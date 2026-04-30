@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'name']) 
+          && data.uid == request.auth.uid
+          && data.name is string && data.name.size() <= 100;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) 
+        && isValidUser(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'trustIdActive']);
+    }
+
+    // 2. Prescriptions Collection
+    match /prescriptions/{prescriptionId} {
+      function isValidPrescription(data) {
+        return data.keys().hasAll(['patientId', 'medication', 'validUntil'])
+          && data.patientId == request.auth.uid
+          && data.medication is string && data.medication.size() <= 200;
+      }
+
+      allow read: if isSignedIn() && (resource.data.patientId == request.auth.uid);
+      allow create: if isSignedIn() && isValidPrescription(request.resource.data);
+      allow update: if isSignedIn() 
+        && resource.data.patientId == request.auth.uid
+        && isValidPrescription(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
+    // 3. Pickups Collection
+    match /pickups/{pickupId} {
+      function isValidPickup(data) {
+        return data.keys().hasAll(['patientId', 'dispensaryId', 'token'])
+          && data.patientId == request.auth.uid
+          && data.token is string && data.token.size() <= 100;
+      }
+
+      allow read: if isSignedIn() && resource.data.patientId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPickup(request.resource.data);
+      allow update: if isSignedIn()
+        && resource.data.patientId == request.auth.uid
+        && isValidPickup(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isSignedIn() && resource.data.patientId == request.auth.uid;
+    }
+  }
+}

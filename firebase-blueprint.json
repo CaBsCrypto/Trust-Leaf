@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with medical identity indicators",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "trustIdActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name"]
+    },
+    "Prescription": {
+      "title": "Medical Prescription (NFT-like)",
+      "description": "Cross-border medical prescription stored on-chain (conceptually)",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "medication": { "type": "string" },
+        "validUntil": { "type": "string", "format": "date-time" },
+        "stellarAssetId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "expired", "used"] }
+      },
+      "required": ["patientId", "medication", "validUntil"]
+    },
+    "Pickup": {
+      "title": "Medicine Pickup Token",
+      "description": "Token generated for medicine withdrawal at a dispensary",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "dispensaryId": { "type": "string" },
+        "strain": { "type": "object" },
+        "quantity": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "token": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientId", "dispensaryId", "token"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Public and private user data"
+    },
+    "prescriptions/{prescriptionId}": {
+      "schema": "Prescription",
+      "description": "Medical prescriptions"
+    },
+    "pickups/{pickupId}": {
+      "schema": "Pickup",
+      "description": "Active medicine withdrawals"
+    }
+  }
+}
