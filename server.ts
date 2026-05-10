@@ -407,7 +407,7 @@ async function getPatientPrescriptions(
   const topic = StellarSdk.nativeToScVal("PrescriptionIssued").toXDR("base64");
 
   const page = await server.getEvents({
-    startLedger: Math.max(1, latestLedger - 120_000),
+    startLedger: Math.max(1, latestLedger - 10_000),
     filters: [
       {
         type: "contract",
