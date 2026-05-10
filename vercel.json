@@ -1,0 +1,28 @@
+{
+  "rewrites": [
+    {
+      "source": "/paciente",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/paciente/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/medico",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dispensario",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dispensario/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    }
+  ]
+}

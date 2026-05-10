@@ -2,6 +2,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
+import { shortenAddress, stellarConfig } from '../lib/stellar/config';
+import { connectFreighterOnTestnet } from '../lib/stellar/freighter';
+import {
+  addFreighterBackupSigner,
+  connectOrCreatePasskeyWallet,
+  getPasskeyAvailability,
+} from '../lib/stellar/passkeys';
 
 export type PortalView = 'overview' | 'doctors' | 'dispensaries' | 'profile' | 'prescriptions' | 'pickups' | 'history' | 'traveler';
 
@@ -9,6 +17,79 @@ interface MockupPortalProps {
   isOpen: boolean;
   onClose: () => void;
   initialView?: PortalView;
+  allowedViews?: PortalView[];
+  pageMode?: boolean;
+  roleLabel?: string;
+}
+
+interface PatientPrescriptionRecord {
+  id: number;
+  patient: string;
+  doctor: string;
+  medicationHash: string;
+  expiresAt: number;
+  isUsed: boolean;
+  status: 'active' | 'used' | 'expired';
+  issuedAt: string;
+  issuedLedger: number;
+  txHash: string;
+}
+
+interface PatientDispenseRecord {
+  id: number;
+  prescriptionId: number;
+  patient: string;
+  doctor: string;
+  dispensary: string;
+  productHash: string;
+  batchHash: string;
+  quantity: number;
+  dispensedAt: number;
+  recordedAt: string;
+  recordedLedger: number;
+  txHash: string;
+}
+
+interface PatientDashboardData {
+  patientAddress: string;
+  network: string;
+  rpcUrl: string;
+  latestLedger: number;
+  latestLedgerClosedAt: string;
+  registryContractId: string;
+  prescriptionContractId: string;
+  summary: {
+    total: number;
+    active: number;
+    used: number;
+    expired: number;
+  };
+  prescriptions: PatientPrescriptionRecord[];
+  dispenseRecords?: PatientDispenseRecord[];
+}
+
+function formatPortalDate(value: string) {
+  return new Intl.DateTimeFormat('es-CL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function formatExpiryDate(timestamp: number) {
+  return new Intl.DateTimeFormat('es-CL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(timestamp * 1000));
+}
+
+function shortenHash(value: string, size = 8) {
+  if (!value || value.length <= size * 2) {
+    return value;
+  }
+
+  return `${value.slice(0, size)}...${value.slice(-size)}`;
 }
 
 const MOCK_DOCTORS = [
@@ -361,9 +442,56 @@ const MOCK_GLOBAL_DISPENSARIES: Record<string, any[]> = {
   ]
 };
 
-export default function MockupPortal({ isOpen, onClose, initialView = 'overview' }: MockupPortalProps) {
+export default function MockupPortal({
+  isOpen,
+  onClose,
+  initialView = 'overview',
+  allowedViews,
+  pageMode = false,
+  roleLabel = 'Trust Leaf Portal',
+}: MockupPortalProps) {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PortalView>(initialView);
+  const isViewAllowed = (view: PortalView) => !allowedViews || allowedViews.includes(view);
+  const switchView = (view: PortalView) => {
+    if (isViewAllowed(view)) {
+      setActiveView(view);
+    }
+  };
+  const [walletSetup, setWalletSetup] = useState<WalletSetupState>(() => {
+    const saved = localStorage.getItem('trust_wallet_setup');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+
+    return {
+      primaryMethod: null,
+      hasFreighterBackup: false,
+      walletLabel: 'Trust Leaf Smart Wallet',
+      contractAccount: 'CAX7...LEAF',
+      networkLabel: stellarConfig.networkLabel,
+    };
+  });
+  const [walletBusy, setWalletBusy] = useState<'passkey' | 'freighter' | 'backup' | null>(null);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [walletHint, setWalletHint] = useState<string | null>(
+    'Todos los accesos de esta versión operan exclusivamente sobre Stellar Testnet.',
+  );
+  const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(null);
+  const [patientDashboardLoading, setPatientDashboardLoading] = useState(false);
+  const [patientDashboardError, setPatientDashboardError] = useState<string | null>(null);
+  const [doctorIssueForm, setDoctorIssueForm] = useState({
+    treatment: 'Cannabis medicinal para manejo de dolor crónico',
+    dosage: '0.5g por vía vaporizada cada 12 horas',
+    notes: 'Control clínico en 30 días.',
+    durationDays: 30,
+  });
+  const [doctorIssueBusy, setDoctorIssueBusy] = useState(false);
+  const [doctorIssueError, setDoctorIssueError] = useState<string | null>(null);
+  const [doctorIssueSuccess, setDoctorIssueSuccess] = useState<string | null>(null);
+  const [dispenseBusy, setDispenseBusy] = useState(false);
+  const [dispenseError, setDispenseError] = useState<string | null>(null);
+  const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
   const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
@@ -416,6 +544,239 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
   useEffect(() => {
     localStorage.setItem('trust_cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_wallet_setup', JSON.stringify(walletSetup));
+  }, [walletSetup]);
+
+  const walletConnected = walletSetup.primaryMethod !== null;
+  const passkeyAvailability = getPasskeyAvailability();
+  const patientIdentityAddress = useMemo(() => {
+    if (!walletConnected) {
+      return null;
+    }
+
+    if (walletSetup.primaryMethod === 'passkey') {
+      return walletSetup.contractAccount;
+    }
+
+    return walletSetup.freighterAddress ?? walletSetup.contractAccount;
+  }, [walletConnected, walletSetup.contractAccount, walletSetup.freighterAddress, walletSetup.primaryMethod]);
+  const primaryPrescription = patientDashboard?.prescriptions[0] ?? null;
+  const activePrescription = patientDashboard?.prescriptions.find(
+    (prescription) => prescription.status === 'active',
+  ) ?? null;
+  const dispenseRecords = patientDashboard?.dispenseRecords ?? [];
+
+  useEffect(() => {
+    if (!patientIdentityAddress) {
+      setPatientDashboard(null);
+      setPatientDashboardError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPatientDashboard = async () => {
+      setPatientDashboardLoading(true);
+      setPatientDashboardError(null);
+
+      try {
+        const response = await fetch(`/api/stellar/patient/${patientIdentityAddress}/dashboard`);
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.message || 'No fue posible cargar el estado on-chain del paciente.');
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setPatientDashboard(payload);
+        setHasPrescription(payload.summary.total > 0);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setPatientDashboardError(
+          error instanceof Error
+            ? error.message
+            : 'No fue posible cargar el estado on-chain del paciente.',
+        );
+      } finally {
+        if (!cancelled) {
+          setPatientDashboardLoading(false);
+        }
+      }
+    };
+
+    loadPatientDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [patientIdentityAddress]);
+
+  const connectPasskeyWallet = async () => {
+    setWalletBusy('passkey');
+    setWalletError(null);
+
+    try {
+      const result = await connectOrCreatePasskeyWallet('Paciente Trust Leaf');
+      setWalletSetup((current) => ({
+        ...current,
+        primaryMethod: 'passkey',
+        walletLabel: 'Passkey Smart Wallet',
+        contractAccount: result.contractId,
+        networkLabel: stellarConfig.networkLabel,
+        passkeyId: result.keyId,
+      }));
+      setWalletHint(
+        'Passkey conectada en testnet. Si quieres más resiliencia, ahora puedes vincular Freighter como respaldo.',
+      );
+    } catch (error) {
+      setWalletError(error instanceof Error ? error.message : 'No se pudo conectar Passkey.');
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const connectFreighterWallet = async () => {
+    setWalletBusy('freighter');
+    setWalletError(null);
+
+    try {
+      const freighter = await connectFreighterOnTestnet();
+      setWalletSetup((current) => ({
+        ...current,
+        primaryMethod: current.primaryMethod ?? 'freighter',
+        hasFreighterBackup:
+          current.primaryMethod === 'passkey' ? true : current.hasFreighterBackup,
+        walletLabel:
+          current.primaryMethod === 'passkey'
+            ? current.walletLabel
+            : 'Freighter Wallet',
+        contractAccount:
+          current.primaryMethod === 'passkey'
+            ? current.contractAccount
+            : freighter.address,
+        networkLabel: stellarConfig.networkLabel,
+        freighterAddress: freighter.address,
+      }));
+      setWalletHint(
+        walletSetup.primaryMethod === 'passkey'
+          ? 'Freighter quedó vinculada como método alternativo sobre testnet.'
+          : 'Freighter conectada correctamente en Stellar Testnet.',
+      );
+    } catch (error) {
+      setWalletError(error instanceof Error ? error.message : 'No se pudo conectar Freighter.');
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const linkFreighterBackup = async () => {
+    setWalletBusy('backup');
+    setWalletError(null);
+
+    try {
+      if (walletSetup.primaryMethod !== 'passkey') {
+        throw new Error('Primero debes crear o conectar tu wallet principal con Passkey.');
+      }
+
+      const freighter = await connectFreighterOnTestnet();
+      await addFreighterBackupSigner(freighter.address);
+
+      setWalletSetup((current) => ({
+        ...current,
+        hasFreighterBackup: true,
+        freighterAddress: freighter.address,
+        networkLabel: stellarConfig.networkLabel,
+      }));
+      setWalletHint(
+        'Freighter quedó agregada como signer de respaldo para tu smart wallet de passkey en testnet.',
+      );
+    } catch (error) {
+      setWalletError(
+        error instanceof Error ? error.message : 'No se pudo vincular Freighter como respaldo.',
+      );
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const openOnchainPrescription = (prescription: PatientPrescriptionRecord) => {
+    setSelectedPrescription({
+      id: `RX-${prescription.id}`,
+      doctor: shortenAddress(prescription.doctor, 6),
+      date: formatPortalDate(prescription.issuedAt),
+      validUntil: formatExpiryDate(prescription.expiresAt),
+      treatment: `Hash clínico ${shortenHash(prescription.medicationHash)}`,
+      concentration: 'Documento clínico protegido fuera de cadena',
+      dosage:
+        prescription.status === 'used'
+          ? 'Esta receta ya fue consumida por un dispensario autorizado.'
+          : prescription.status === 'expired'
+            ? 'La receta expiró en testnet y requiere nueva emisión médica.'
+            : 'Receta vigente. El documento médico completo se resuelve off-chain.',
+      notes: `Tx ${shortenHash(prescription.txHash)} • Ledger ${prescription.issuedLedger}`,
+    });
+  };
+
+  const handleDoctorIssuePrescription = async () => {
+    if (!patientIdentityAddress) {
+      setDoctorIssueError('Primero debes conectar la wallet del paciente para emitir la receta.');
+      return;
+    }
+
+    setDoctorIssueBusy(true);
+    setDoctorIssueError(null);
+    setDoctorIssueSuccess(null);
+
+    try {
+      const response = await fetch('/api/stellar/doctor/issue-prescription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patientAddress: patientIdentityAddress,
+          treatment: doctorIssueForm.treatment,
+          dosage: doctorIssueForm.dosage,
+          notes: doctorIssueForm.notes,
+          durationDays: doctorIssueForm.durationDays,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible emitir la receta en testnet.');
+      }
+
+      setPatientDashboard(payload.dashboard);
+      setHasPrescription(payload.dashboard.summary.total > 0);
+      setDoctorIssueSuccess(
+        `Receta emitida en testnet. RX-${payload.issuedId ?? 'pendiente'} • Tx ${shortenHash(payload.txHash)}`,
+      );
+      setRecentActivity((prev: any[]) => [
+        {
+          id: `act-issue-${Date.now()}`,
+          action: `Receta emitida para ${shortenAddress(patientIdentityAddress, 5)}`,
+          date: 'Recién',
+          icon: 'FileText',
+        },
+        ...prev,
+      ]);
+    } catch (error) {
+      setDoctorIssueError(
+        error instanceof Error ? error.message : 'No fue posible emitir la receta en testnet.',
+      );
+    } finally {
+      setDoctorIssueBusy(false);
+    }
+  };
 
   const getActivityIcon = (iconName: string) => {
     switch (iconName) {
@@ -470,6 +831,84 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
       setRecentActivity(prev => [...newActivities, ...prev]);
       setCart([]); // Clear cart after success
     }, 500);
+  };
+
+  const handleCompleteOnchainDispense = async () => {
+    if (!activePrescription) {
+      setDispenseError('No hay una receta activa on-chain para consumir en este retiro.');
+      return;
+    }
+
+    if (!cart.length) {
+      setDispenseError('Agrega al menos una medicina al carrito antes de dispensar.');
+      return;
+    }
+
+    setDispenseBusy(true);
+    setDispenseError(null);
+    setDispenseSuccess(null);
+
+    try {
+      const productLabel = cart
+        .map((item) => `${item.strain.name} x${item.quantity}g`)
+        .join(' + ');
+      const batchLabel = cart
+        .map((item) => item.strain.batch || item.strain.id)
+        .join(' + ');
+      const quantity = cart.reduce((total, item) => total + item.quantity, 0);
+      const response = await fetch('/api/stellar/dispensary/dispense-prescription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prescriptionId: activePrescription.id,
+          productLabel,
+          batchLabel,
+          quantity,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible dispensar la receta en testnet.');
+      }
+
+      setPatientDashboard(payload.dashboard);
+      setHasPrescription(payload.dashboard.summary.total > 0);
+      setDispenseSuccess(
+        `Dispensacion registrada. Record ${payload.recordId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
+      );
+      setDispensaryStep('success');
+
+      const newPickups = cart.map(item => ({
+        id: `pick-${Date.now()}-${item.strain.id}`,
+        strain: item.strain,
+        quantity: item.quantity,
+        dispensary: selectedDispensary,
+        status: 'pending',
+        token: `RX-${activePrescription.id}-DR-${payload.recordId ?? 'TESTNET'}`,
+        expires: 'Registrado on-chain'
+      }));
+
+      setActivePickups(prev => [...newPickups, ...prev]);
+      setRecentActivity(prev => [
+        {
+          id: `act-disp-${Date.now()}`,
+          action: `Dispensacion on-chain RX-${activePrescription.id}`,
+          date: "ReciÃ©n",
+          icon: "ShoppingBag",
+        },
+        ...prev,
+      ]);
+      setCart([]);
+    } catch (error) {
+      setDispenseError(
+        error instanceof Error ? error.message : 'No fue posible dispensar la receta en testnet.',
+      );
+    } finally {
+      setDispenseBusy(false);
+    }
   };
 
   const addToCart = (strain: any) => {
@@ -536,12 +975,14 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
     setSelectedDispensary(null);
     setSelectedStrain(null);
     setDispensaryStep('inventory');
+    setDispenseError(null);
+    setDispenseSuccess(null);
     setCart([]); // Clear cart when leaving dispensary flow
   };
 
   useEffect(() => {
     if (isOpen) {
-      setActiveView(initialView);
+      setActiveView(isViewAllowed(initialView) ? initialView : allowedViews?.[0] ?? 'overview');
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -550,7 +991,7 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, initialView]);
+  }, [isOpen, initialView, allowedViews]);
 
   return (
     <AnimatePresence>
@@ -560,66 +1001,80 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-brand-green-deep/60 backdrop-blur-sm"
+          className={`fixed inset-0 z-[100] flex items-center justify-center ${pageMode ? 'bg-brand-ivory' : 'bg-brand-green-deep/60 backdrop-blur-sm'}`}
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="bg-brand-ivory w-full max-w-5xl h-full md:h-[85vh] rounded-none md:rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row relative"
+            className={`bg-brand-ivory w-full h-full overflow-hidden flex flex-col md:flex-row relative ${pageMode ? 'max-w-none rounded-none shadow-none md:h-full' : 'max-w-5xl md:h-[85vh] rounded-none md:rounded-[32px] shadow-2xl'}`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Sidebar Mockup (Desktop) / Bottom Nav (Mobile) */}
             <div className="hidden md:flex w-64 bg-brand-green-deep p-6 text-brand-ivory flex-col gap-8">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-brand-gold rounded-lg" />
-                <span className="font-bold">Trust Leaf Portal</span>
+                <span className="font-bold">{roleLabel}</span>
               </div>
               
               <nav className="flex flex-col gap-2">
+                {isViewAllowed('overview') && (
                 <button 
-                  onClick={() => setActiveView('overview')}
+                  onClick={() => switchView('overview')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'overview' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <Activity size={18} /> {t.portal.navResume}
                 </button>
+                )}
+                {isViewAllowed('doctors') && (
                 <button 
-                  onClick={() => setActiveView('doctors')}
+                  onClick={() => switchView('doctors')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'doctors' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <Stethoscope size={18} /> {t.portal.navDoctors}
                 </button>
+                )}
+                {isViewAllowed('dispensaries') && (
                 <button 
-                  onClick={() => setActiveView('dispensaries')}
+                  onClick={() => switchView('dispensaries')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'dispensaries' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <ShoppingBag size={18} /> {t.portal.navDispensaries}
                 </button>
+                )}
+                {isViewAllowed('prescriptions') && (
                 <button 
-                  onClick={() => setActiveView('prescriptions')}
+                  onClick={() => switchView('prescriptions')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'prescriptions' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <FileText size={18} /> {t.portal.navPrescriptions}
                 </button>
+                )}
+                {isViewAllowed('pickups') && (
                 <button 
-                  onClick={() => setActiveView('pickups')}
+                  onClick={() => switchView('pickups')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'pickups' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <Package size={18} /> {t.portal.navPickups}
                 </button>
+                )}
+                {isViewAllowed('history') && (
                 <button 
-                  onClick={() => setActiveView('history')}
+                  onClick={() => switchView('history')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'history' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <Database size={18} /> {t.portal.navHistory}
                 </button>
+                )}
+                {isViewAllowed('traveler') && (
                 <button 
-                  onClick={() => setActiveView('traveler')}
+                  onClick={() => switchView('traveler')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'traveler' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <Globe size={18} /> {t.portal.navTraveler}
                 </button>
+                )}
               </nav>
               
               <div className="mt-auto p-4 bg-brand-gold/20 rounded-2xl border border-brand-gold/20">
@@ -630,48 +1085,60 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
 
             {/* Mobile Bottom Navigation */}
             <div className="md:hidden fixed bottom-2 left-4 right-4 bg-brand-green-deep/95 backdrop-blur-xl h-16 flex justify-around items-center z-[110] border border-white/10 rounded-[24px] pb-safe shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+              {isViewAllowed('overview') && (
               <button 
-                onClick={() => setActiveView('overview')}
+                onClick={() => switchView('overview')}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'overview' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <Activity size={20} className={activeView === 'overview' ? 'scale-110' : ''} />
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navHome}</span>
               </button>
+              )}
+              {isViewAllowed('prescriptions') && (
               <button 
-                onClick={() => setActiveView('prescriptions')}
+                onClick={() => switchView('prescriptions')}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'prescriptions' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <Activity size={20} className={activeView === 'prescriptions' ? 'scale-110' : ''} />
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navHealth}</span>
               </button>
+              )}
+              {isViewAllowed('dispensaries') && (
               <button 
-                onClick={() => setActiveView('dispensaries')}
+                onClick={() => switchView('dispensaries')}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'dispensaries' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <ShoppingBag size={20} className={activeView === 'dispensaries' ? 'scale-110' : ''} />
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navStore}</span>
               </button>
+              )}
+              {isViewAllowed('pickups') && (
               <button 
-                onClick={() => setActiveView('pickups')}
+                onClick={() => switchView('pickups')}
                 className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'pickups' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <Package size={20} />
                 <span className="text-[10px] font-bold">{t.portal.navPickups}</span>
               </button>
+              )}
+              {isViewAllowed('history') && (
               <button 
-                onClick={() => setActiveView('history')}
+                onClick={() => switchView('history')}
                 className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'history' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <Database size={20} />
                 <span className="text-[10px] font-bold">{t.portal.navRecord}</span>
               </button>
+              )}
+              {isViewAllowed('traveler') && (
               <button 
-                onClick={() => setActiveView('traveler')}
+                onClick={() => switchView('traveler')}
                 className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'traveler' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <Globe size={20} />
                 <span className="text-[10px] font-bold">{t.portal.navTraveler}</span>
               </button>
+              )}
             </div>
 
             {/* Content Mockup */}
@@ -708,7 +1175,51 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                         </div>
                       </div>
 
-                      {/* Main Journey CTA */}
+                      {!walletConnected && (
+                        <WalletOnboarding
+                          title={t.portal.onboarding.title}
+                          eyebrow={t.portal.onboarding.eyebrow}
+                          description={t.portal.onboarding.desc}
+                          primaryMethod={walletSetup.primaryMethod}
+                          hasFreighterBackup={walletSetup.hasFreighterBackup}
+                          walletLabel={walletSetup.walletLabel}
+                          contractAccount={shortenAddress(walletSetup.contractAccount, 6)}
+                          passkeyTitle={t.portal.onboarding.passkeyTitle}
+                          passkeyDescription={t.portal.onboarding.passkeyDesc}
+                          passkeyAction={t.portal.onboarding.passkeyAction}
+                          freighterTitle={t.portal.onboarding.freighterTitle}
+                          freighterDescription={t.portal.onboarding.freighterDesc}
+                          freighterAction={t.portal.onboarding.freighterAction}
+                          linkedLabel={t.portal.onboarding.linked}
+                          backupTitle={t.portal.onboarding.backupTitle}
+                          backupDescription={t.portal.onboarding.backupDesc}
+                          backupAction={t.portal.onboarding.backupAction}
+                          statusTitle={t.portal.onboarding.statusTitle}
+                          statusPrimary={t.portal.onboarding.statusPrimary}
+                          statusBackup={t.portal.onboarding.statusBackup}
+                          statusAccount={t.portal.onboarding.statusAccount}
+                          statusNetwork="Red"
+                          networkValue={walletSetup.networkLabel ?? stellarConfig.networkLabel}
+                          primaryPasskeyValue={t.portal.onboarding.primaryPasskeyValue}
+                          primaryFreighterValue={t.portal.onboarding.primaryFreighterValue}
+                          primaryEmptyValue={t.portal.onboarding.primaryEmptyValue}
+                          backupConnectedValue={t.portal.onboarding.backupConnectedValue}
+                          backupEmptyValue={t.portal.onboarding.backupEmptyValue}
+                          continueAction={t.portal.onboarding.continueAction}
+                          statusHint={passkeyAvailability.available ? walletHint : passkeyAvailability.reason}
+                          statusError={walletError}
+                          passkeyBusy={walletBusy === 'passkey'}
+                          freighterBusy={walletBusy === 'freighter'}
+                          backupBusy={walletBusy === 'backup'}
+                          onConnectPasskey={connectPasskeyWallet}
+                          onConnectFreighter={connectFreighterWallet}
+                          onLinkFreighterBackup={linkFreighterBackup}
+                          onContinue={() => setActiveView('doctors')}
+                        />
+                      )}
+
+                      {walletConnected && (
+                        <>
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -717,7 +1228,7 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                         <div className="relative z-10 max-w-lg">
                            <div className="flex items-center gap-2 mb-4">
                               <span className="w-8 h-[1px] bg-brand-gold"></span>
-                              <span className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em]">{t.process.step1}</span>
+                               <span className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em]">{t.portal.onboarding.connectedEyebrow}</span>
                            </div>
                            <h4 className="text-3xl md:text-5xl font-serif mb-6 leading-tight">{t.portal.healthStart}</h4>
                            <p className="text-brand-ivory/60 text-sm md:text-base leading-relaxed mb-8">
@@ -727,7 +1238,7 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                              onClick={() => setActiveView('doctors')}
                              className="flex items-center gap-4 px-8 py-4 bg-brand-gold text-brand-green-deep rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-gold/20 group/btn"
                            >
-                              Agendar con un Especialista <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                               {t.portal.onboarding.startCareAction} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                            </button>
                         </div>
 
@@ -736,6 +1247,114 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                            <Activity size={400} className="absolute -right-20 -top-20 rotate-12" />
                         </div>
                       </motion.div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
+                        <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-6 shadow-sm">
+                          <div className="flex items-center justify-between gap-4 mb-4">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Estado On-Chain</p>
+                              <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Wallet del Paciente</h5>
+                            </div>
+                            <div className="px-3 py-1 rounded-full bg-brand-neutral text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
+                              {stellarConfig.networkLabel}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                            <div className="rounded-2xl bg-brand-neutral/50 p-4 border border-brand-green-deep/5">
+                              <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Recetas</p>
+                              <p className="text-3xl font-bold text-brand-green-deep mt-2">
+                                {patientDashboardLoading ? '...' : patientDashboard?.summary.total ?? 0}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl bg-brand-neutral/50 p-4 border border-brand-green-deep/5">
+                              <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Activas</p>
+                              <p className="text-3xl font-bold text-brand-green-deep mt-2">
+                                {patientDashboardLoading ? '...' : patientDashboard?.summary.active ?? 0}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl bg-brand-neutral/50 p-4 border border-brand-green-deep/5">
+                              <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Usadas / Exp.</p>
+                              <p className="text-3xl font-bold text-brand-green-deep mt-2">
+                                {patientDashboardLoading
+                                  ? '...'
+                                  : (patientDashboard?.summary.used ?? 0) + (patientDashboard?.summary.expired ?? 0)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-green-deep/5 px-4 py-3">
+                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Identidad paciente</span>
+                              <span className="text-xs font-mono text-brand-green-deep">{shortenAddress(patientIdentityAddress ?? '', 8)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-green-deep/5 px-4 py-3">
+                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Prescription Contract</span>
+                              <span className="text-xs font-mono text-brand-green-deep">
+                                {shortenAddress(patientDashboard?.prescriptionContractId ?? '', 8)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {patientDashboardError && (
+                            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                              {patientDashboardError}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="bg-brand-neutral/40 rounded-[32px] border border-brand-green-deep/5 p-6">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Última receta</p>
+                          {patientDashboardLoading ? (
+                            <div className="rounded-3xl bg-white p-6 border border-brand-green-deep/5">
+                              <p className="text-sm text-brand-green-mid/60">Consultando testnet...</p>
+                            </div>
+                          ) : primaryPrescription ? (
+                            <button
+                              onClick={() => openOnchainPrescription(primaryPrescription)}
+                              className="w-full text-left rounded-3xl bg-white p-6 border border-brand-green-deep/5 hover:border-brand-gold transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/40">
+                                    RX-{primaryPrescription.id}
+                                  </p>
+                                  <h6 className="mt-2 text-lg font-bold text-brand-green-deep">
+                                    {primaryPrescription.status === 'active'
+                                      ? 'Receta vigente'
+                                      : primaryPrescription.status === 'used'
+                                        ? 'Receta consumida'
+                                        : 'Receta expirada'}
+                                  </h6>
+                                  <p className="mt-2 text-sm text-brand-green-mid/70">
+                                    Emisión {formatPortalDate(primaryPrescription.issuedAt)}
+                                  </p>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                                  primaryPrescription.status === 'active'
+                                    ? 'bg-green-50 text-green-700'
+                                    : primaryPrescription.status === 'used'
+                                      ? 'bg-blue-50 text-blue-700'
+                                      : 'bg-amber-50 text-amber-700'
+                                }`}>
+                                  {primaryPrescription.status}
+                                </span>
+                              </div>
+                              <p className="mt-4 text-xs font-mono text-brand-green-mid/60">
+                                Hash {shortenHash(primaryPrescription.medicationHash)}
+                              </p>
+                            </button>
+                          ) : (
+                            <div className="rounded-3xl bg-white p-6 border border-dashed border-brand-green-deep/10">
+                              <p className="text-sm text-brand-green-mid/70">
+                                Esta wallet todavía no tiene recetas emitidas en la ventana actual de eventos de testnet.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                        </>
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {/* Interactive Stat: Prescriptions */}
@@ -862,6 +1481,140 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                     <div className="space-y-6">
                       <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf están validados y poseen licencias vigentes para la prescripción de cannabis medicinal.</p>
                       
+                      <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-5 shadow-sm space-y-5">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">
+                              POV medico testnet
+                            </p>
+                            <h3 className="text-xl font-bold text-brand-green-deep mt-1">
+                              Emitir receta soulbound al paciente conectado
+                            </h3>
+                            <p className="text-xs text-brand-green-mid/60 mt-2 max-w-2xl">
+                              La receta se firma con el medico autorizado de testnet, queda ligada a la cuenta del paciente y se valida contra los contratos Prescription y Registry.
+                            </p>
+                          </div>
+                          <div className="px-3 py-2 rounded-xl bg-brand-neutral text-xs font-mono text-brand-green-mid/70 break-all md:max-w-[280px]">
+                            {patientIdentityAddress
+                              ? shortenAddress(patientIdentityAddress, 10)
+                              : 'Paciente sin wallet conectada'}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <label className="space-y-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                              Tratamiento
+                            </span>
+                            <input
+                              type="text"
+                              value={doctorIssueForm.treatment}
+                              onChange={(event) =>
+                                setDoctorIssueForm((prev) => ({
+                                  ...prev,
+                                  treatment: event.target.value,
+                                }))
+                              }
+                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                              Dosis
+                            </span>
+                            <input
+                              type="text"
+                              value={doctorIssueForm.dosage}
+                              onChange={(event) =>
+                                setDoctorIssueForm((prev) => ({
+                                  ...prev,
+                                  dosage: event.target.value,
+                                }))
+                              }
+                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                          </label>
+
+                          <label className="space-y-2 md:col-span-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                              Notas clinicas
+                            </span>
+                            <textarea
+                              value={doctorIssueForm.notes}
+                              onChange={(event) =>
+                                setDoctorIssueForm((prev) => ({
+                                  ...prev,
+                                  notes: event.target.value,
+                                }))
+                              }
+                              rows={3}
+                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 resize-none"
+                            />
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                              Vigencia en dias
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={365}
+                              value={doctorIssueForm.durationDays}
+                              onChange={(event) =>
+                                setDoctorIssueForm((prev) => ({
+                                  ...prev,
+                                  durationDays: Number(event.target.value),
+                                }))
+                              }
+                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                          </label>
+
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              onClick={handleDoctorIssuePrescription}
+                              disabled={doctorIssueBusy || !patientIdentityAddress}
+                              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                            >
+                              {doctorIssueBusy ? (
+                                <>
+                                  <Activity size={16} className="animate-spin" />
+                                  Emitiendo...
+                                </>
+                              ) : (
+                                <>
+                                  <FileText size={16} />
+                                  Emitir en testnet
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {doctorIssueError && (
+                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
+                            {doctorIssueError}
+                          </div>
+                        )}
+
+                        {doctorIssueSuccess && (
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-green-50 border border-green-100 rounded-xl text-xs text-green-700">
+                            <span>{doctorIssueSuccess}</span>
+                            <button
+                              type="button"
+                              onClick={() => setActiveView('prescriptions')}
+                              className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-white border border-green-100 rounded-lg font-bold text-green-700 hover:border-green-200"
+                            >
+                              Ver recetas
+                              <ArrowRight size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="relative">
                         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-mid/40" />
                         <input 
@@ -916,11 +1669,133 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                       exit={{ opacity: 0, y: -10 }}
                       className="space-y-6"
                     >
-                    {!hasPrescription ? (
+                    {false && patientDashboardLoading && (
+                      <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-8">
+                        <p className="text-sm text-brand-green-mid/60">Consultando recetas del paciente en testnet...</p>
+                      </div>
+                    )}
+
+                    {false && !!patientDashboard?.prescriptions.length && (
+                      <div className="space-y-4">
+                        <div className="mb-2 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
+                          <Star size={14} fill="currentColor" />
+                          <span>Estas recetas se leen en tiempo real desde el contrato `Prescription` desplegado en Stellar Testnet.</span>
+                        </div>
+
+                        {patientDashboard.prescriptions.map((prescription) => (
+                          <div
+                            key={prescription.id}
+                            onClick={() => openOnchainPrescription(prescription)}
+                            className="group cursor-pointer p-6 bg-white border border-brand-green-deep/10 rounded-2xl hover:border-brand-gold hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-center gap-4"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-brand-neutral rounded-xl text-brand-green-deep group-hover:bg-brand-gold/10 group-hover:text-brand-gold transition-colors">
+                                <FileText size={24} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-xs font-bold text-brand-green-mid/40 uppercase tracking-widest">
+                                    ID: RX-{prescription.id}
+                                  </p>
+                                  <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
+                                    <Database size={10} /> ON-CHAIN
+                                  </span>
+                                </div>
+                                <h4 className="font-bold text-brand-green-deep">
+                                  {prescription.status === 'active'
+                                    ? 'Receta vigente en testnet'
+                                    : prescription.status === 'used'
+                                      ? 'Receta consumida'
+                                      : 'Receta expirada'}
+                                </h4>
+                                <p className="text-sm text-brand-green-mid/70">
+                                  {shortenAddress(prescription.doctor, 6)} • {formatPortalDate(prescription.issuedAt)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                                prescription.status === 'active'
+                                  ? 'text-green-600 bg-green-50'
+                                  : prescription.status === 'used'
+                                    ? 'text-blue-600 bg-blue-50'
+                                    : 'text-amber-700 bg-amber-50'
+                              }`}>
+                                {prescription.status}
+                              </span>
+                              <div className="p-2 text-brand-green-mid/40 group-hover:text-brand-gold transition-colors">
+                                <ArrowRight size={20} />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {patientDashboardLoading ? (
+                      <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-8">
+                        <p className="text-sm text-brand-green-mid/60">Consultando recetas del paciente en testnet...</p>
+                      </div>
+                    ) : patientDashboard?.prescriptions.length ? (
+                      <div className="space-y-4">
+                        <div className="mb-2 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
+                          <Star size={14} fill="currentColor" />
+                          <span>Estas recetas se leen en tiempo real desde el contrato `Prescription` desplegado en Stellar Testnet.</span>
+                        </div>
+
+                        {patientDashboard.prescriptions.map((prescription) => (
+                          <div
+                            key={prescription.id}
+                            onClick={() => openOnchainPrescription(prescription)}
+                            className="group cursor-pointer p-6 bg-white border border-brand-green-deep/10 rounded-2xl hover:border-brand-gold hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-center gap-4"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-brand-neutral rounded-xl text-brand-green-deep group-hover:bg-brand-gold/10 group-hover:text-brand-gold transition-colors">
+                                <FileText size={24} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-xs font-bold text-brand-green-mid/40 uppercase tracking-widest">
+                                    ID: RX-{prescription.id}
+                                  </p>
+                                  <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
+                                    <Database size={10} /> ON-CHAIN
+                                  </span>
+                                </div>
+                                <h4 className="font-bold text-brand-green-deep">
+                                  {prescription.status === 'active'
+                                    ? 'Receta vigente en testnet'
+                                    : prescription.status === 'used'
+                                      ? 'Receta consumida'
+                                      : 'Receta expirada'}
+                                </h4>
+                                <p className="text-sm text-brand-green-mid/70">
+                                  {shortenAddress(prescription.doctor, 6)} • {formatPortalDate(prescription.issuedAt)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                                prescription.status === 'active'
+                                  ? 'text-green-600 bg-green-50'
+                                  : prescription.status === 'used'
+                                    ? 'text-blue-600 bg-blue-50'
+                                    : 'text-amber-700 bg-amber-50'
+                              }`}>
+                                {prescription.status}
+                              </span>
+                              <div className="p-2 text-brand-green-mid/40 group-hover:text-brand-gold transition-colors">
+                                <ArrowRight size={20} />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : !hasPrescription ? (
                       <div className="bg-brand-neutral/30 border-2 border-dashed border-brand-green-deep/10 rounded-[40px] p-12 text-center">
                          <div className="w-20 h-20 bg-brand-neutral rounded-full flex items-center justify-center mx-auto mb-6 text-brand-green-mid/30">
-                            <ShoppingBag size={40} />
-                         </div>
+                             <ShoppingBag size={40} />
+                          </div>
                          <h4 className="text-xl font-serif text-brand-green-deep mb-2">Acceso Restringido</h4>
                          <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Debe completar una consulta médica para acceder a la red de dispensarios y medicina trazable.</p>
                          <button 
@@ -929,7 +1804,7 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                          >
                             Ir al Médico Primero
                          </button>
-                      </div>
+                       </div>
                     ) : (
                       <>
                         <div className="relative mb-8">
@@ -1250,8 +2125,62 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                       </div>
                     </div>
 
+                    {dispenseRecords.length > 0 && (
+                      <div className="space-y-4">
+                        {dispenseRecords.map((record, idx) => (
+                          <motion.div
+                            key={`dispense-record-${record.id}`}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="bg-white border border-brand-green-deep/5 rounded-3xl p-6 hover:shadow-md transition-shadow group"
+                          >
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="w-12 h-12 bg-brand-neutral rounded-2xl flex items-center justify-center text-brand-green-deep group-hover:bg-brand-green-deep group-hover:text-brand-ivory transition-all shrink-0">
+                                  <Database size={20} />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-bold text-brand-green-mid/40 uppercase tracking-widest leading-none">
+                                      Dispensa #{record.id}
+                                    </span>
+                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded-full border border-blue-100">
+                                      ON-CHAIN
+                                    </span>
+                                  </div>
+                                  <h4 className="font-bold text-brand-green-deep text-base sm:text-lg leading-none mb-1">
+                                    RX-{record.prescriptionId} consumida
+                                  </h4>
+                                  <p className="text-[11px] text-brand-green-mid/70 truncate">
+                                    {shortenAddress(record.dispensary, 6)} â€¢ {formatPortalDate(record.recordedAt)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:items-end w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-brand-green-deep/5 gap-2">
+                                <div className="flex justify-between sm:block text-right">
+                                  <p className="sm:text-lg font-bold text-brand-green-deep">{record.quantity}g</p>
+                                  <p className="text-[10px] text-brand-green-mid/40 font-bold uppercase tracking-tighter sm:mt-0.5">
+                                    Ledger {record.recordedLedger}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 bg-brand-neutral/50 px-3 py-1.5 rounded-lg border border-brand-green-deep/5">
+                                  <Database size={10} className="text-brand-gold" />
+                                  <span className="font-mono text-[9px] text-brand-green-mid/60 truncate max-w-[80px]">
+                                    {shortenHash(record.txHash, 6)}
+                                  </span>
+                                  <ArrowRight size={10} className="text-brand-gold" />
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="space-y-4">
-                      {MOCK_ORDERS.map((order, idx) => (
+                      {dispenseRecords.length === 0 && MOCK_ORDERS.map((order, idx) => (
                         <motion.div 
                           key={order.id}
                           initial={{ opacity: 0, x: -20 }}
@@ -2068,11 +2997,17 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
 
                          <div className="space-y-4">
                             <button 
-                              onClick={handleCompleteAcquisition}
-                              className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2"
+                              onClick={handleCompleteOnchainDispense}
+                              disabled={dispenseBusy || !activePrescription}
+                              className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
-                               Validar Receta y Generar Tokens <CheckCircle size={20} />
+                               {dispenseBusy ? 'Registrando en testnet...' : 'Validar Receta y Registrar Dispensa'} <CheckCircle size={20} />
                             </button>
+                            {dispenseError && (
+                              <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
+                                {dispenseError}
+                              </div>
+                            )}
                             <p className="text-[10px] text-center text-brand-green-mid/40 font-bold uppercase tracking-widest px-8 leading-relaxed">
                                Al confirmar, la red Trust Leaf reservará el stock y generará los tokens únicos vinculados a su receta médica.
                             </p>
@@ -2086,6 +3021,11 @@ export default function MockupPortal({ isOpen, onClose, initialView = 'overview'
                          <div className="w-24 h-24 bg-brand-green-deep rounded-full mx-auto mb-6 flex items-center justify-center text-brand-gold">
                             <CheckCircle size={48} />
                          </div>
+                         {dispenseSuccess && (
+                           <div className="mb-6 p-3 bg-green-50 border border-green-100 rounded-xl text-xs text-green-700">
+                             {dispenseSuccess}
+                           </div>
+                         )}
                          <h5 className="text-2xl font-serif text-brand-green-deep mb-2">¡Token Generado!</h5>
                          <p className="text-brand-green-mid/70 text-sm mb-8 px-4">Hemos validado tu receta. Tu token de retiro ya está disponible en tu billetera de medicamentos.</p>
                          

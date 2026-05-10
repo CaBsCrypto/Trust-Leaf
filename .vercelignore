@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+node_modules
+dist
+soroban/target/**
+soroban/targetRNEc1d
+soroban/targetXrcgf0
+!soroban/target/
+!soroban/target/wasm32v1-none/
+!soroban/target/wasm32v1-none/release/
+!soroban/target/wasm32v1-none/release/prescription.wasm
+!soroban/target/wasm32v1-none/release/registry.wasm
+!soroban/target/wasm32v1-none/release/dispensary_registry.wasm
+!soroban/target/wasm32v1-none/release/dispense_record.wasm

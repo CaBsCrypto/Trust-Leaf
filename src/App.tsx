@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
+import { Activity, ArrowRight, Database, FileText, Leaf, Package, ShieldCheck, ShoppingBag, Stethoscope, UserRound } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Solution from './components/Solution';
@@ -20,6 +21,40 @@ import MockupPortal, { PortalView } from './components/MockupPortal';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
+type DispensaryRegistrationStatus = 'pending' | 'approved' | 'rejected';
+
+interface DispensaryRegistration {
+  id: string;
+  name: string;
+  legalId: string;
+  address: string;
+  contact: string;
+  wallet: string;
+  status: DispensaryRegistrationStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+}
+
+const PATIENT_VIEWS: PortalView[] = ['overview', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
+const DOCTOR_VIEWS: PortalView[] = ['doctors'];
+const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
+
+const ROLE_ROUTES = [
+  { path: '/paciente', label: 'Paciente' },
+  { path: '/medico', label: 'Medico' },
+  { path: '/dispensario', label: 'Dispensario' },
+  { path: '/admin', label: 'Admin' },
+];
+
+const PATIENT_ROUTE_VIEWS: Record<string, PortalView> = {
+  '/paciente': 'overview',
+  '/paciente/recetas': 'prescriptions',
+  '/paciente/dispensarios': 'dispensaries',
+  '/paciente/retiros': 'pickups',
+  '/paciente/historial': 'history',
+  '/paciente/viajero': 'traveler',
+};
+
 export default function App() {
   return (
     <LanguageProvider>
@@ -32,11 +67,118 @@ function AppContent() {
   const { t } = useLanguage();
   const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [portalView, setPortalView] = useState<PortalView>('overview');
+  const [path, setPath] = useState(() => window.location.pathname);
+  const [dispensaryRegistrations, setDispensaryRegistrations] = useState<DispensaryRegistration[]>(() => {
+    const saved = localStorage.getItem('trust_dispensary_registrations');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const navigate = (nextPath: string) => {
+    window.history.pushState({}, '', nextPath);
+    setPath(window.location.pathname);
+  };
 
   const openPortal = (view: PortalView = 'overview') => {
     setPortalView(view);
     setIsPortalOpen(true);
   };
+
+  useEffect(() => {
+    const onPopState = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('trust_dispensary_registrations', JSON.stringify(dispensaryRegistrations));
+  }, [dispensaryRegistrations]);
+
+  const submitDispensaryRegistration = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => {
+    const request: DispensaryRegistration = {
+      ...input,
+      id: `disp-req-${Date.now()}`,
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+    };
+    setDispensaryRegistrations((current) => [request, ...current]);
+  };
+
+  const reviewDispensaryRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
+    setDispensaryRegistrations((current) =>
+      current.map((request) =>
+        request.id === id
+          ? { ...request, status, reviewedAt: new Date().toISOString() }
+          : request,
+      ),
+    );
+  };
+
+  const patientView = PATIENT_ROUTE_VIEWS[path];
+  if (patientView) {
+    return (
+      <MockupPortal
+        isOpen
+        onClose={() => navigate('/')}
+        initialView={patientView}
+        allowedViews={PATIENT_VIEWS}
+        pageMode
+        roleLabel="Portal Paciente"
+      />
+    );
+  }
+
+  if (path === '/medico') {
+    return (
+      <MockupPortal
+        isOpen
+        onClose={() => navigate('/')}
+        initialView="doctors"
+        allowedViews={DOCTOR_VIEWS}
+        pageMode
+        roleLabel="Portal Medico"
+      />
+    );
+  }
+
+  if (path === '/dispensario') {
+    return (
+      <DispensaryRegistrationRoute
+        onBack={() => navigate('/')}
+        onNavigate={navigate}
+        dispensaryRegistrations={dispensaryRegistrations}
+        onSubmitDispensaryRegistration={submitDispensaryRegistration}
+      />
+    );
+  }
+
+  if (path === '/dispensario/operacion' || path === '/dispensario/historial' || path === '/dispensario/retiros') {
+    return (
+      <MockupPortal
+        isOpen
+        onClose={() => navigate('/dispensario')}
+        initialView={
+          path === '/dispensario/historial'
+            ? 'history'
+            : path === '/dispensario/retiros'
+              ? 'pickups'
+              : 'dispensaries'
+        }
+        allowedViews={DISPENSARY_VIEWS}
+        pageMode
+        roleLabel="Portal Dispensario"
+      />
+    );
+  }
+
+  if (path === '/admin') {
+    return (
+      <AdminRoute
+        onBack={() => navigate('/')}
+        registrations={dispensaryRegistrations}
+        onReviewRegistration={reviewDispensaryRegistration}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen selection:bg-brand-gold/30 selection:text-brand-green-deep relative overflow-hidden bg-brand-ivory">
@@ -91,6 +233,541 @@ function AppContent() {
         initialView={portalView}
       />
       </div>
+  );
+}
+
+function AdminRoute({
+  onBack,
+  registrations,
+  onReviewRegistration,
+}: {
+  onBack: () => void;
+  registrations: DispensaryRegistration[];
+  onReviewRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
+}) {
+  const pending = registrations.filter((request) => request.status === 'pending');
+  const approved = registrations.filter((request) => request.status === 'approved');
+
+  return (
+    <div className="min-h-screen bg-brand-ivory text-brand-green-deep">
+      <div className="border-b border-brand-green-deep/10 bg-white/80 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Trust Leaf</p>
+            <h1 className="text-2xl md:text-3xl font-serif">Admin Operacional</h1>
+          </div>
+          <button
+            onClick={onBack}
+            className="px-4 py-2 rounded-xl bg-brand-green-deep text-brand-ivory text-sm font-bold hover:bg-brand-green-mid transition-colors"
+          >
+            Volver al landing
+          </button>
+        </div>
+      </div>
+
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            ['DoctorRegistry', 'Medicos autorizados para emitir recetas.'],
+            ['DispensaryRegistry', 'Dispensarios autorizados para consumir recetas.'],
+            ['Prescription + DispenseRecord', 'Recetas y entregas auditables en Testnet.'],
+          ].map(([title, desc]) => (
+            <div key={title} className="bg-white border border-brand-green-deep/10 rounded-2xl p-6">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Contrato</p>
+              <h2 className="text-xl font-bold mb-2">{title}</h2>
+              <p className="text-sm text-brand-green-mid/70">{desc}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_0.8fr]">
+          <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Solicitudes</p>
+                <h2 className="text-2xl font-serif mb-2">Registro de dispensarios</h2>
+                <p className="text-sm text-brand-green-mid/70 max-w-2xl">
+                  Revisa la solicitud, aprueba el ingreso y el dispensario queda visible como autorizado en esta demo.
+                  El siguiente paso sera ejecutar `add_dispensary` on-chain con la cuenta admin.
+                </p>
+              </div>
+              <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
+                {pending.length} pendientes
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {registrations.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
+                  Aun no hay solicitudes. Entra a `/dispensario` y completa el formulario de registro.
+                </div>
+              )}
+
+              {registrations.map((request) => (
+                <div key={request.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-5">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="mb-2 flex items-center gap-2">
+                        <h3 className="text-lg font-bold">{request.name}</h3>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                          request.status === 'approved'
+                            ? 'bg-green-100 text-green-700'
+                            : request.status === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {request.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-brand-green-mid/70">{request.address}</p>
+                      <p className="mt-2 text-xs font-mono text-brand-green-mid/60 break-all">{request.wallet}</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70 sm:grid-cols-2">
+                        <span>Registro legal: <strong>{request.legalId}</strong></span>
+                        <span>Contacto: <strong>{request.contact}</strong></span>
+                      </div>
+                    </div>
+                    {request.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => onReviewRegistration(request.id, 'approved')}
+                          className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid"
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          onClick={() => onReviewRegistration(request.id, 'rejected')}
+                          className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-brand-green-deep text-brand-ivory border border-brand-green-deep/10 rounded-2xl p-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Live network</p>
+            <h2 className="text-2xl font-serif mb-4">{approved.length} dispensarios live</h2>
+            <div className="space-y-3">
+              {approved.length === 0 ? (
+                <p className="text-sm text-brand-ivory/60">Cuando apruebes una solicitud, aparecera aqui como autorizada.</p>
+              ) : (
+                approved.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="font-bold">{request.name}</p>
+                    <p className="mt-1 text-xs text-brand-ivory/60">{request.address}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function DispensaryRegistrationRoute({
+  onBack,
+  onNavigate,
+  dispensaryRegistrations,
+  onSubmitDispensaryRegistration,
+}: {
+  onBack: () => void;
+  onNavigate: (path: string) => void;
+  dispensaryRegistrations: DispensaryRegistration[];
+  onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+}) {
+  const [registrationForm, setRegistrationForm] = useState({
+    name: '',
+    legalId: '',
+    address: '',
+    contact: '',
+    wallet: '',
+  });
+  const latestRegistration = dispensaryRegistrations[0];
+  const approved = dispensaryRegistrations.filter((request) => request.status === 'approved');
+
+  const submitRegistration = () => {
+    if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact || !registrationForm.wallet) {
+      return;
+    }
+
+    onSubmitDispensaryRegistration(registrationForm);
+    setRegistrationForm({
+      name: '',
+      legalId: '',
+      address: '',
+      contact: '',
+      wallet: '',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onNavigate('/dispensario/operacion')}
+              className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory active:scale-95"
+            >
+              Operar
+            </button>
+            <button
+              onClick={() => onNavigate('/admin')}
+              className="hidden rounded-full bg-white px-4 py-2 text-sm font-bold text-brand-green-deep md:block"
+            >
+              Admin
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-7xl gap-6 px-5 py-8 md:grid-cols-[0.95fr_1.05fr] md:px-8 md:py-12">
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[28px] border border-brand-green-deep/10 bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro de dispensario</p>
+          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Despues operas.</h1>
+          <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
+            El dispensario completa su solicitud, Trust Leaf revisa desde admin y, al aprobar, queda listo para validar recetas y registrar entregas.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              ['Pendiente', dispensaryRegistrations.filter((item) => item.status === 'pending').length],
+              ['Live', approved.length],
+              ['Red', 'Testnet'],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
+                <p className="mt-2 text-sm font-bold text-brand-ivory">{value}</p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="space-y-4"
+        >
+          <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Solicitud</p>
+                <h2 className="mt-2 text-2xl font-serif">Datos para revisión admin</h2>
+              </div>
+              {latestRegistration && (
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                  latestRegistration.status === 'approved'
+                    ? 'bg-green-100 text-green-700'
+                    : latestRegistration.status === 'rejected'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {latestRegistration.status === 'approved' ? 'Live' : latestRegistration.status}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                ['name', 'Nombre comercial'],
+                ['legalId', 'Registro sanitario / legal'],
+                ['address', 'Direccion operativa'],
+                ['contact', 'Contacto responsable'],
+                ['wallet', 'Wallet Stellar del dispensario'],
+              ].map(([key, label]) => (
+                <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
+                  <input
+                    value={registrationForm[key as keyof typeof registrationForm]}
+                    onChange={(event) =>
+                      setRegistrationForm((current) => ({
+                        ...current,
+                        [key]: event.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <button
+              onClick={submitRegistration}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95"
+            >
+              Enviar solicitud al admin <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <button
+              onClick={() => onNavigate('/dispensario/operacion')}
+              className="group flex items-center justify-between rounded-2xl border border-brand-green-deep/10 bg-white p-5 text-left shadow-sm hover:border-brand-gold/40"
+            >
+              <span className="flex items-center gap-3 font-bold"><ShieldCheck size={18} /> Operacion</span>
+              <ArrowRight size={18} className="text-brand-gold group-hover:translate-x-1" />
+            </button>
+            <button
+              onClick={() => onNavigate('/dispensario/historial')}
+              className="group flex items-center justify-between rounded-2xl border border-brand-green-deep/10 bg-white p-5 text-left shadow-sm hover:border-brand-gold/40"
+            >
+              <span className="flex items-center gap-3 font-bold"><Database size={18} /> Historial</span>
+              <ArrowRight size={18} className="text-brand-gold group-hover:translate-x-1" />
+            </button>
+          </div>
+        </motion.section>
+      </main>
+    </div>
+  );
+}
+
+function RoleRoutePage({
+  role,
+  eyebrow,
+  title,
+  description,
+  accent,
+  defaultView,
+  allowedViews,
+  roleLabel,
+  actions,
+  metrics,
+  onBack,
+  onNavigate,
+  dispensaryRegistrations = [],
+  onSubmitDispensaryRegistration,
+}: {
+  role: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  accent: string;
+  defaultView: PortalView;
+  allowedViews: PortalView[];
+  roleLabel: string;
+  actions: Array<{ label: string; view: PortalView; icon: ReactNode }>;
+  metrics: Array<[string, string]>;
+  onBack: () => void;
+  onNavigate: (path: string) => void;
+  dispensaryRegistrations?: DispensaryRegistration[];
+  onSubmitDispensaryRegistration?: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+}) {
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [initialView, setInitialView] = useState<PortalView>(defaultView);
+  const [registrationForm, setRegistrationForm] = useState({
+    name: '',
+    legalId: '',
+    address: '',
+    contact: '',
+    wallet: '',
+  });
+  const latestRegistration = dispensaryRegistrations[0];
+
+  const openWorkspace = (view: PortalView) => {
+    setInitialView(view);
+    setWorkspaceOpen(true);
+  };
+
+  const submitRegistration = () => {
+    if (!onSubmitDispensaryRegistration) {
+      return;
+    }
+
+    if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact || !registrationForm.wallet) {
+      return;
+    }
+
+    onSubmitDispensaryRegistration(registrationForm);
+    setRegistrationForm({
+      name: '',
+      legalId: '',
+      address: '',
+      contact: '',
+      wallet: '',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <nav className="hidden items-center gap-2 md:flex">
+            {ROLE_ROUTES.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => onNavigate(item.path)}
+                className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+                  item.label === role
+                    ? 'bg-brand-green-deep text-brand-ivory'
+                    : 'text-brand-green-mid/60 hover:bg-white'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <button
+            onClick={() => openWorkspace(defaultView)}
+            className="rounded-full bg-brand-gold px-4 py-2 text-sm font-bold text-brand-green-deep shadow-sm active:scale-95"
+          >
+            Abrir
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-7xl gap-6 px-5 py-8 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-12">
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[28px] border border-brand-green-deep/10 bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10"
+        >
+          <div className="mb-10 flex items-center justify-between gap-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">{eyebrow}</p>
+            <span className="rounded-full border border-brand-gold/30 bg-brand-gold/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-gold">
+              {accent}
+            </span>
+          </div>
+          <h1 className="max-w-3xl text-4xl font-serif leading-tight md:text-6xl">{title}</h1>
+          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-brand-ivory/70 md:text-base">{description}</p>
+
+          <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {metrics.map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
+                <p className="mt-2 text-sm font-bold text-brand-ivory">{value}</p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="space-y-4"
+        >
+          <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acciones del rol</p>
+            <h2 className="mt-2 text-2xl font-serif">Workspace enfocado</h2>
+            <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+              Cada boton abre solo las herramientas necesarias para este POV. Menos ruido visual, mas operacion real.
+            </p>
+          </div>
+
+          {actions.map((action, index) => (
+            <motion.button
+              key={action.label}
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.12 + index * 0.04 }}
+              onClick={() => openWorkspace(action.view)}
+              className="group flex w-full items-center justify-between rounded-2xl border border-brand-green-deep/10 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-gold/40 hover:shadow-lg"
+            >
+              <span className="flex items-center gap-4">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-neutral text-brand-green-deep group-hover:bg-brand-green-deep group-hover:text-brand-ivory">
+                  {action.icon}
+                </span>
+                <span className="font-bold">{action.label}</span>
+              </span>
+              <ArrowRight size={18} className="text-brand-gold transition-transform group-hover:translate-x-1" />
+            </motion.button>
+          ))}
+
+          {onSubmitDispensaryRegistration && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.24 }}
+              className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Registro</p>
+                  <h2 className="mt-2 text-2xl font-serif">Solicitar alta como dispensario</h2>
+                </div>
+                {latestRegistration && (
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                    latestRegistration.status === 'approved'
+                      ? 'bg-green-100 text-green-700'
+                      : latestRegistration.status === 'rejected'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {latestRegistration.status === 'approved' ? 'Live' : latestRegistration.status}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  ['name', 'Nombre comercial'],
+                  ['legalId', 'Registro sanitario / legal'],
+                  ['address', 'Direccion operativa'],
+                  ['contact', 'Contacto responsable'],
+                  ['wallet', 'Wallet Stellar del dispensario'],
+                ].map(([key, label]) => (
+                  <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
+                    <input
+                      value={registrationForm[key as keyof typeof registrationForm]}
+                      onChange={(event) =>
+                        setRegistrationForm((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <button
+                onClick={submitRegistration}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95"
+              >
+                Enviar solicitud al admin <ArrowRight size={16} />
+              </button>
+
+              <p className="mt-3 text-xs leading-relaxed text-brand-green-mid/60">
+                En el MVP esta solicitud se guarda localmente para validar UX. En produccion se enviara al backend y, tras aprobacion, ejecutara `add_dispensary` en Soroban.
+              </p>
+            </motion.div>
+          )}
+        </motion.section>
+      </main>
+
+      <MockupPortal
+        isOpen={workspaceOpen}
+        onClose={() => setWorkspaceOpen(false)}
+        initialView={initialView}
+        allowedViews={allowedViews}
+        roleLabel={roleLabel}
+      />
+    </div>
   );
 }
 
