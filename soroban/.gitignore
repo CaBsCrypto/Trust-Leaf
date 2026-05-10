@@ -1,5 +1,8 @@
-# Rust's output directory
-target
+# Rust's output directory, except tiny WASM artifacts needed by Vercel functions.
+target/**
+!target/wasm32v1-none/
+!target/wasm32v1-none/release/
+!target/wasm32v1-none/release/*.wasm
 
 # Local settings
 .soroban

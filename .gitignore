@@ -7,4 +7,10 @@ coverage/
 .env*
 !.env.example
 .vercel
-soroban/target*/
+soroban/targetR*/
+soroban/targetX*/
+soroban/target_*/
+soroban/target/**
+!soroban/target/wasm32v1-none/
+!soroban/target/wasm32v1-none/release/
+!soroban/target/wasm32v1-none/release/*.wasm
