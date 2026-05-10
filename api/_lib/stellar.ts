@@ -331,7 +331,6 @@ export async function dispensePrescriptionForPatient(input: {
   const server = getSorobanServer();
   const dispensaryKeypair = StellarSdk.Keypair.fromSecret(dispensarySecret);
   const dispensaryAddress = dispensaryKeypair.publicKey();
-  const sourceAccount = await server.getAccount(dispensaryAddress);
   const prescriptionContract = new StellarSdk.Contract(getPrescriptionContractId());
   const dispenseRecordContract = new StellarSdk.Contract(getDispenseRecordContractId());
   const prescriptionId = Math.floor(input.prescriptionId);
@@ -362,28 +361,24 @@ export async function dispensePrescriptionForPatient(input: {
     u64ToScVal(BigInt(prescriptionId)),
   ];
 
-  let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
-    fee: (Number(StellarSdk.BASE_FEE) * 2).toString(),
-    networkPassphrase: getNetworkPassphrase(),
-  })
-    .addOperation(dispenseRecordContract.call('record_dispense', ...recordArgs))
-    .addOperation(prescriptionContract.call('consume_prescription', ...consumeArgs))
-    .setTimeout(30)
-    .build();
+  const recordResult = await submitSingleContractCall(
+    server,
+    dispensaryKeypair,
+    dispenseRecordContract,
+    'record_dispense',
+    recordArgs,
+  );
+  const recordId = recordResult.returnValue
+    ? Number(StellarSdk.scValToBigInt(recordResult.returnValue))
+    : null;
 
-  transaction = await server.prepareTransaction(transaction);
-  transaction.sign(dispensaryKeypair);
-
-  const sendResult = await server.sendTransaction(transaction);
-  const txHash = sendResult.hash;
-  if (!txHash) {
-    throw new Error('La red no devolvio hash para la dispensacion.');
-  }
-
-  const completed = await waitForTransaction(server, txHash);
-  if (completed.status !== StellarSdk.rpc.Api.GetTransactionStatus.SUCCESS) {
-    throw new Error('La dispensacion no llego a estado SUCCESS en testnet.');
-  }
+  const consumeResult = await submitSingleContractCall(
+    server,
+    dispensaryKeypair,
+    prescriptionContract,
+    'consume_prescription',
+    consumeArgs,
+  );
 
   const record = await invokeReadonlyContractWithSpec(
     server,
@@ -395,8 +390,9 @@ export async function dispensePrescriptionForPatient(input: {
   const dashboard = await getPatientDashboard(patientAddress);
 
   return {
-    txHash,
-    recordId: record ? Number(record.id) : null,
+    txHash: consumeResult.txHash,
+    recordTxHash: recordResult.txHash,
+    recordId: record ? Number(record.id) : recordId,
     prescriptionId,
     patientAddress,
     dispensaryAddress,
@@ -677,6 +673,42 @@ function bytes32ToScVal(value: Buffer) {
   }
 
   return StellarSdk.nativeToScVal(value, { type: 'bytes' });
+}
+
+async function submitSingleContractCall(
+  server: InstanceType<typeof StellarSdk.rpc.Server>,
+  signer: StellarSdk.Keypair,
+  contract: StellarSdk.Contract,
+  method: string,
+  args: StellarSdk.xdr.ScVal[],
+) {
+  const sourceAccount = await server.getAccount(signer.publicKey());
+  let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: getNetworkPassphrase(),
+  })
+    .addOperation(contract.call(method, ...args))
+    .setTimeout(30)
+    .build();
+
+  transaction = await server.prepareTransaction(transaction);
+  transaction.sign(signer);
+
+  const sendResult = await server.sendTransaction(transaction);
+  const txHash = sendResult.hash;
+  if (!txHash) {
+    throw new Error(`La red no devolvio hash para ${method}.`);
+  }
+
+  const completed = await waitForTransaction(server, txHash);
+  if (completed.status !== StellarSdk.rpc.Api.GetTransactionStatus.SUCCESS) {
+    throw new Error(`${method} no llego a estado SUCCESS en testnet.`);
+  }
+
+  return {
+    txHash,
+    returnValue: completed.returnValue,
+  };
 }
 
 async function waitForTransaction(
