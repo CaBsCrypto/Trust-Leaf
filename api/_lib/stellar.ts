@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { createHash } from 'crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
 
@@ -13,36 +11,6 @@ const DEFAULT_PRESCRIPTION_CONTRACT_ID =
   'CDPIIGBA6WAL7MBPUWSRIQNLCITKGRO5REWIYTAVSOS3FHSK373MEK42';
 const DEFAULT_DISPENSE_RECORD_CONTRACT_ID =
   'CBG6Z77BNEVMPOVAYI2RKGVFSNU4QJ4GBCP5ALRECDHDBJGWOO2DQJVI';
-
-const prescriptionWasmPath = path.join(
-  process.cwd(),
-  'soroban',
-  'target',
-  'wasm32v1-none',
-  'release',
-  'prescription.wasm',
-);
-const dispenseRecordWasmPath = path.join(
-  process.cwd(),
-  'soroban',
-  'target',
-  'wasm32v1-none',
-  'release',
-  'dispense_record.wasm',
-);
-
-let prescriptionSpecCache: ReturnType<typeof loadContractSpec> | null = null;
-let dispenseRecordSpecCache: ReturnType<typeof loadContractSpec> | null = null;
-
-function getPrescriptionSpec() {
-  prescriptionSpecCache ??= loadContractSpec(prescriptionWasmPath);
-  return prescriptionSpecCache;
-}
-
-function getDispenseRecordSpec() {
-  dispenseRecordSpecCache ??= loadContractSpec(dispenseRecordWasmPath);
-  return dispenseRecordSpecCache;
-}
 
 export function getRpcUrl() {
   return process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org';
@@ -287,14 +255,12 @@ export async function issuePrescriptionForPatient(input: {
     .update(JSON.stringify(payload))
     .digest('hex');
   const medicationHashBytes = Buffer.from(medicationHashHex, 'hex');
-  const prescriptionSpec = getPrescriptionSpec();
-
-  const scArgs = prescriptionSpec.funcArgsToScVals('issue_prescription', {
-    doctor: doctorAddress,
-    patient: input.patientAddress,
-    medication_hash: medicationHashBytes,
-    duration: BigInt(Math.floor(input.durationDays)) * 24n * 60n * 60n,
-  });
+  const scArgs = [
+    addressToScVal(doctorAddress),
+    addressToScVal(input.patientAddress),
+    bytes32ToScVal(medicationHashBytes),
+    u64ToScVal(BigInt(Math.floor(input.durationDays)) * 24n * 60n * 60n),
+  ];
 
   let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
     fee: StellarSdk.BASE_FEE,
@@ -319,7 +285,7 @@ export async function issuePrescriptionForPatient(input: {
   }
 
   const issuedId = completed.returnValue
-    ? Number(prescriptionSpec.funcResToNative('issue_prescription', completed.returnValue))
+    ? Number(StellarSdk.scValToBigInt(completed.returnValue))
     : null;
 
   const dashboard = await getPatientDashboard(input.patientAddress);
@@ -369,8 +335,6 @@ export async function dispensePrescriptionForPatient(input: {
   const prescriptionContract = new StellarSdk.Contract(getPrescriptionContractId());
   const dispenseRecordContract = new StellarSdk.Contract(getDispenseRecordContractId());
   const prescriptionId = Math.floor(input.prescriptionId);
-  const prescriptionSpec = getPrescriptionSpec();
-  const dispenseRecordSpec = getDispenseRecordSpec();
 
   const prescription = await invokeReadonlyContract(
     server,
@@ -386,17 +350,17 @@ export async function dispensePrescriptionForPatient(input: {
     .update(JSON.stringify({ batchLabel, prescriptionId, network: 'testnet' }))
     .digest('hex');
 
-  const recordArgs = dispenseRecordSpec.funcArgsToScVals('record_dispense', {
-    dispensary: dispensaryAddress,
-    prescription_id: BigInt(prescriptionId),
-    product_hash: Buffer.from(productHashHex, 'hex'),
-    batch_hash: Buffer.from(batchHashHex, 'hex'),
-    quantity: BigInt(quantity),
-  });
-  const consumeArgs = prescriptionSpec.funcArgsToScVals('consume_prescription', {
-    dispensary: dispensaryAddress,
-    prescription_id: BigInt(prescriptionId),
-  });
+  const recordArgs = [
+    addressToScVal(dispensaryAddress),
+    u64ToScVal(BigInt(prescriptionId)),
+    bytes32ToScVal(Buffer.from(productHashHex, 'hex')),
+    bytes32ToScVal(Buffer.from(batchHashHex, 'hex')),
+    u64ToScVal(BigInt(quantity)),
+  ];
+  const consumeArgs = [
+    addressToScVal(dispensaryAddress),
+    u64ToScVal(BigInt(prescriptionId)),
+  ];
 
   let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
     fee: (Number(StellarSdk.BASE_FEE) * 2).toString(),
@@ -424,7 +388,6 @@ export async function dispensePrescriptionForPatient(input: {
   const record = await invokeReadonlyContractWithSpec(
     server,
     getDispenseRecordContractId(),
-    dispenseRecordSpec,
     'get_last_record_for_prescription',
     { prescription_id: BigInt(prescriptionId) },
   );
@@ -522,7 +485,6 @@ async function getPatientDispenseRecords(
       const onchain = await invokeReadonlyContractWithSpec(
         server,
         contractId,
-        getDispenseRecordSpec(),
         'get_record',
         { id: BigInt(event.id) },
       );
@@ -577,25 +539,18 @@ async function invokeReadonlyContract(
   method: string,
   args: Record<string, unknown> = {},
 ) {
-  return invokeReadonlyContractWithSpec(
-    server,
-    contractId,
-    getPrescriptionSpec(),
-    method,
-    args,
-  );
+  return invokeReadonlyContractWithSpec(server, contractId, method, args);
 }
 
 async function invokeReadonlyContractWithSpec(
   server: InstanceType<typeof StellarSdk.rpc.Server>,
   contractId: string,
-  spec: StellarSdk.contract.Spec,
   method: string,
   args: Record<string, unknown> = {},
 ) {
   const sourceAccount = await server.getAccount(getReadonlyAccountId());
   const contract = new StellarSdk.Contract(contractId);
-  const scArgs = spec.funcArgsToScVals(method, args);
+  const scArgs = buildContractArgs(method, args);
   const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
     fee: StellarSdk.BASE_FEE,
     networkPassphrase: getNetworkPassphrase(),
@@ -609,7 +564,7 @@ async function invokeReadonlyContractWithSpec(
     throw new Error(`La simulación del contrato ${method} falló en testnet.`);
   }
 
-  return spec.funcResToNative(method, simulation.result.retval);
+  return decodeContractResult(method, simulation.result.retval);
 }
 
 function normalizePrescriptionRecord(
@@ -686,9 +641,42 @@ function bufferLikeToHex(value: unknown) {
   return String(value);
 }
 
-function loadContractSpec(wasmPath: string) {
-  const wasm = fs.readFileSync(wasmPath);
-  return StellarSdk.contract.Spec.fromWasm(wasm);
+function buildContractArgs(method: string, args: Record<string, unknown>) {
+  switch (method) {
+    case 'get_prescription':
+    case 'get_record':
+      return [u64ToScVal(BigInt(args.id as bigint | number | string))];
+    case 'get_last_record_for_prescription':
+      return [u64ToScVal(BigInt(args.prescription_id as bigint | number | string))];
+    default:
+      throw new Error(`Metodo de contrato no soportado por el codificador manual: ${method}`);
+  }
+}
+
+function decodeContractResult(method: string, value: StellarSdk.xdr.ScVal) {
+  const native = StellarSdk.scValToNative(value);
+
+  if (method === 'get_last_record_for_prescription' && native === undefined) {
+    return null;
+  }
+
+  return native;
+}
+
+function addressToScVal(address: string) {
+  return StellarSdk.Address.fromString(address).toScVal();
+}
+
+function u64ToScVal(value: bigint) {
+  return StellarSdk.nativeToScVal(value, { type: 'u64' });
+}
+
+function bytes32ToScVal(value: Buffer) {
+  if (value.length !== 32) {
+    throw new Error('Se esperaba un hash de 32 bytes para Soroban.');
+  }
+
+  return StellarSdk.nativeToScVal(value, { type: 'bytes' });
 }
 
 async function waitForTransaction(
