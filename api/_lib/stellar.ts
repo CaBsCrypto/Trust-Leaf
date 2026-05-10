@@ -112,6 +112,56 @@ export function getDispensaryAddress() {
   return StellarSdk.Keypair.fromSecret(secret).publicKey();
 }
 
+export function getRuntimeReadiness() {
+  const hasDoctorSigner = Boolean(getDoctorSecret());
+  const hasDispensarySigner = Boolean(getDispensarySecret());
+  const hasPasskeyRelayer = Boolean(
+    process.env.STELLAR_RELAYER_URL && process.env.STELLAR_RELAYER_API_KEY,
+  );
+  const hasMercuryLookup = Boolean(
+    process.env.STELLAR_MERCURY_URL &&
+      (process.env.STELLAR_MERCURY_JWT || process.env.STELLAR_MERCURY_KEY),
+  );
+
+  return {
+    network: 'Stellar Testnet',
+    rpcUrl: getRpcUrl(),
+    contracts: {
+      registryContractId: getRegistryContractId(),
+      dispensaryRegistryContractId: getDispensaryRegistryContractId(),
+      prescriptionContractId: getPrescriptionContractId(),
+      dispenseRecordContractId: getDispenseRecordContractId(),
+    },
+    signers: {
+      doctor: {
+        configured: hasDoctorSigner,
+        address: getDoctorAddress() || null,
+      },
+      dispensary: {
+        configured: hasDispensarySigner,
+        address: getDispensaryAddress() || null,
+      },
+    },
+    passkeys: {
+      relayerConfigured: hasPasskeyRelayer,
+      mercuryConfigured: hasMercuryLookup,
+    },
+    capabilities: {
+      readContracts: true,
+      issuePrescriptions: hasDoctorSigner,
+      dispensePrescriptions: hasDispensarySigner,
+      passkeyRelay: hasPasskeyRelayer,
+      passkeyDiscovery: hasMercuryLookup,
+    },
+    missing: [
+      ...(!hasDoctorSigner ? ['STELLAR_DOCTOR_SECRET'] : []),
+      ...(!hasDispensarySigner ? ['STELLAR_DISPENSARY_SECRET'] : []),
+      ...(!hasPasskeyRelayer ? ['STELLAR_RELAYER_URL', 'STELLAR_RELAYER_API_KEY'] : []),
+      ...(!hasMercuryLookup ? ['STELLAR_MERCURY_URL', 'STELLAR_MERCURY_JWT or STELLAR_MERCURY_KEY'] : []),
+    ],
+  };
+}
+
 export function getSorobanServer() {
   return new StellarSdk.rpc.Server(getRpcUrl());
 }

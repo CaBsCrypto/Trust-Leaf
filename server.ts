@@ -7,6 +7,7 @@ import * as LegacyStellarSdk from "stellar-sdk";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   dispensePrescriptionForPatient as dispensePrescriptionForPatientShared,
+  getRuntimeReadiness,
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
 } from "./api/_lib/stellar";
 
@@ -76,6 +77,10 @@ async function startServer() {
         message: "No fue posible obtener el estado de los contratos en testnet.",
       });
     }
+  });
+
+  app.get("/api/stellar/readiness", (_req, res) => {
+    res.json(getRuntimeReadiness());
   });
 
   app.get("/api/stellar/patient/:address/dashboard", async (req, res) => {

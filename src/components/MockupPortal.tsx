@@ -68,6 +68,27 @@ interface PatientDashboardData {
   dispenseRecords?: PatientDispenseRecord[];
 }
 
+interface RuntimeReadiness {
+  capabilities: {
+    readContracts: boolean;
+    issuePrescriptions: boolean;
+    dispensePrescriptions: boolean;
+    passkeyRelay: boolean;
+    passkeyDiscovery: boolean;
+  };
+  signers: {
+    doctor: {
+      configured: boolean;
+      address: string | null;
+    };
+    dispensary: {
+      configured: boolean;
+      address: string | null;
+    };
+  };
+  missing: string[];
+}
+
 function formatPortalDate(value: string) {
   return new Intl.DateTimeFormat('es-CL', {
     day: '2-digit',
@@ -480,6 +501,7 @@ export default function MockupPortal({
   const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(null);
   const [patientDashboardLoading, setPatientDashboardLoading] = useState(false);
   const [patientDashboardError, setPatientDashboardError] = useState<string | null>(null);
+  const [runtimeReadiness, setRuntimeReadiness] = useState<RuntimeReadiness | null>(null);
   const [doctorIssueForm, setDoctorIssueForm] = useState({
     treatment: 'Cannabis medicinal para manejo de dolor crónico',
     dosage: '0.5g por vía vaporizada cada 12 horas',
@@ -567,6 +589,8 @@ export default function MockupPortal({
     (prescription) => prescription.status === 'active',
   ) ?? null;
   const dispenseRecords = patientDashboard?.dispenseRecords ?? [];
+  const doctorSignerReady = runtimeReadiness?.capabilities.issuePrescriptions ?? false;
+  const dispensarySignerReady = runtimeReadiness?.capabilities.dispensePrescriptions ?? false;
 
   useEffect(() => {
     if (!patientIdentityAddress) {
@@ -618,6 +642,35 @@ export default function MockupPortal({
       cancelled = true;
     };
   }, [patientIdentityAddress]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRuntimeReadiness = async () => {
+      try {
+        const response = await fetch('/api/stellar/readiness');
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.message || 'No fue posible cargar el estado operacional.');
+        }
+
+        if (!cancelled) {
+          setRuntimeReadiness(payload);
+        }
+      } catch {
+        if (!cancelled) {
+          setRuntimeReadiness(null);
+        }
+      }
+    };
+
+    loadRuntimeReadiness();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const connectPasskeyWallet = async () => {
     setWalletBusy('passkey');
@@ -731,6 +784,11 @@ export default function MockupPortal({
       return;
     }
 
+    if (!doctorSignerReady) {
+      setDoctorIssueError('Produccion ya lee contratos, pero falta STELLAR_DOCTOR_SECRET en Vercel para firmar emisiones reales.');
+      return;
+    }
+
     setDoctorIssueBusy(true);
     setDoctorIssueError(null);
     setDoctorIssueSuccess(null);
@@ -836,6 +894,11 @@ export default function MockupPortal({
   const handleCompleteOnchainDispense = async () => {
     if (!activePrescription) {
       setDispenseError('No hay una receta activa on-chain para consumir en este retiro.');
+      return;
+    }
+
+    if (!dispensarySignerReady) {
+      setDispenseError('Produccion ya lee contratos, pero falta STELLAR_DISPENSARY_SECRET en Vercel para firmar dispensaciones reales.');
       return;
     }
 
@@ -1501,6 +1564,16 @@ export default function MockupPortal({
                           </div>
                         </div>
 
+                        <div className={`rounded-xl border p-3 text-xs ${
+                          doctorSignerReady
+                            ? 'border-green-100 bg-green-50 text-green-700'
+                            : 'border-amber-100 bg-amber-50 text-amber-800'
+                        }`}>
+                          {doctorSignerReady
+                            ? `Signer medico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
+                            : 'Modo lectura activo. Para emitir recetas reales en produccion falta configurar STELLAR_DOCTOR_SECRET en Vercel.'}
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <label className="space-y-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
@@ -1576,7 +1649,7 @@ export default function MockupPortal({
                             <button
                               type="button"
                               onClick={handleDoctorIssuePrescription}
-                              disabled={doctorIssueBusy || !patientIdentityAddress}
+                              disabled={doctorIssueBusy || !patientIdentityAddress || !doctorSignerReady}
                               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
                               {doctorIssueBusy ? (
@@ -2996,9 +3069,18 @@ export default function MockupPortal({
                          </div>
 
                          <div className="space-y-4">
+                            <div className={`rounded-xl border p-3 text-xs ${
+                              dispensarySignerReady
+                                ? 'border-green-100 bg-green-50 text-green-700'
+                                : 'border-amber-100 bg-amber-50 text-amber-800'
+                            }`}>
+                              {dispensarySignerReady
+                                ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
+                                : 'Modo lectura activo. Para registrar dispensaciones reales en produccion falta configurar STELLAR_DISPENSARY_SECRET en Vercel.'}
+                            </div>
                             <button 
                               onClick={handleCompleteOnchainDispense}
-                              disabled={dispenseBusy || !activePrescription}
+                              disabled={dispenseBusy || !activePrescription || !dispensarySignerReady}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
                                {dispenseBusy ? 'Registrando en testnet...' : 'Validar Receta y Registrar Dispensa'} <CheckCircle size={20} />
