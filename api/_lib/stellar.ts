@@ -87,7 +87,7 @@ export function getReadonlyAccountId() {
 }
 
 export function getDoctorSecret() {
-  return process.env.STELLAR_DOCTOR_SECRET || '';
+  return process.env.STELLAR_DOCTOR_SECRET?.trim() || '';
 }
 
 export function getDoctorAddress() {
@@ -100,7 +100,7 @@ export function getDoctorAddress() {
 }
 
 export function getDispensarySecret() {
-  return process.env.STELLAR_DISPENSARY_SECRET || '';
+  return process.env.STELLAR_DISPENSARY_SECRET?.trim() || '';
 }
 
 export function getDispensaryAddress() {
