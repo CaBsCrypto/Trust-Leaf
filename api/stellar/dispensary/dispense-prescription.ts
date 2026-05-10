@@ -1,4 +1,4 @@
-import { dispensePrescriptionForPatient } from '../../_lib/stellar';
+import { dispensePrescriptionForPatient } from '../../_lib/stellar.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {

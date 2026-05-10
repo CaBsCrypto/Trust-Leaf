@@ -1,4 +1,4 @@
-import { createPasskeyServer } from '../../_lib/stellar';
+import { createPasskeyServer } from '../../_lib/stellar.js';
 
 export default async function handler(req: any, res: any) {
   const passkeyServer = await createPasskeyServer();

@@ -1,4 +1,4 @@
-import { createPasskeyServer, getRpcUrl } from '../_lib/stellar';
+import { createPasskeyServer, getRpcUrl } from '../_lib/stellar.js';
 
 export default async function handler(_req: any, res: any) {
   const configured = Boolean(await createPasskeyServer());

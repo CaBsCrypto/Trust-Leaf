@@ -1,4 +1,4 @@
-import { getPatientDashboard } from '../../../_lib/stellar';
+import { getPatientDashboard } from '../../../_lib/stellar.js';
 
 export default async function handler(req: any, res: any) {
   try {

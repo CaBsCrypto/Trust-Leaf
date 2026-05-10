@@ -1,4 +1,4 @@
-import { getContractsStatus } from '../_lib/stellar';
+import { getContractsStatus } from '../_lib/stellar.js';
 
 export default async function handler(_req: any, res: any) {
   try {
