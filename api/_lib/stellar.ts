@@ -408,9 +408,7 @@ async function getPatientPrescriptions(
   patientAddress: string,
   latestLedger: number,
 ) {
-  const topic = StellarSdk.nativeToScVal('PrescriptionIssued', {
-    type: 'symbol',
-  }).toXDR('base64');
+  const topic = StellarSdk.nativeToScVal('PrescriptionIssued').toXDR('base64');
 
   const page = await server.getEvents({
     startLedger: Math.max(1, latestLedger - 120_000),
@@ -453,9 +451,7 @@ async function getPatientDispenseRecords(
   patientAddress: string,
   latestLedger: number,
 ) {
-  const topic = StellarSdk.nativeToScVal('DispenseRecorded', {
-    type: 'symbol',
-  }).toXDR('base64');
+  const topic = StellarSdk.nativeToScVal('DispenseRecorded').toXDR('base64');
 
   const page = await server.getEvents({
     startLedger: Math.max(1, latestLedger - 120_000),
