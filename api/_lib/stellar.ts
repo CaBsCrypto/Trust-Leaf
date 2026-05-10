@@ -31,8 +31,18 @@ const dispenseRecordWasmPath = path.join(
   'dispense_record.wasm',
 );
 
-const prescriptionSpec = loadContractSpec(prescriptionWasmPath);
-const dispenseRecordSpec = loadContractSpec(dispenseRecordWasmPath);
+let prescriptionSpecCache: ReturnType<typeof loadContractSpec> | null = null;
+let dispenseRecordSpecCache: ReturnType<typeof loadContractSpec> | null = null;
+
+function getPrescriptionSpec() {
+  prescriptionSpecCache ??= loadContractSpec(prescriptionWasmPath);
+  return prescriptionSpecCache;
+}
+
+function getDispenseRecordSpec() {
+  dispenseRecordSpecCache ??= loadContractSpec(dispenseRecordWasmPath);
+  return dispenseRecordSpecCache;
+}
 
 export function getRpcUrl() {
   return process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org';
@@ -227,6 +237,7 @@ export async function issuePrescriptionForPatient(input: {
     .update(JSON.stringify(payload))
     .digest('hex');
   const medicationHashBytes = Buffer.from(medicationHashHex, 'hex');
+  const prescriptionSpec = getPrescriptionSpec();
 
   const scArgs = prescriptionSpec.funcArgsToScVals('issue_prescription', {
     doctor: doctorAddress,
@@ -308,6 +319,8 @@ export async function dispensePrescriptionForPatient(input: {
   const prescriptionContract = new StellarSdk.Contract(getPrescriptionContractId());
   const dispenseRecordContract = new StellarSdk.Contract(getDispenseRecordContractId());
   const prescriptionId = Math.floor(input.prescriptionId);
+  const prescriptionSpec = getPrescriptionSpec();
+  const dispenseRecordSpec = getDispenseRecordSpec();
 
   const prescription = await invokeReadonlyContract(
     server,
@@ -459,7 +472,7 @@ async function getPatientDispenseRecords(
       const onchain = await invokeReadonlyContractWithSpec(
         server,
         contractId,
-        dispenseRecordSpec,
+        getDispenseRecordSpec(),
         'get_record',
         { id: BigInt(event.id) },
       );
@@ -517,7 +530,7 @@ async function invokeReadonlyContract(
   return invokeReadonlyContractWithSpec(
     server,
     contractId,
-    prescriptionSpec,
+    getPrescriptionSpec(),
     method,
     args,
   );
