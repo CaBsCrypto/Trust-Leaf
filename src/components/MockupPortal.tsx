@@ -113,6 +113,8 @@ function shortenHash(value: string, size = 8) {
   return `${value.slice(0, size)}...${value.slice(-size)}`;
 }
 
+const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
+
 const MOCK_DOCTORS = [
   { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
   { id: 'doc-2', name: "Dra. Elena Sotillo", specialty: "Medicina Interna", rating: 4.8, reviews: 89, availability: "Mañana" },
@@ -508,9 +510,17 @@ export default function MockupPortal({
     notes: 'Control clínico en 30 días.',
     durationDays: 30,
   });
+  const [doctorPatientAddress, setDoctorPatientAddress] = useState(() =>
+    localStorage.getItem('trust_doctor_patient_address') || DEMO_PATIENT_ADDRESS,
+  );
   const [doctorIssueBusy, setDoctorIssueBusy] = useState(false);
   const [doctorIssueError, setDoctorIssueError] = useState<string | null>(null);
   const [doctorIssueSuccess, setDoctorIssueSuccess] = useState<string | null>(null);
+  const [dispensePrescriptionId, setDispensePrescriptionId] = useState(() =>
+    localStorage.getItem('trust_dispense_prescription_id') ||
+    localStorage.getItem('trust_latest_prescription_id') ||
+    '',
+  );
   const [dispenseBusy, setDispenseBusy] = useState(false);
   const [dispenseError, setDispenseError] = useState<string | null>(null);
   const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
@@ -570,6 +580,14 @@ export default function MockupPortal({
   useEffect(() => {
     localStorage.setItem('trust_wallet_setup', JSON.stringify(walletSetup));
   }, [walletSetup]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_doctor_patient_address', doctorPatientAddress);
+  }, [doctorPatientAddress]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_dispense_prescription_id', dispensePrescriptionId);
+  }, [dispensePrescriptionId]);
 
   const walletConnected = walletSetup.primaryMethod !== null;
   const passkeyAvailability = getPasskeyAvailability();
@@ -730,6 +748,21 @@ export default function MockupPortal({
     }
   };
 
+  const connectDemoPatientWallet = () => {
+    setWalletSetup((current) => ({
+      ...current,
+      primaryMethod: 'freighter',
+      hasFreighterBackup: false,
+      walletLabel: 'Paciente demo testnet',
+      contractAccount: DEMO_PATIENT_ADDRESS,
+      freighterAddress: DEMO_PATIENT_ADDRESS,
+      networkLabel: stellarConfig.networkLabel,
+    }));
+    setWalletError(null);
+    setWalletHint('Paciente demo conectado. Esta identidad ya tiene historial real en Stellar Testnet.');
+    setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
+  };
+
   const linkFreighterBackup = async () => {
     setWalletBusy('backup');
     setWalletError(null);
@@ -779,8 +812,10 @@ export default function MockupPortal({
   };
 
   const handleDoctorIssuePrescription = async () => {
-    if (!patientIdentityAddress) {
-      setDoctorIssueError('Primero debes conectar la wallet del paciente para emitir la receta.');
+    const targetPatientAddress = doctorPatientAddress.trim();
+
+    if (!targetPatientAddress) {
+      setDoctorIssueError('Ingresa la direccion Stellar del paciente para emitir la receta.');
       return;
     }
 
@@ -800,7 +835,7 @@ export default function MockupPortal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patientAddress: patientIdentityAddress,
+          patientAddress: targetPatientAddress,
           treatment: doctorIssueForm.treatment,
           dosage: doctorIssueForm.dosage,
           notes: doctorIssueForm.notes,
@@ -818,10 +853,15 @@ export default function MockupPortal({
       setDoctorIssueSuccess(
         `Receta emitida en testnet. RX-${payload.issuedId ?? 'pendiente'} • Tx ${shortenHash(payload.txHash)}`,
       );
+      if (payload.issuedId !== undefined && payload.issuedId !== null) {
+        const issuedId = String(payload.issuedId);
+        localStorage.setItem('trust_latest_prescription_id', issuedId);
+        setDispensePrescriptionId(issuedId);
+      }
       setRecentActivity((prev: any[]) => [
         {
           id: `act-issue-${Date.now()}`,
-          action: `Receta emitida para ${shortenAddress(patientIdentityAddress, 5)}`,
+          action: `Receta emitida para ${shortenAddress(targetPatientAddress, 5)}`,
           date: 'Recién',
           icon: 'FileText',
         },
@@ -892,8 +932,14 @@ export default function MockupPortal({
   };
 
   const handleCompleteOnchainDispense = async () => {
-    if (!activePrescription) {
-      setDispenseError('No hay una receta activa on-chain para consumir en este retiro.');
+    const normalizedPrescriptionInput = dispensePrescriptionId.trim().replace(/^RX-/i, '');
+    const manualPrescriptionId = normalizedPrescriptionInput
+      ? Number(normalizedPrescriptionInput)
+      : Number.NaN;
+    const prescriptionId = activePrescription?.id ?? manualPrescriptionId;
+
+    if (!Number.isFinite(prescriptionId)) {
+      setDispenseError('Ingresa el numero RX on-chain que emitio el medico.');
       return;
     }
 
@@ -925,7 +971,7 @@ export default function MockupPortal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prescriptionId: activePrescription.id,
+          prescriptionId,
           productLabel,
           batchLabel,
           quantity,
@@ -950,7 +996,7 @@ export default function MockupPortal({
         quantity: item.quantity,
         dispensary: selectedDispensary,
         status: 'pending',
-        token: `RX-${activePrescription.id}-DR-${payload.recordId ?? 'TESTNET'}`,
+        token: `RX-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
         expires: 'Registrado on-chain'
       }));
 
@@ -958,7 +1004,7 @@ export default function MockupPortal({
       setRecentActivity(prev => [
         {
           id: `act-disp-${Date.now()}`,
-          action: `Dispensacion on-chain RX-${activePrescription.id}`,
+          action: `Dispensacion on-chain RX-${prescriptionId}`,
           date: "ReciÃ©n",
           icon: "ShoppingBag",
         },
@@ -1212,6 +1258,7 @@ export default function MockupPortal({
                   {activeView === 'doctors' && t.portal.viewDoctors}
                   {activeView === 'dispensaries' && t.portal.viewDispensaries}
                   {activeView === 'prescriptions' && t.portal.viewPrescriptions}
+                  {activeView === 'pickups' && t.portal.navPickups}
                   {activeView === 'history' && t.portal.viewHistory}
                   {activeView === 'traveler' && t.portal.viewTraveler}
                   {activeView === 'profile' && t.portal.viewProfile}
@@ -1239,6 +1286,7 @@ export default function MockupPortal({
                       </div>
 
                       {!walletConnected && (
+                        <div className="space-y-3">
                         <WalletOnboarding
                           title={t.portal.onboarding.title}
                           eyebrow={t.portal.onboarding.eyebrow}
@@ -1279,6 +1327,15 @@ export default function MockupPortal({
                           onLinkFreighterBackup={linkFreighterBackup}
                           onContinue={() => setActiveView('doctors')}
                         />
+                        <button
+                          type="button"
+                          onClick={connectDemoPatientWallet}
+                          className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:border-brand-gold/50 hover:text-brand-green-mid transition-colors"
+                        >
+                          <Database size={16} />
+                          Usar paciente demo testnet
+                        </button>
+                        </div>
                       )}
 
                       {walletConnected && (
@@ -1551,16 +1608,16 @@ export default function MockupPortal({
                               POV medico testnet
                             </p>
                             <h3 className="text-xl font-bold text-brand-green-deep mt-1">
-                              Emitir receta soulbound al paciente conectado
+                              Emitir receta soulbound al paciente objetivo
                             </h3>
                             <p className="text-xs text-brand-green-mid/60 mt-2 max-w-2xl">
                               La receta se firma con el medico autorizado de testnet, queda ligada a la cuenta del paciente y se valida contra los contratos Prescription y Registry.
                             </p>
                           </div>
                           <div className="px-3 py-2 rounded-xl bg-brand-neutral text-xs font-mono text-brand-green-mid/70 break-all md:max-w-[280px]">
-                            {patientIdentityAddress
-                              ? shortenAddress(patientIdentityAddress, 10)
-                              : 'Paciente sin wallet conectada'}
+                            {doctorPatientAddress.trim()
+                              ? shortenAddress(doctorPatientAddress.trim(), 10)
+                              : 'Paciente sin direccion'}
                           </div>
                         </div>
 
@@ -1575,6 +1632,19 @@ export default function MockupPortal({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <label className="space-y-2 md:col-span-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                              Wallet Stellar del paciente
+                            </span>
+                            <input
+                              type="text"
+                              value={doctorPatientAddress}
+                              onChange={(event) => setDoctorPatientAddress(event.target.value)}
+                              placeholder={DEMO_PATIENT_ADDRESS}
+                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                          </label>
+
                           <label className="space-y-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
                               Tratamiento
@@ -1649,7 +1719,7 @@ export default function MockupPortal({
                             <button
                               type="button"
                               onClick={handleDoctorIssuePrescription}
-                              disabled={doctorIssueBusy || !patientIdentityAddress || !doctorSignerReady}
+                              disabled={doctorIssueBusy || !doctorPatientAddress.trim() || !doctorSignerReady}
                               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
                               {doctorIssueBusy ? (
@@ -3078,9 +3148,26 @@ export default function MockupPortal({
                                 ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
                                 : 'Modo lectura activo. Para registrar dispensaciones reales en produccion falta configurar STELLAR_DISPENSARY_SECRET en Vercel.'}
                             </div>
+                            <label className="block space-y-2">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                                RX on-chain a validar
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={activePrescription ? `RX-${activePrescription.id}` : dispensePrescriptionId}
+                                disabled={Boolean(activePrescription)}
+                                onChange={(event) => setDispensePrescriptionId(event.target.value.replace(/^RX-/i, ''))}
+                                placeholder="Ej: 1"
+                                className="w-full px-4 py-3 bg-white rounded-xl border border-brand-green-deep/10 text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 disabled:bg-brand-neutral disabled:text-brand-green-mid/60"
+                              />
+                              <p className="text-[10px] text-brand-green-mid/45 leading-relaxed">
+                                Si no hay wallet paciente conectada, pega aqui el RX que emitio medico. El ultimo RX emitido en esta demo queda precargado.
+                              </p>
+                            </label>
                             <button 
                               onClick={handleCompleteOnchainDispense}
-                              disabled={dispenseBusy || !activePrescription || !dispensarySignerReady}
+                              disabled={dispenseBusy || (!activePrescription && !dispensePrescriptionId.trim()) || !dispensarySignerReady}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
                                {dispenseBusy ? 'Registrando en testnet...' : 'Validar Receta y Registrar Dispensa'} <CheckCircle size={20} />
