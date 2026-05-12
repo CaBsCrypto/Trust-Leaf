@@ -11,25 +11,26 @@ export default function Hero({ onStartClick }: HeroProps) {
   const { t } = useLanguage();
 
   return (
-    <section className="relative min-h-[88vh] overflow-hidden bg-brand-green-deep text-brand-ivory">
+    <section className="relative min-h-[86vh] overflow-hidden bg-brand-green-deep text-brand-ivory">
       <img
-        src="https://images.pexels.com/photos/6442512/pexels-photo-6442512.jpeg?auto=compress&cs=tinysrgb&w=1800"
-        alt="Aceites de cannabis medicinal en frascos de tratamiento"
-        className="absolute inset-0 h-full w-full object-cover opacity-42"
+        src="https://images.pexels.com/photos/6429022/pexels-photo-6429022.jpeg?auto=compress&cs=tinysrgb&w=2000"
+        alt="Flor de cannabis medicinal con tricomas visibles"
+        className="absolute inset-0 h-full w-full object-cover opacity-70"
         referrerPolicy="no-referrer"
       />
-      <div className="absolute inset-0 bg-brand-green-deep/68" />
-      <div className="container relative z-10 mx-auto flex min-h-[88vh] items-center px-6 pb-16 pt-32 md:px-12 md:pt-40">
-        <div className="max-w-4xl">
+      <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep via-brand-green-deep/76 to-brand-green-deep/18" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-ivory to-transparent" />
+      <div className="container relative z-10 mx-auto flex min-h-[86vh] items-center px-6 pb-20 pt-28 md:px-12 md:pt-36">
+        <div className="max-w-3xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <span className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wider text-brand-gold uppercase bg-brand-gold/10 border border-brand-gold/20">
+            <span className="inline-block border border-brand-gold/35 bg-brand-green-deep/35 px-4 py-1.5 mb-6 text-xs font-semibold tracking-wider text-brand-gold uppercase backdrop-blur-sm">
               {t.hero.badge}
             </span>
-            <h1 className="text-5xl sm:text-6xl md:text-8xl font-serif leading-[1.05] mb-6 md:mb-8 font-medium">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-serif leading-[1.02] mb-6 md:mb-8 font-medium">
               {t.hero.title}
             </h1>
             <p className="text-base md:text-xl text-brand-ivory/78 max-w-2xl mb-10 leading-relaxed font-medium">
@@ -53,11 +54,11 @@ export default function Hero({ onStartClick }: HeroProps) {
 
             <div className="mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                ['Expediente privado', <FileText size={18} />],
+                ['Flor y aceite', <FileText size={18} />],
                 ['Cupo mensual', <Database size={18} />],
-                ['Trazabilidad por lote', <ShieldCheck size={18} />],
+                ['Lote verificable', <ShieldCheck size={18} />],
               ].map(([label, icon]) => (
-                <div key={label as string} className="flex items-center gap-3 border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold backdrop-blur-sm">
+                <div key={label as string} className="flex items-center gap-3 border border-white/15 bg-brand-green-deep/30 px-4 py-3 text-sm font-bold backdrop-blur-sm">
                   <span className="text-brand-gold">{icon}</span>
                   <span>{label}</span>
                 </div>
