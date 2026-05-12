@@ -280,7 +280,7 @@ function MvpSnapshot({ onNavigate }: { onNavigate: (path: string) => void }) {
   const pillars = [
     {
       title: 'Paciente',
-      desc: 'Identidad, historial clinico privado, recetas con cupo mensual y retiros trazables.',
+      desc: 'Identidad, historial clinico privado, dosis autorizadas y retiros trazables.',
       action: 'Abrir portal',
       path: '/paciente',
       icon: <UserRound size={20} />,
@@ -351,7 +351,7 @@ function MvpSnapshot({ onNavigate }: { onNavigate: (path: string) => void }) {
             </div>
             <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory p-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Dispensa</p>
-              <p className="mt-3 text-xl font-bold text-brand-green-deep">Retiros parciales contra cupo mensual.</p>
+              <p className="mt-3 text-xl font-bold text-brand-green-deep">Entregas parciales contra tratamiento vigente.</p>
             </div>
           </div>
         </div>

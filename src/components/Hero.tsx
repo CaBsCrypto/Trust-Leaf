@@ -70,7 +70,7 @@ export default function Hero({ onStartClick }: HeroProps) {
             <div className="mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
               {[
                 ['Flor y aceite', <FileText size={18} />],
-                ['Cupo mensual', <Database size={18} />],
+                ['Dosis autorizada', <Database size={18} />],
                 ['Lote verificable', <ShieldCheck size={18} />],
               ].map(([label, icon]) => (
                 <div key={label as string} className="flex items-center gap-3 border border-white/15 bg-brand-green-deep/30 px-4 py-3 text-sm font-bold backdrop-blur-sm">

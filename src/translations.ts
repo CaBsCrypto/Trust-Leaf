@@ -9,7 +9,7 @@ export const translations = {
     hero: {
       badge: "Trust Leaf Network",
       title: "Acceso seguro a cannabis medicinal",
-      desc: "Recetas privadas, cupos mensuales y trazabilidad por lote para flores, aceites y extractos. Tu informacion clinica queda bajo tu control; la red solo valida lo necesario.",
+      desc: "Recetas privadas, dosis autorizadas y trazabilidad por lote para flores, aceites y extractos. Tu informacion clinica queda bajo tu control; la red solo valida lo necesario.",
       cta: "Entrar como paciente",
       secondary: "Ver MVP en vivo",
     },
@@ -230,7 +230,7 @@ export const translations = {
     hero: {
       badge: "Trust Leaf Network",
       title: "Secure access to medical cannabis",
-      desc: "Private prescriptions, monthly allowances, and batch traceability for flower, oils, and extracts. Your clinical information stays under your control; the network validates only what is needed.",
+      desc: "Private prescriptions, authorized dosing, and batch traceability for flower, oils, and extracts. Your clinical information stays under your control; the network validates only what is needed.",
       cta: "Enter Patient Portal",
       secondary: "View Live MVP",
     },
