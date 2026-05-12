@@ -476,6 +476,8 @@ export default function MockupPortal({
 }: MockupPortalProps) {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PortalView>(initialView);
+  const isDoctorPortal = roleLabel === 'Portal Medico';
+  const isDispensaryPortal = roleLabel === 'Portal Dispensario';
   const isViewAllowed = (view: PortalView) => !allowedViews || allowedViews.includes(view);
   const switchView = (view: PortalView) => {
     if (isViewAllowed(view)) {
@@ -1184,7 +1186,7 @@ export default function MockupPortal({
                   onClick={() => switchView('doctors')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'doctors' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
-                  <Stethoscope size={18} /> {t.portal.navDoctors}
+                  <Stethoscope size={18} /> {isDoctorPortal ? 'Emitir RX' : t.portal.navDoctors}
                 </button>
                 )}
                 {isViewAllowed('dispensaries') && (
@@ -1192,7 +1194,7 @@ export default function MockupPortal({
                   onClick={() => switchView('dispensaries')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'dispensaries' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
-                  <ShoppingBag size={18} /> {t.portal.navDispensaries}
+                  <ShoppingBag size={18} /> {isDispensaryPortal ? 'Operacion' : t.portal.navDispensaries}
                 </button>
                 )}
                 {isViewAllowed('prescriptions') && (
@@ -1255,13 +1257,22 @@ export default function MockupPortal({
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navHealth}</span>
               </button>
               )}
+              {isViewAllowed('doctors') && (
+              <button 
+                onClick={() => switchView('doctors')}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'doctors' ? 'text-brand-gold' : 'text-white/40'}`}
+              >
+                <Stethoscope size={20} className={activeView === 'doctors' ? 'scale-110' : ''} />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">{isDoctorPortal ? 'Emitir RX' : t.portal.navDoctors}</span>
+              </button>
+              )}
               {isViewAllowed('dispensaries') && (
               <button 
                 onClick={() => switchView('dispensaries')}
                 className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'dispensaries' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <ShoppingBag size={20} className={activeView === 'dispensaries' ? 'scale-110' : ''} />
-                <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navStore}</span>
+                <span className="text-[10px] font-bold uppercase tracking-tighter">{isDispensaryPortal ? 'Operar' : t.portal.navStore}</span>
               </button>
               )}
               {isViewAllowed('pickups') && (
@@ -1298,8 +1309,8 @@ export default function MockupPortal({
               <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 px-6 md:px-8 py-4 md:py-6 border-b border-brand-green-deep/5 flex justify-between items-center">
                 <h3 className="text-xl md:text-2xl font-serif text-brand-green-deep">
                   {activeView === 'overview' && t.portal.viewWelcome}
-                  {activeView === 'doctors' && t.portal.viewDoctors}
-                  {activeView === 'dispensaries' && t.portal.viewDispensaries}
+                  {activeView === 'doctors' && (isDoctorPortal ? 'Emision medica' : t.portal.viewDoctors)}
+                  {activeView === 'dispensaries' && (isDispensaryPortal ? 'Operacion dispensario' : t.portal.viewDispensaries)}
                   {activeView === 'prescriptions' && t.portal.viewPrescriptions}
                   {activeView === 'pickups' && t.portal.navPickups}
                   {activeView === 'history' && t.portal.viewHistory}
@@ -1642,6 +1653,11 @@ export default function MockupPortal({
                       className="space-y-6"
                     >
                     <div className="space-y-6">
+                      {isDoctorPortal && (
+                        <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral p-4 text-sm text-brand-green-mid/70">
+                          Portal profesional separado: emite recetas on-chain y entrega el RX para que el dispensario lo valide desde su propia URL.
+                        </div>
+                      )}
                       <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf están validados y poseen licencias vigentes para la prescripción de cannabis medicinal.</p>
                       
                       <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-5 shadow-sm space-y-5">
@@ -1985,7 +2001,7 @@ export default function MockupPortal({
                           </div>
                         ))}
                       </div>
-                    ) : !hasPrescription ? (
+                    ) : !hasPrescription && !isDispensaryPortal ? (
                       <div className="bg-brand-neutral/30 border-2 border-dashed border-brand-green-deep/10 rounded-[40px] p-12 text-center">
                          <div className="w-20 h-20 bg-brand-neutral rounded-full flex items-center justify-center mx-auto mb-6 text-brand-green-mid/30">
                              <ShoppingBag size={40} />
