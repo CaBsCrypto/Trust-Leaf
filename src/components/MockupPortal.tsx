@@ -1267,6 +1267,12 @@ export default function MockupPortal({
     };
   }, [isOpen, initialView, allowedViews]);
 
+  useEffect(() => {
+    if (!isViewAllowed(activeView)) {
+      setActiveView(allowedViews?.[0] ?? 'overview');
+    }
+  }, [activeView, allowedViews]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -1514,7 +1520,7 @@ export default function MockupPortal({
                           onConnectPasskey={connectPasskeyWallet}
                           onConnectFreighter={connectFreighterWallet}
                           onLinkFreighterBackup={linkFreighterBackup}
-                          onContinue={() => setActiveView('doctors')}
+                          onContinue={() => switchView('doctors')}
                         />
                         <button
                           type="button"
@@ -1545,14 +1551,14 @@ export default function MockupPortal({
                            </p>
                            <div className="flex flex-col gap-3 sm:flex-row">
                              <button 
-                               onClick={() => setActiveView(primaryPrescription ? 'prescriptions' : 'doctors')}
+                               onClick={() => switchView(primaryPrescription ? 'prescriptions' : 'doctors')}
                                className="flex items-center justify-center gap-3 px-6 py-4 bg-brand-gold text-brand-green-deep rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-gold/20 group/btn"
                              >
                                  {primaryPrescription ? 'Ver receta activa' : t.portal.onboarding.startCareAction}
                                  <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                              </button>
                              <button
-                               onClick={() => setActiveView('dispensaries')}
+                               onClick={() => switchView('dispensaries')}
                                className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-bold text-brand-ivory transition-colors hover:bg-white/10"
                              >
                                Buscar dispensario
@@ -1805,7 +1811,7 @@ export default function MockupPortal({
                     </motion.div>
                   )}
 
-                  {activeView === 'doctors' && (
+                  {activeView === 'doctors' && isViewAllowed('doctors') && (
                     <motion.div 
                       key="view-doctors"
                       initial={{ opacity: 0, y: 10 }} 
@@ -1821,6 +1827,7 @@ export default function MockupPortal({
                       )}
                       <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf están validados y poseen licencias vigentes para la prescripción de cannabis medicinal.</p>
                       
+                      {isDoctorPortal && (
                       <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-5 shadow-sm space-y-5">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                           <div>
@@ -1989,6 +1996,7 @@ export default function MockupPortal({
                           </div>
                         )}
                       </div>
+                      )}
 
                       {!isDoctorPortal && (
                       <>
@@ -2360,12 +2368,12 @@ export default function MockupPortal({
                              <ShoppingBag size={40} />
                           </div>
                          <h4 className="text-xl font-serif text-brand-green-deep mb-2">Acceso Restringido</h4>
-                         <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Debe completar una consulta médica para acceder a la red de dispensarios y medicina trazable.</p>
+                         <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Necesitas una receta activa antes de preparar una compra con medicina trazable.</p>
                          <button 
-                           onClick={() => setActiveView('doctors')}
+                           onClick={() => switchView('prescriptions')}
                            className="px-8 py-4 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-green-deep/20"
                          >
-                            Ir al Médico Primero
+                            Ver mis recetas
                          </button>
                        </div>
                     ) : (
@@ -2425,12 +2433,12 @@ export default function MockupPortal({
                              <FileText size={40} />
                           </div>
                           <h4 className="text-xl font-serif text-brand-green-deep mb-2">Billetera de Recetas</h4>
-                          <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Complete su evaluación médica para visualizar sus prescripciones digitales on-chain.</p>
+                          <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Cuando un medico emita tu receta, aparecera aca y podras usarla en dispensarios.</p>
                           <button 
-                            onClick={() => setActiveView('doctors')}
+                            onClick={() => switchView('dispensaries')}
                             className="px-8 py-4 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-green-deep/20"
                           >
-                             Empezar Consulta
+                             Ver dispensarios
                           </button>
                        </div>
                     ) : (
