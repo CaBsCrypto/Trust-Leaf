@@ -35,6 +35,18 @@ interface DispensaryRegistration {
   reviewedAt?: string;
 }
 
+interface DoctorRegistration {
+  id: string;
+  name: string;
+  licenseId: string;
+  specialty: string;
+  contact: string;
+  wallet: string;
+  status: DispensaryRegistrationStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+}
+
 const PATIENT_VIEWS: PortalView[] = ['overview', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
@@ -70,6 +82,10 @@ function AppContent() {
     const saved = localStorage.getItem('trust_dispensary_registrations');
     return saved ? JSON.parse(saved) : [];
   });
+  const [doctorRegistrations, setDoctorRegistrations] = useState<DoctorRegistration[]>(() => {
+    const saved = localStorage.getItem('trust_doctor_registrations');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const navigate = (nextPath: string) => {
     window.history.pushState({}, '', nextPath);
@@ -86,6 +102,20 @@ function AppContent() {
     localStorage.setItem('trust_dispensary_registrations', JSON.stringify(dispensaryRegistrations));
   }, [dispensaryRegistrations]);
 
+  useEffect(() => {
+    localStorage.setItem('trust_doctor_registrations', JSON.stringify(doctorRegistrations));
+  }, [doctorRegistrations]);
+
+  const submitDoctorRegistration = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => {
+    const request: DoctorRegistration = {
+      ...input,
+      id: `doc-req-${Date.now()}`,
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+    };
+    setDoctorRegistrations((current) => [request, ...current]);
+  };
+
   const submitDispensaryRegistration = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => {
     const request: DispensaryRegistration = {
       ...input,
@@ -98,6 +128,16 @@ function AppContent() {
 
   const reviewDispensaryRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
     setDispensaryRegistrations((current) =>
+      current.map((request) =>
+        request.id === id
+          ? { ...request, status, reviewedAt: new Date().toISOString() }
+          : request,
+      ),
+    );
+  };
+
+  const reviewDoctorRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
+    setDoctorRegistrations((current) =>
       current.map((request) =>
         request.id === id
           ? { ...request, status, reviewedAt: new Date().toISOString() }
@@ -122,9 +162,20 @@ function AppContent() {
 
   if (path === '/medico') {
     return (
+      <DoctorRegistrationRoute
+        onBack={() => navigate('/')}
+        onNavigate={navigate}
+        doctorRegistrations={doctorRegistrations}
+        onSubmitDoctorRegistration={submitDoctorRegistration}
+      />
+    );
+  }
+
+  if (path === '/medico/operacion') {
+    return (
       <MockupPortal
         isOpen
-        onClose={() => navigate('/')}
+        onClose={() => navigate('/medico')}
         initialView="doctors"
         allowedViews={DOCTOR_VIEWS}
         pageMode
@@ -167,7 +218,9 @@ function AppContent() {
     return (
       <AdminRoute
         onBack={() => navigate('/')}
+        doctorRegistrations={doctorRegistrations}
         registrations={dispensaryRegistrations}
+        onReviewDoctorRegistration={reviewDoctorRegistration}
         onReviewRegistration={reviewDispensaryRegistration}
       />
     );
@@ -229,7 +282,7 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
     {
       path: '/medico',
       label: 'Medicos',
-      desc: 'Emitir recetas y revisar pacientes autorizados.',
+      desc: 'Solicitar alta o entrar al panel de emision.',
       icon: <Stethoscope size={18} />,
     },
     {
@@ -284,15 +337,21 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
 
 function AdminRoute({
   onBack,
+  doctorRegistrations,
   registrations,
+  onReviewDoctorRegistration,
   onReviewRegistration,
 }: {
   onBack: () => void;
+  doctorRegistrations: DoctorRegistration[];
   registrations: DispensaryRegistration[];
+  onReviewDoctorRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
   onReviewRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
+  const pendingDoctors = doctorRegistrations.filter((request) => request.status === 'pending');
+  const approvedDoctors = doctorRegistrations.filter((request) => request.status === 'approved');
 
   return (
     <div className="min-h-screen bg-brand-ivory text-brand-green-deep">
@@ -324,6 +383,92 @@ function AdminRoute({
               <p className="text-sm text-brand-green-mid/70">{desc}</p>
             </div>
           ))}
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_0.8fr]">
+          <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Solicitudes</p>
+                <h2 className="text-2xl font-serif mb-2">Registro de medicos</h2>
+                <p className="text-sm text-brand-green-mid/70 max-w-2xl">
+                  Revisa licencias, aprueba medicos y habilita el POV profesional para emitir recetas.
+                  En el siguiente paso esta aprobacion se conectara con DoctorRegistry.
+                </p>
+              </div>
+              <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
+                {pendingDoctors.length} pendientes
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {doctorRegistrations.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
+                  Aun no hay solicitudes. Entra a `/medico` y completa el formulario de registro.
+                </div>
+              )}
+
+              {doctorRegistrations.map((request) => (
+                <div key={request.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-5">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="mb-2 flex items-center gap-2">
+                        <h3 className="text-lg font-bold">{request.name}</h3>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                          request.status === 'approved'
+                            ? 'bg-green-100 text-green-700'
+                            : request.status === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {request.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-brand-green-mid/70">{request.specialty}</p>
+                      <p className="mt-2 text-xs font-mono text-brand-green-mid/60 break-all">{request.wallet}</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70 sm:grid-cols-2">
+                        <span>Licencia: <strong>{request.licenseId}</strong></span>
+                        <span>Contacto: <strong>{request.contact}</strong></span>
+                      </div>
+                    </div>
+                    {request.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => onReviewDoctorRegistration(request.id, 'approved')}
+                          className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid"
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          onClick={() => onReviewDoctorRegistration(request.id, 'rejected')}
+                          className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-brand-green-deep text-brand-ivory border border-brand-green-deep/10 rounded-2xl p-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Medical network</p>
+            <h2 className="text-2xl font-serif mb-4">{approvedDoctors.length} medicos live</h2>
+            <div className="space-y-3">
+              {approvedDoctors.length === 0 ? (
+                <p className="text-sm text-brand-ivory/60">Cuando apruebes una solicitud, aparecera aqui como medico autorizado.</p>
+              ) : (
+                approvedDoctors.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="font-bold">{request.name}</p>
+                    <p className="mt-1 text-xs text-brand-ivory/60">{request.specialty}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_0.8fr]">
@@ -578,6 +723,165 @@ function DispensaryRegistrationRoute({
               <ArrowRight size={18} className="text-brand-gold group-hover:translate-x-1" />
             </button>
           </div>
+        </motion.section>
+      </main>
+    </div>
+  );
+}
+
+function DoctorRegistrationRoute({
+  onBack,
+  onNavigate,
+  doctorRegistrations,
+  onSubmitDoctorRegistration,
+}: {
+  onBack: () => void;
+  onNavigate: (path: string) => void;
+  doctorRegistrations: DoctorRegistration[];
+  onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+}) {
+  const [registrationForm, setRegistrationForm] = useState({
+    name: '',
+    licenseId: '',
+    specialty: '',
+    contact: '',
+    wallet: '',
+  });
+  const latestRegistration = doctorRegistrations[0];
+  const approved = doctorRegistrations.filter((request) => request.status === 'approved');
+
+  const submitRegistration = () => {
+    if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact || !registrationForm.wallet) {
+      return;
+    }
+
+    onSubmitDoctorRegistration(registrationForm);
+    setRegistrationForm({
+      name: '',
+      licenseId: '',
+      specialty: '',
+      contact: '',
+      wallet: '',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onNavigate('/medico/operacion')}
+              className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory active:scale-95"
+            >
+              Emitir RX
+            </button>
+            <button
+              onClick={() => onNavigate('/admin')}
+              className="hidden rounded-full bg-white px-4 py-2 text-sm font-bold text-brand-green-deep md:block"
+            >
+              Admin
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-7xl gap-6 px-5 py-8 md:grid-cols-[0.95fr_1.05fr] md:px-8 md:py-12">
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[28px] border border-brand-green-deep/10 bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro medico</p>
+          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Despues emites RX.</h1>
+          <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
+            El medico presenta licencia, especialidad y wallet. Admin revisa y habilita el acceso profesional para emitir recetas verificables.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              ['Pendiente', doctorRegistrations.filter((item) => item.status === 'pending').length],
+              ['Live', approved.length],
+              ['Red', 'Testnet'],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
+                <p className="mt-2 text-sm font-bold text-brand-ivory">{value}</p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="space-y-4"
+        >
+          <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Solicitud</p>
+                <h2 className="mt-2 text-2xl font-serif">Datos para revision admin</h2>
+              </div>
+              {latestRegistration && (
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                  latestRegistration.status === 'approved'
+                    ? 'bg-green-100 text-green-700'
+                    : latestRegistration.status === 'rejected'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {latestRegistration.status === 'approved' ? 'Live' : latestRegistration.status}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                ['name', 'Nombre profesional'],
+                ['licenseId', 'Licencia / registro medico'],
+                ['specialty', 'Especialidad'],
+                ['contact', 'Contacto responsable'],
+                ['wallet', 'Wallet Stellar del medico'],
+              ].map(([key, label]) => (
+                <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
+                  <input
+                    value={registrationForm[key as keyof typeof registrationForm]}
+                    onChange={(event) =>
+                      setRegistrationForm((current) => ({
+                        ...current,
+                        [key]: event.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <button
+              onClick={submitRegistration}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95"
+            >
+              Enviar solicitud al admin <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <button
+            onClick={() => onNavigate('/medico/operacion')}
+            className="group flex w-full items-center justify-between rounded-2xl border border-brand-green-deep/10 bg-white p-5 text-left shadow-sm hover:border-brand-gold/40"
+          >
+            <span className="flex items-center gap-3 font-bold"><Stethoscope size={18} /> Ir al panel medico</span>
+            <ArrowRight size={18} className="text-brand-gold group-hover:translate-x-1" />
+          </button>
         </motion.section>
       </main>
     </div>
