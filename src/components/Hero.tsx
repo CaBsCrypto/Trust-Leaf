@@ -20,21 +20,15 @@ export default function Hero({ onStartClick }: HeroProps) {
           referrerPolicy="no-referrer"
         />
         <img
-          src="https://images.pexels.com/photos/7604403/pexels-photo-7604403.jpeg?auto=compress&cs=tinysrgb&w=1200"
+          src="https://cdn.pixabay.com/photo/2020/11/16/12/33/cannabis-5748860_1280.jpg"
           alt=""
-          className="absolute bottom-4 right-[2%] hidden h-[55%] w-[35%] object-cover object-center opacity-70 [mask-image:radial-gradient(ellipse_at_center,black_44%,transparent_76%)] md:block"
+          className="absolute bottom-0 right-[1%] hidden h-[56%] w-[36%] object-cover object-center opacity-66 [mask-image:radial-gradient(ellipse_at_center,black_44%,transparent_76%)] md:block"
           referrerPolicy="no-referrer"
         />
         <img
           src="https://images.pexels.com/photos/9419514/pexels-photo-9419514.jpeg?auto=compress&cs=tinysrgb&w=1200"
           alt=""
           className="absolute right-[19%] top-[12%] hidden h-[36%] w-[28%] rotate-[-5deg] object-cover object-center opacity-58 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_74%)] lg:block"
-          referrerPolicy="no-referrer"
-        />
-        <img
-          src="https://images.pexels.com/photos/7604404/pexels-photo-7604404.jpeg?auto=compress&cs=tinysrgb&w=900"
-          alt=""
-          className="absolute bottom-[18%] right-[28%] hidden h-[28%] w-[18%] object-cover object-center opacity-48 [mask-image:radial-gradient(ellipse_at_center,black_36%,transparent_72%)] xl:block"
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep via-brand-green-deep/70 to-brand-green-deep/18" />
