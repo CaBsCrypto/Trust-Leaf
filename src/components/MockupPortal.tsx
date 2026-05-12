@@ -115,8 +115,8 @@ function shortenHash(value: string, size = 8) {
 
 const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
 const DEMO_PRESCRIPTION_ID = '1';
-const PRESCRIPTION_MONTHLY_LIMIT_GRAMS = 30;
-const PRESCRIPTION_USED_GRAMS = 9;
+const DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS = 30;
+const DEFAULT_PRESCRIPTION_USED_GRAMS = 9;
 
 function isPrescriptionNotValidError(message: string) {
   return /PRESCRIPTION_NOT_VALID|Error\(Contract,\s*#4\)|is_valid.*false|not valid|invalid|used|consum/i.test(message);
@@ -580,6 +580,7 @@ export default function MockupPortal({
     dosage: '0.5g por vía vaporizada cada 12 horas',
     notes: 'Control clínico en 30 días.',
     durationDays: 30,
+    monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
   });
   const [doctorPatientAddress, setDoctorPatientAddress] = useState(() =>
     localStorage.getItem('trust_doctor_patient_address') || DEMO_PATIENT_ADDRESS,
@@ -592,6 +593,15 @@ export default function MockupPortal({
     localStorage.getItem('trust_latest_prescription_id') ||
     DEMO_PRESCRIPTION_ID,
   );
+  const [prescriptionAllowance, setPrescriptionAllowance] = useState(() => {
+    const saved = localStorage.getItem('trust_prescription_allowance');
+    return saved
+      ? JSON.parse(saved)
+      : {
+          monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+          usedGrams: DEFAULT_PRESCRIPTION_USED_GRAMS,
+        };
+  });
   const [dispenseBusy, setDispenseBusy] = useState(false);
   const [dispenseError, setDispenseError] = useState<string | null>(null);
   const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
@@ -679,6 +689,10 @@ export default function MockupPortal({
   useEffect(() => {
     localStorage.setItem('trust_dispense_prescription_id', dispensePrescriptionId);
   }, [dispensePrescriptionId]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_prescription_allowance', JSON.stringify(prescriptionAllowance));
+  }, [prescriptionAllowance]);
 
   const walletConnected = walletSetup.primaryMethod !== null;
   const passkeyAvailability = getPasskeyAvailability();
@@ -999,6 +1013,10 @@ export default function MockupPortal({
       setDoctorIssueSuccess(
         `Receta emitida en testnet. RX-${payload.issuedId ?? 'pendiente'} • Tx ${shortenHash(payload.txHash)}`,
       );
+      setPrescriptionAllowance({
+        monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
+        usedGrams: 0,
+      });
       if (payload.issuedId !== undefined && payload.issuedId !== null) {
         const issuedId = String(payload.issuedId);
         localStorage.setItem('trust_latest_prescription_id', issuedId);
@@ -1134,6 +1152,13 @@ export default function MockupPortal({
       setDispenseSuccess(
         `Retiro parcial registrado. Record ${payload.recordId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}. La receta sigue disponible para futuros retiros.`,
       );
+      setPrescriptionAllowance((current: any) => ({
+        ...current,
+        usedGrams: Math.min(
+          Number(current.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+          (Number(current.usedGrams) || 0) + quantity,
+        ),
+      }));
       setDispensaryStep('success');
 
       const newPickups = cart.map(item => ({
@@ -1182,6 +1207,13 @@ export default function MockupPortal({
         }));
 
         setHasPrescription(true);
+        setPrescriptionAllowance((current: any) => ({
+          ...current,
+          usedGrams: Math.min(
+            Number(current.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+            (Number(current.usedGrams) || 0) + cart.reduce((total, item) => total + item.quantity, 0),
+          ),
+        }));
         setActivePickups(prev => [...newPickups, ...prev]);
         setRecentActivity(prev => [
           {
@@ -1296,11 +1328,13 @@ export default function MockupPortal({
   const cartGrams = useMemo(() => {
     return cart.reduce((total, item) => total + item.quantity, 0);
   }, [cart]);
-  const prescriptionRemainingGrams = Math.max(0, PRESCRIPTION_MONTHLY_LIMIT_GRAMS - PRESCRIPTION_USED_GRAMS);
-  const prescriptionProjectedGrams = PRESCRIPTION_USED_GRAMS + cartGrams;
+  const prescriptionMonthlyLimitGrams = Number(prescriptionAllowance.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS;
+  const prescriptionUsedGrams = Number(prescriptionAllowance.usedGrams) || 0;
+  const prescriptionRemainingGrams = Math.max(0, prescriptionMonthlyLimitGrams - prescriptionUsedGrams);
+  const prescriptionProjectedGrams = prescriptionUsedGrams + cartGrams;
   const prescriptionUsagePercent = Math.min(
     100,
-    Math.round((prescriptionProjectedGrams / PRESCRIPTION_MONTHLY_LIMIT_GRAMS) * 100),
+    Math.round((prescriptionProjectedGrams / prescriptionMonthlyLimitGrams) * 100),
   );
   const cartExceedsPrescriptionLimit = cartGrams > prescriptionRemainingGrams;
 
@@ -2035,6 +2069,25 @@ export default function MockupPortal({
                                 setDoctorIssueForm((prev) => ({
                                   ...prev,
                                   durationDays: Number(event.target.value),
+                                }))
+                              }
+                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                              Cupo mensual gramos
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={500}
+                              value={doctorIssueForm.monthlyLimitGrams}
+                              onChange={(event) =>
+                                setDoctorIssueForm((prev) => ({
+                                  ...prev,
+                                  monthlyLimitGrams: Number(event.target.value),
                                 }))
                               }
                               className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
@@ -3447,7 +3500,7 @@ export default function MockupPortal({
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-1">Cupo receta mensual</p>
                                 <h6 className="text-lg font-bold text-brand-green-deep">
-                                  {PRESCRIPTION_USED_GRAMS}g usados de {PRESCRIPTION_MONTHLY_LIMIT_GRAMS}g
+                                  {prescriptionUsedGrams}g usados de {prescriptionMonthlyLimitGrams}g
                                 </h6>
                               </div>
                               <div className="rounded-2xl bg-brand-neutral px-4 py-3 text-right">
@@ -3463,7 +3516,7 @@ export default function MockupPortal({
                             </div>
                             <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-brand-green-mid/60">
                               <span>Carrito actual: {cartGrams}g</span>
-                              <span>Proyectado post retiro: {prescriptionProjectedGrams}g / {PRESCRIPTION_MONTHLY_LIMIT_GRAMS}g</span>
+                              <span>Proyectado post retiro: {prescriptionProjectedGrams}g / {prescriptionMonthlyLimitGrams}g</span>
                             </div>
                             {cartExceedsPrescriptionLimit && (
                               <p className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
@@ -3757,7 +3810,7 @@ export default function MockupPortal({
                             <div className="border-t border-brand-green-deep/5 pt-4">
                                <div className="flex justify-between text-xs font-bold text-brand-green-deep mb-2">
                                   <span>Cupo mensual receta</span>
-                                  <span>{prescriptionProjectedGrams}g / {PRESCRIPTION_MONTHLY_LIMIT_GRAMS}g</span>
+                                  <span>{prescriptionProjectedGrams}g / {prescriptionMonthlyLimitGrams}g</span>
                                </div>
                                <div className="h-2 overflow-hidden rounded-full bg-white">
                                   <div
@@ -4061,7 +4114,5 @@ export default function MockupPortal({
     </AnimatePresence>
   );
 }
-
-
 
 
