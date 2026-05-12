@@ -418,6 +418,40 @@ const PRIVATE_CLINICAL_DOSSIER = [
   },
 ];
 
+const DOCTOR_SESSION_PATIENTS = [
+  {
+    id: 'pat-001',
+    name: 'Paciente 0',
+    reason: 'Dolor cronico lumbar',
+    status: 'Listo para revisar',
+    lastVisit: 'Control en 30 dias',
+    wallet: DEMO_PATIENT_ADDRESS,
+  },
+  {
+    id: 'pat-002',
+    name: 'Lucia M.',
+    reason: 'Insomnio refractario',
+    status: 'Documentos pendientes',
+    lastVisit: 'Primera consulta',
+    wallet: 'GD2MXRXHUGJ57VNXQWDTLPRIVATE402PATIENT0002',
+  },
+  {
+    id: 'pat-003',
+    name: 'Rafael P.',
+    reason: 'Ansiedad y dolor neuropatico',
+    status: 'Seguimiento activo',
+    lastVisit: 'Hace 14 dias',
+    wallet: 'GCFW6WEVFOLLOWUPPRIVATE402PATIENT0003',
+  },
+];
+
+const DOCTOR_AVAILABILITY_SLOTS = [
+  ['Hoy', '16:30', 'Disponible'],
+  ['Mañana', '10:00', 'Disponible'],
+  ['Mañana', '12:30', 'Reservado'],
+  ['Viernes', '09:00', 'Disponible'],
+];
+
 
 const MOCK_ORDERS = [
   { 
@@ -1433,7 +1467,7 @@ export default function MockupPortal({
                   onClick={() => switchView('doctors')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'doctors' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
-                  <Stethoscope size={18} /> {isDoctorPortal ? 'Emitir RX' : t.portal.navDoctors}
+                  <Stethoscope size={18} /> {isDoctorPortal ? 'Panel medico' : t.portal.navDoctors}
                 </button>
                 )}
                 {isViewAllowed('dispensaries') && (
@@ -1556,7 +1590,7 @@ export default function MockupPortal({
               <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 px-6 md:px-8 py-4 md:py-6 border-b border-brand-green-deep/5 flex justify-between items-center">
                 <h3 className="text-xl md:text-2xl font-serif text-brand-green-deep">
                   {activeView === 'overview' && t.portal.viewWelcome}
-                  {activeView === 'doctors' && (isDoctorPortal ? 'Emision medica' : t.portal.viewDoctors)}
+                  {activeView === 'doctors' && (isDoctorPortal ? 'Panel medico' : t.portal.viewDoctors)}
                   {activeView === 'dispensaries' && (isDispensaryPortal ? 'Operacion dispensario' : t.portal.viewDispensaries)}
                   {activeView === 'prescriptions' && t.portal.viewPrescriptions}
                   {activeView === 'pickups' && t.portal.navPickups}
@@ -1942,24 +1976,101 @@ export default function MockupPortal({
                     >
                     <div className="space-y-6">
                       {isDoctorPortal && (
-                        <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral p-4 text-sm text-brand-green-mid/70">
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.85fr]">
+                          <div className="rounded-3xl bg-brand-green-deep p-6 text-brand-ivory">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Sesion de trabajo</p>
+                            <h3 className="mt-2 text-3xl font-serif">Agenda, pacientes y recetas en un solo panel.</h3>
+                            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-ivory/65">
+                              El medico revisa documentos privados autorizados, administra horarios disponibles y emite una receta cuando la evidencia clinica esta completa.
+                            </p>
+                            <div className="mt-6 grid grid-cols-3 gap-3">
+                              {[
+                                ['Pacientes', DOCTOR_SESSION_PATIENTS.length],
+                                ['Hoy', 2],
+                                ['RX activas', patientDashboard?.summary.active ?? 1],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                  <p className="text-2xl font-bold text-brand-gold">{value}</p>
+                                  <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-ivory/45">{label}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Horarios</p>
+                                <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Disponibilidad</h4>
+                              </div>
+                              <button className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory">Agregar bloque</button>
+                            </div>
+                            <div className="mt-4 grid grid-cols-1 gap-2">
+                              {DOCTOR_AVAILABILITY_SLOTS.map(([day, time, status]) => (
+                                <div key={`${day}-${time}`} className="flex items-center justify-between rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/50 px-4 py-3">
+                                  <div>
+                                    <p className="text-sm font-bold text-brand-green-deep">{day} · {time}</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45">{status}</p>
+                                  </div>
+                                  <span className={`h-2.5 w-2.5 rounded-full ${status === 'Disponible' ? 'bg-green-500' : 'bg-brand-gold'}`} />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {isDoctorPortal && (
+                        <div className="hidden rounded-2xl border border-brand-green-deep/10 bg-brand-neutral p-4 text-sm text-brand-green-mid/70">
                           Portal profesional separado: emite recetas on-chain y entrega el RX para que el dispensario lo valide desde su propia URL.
                         </div>
                       )}
-                      <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf están validados y poseen licencias vigentes para la prescripción de cannabis medicinal.</p>
+                      {!isDoctorPortal && (
+                        <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf están validados y poseen licencias vigentes para la prescripción de cannabis medicinal.</p>
+                      )}
                       
                       {isDoctorPortal && (
-                      <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-5 shadow-sm space-y-5">
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.78fr_1.22fr]">
+                        <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pacientes</p>
+                          <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Casos para revisar</h4>
+                          <div className="mt-4 space-y-3">
+                            {DOCTOR_SESSION_PATIENTS.map((patient) => (
+                              <button
+                                key={patient.id}
+                                type="button"
+                                onClick={() => setDoctorPatientAddress(patient.wallet)}
+                                className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                                  doctorPatientAddress === patient.wallet
+                                    ? 'border-brand-gold bg-brand-gold/5'
+                                    : 'border-brand-green-deep/5 bg-brand-neutral/40 hover:border-brand-gold/40'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+                                    <p className="mt-1 text-xs text-brand-green-mid/60">{patient.reason}</p>
+                                  </div>
+                                  <span className="rounded-full bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                                    {patient.status}
+                                  </span>
+                                </div>
+                                <p className="mt-3 text-[10px] font-mono text-brand-green-mid/45">{shortenAddress(patient.wallet, 8)}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                      <div className="bg-white border border-brand-green-deep/10 rounded-3xl p-5 shadow-sm space-y-5">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                           <div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">
-                              POV medico testnet
+                              Receta verificable
                             </p>
                             <h3 className="text-xl font-bold text-brand-green-deep mt-1">
-                              Emitir receta soulbound al paciente objetivo
+                              Emitir receta al paciente seleccionado
                             </h3>
                             <p className="text-xs text-brand-green-mid/60 mt-2 max-w-2xl">
-                              La receta se firma con el medico autorizado de testnet, queda ligada a la cuenta del paciente y se valida contra los contratos Prescription y Registry.
+                              La receta se firma con el medico autorizado, queda ligada a la wallet del paciente y el dispensario valida solo estado, vigencia y dosis.
                             </p>
                           </div>
                           <div className="px-3 py-2 rounded-xl bg-brand-neutral text-xs font-mono text-brand-green-mid/70 break-all md:max-w-[280px]">
@@ -2077,7 +2188,7 @@ export default function MockupPortal({
 
                           <label className="space-y-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Cupo mensual gramos
+                              Dosis autorizada gramos
                             </span>
                             <input
                               type="number"
@@ -2135,6 +2246,7 @@ export default function MockupPortal({
                             </button>
                           </div>
                         )}
+                      </div>
                       </div>
                       )}
 
@@ -2518,7 +2630,80 @@ export default function MockupPortal({
                        </div>
                     ) : (
                       <>
-                        <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.72fr]">
+                          <div
+                            onClick={() => setSelectedPrescription({
+                              id: "TL-8829-QX",
+                              doctor: "Dr. Alejandro Merino",
+                              date: "29 Abr 2026",
+                              validUntil: "29 Oct 2026",
+                              treatment: "Cannabis Sativa L. (Flores secas)",
+                              concentration: "THC 18%, CBD 2%",
+                              dosage: "0.5g por via vaporizada cada 12hs",
+                              notes: "Acompanamiento por dolor cronico lumbar. Control en 30 dias."
+                            })}
+                            className="group cursor-pointer rounded-3xl border border-brand-green-deep/10 bg-white p-5 transition-all hover:border-brand-gold hover:shadow-md"
+                          >
+                            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="flex items-start gap-4">
+                                <div className="rounded-2xl bg-brand-neutral p-3 text-brand-green-deep transition-colors group-hover:bg-brand-gold/10 group-hover:text-brand-gold">
+                                  <FileText size={24} />
+                                </div>
+                                <div>
+                                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/45">RX TL-8829-QX</p>
+                                    <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[9px] font-bold text-blue-600">
+                                      <Database size={10} /> ON-CHAIN
+                                    </span>
+                                    <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-600">Vigente</span>
+                                  </div>
+                                  <h4 className="text-xl font-bold text-brand-green-deep">Tratamiento dolor cronico</h4>
+                                  <p className="mt-1 text-sm text-brand-green-mid/70">Dr. Alejandro Merino - emitida hoy</p>
+                                </div>
+                              </div>
+                              <ArrowRight size={20} className="hidden text-brand-green-mid/35 transition-colors group-hover:text-brand-gold lg:block" />
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                              {[
+                                ['Dosis', '0.5g cada 12hs'],
+                                ['Vigencia', 'Hasta 29 Oct 2026'],
+                                ['Privacidad', 'Diagnostico no publico'],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-2xl bg-brand-neutral/60 p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                                  <p className="mt-1 text-sm font-bold text-brand-green-deep">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="rounded-3xl border border-brand-green-deep/10 bg-brand-neutral/40 p-5">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Uso de receta</p>
+                            <h4 className="mt-2 text-xl font-serif text-brand-green-deep">Entregas parciales</h4>
+                            <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                              La receta no se quema en el primer retiro. Cada dispensario valida vigencia, identidad y cantidad entregada contra el saldo autorizado.
+                            </p>
+                            <div className="mt-5 grid grid-cols-2 gap-3">
+                              <div className="rounded-2xl bg-white p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Autorizado</p>
+                                <p className="mt-1 text-2xl font-bold text-brand-green-deep">30g</p>
+                              </div>
+                              <div className="rounded-2xl bg-white p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Disponible</p>
+                                <p className="mt-1 text-2xl font-bold text-brand-green-deep">20g</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setActiveView('dispensaries')}
+                              className="mt-4 w-full rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
+                            >
+                              Buscar dispensario
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="hidden mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl items-center gap-3 text-blue-700 text-xs">
                           <Star size={14} fill="currentColor" />
                           <span>Receta validada para retiro fraccionado. El dispensario registra cada entrega semanal sin quemar todo el tratamiento.</span>
                         </div>
@@ -2603,7 +2788,7 @@ export default function MockupPortal({
                         dosage: "0.5g p/vía vaporizada cada 12hs",
                         notes: "Acompañamiento por dolor crónico lumbar. Control en 30 días."
                       })}
-                      className="group cursor-pointer p-6 bg-white border border-brand-green-deep/10 rounded-2xl hover:border-brand-gold hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-center gap-4"
+                      className="hidden group cursor-pointer p-6 bg-white border border-brand-green-deep/10 rounded-2xl hover:border-brand-gold hover:shadow-md transition-all flex-col sm:flex-row justify-between items-center gap-4"
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-brand-neutral rounded-xl text-brand-green-deep group-hover:bg-brand-gold/10 group-hover:text-brand-gold transition-colors">
@@ -2659,7 +2844,67 @@ export default function MockupPortal({
                              <button onClick={() => setActiveView('dispensaries')} className="mt-8 text-sm font-bold text-brand-gold uppercase tracking-widest hover:underline">Ver dispensarios cercanos</button>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <>
+                          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                            <div className="rounded-3xl bg-brand-green-deep p-5 text-brand-ivory lg:col-span-1">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Retiros pendientes</p>
+                              <p className="mt-2 text-4xl font-bold">{activePickups.length}</p>
+                              <p className="mt-2 text-sm text-brand-ivory/60">Tokens listos para presentar en dispensario. No exponen diagnostico ni notas clinicas.</p>
+                            </div>
+                            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5 lg:col-span-2">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Saldo de receta</p>
+                              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                {[
+                                  ['Autorizado', '30g'],
+                                  ['Retirado', '10g'],
+                                  ['Disponible', '20g'],
+                                  ['Vigencia', '29 Oct'],
+                                ].map(([label, value]) => (
+                                  <div key={label} className="rounded-2xl bg-brand-neutral/60 p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                                    <p className="mt-1 text-lg font-bold text-brand-green-deep">{value}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {activePickups.map((pickup) => (
+                              <div key={`compact-${pickup.id}`} className="rounded-3xl border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                  <div className="flex items-start gap-4">
+                                    <div className="rounded-2xl bg-brand-neutral p-3 text-brand-green-deep">
+                                      <Package size={22} />
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">{pickup.dispensary.name}</p>
+                                      <h4 className="mt-1 text-xl font-bold text-brand-green-deep">{pickup.strain.name}</h4>
+                                      <p className="mt-1 text-sm text-brand-green-mid/65">Entrega parcial autorizada - {pickup.expires}</p>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
+                                    <div className="rounded-2xl bg-brand-neutral/60 px-4 py-3">
+                                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Token</p>
+                                      <p className="font-mono text-xs font-bold text-brand-green-deep">{pickup.token}</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-brand-neutral/60 px-4 py-3">
+                                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Estado</p>
+                                      <p className="text-xs font-bold text-green-600">Validado</p>
+                                    </div>
+                                    <button
+                                      onClick={() => handleStartPickup(pickup)}
+                                      className="col-span-2 rounded-2xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory sm:col-span-1"
+                                    >
+                                      Mostrar token
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="hidden grid-cols-1 md:grid-cols-2 gap-6">
                              {activePickups.map((pickup) => (
                                <div key={pickup.id} className="bg-brand-green-deep rounded-[40px] p-8 text-brand-ivory shadow-2xl relative overflow-hidden flex flex-col min-h-[460px]">
                                   <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -2716,6 +2961,7 @@ export default function MockupPortal({
                                </div>
                              ))}
                           </div>
+                          </>
                         )}
                       </>
                     ) : (
@@ -2853,6 +3099,12 @@ export default function MockupPortal({
                           <p className="text-[10px] uppercase tracking-widest text-brand-ivory/50 font-bold">Modo de acceso</p>
                           <p className="mt-1 text-sm font-bold text-brand-gold">Consentimiento temporal</p>
                           <p className="mt-2 text-xs text-brand-ivory/55">Lectura limitada, auditada y revocable.</p>
+                          <button
+                            onClick={() => setSelectedClinicalRecord(PRIVATE_CLINICAL_DOSSIER[0])}
+                            className="mt-4 w-full rounded-xl bg-brand-gold px-4 py-3 text-xs font-bold text-brand-green-deep"
+                          >
+                            Compartir con medico
+                          </button>
                         </div>
                       </div>
 
@@ -3026,7 +3278,7 @@ export default function MockupPortal({
                                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.3em] leading-none">Global Health Identity</p>
                               </div>
                               <h3 className="text-3xl md:text-5xl font-serif mb-6 leading-[1.1]">Tu salud no tiene fronteras.</h3>
-                              <p className="text-sm md:text-base text-brand-ivory/60 mb-10 leading-relaxed">Active su identificación Trust Leaf para acceder a dispensarios autorizados en todo el mundo con validación legal instantánea.</p>
+                              <p className="text-sm md:text-base text-brand-ivory/60 mb-10 leading-relaxed">Active una credencial medica privada para presentar receta vigente, identidad y evidencia minima en destinos compatibles.</p>
                               
                               <button 
                                 onClick={() => setTravelerActive(!travelerActive)}
@@ -3038,9 +3290,9 @@ export default function MockupPortal({
                               >
                                  <div className="relative z-10 flex items-center gap-3">
                                    {travelerActive ? (
-                                     <> <CheckCircle size={20} className="text-green-400" /> Trust ID Activo </>
+                                     <> <CheckCircle size={20} className="text-green-400" /> Credencial activa </>
                                    ) : (
-                                     <> <Globe size={20} className="group-hover:rotate-12 transition-transform" /> Activar Trust ID </>
+                                     <> <Globe size={20} className="group-hover:rotate-12 transition-transform" /> Activar credencial </>
                                    )}
                                  </div>
                                  {!travelerActive && <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>}
@@ -3289,7 +3541,7 @@ export default function MockupPortal({
                        <div className="text-center md:text-left">
                           <p className="text-lg font-bold text-brand-green-deep mb-1">Compromiso Legal Transfronterizo</p>
                           <p className="text-[13px] text-brand-green-mid/70 leading-relaxed max-w-2xl">
-                             Trust Leaf actúa como oráculo de datos criptográficos entre sistemas de salud nacionales. El acceso a la medicina en el extranjero está sujeto a las leyes locales. Siempre verifique las regulaciones del país de destino en su Trust ID.
+                             Trust Leaf actúa como oráculo de datos criptográficos entre sistemas de salud nacionales. El acceso a la medicina en el extranjero está sujeto a las leyes locales. Siempre verifique las regulaciones del país de destino antes de compartir su credencial médica.
                           </p>
                        </div>
                     </div>
@@ -3950,6 +4202,14 @@ export default function MockupPortal({
                 <div className="rounded-2xl border border-brand-gold/20 bg-brand-gold/5 p-4">
                   <p className="text-[10px] uppercase tracking-widest text-brand-gold font-bold mb-1">Prueba publica</p>
                   <p className="font-mono text-xs text-brand-green-deep">{selectedClinicalRecord.proof}</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
+                    Autorizar lectura 24h
+                  </button>
+                  <button className="rounded-2xl border border-brand-green-deep/10 px-4 py-3 text-sm font-bold text-brand-green-deep">
+                    Revocar acceso
+                  </button>
                 </div>
               </div>
             </motion.div>
