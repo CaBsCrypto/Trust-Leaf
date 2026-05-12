@@ -1,9 +1,8 @@
 import { motion } from 'motion/react';
-import { ArrowRight, ShieldCheck, Stethoscope, Store } from 'lucide-react';
-import { PortalView } from './MockupPortal';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface HeroProps {
-  onStartClick: (view?: PortalView) => void;
+  onStartClick: () => void;
 }
 
 import { useLanguage } from '../context/LanguageContext';
@@ -32,13 +31,13 @@ export default function Hero({ onStartClick }: HeroProps) {
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 px-6 sm:px-0">
               <button 
-                onClick={() => onStartClick('traveler')}
+                onClick={onStartClick}
                 className="px-10 py-5 text-base md:text-lg font-bold text-brand-ivory bg-brand-green-deep rounded-2xl md:rounded-[32px] hover:bg-brand-green-mid transition-all shadow-2xl shadow-brand-green-deep/30 flex items-center justify-center gap-3 group active:scale-95"
               >
                 {t.hero.cta} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button 
-                onClick={() => onStartClick('overview')}
+                onClick={onStartClick}
                 className="px-10 py-5 text-base md:text-lg font-bold text-brand-green-deep border-2 border-brand-green-deep/10 bg-white/50 backdrop-blur-sm rounded-2xl md:rounded-[32px] hover:bg-white transition-all text-center active:scale-95 flex items-center justify-center gap-2"
               >
                 <ShieldCheck size={20} className="text-brand-gold" /> {t.hero.secondary}

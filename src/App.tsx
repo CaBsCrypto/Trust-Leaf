@@ -65,8 +65,6 @@ export default function App() {
 
 function AppContent() {
   const { t } = useLanguage();
-  const [isPortalOpen, setIsPortalOpen] = useState(false);
-  const [portalView, setPortalView] = useState<PortalView>('overview');
   const [path, setPath] = useState(() => window.location.pathname);
   const [dispensaryRegistrations, setDispensaryRegistrations] = useState<DispensaryRegistration[]>(() => {
     const saved = localStorage.getItem('trust_dispensary_registrations');
@@ -76,11 +74,6 @@ function AppContent() {
   const navigate = (nextPath: string) => {
     window.history.pushState({}, '', nextPath);
     setPath(window.location.pathname);
-  };
-
-  const openPortal = (view: PortalView = 'overview') => {
-    setPortalView(view);
-    setIsPortalOpen(true);
   };
 
   useEffect(() => {
@@ -188,9 +181,10 @@ function AppContent() {
         <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-brand-gold/[0.03] rounded-full blur-[100px] -translate-x-1/4 translate-y-1/4" />
       </div>
 
-      <Navbar onPortalClick={() => openPortal('overview')} />
+      <Navbar onPortalClick={() => navigate('/paciente')} />
       <main>
-        <Hero onStartClick={openPortal} />
+        <Hero onStartClick={() => navigate('/paciente')} />
+        <ProfessionalAccess onNavigate={navigate} />
         <Ecosystem />
         <Problem />
         <Solution />
@@ -216,7 +210,7 @@ function AppContent() {
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4 px-6 md:px-0">
                 <button 
-                   onClick={() => openPortal('overview')}
+                   onClick={() => navigate('/paciente')}
                    className="w-full sm:w-auto px-10 py-5 font-bold bg-brand-green-deep text-brand-ivory rounded-2xl md:rounded-full hover:bg-brand-green-mid transition-all shadow-xl active:scale-95 text-lg"
                 >
                   {t.closure.cta}
@@ -226,13 +220,65 @@ function AppContent() {
         </section>
       </main>
       <Footer />
-
-      <MockupPortal 
-        isOpen={isPortalOpen} 
-        onClose={() => setIsPortalOpen(false)} 
-        initialView={portalView}
-      />
       </div>
+  );
+}
+
+function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const entries = [
+    {
+      path: '/medico',
+      label: 'Medicos',
+      desc: 'Emitir recetas y revisar pacientes autorizados.',
+      icon: <Stethoscope size={18} />,
+    },
+    {
+      path: '/dispensario',
+      label: 'Dispensarios',
+      desc: 'Solicitar alta, validar RX y registrar entregas.',
+      icon: <ShoppingBag size={18} />,
+    },
+    {
+      path: '/admin',
+      label: 'Admin',
+      desc: 'Revisar solicitudes y estado operacional.',
+      icon: <ShieldCheck size={18} />,
+    },
+  ];
+
+  return (
+    <section className="px-6 md:px-12 pb-10 -mt-8 relative z-10">
+      <div className="mx-auto max-w-5xl rounded-2xl border border-brand-green-deep/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="px-3 py-2 md:max-w-xs">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso profesional</p>
+            <p className="mt-1 text-xs text-brand-green-mid/60">
+              Entradas separadas para actores operativos. Pacientes continúan por el portal principal.
+            </p>
+          </div>
+          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
+            {entries.map((entry) => (
+              <button
+                key={entry.path}
+                onClick={() => onNavigate(entry.path)}
+                className="group flex min-h-[86px] items-center justify-between gap-3 rounded-xl border border-brand-green-deep/10 bg-brand-ivory/70 px-4 py-3 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
+              >
+                <span className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-green-deep text-brand-ivory">
+                    {entry.icon}
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold text-brand-green-deep">{entry.label}</span>
+                    <span className="mt-1 block text-[11px] leading-snug text-brand-green-mid/60">{entry.desc}</span>
+                  </span>
+                </span>
+                <ArrowRight size={16} className="shrink-0 text-brand-gold transition-transform group-hover:translate-x-1" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
