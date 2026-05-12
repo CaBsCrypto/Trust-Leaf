@@ -2000,7 +2000,7 @@ export default function MockupPortal({
 
                       {!isDoctorPortal && (
                       <>
-                      <div className="relative">
+                      <div className="relative max-w-3xl">
                         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-mid/40" />
                         <input 
                           type="text" 
@@ -2010,30 +2010,30 @@ export default function MockupPortal({
                           className="w-full pl-12 pr-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" 
                         />
                       </div>
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-6xl">
                       {MOCK_DOCTORS.filter(doc => 
                         doc.name.toLowerCase().includes(doctorSearchQuery.toLowerCase()) || 
                         doc.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase())
                       ).map(doc => (
-                        <div key={`portal-doctor-${doc.id}`} className="p-5 md:p-6 border border-brand-green-deep/5 rounded-[24px] md:rounded-2xl flex flex-col sm:flex-row items-center gap-5 md:gap-6 hover:shadow-md transition-shadow">
-                          <div className="w-16 h-16 bg-brand-neutral rounded-full flex items-center justify-center text-brand-green-mid flex-shrink-0">
-                            <User size={30} />
+                        <div key={`portal-doctor-${doc.id}`} className="p-5 border border-brand-green-deep/5 rounded-2xl grid grid-cols-[auto_1fr] gap-4 hover:shadow-md transition-shadow">
+                          <div className="w-14 h-14 bg-brand-neutral rounded-2xl flex items-center justify-center text-brand-green-mid flex-shrink-0">
+                            <User size={26} />
                           </div>
-                          <div className="flex-1 text-center sm:text-left min-w-0">
+                          <div className="flex-1 min-w-0">
                             <h4 className="text-lg font-bold text-brand-green-deep truncate">{doc.name}</h4>
                             <p className="text-sm text-brand-green-mid/60 mb-2 truncate">{doc.specialty}</p>
-                            <div className="flex items-center justify-center sm:justify-start gap-1 text-xs text-brand-gold font-bold">
+                            <div className="flex items-center gap-1 text-xs text-brand-gold font-bold">
                               <Star size={14} fill="currentColor" /> {doc.rating.toFixed(1)} <span className="text-brand-green-mid/40 font-medium">({doc.reviews} reseñas)</span>
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2 w-full sm:w-auto">
+                          <div className="col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-brand-green-deep/5">
                             <span className="text-[10px] text-center uppercase tracking-widest text-brand-green-mid font-bold opacity-60">Próxima: {doc.availability}</span>
                             <button 
                               onClick={() => {
                                 setBookingDoctor(doc);
                                 setBookingStep('date');
                               }}
-                              className="w-full sm:px-6 py-3 sm:py-2 bg-brand-green-deep text-brand-ivory rounded-xl md:rounded-full text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95"
+                              className="w-full sm:w-auto px-5 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95"
                             >
                               Agendar Cita
                             </button>
