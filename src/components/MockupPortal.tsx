@@ -114,6 +114,7 @@ function shortenHash(value: string, size = 8) {
 }
 
 const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
+const DEMO_PRESCRIPTION_ID = '1';
 
 const MOCK_DOCTORS = [
   { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
@@ -519,7 +520,7 @@ export default function MockupPortal({
   const [dispensePrescriptionId, setDispensePrescriptionId] = useState(() =>
     localStorage.getItem('trust_dispense_prescription_id') ||
     localStorage.getItem('trust_latest_prescription_id') ||
-    '',
+    DEMO_PRESCRIPTION_ID,
   );
   const [dispenseBusy, setDispenseBusy] = useState(false);
   const [dispenseError, setDispenseError] = useState<string | null>(null);
@@ -689,6 +690,48 @@ export default function MockupPortal({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (activeView !== 'dispensaries' || activePrescription) {
+      return;
+    }
+
+    const shouldRefreshDemoRx =
+      !dispensePrescriptionId.trim() || dispensePrescriptionId === DEMO_PRESCRIPTION_ID;
+
+    if (!shouldRefreshDemoRx) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadDemoPrescription = async () => {
+      try {
+        const response = await fetch(`/api/stellar/patient/${DEMO_PATIENT_ADDRESS}/dashboard`);
+        const payload = await response.json();
+
+        if (!response.ok) {
+          return;
+        }
+
+        const demoActivePrescription = payload.prescriptions?.find(
+          (prescription: PatientPrescriptionRecord) => prescription.status === 'active',
+        );
+
+        if (!cancelled && demoActivePrescription) {
+          setDispensePrescriptionId(String(demoActivePrescription.id));
+        }
+      } catch {
+        // Keep the static demo fallback if the read endpoint is unavailable.
+      }
+    };
+
+    loadDemoPrescription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePrescription, activeView, dispensePrescriptionId]);
 
   const connectPasskeyWallet = async () => {
     setWalletBusy('passkey');
@@ -1005,7 +1048,7 @@ export default function MockupPortal({
         {
           id: `act-disp-${Date.now()}`,
           action: `Dispensacion on-chain RX-${prescriptionId}`,
-          date: "ReciÃ©n",
+          date: "Recien",
           icon: "ShoppingBag",
         },
         ...prev,
@@ -1631,6 +1674,14 @@ export default function MockupPortal({
                             : 'Modo lectura activo. Para emitir recetas reales en produccion falta configurar STELLAR_DOCTOR_SECRET en Vercel.'}
                         </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/55">
+                          {['1. Paciente objetivo', '2. Emitir RX', '3. Dispensario valida'].map((step) => (
+                            <div key={step} className="rounded-xl border border-brand-green-deep/5 bg-brand-neutral px-3 py-2">
+                              {step}
+                            </div>
+                          ))}
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <label className="space-y-2 md:col-span-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
@@ -1748,10 +1799,10 @@ export default function MockupPortal({
                             <span>{doctorIssueSuccess}</span>
                             <button
                               type="button"
-                              onClick={() => setActiveView('prescriptions')}
+                              onClick={() => window.location.assign('/dispensario/operacion')}
                               className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-white border border-green-100 rounded-lg font-bold text-green-700 hover:border-green-200"
                             >
-                              Ver recetas
+                              Ir a dispensar
                               <ArrowRight size={14} />
                             </button>
                           </div>
@@ -2296,7 +2347,7 @@ export default function MockupPortal({
                                     RX-{record.prescriptionId} consumida
                                   </h4>
                                   <p className="text-[11px] text-brand-green-mid/70 truncate">
-                                    {shortenAddress(record.dispensary, 6)} â€¢ {formatPortalDate(record.recordedAt)}
+                                    {shortenAddress(record.dispensary, 6)} - {formatPortalDate(record.recordedAt)}
                                   </p>
                                 </div>
                               </div>
@@ -3162,7 +3213,7 @@ export default function MockupPortal({
                                 className="w-full px-4 py-3 bg-white rounded-xl border border-brand-green-deep/10 text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 disabled:bg-brand-neutral disabled:text-brand-green-mid/60"
                               />
                               <p className="text-[10px] text-brand-green-mid/45 leading-relaxed">
-                                Si no hay wallet paciente conectada, pega aqui el RX que emitio medico. El ultimo RX emitido en esta demo queda precargado.
+                                Si no hay wallet paciente conectada, pega aqui el RX que emitio medico. El demo carga RX-{DEMO_PRESCRIPTION_ID} y luego recuerda el ultimo RX emitido.
                               </p>
                             </label>
                             <button 
