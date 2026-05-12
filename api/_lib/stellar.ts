@@ -331,7 +331,6 @@ export async function dispensePrescriptionForPatient(input: {
   const server = getSorobanServer();
   const dispensaryKeypair = StellarSdk.Keypair.fromSecret(dispensarySecret);
   const dispensaryAddress = dispensaryKeypair.publicKey();
-  const prescriptionContract = new StellarSdk.Contract(getPrescriptionContractId());
   const dispenseRecordContract = new StellarSdk.Contract(getDispenseRecordContractId());
   const prescriptionId = Math.floor(input.prescriptionId);
 
@@ -356,10 +355,6 @@ export async function dispensePrescriptionForPatient(input: {
     bytes32ToScVal(Buffer.from(batchHashHex, 'hex')),
     u64ToScVal(BigInt(quantity)),
   ];
-  const consumeArgs = [
-    addressToScVal(dispensaryAddress),
-    u64ToScVal(BigInt(prescriptionId)),
-  ];
 
   const recordResult = await submitSingleContractCall(
     server,
@@ -372,14 +367,6 @@ export async function dispensePrescriptionForPatient(input: {
     ? Number(StellarSdk.scValToBigInt(recordResult.returnValue))
     : null;
 
-  const consumeResult = await submitSingleContractCall(
-    server,
-    dispensaryKeypair,
-    prescriptionContract,
-    'consume_prescription',
-    consumeArgs,
-  );
-
   const record = await invokeReadonlyContractWithSpec(
     server,
     getDispenseRecordContractId(),
@@ -390,7 +377,7 @@ export async function dispensePrescriptionForPatient(input: {
   const dashboard = await getPatientDashboard(patientAddress);
 
   return {
-    txHash: consumeResult.txHash,
+    txHash: recordResult.txHash,
     recordTxHash: recordResult.txHash,
     recordId: record ? Number(record.id) : recordId,
     prescriptionId,
@@ -398,6 +385,7 @@ export async function dispensePrescriptionForPatient(input: {
     dispensaryAddress,
     productHash: productHashHex,
     batchHash: batchHashHex,
+    dispenseMode: 'partial_allowance',
     dashboard,
   };
 }

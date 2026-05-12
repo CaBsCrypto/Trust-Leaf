@@ -123,8 +123,8 @@ function isPrescriptionNotValidError(message: string) {
 // Future hardening: Agent 402 checks should resolve against a private vault
 // (Supabase + encrypted storage) and publish only decisions, hashes and state
 // transitions to Stellar. The UI below keeps that privacy model visible in MVP.
-// Current Soroban MVP consumes RX state in one call; production should model
-// weekly allowances/remaining grams instead of burning the whole prescription.
+// Current MVP records each dispense as a partial allowance. Production should
+// enforce weekly limits/remaining grams in contract state, not burn the RX.
 
 const MOCK_DOCTORS = [
   { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
@@ -1130,7 +1130,7 @@ export default function MockupPortal({
       setPatientDashboard(payload.dashboard);
       setHasPrescription(payload.dashboard.summary.total > 0);
       setDispenseSuccess(
-        `Dispensacion registrada. Record ${payload.recordId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
+        `Retiro parcial registrado. Record ${payload.recordId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}. La receta sigue disponible para futuros retiros.`,
       );
       setDispensaryStep('success');
 
@@ -1141,14 +1141,14 @@ export default function MockupPortal({
         dispensary: selectedDispensary,
         status: 'pending',
         token: `RX-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
-        expires: 'Registrado on-chain'
+        expires: 'Retiro parcial registrado'
       }));
 
       setActivePickups(prev => [...newPickups, ...prev]);
       setRecentActivity(prev => [
         {
           id: `act-disp-${Date.now()}`,
-          action: `Dispensacion on-chain RX-${prescriptionId}`,
+          action: `Retiro parcial on-chain RX-${prescriptionId}`,
           date: "Recien",
           icon: "ShoppingBag",
         },
