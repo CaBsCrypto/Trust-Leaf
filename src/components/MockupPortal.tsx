@@ -115,6 +115,8 @@ function shortenHash(value: string, size = 8) {
 
 const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
 const DEMO_PRESCRIPTION_ID = '1';
+const PRESCRIPTION_MONTHLY_LIMIT_GRAMS = 30;
+const PRESCRIPTION_USED_GRAMS = 9;
 
 function isPrescriptionNotValidError(message: string) {
   return /PRESCRIPTION_NOT_VALID|Error\(Contract,\s*#4\)|is_valid.*false|not valid|invalid|used|consum/i.test(message);
@@ -1291,6 +1293,16 @@ export default function MockupPortal({
   const cartTotal = useMemo(() => {
     return cart.reduce((acc, item) => acc + item.quantity * 12500, 0); // Using mock price 12500
   }, [cart]);
+  const cartGrams = useMemo(() => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  }, [cart]);
+  const prescriptionRemainingGrams = Math.max(0, PRESCRIPTION_MONTHLY_LIMIT_GRAMS - PRESCRIPTION_USED_GRAMS);
+  const prescriptionProjectedGrams = PRESCRIPTION_USED_GRAMS + cartGrams;
+  const prescriptionUsagePercent = Math.min(
+    100,
+    Math.round((prescriptionProjectedGrams / PRESCRIPTION_MONTHLY_LIMIT_GRAMS) * 100),
+  );
+  const cartExceedsPrescriptionLimit = cartGrams > prescriptionRemainingGrams;
 
   const handleStartPickup = (pickup: any) => {
     setProcessingPickup(pickup);
@@ -3430,6 +3442,36 @@ export default function MockupPortal({
                             </div>
                          </div>
                          
+                         <div className="mb-5 rounded-3xl border border-brand-green-deep/5 bg-white p-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-1">Cupo receta mensual</p>
+                                <h6 className="text-lg font-bold text-brand-green-deep">
+                                  {PRESCRIPTION_USED_GRAMS}g usados de {PRESCRIPTION_MONTHLY_LIMIT_GRAMS}g
+                                </h6>
+                              </div>
+                              <div className="rounded-2xl bg-brand-neutral px-4 py-3 text-right">
+                                <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Disponible</p>
+                                <p className="text-xl font-bold text-brand-green-deep">{prescriptionRemainingGrams}g</p>
+                              </div>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-brand-neutral">
+                              <div
+                                className={`h-full rounded-full ${cartExceedsPrescriptionLimit ? 'bg-red-400' : 'bg-brand-gold'}`}
+                                style={{ width: `${prescriptionUsagePercent}%` }}
+                              />
+                            </div>
+                            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-brand-green-mid/60">
+                              <span>Carrito actual: {cartGrams}g</span>
+                              <span>Proyectado post retiro: {prescriptionProjectedGrams}g / {PRESCRIPTION_MONTHLY_LIMIT_GRAMS}g</span>
+                            </div>
+                            {cartExceedsPrescriptionLimit && (
+                              <p className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
+                                Este carrito supera el cupo disponible de la receta. Reduce gramos o solicita actualizacion medica.
+                              </p>
+                            )}
+                         </div>
+
                          <div className="space-y-4">
                             {selectedDispensary.inventory.map((strain: any) => (
                                <div 
@@ -3705,12 +3747,27 @@ export default function MockupPortal({
                                <span className="text-xs text-brand-green-mid/60 uppercase font-bold tracking-wider">Dispensario</span>
                                <span className="text-sm font-bold text-brand-green-deep">{selectedDispensary.name}</span>
                             </div>
-                            <div className="flex justify-between border-brand-green-deep/5">
+                           <div className="flex justify-between border-brand-green-deep/5">
                                <span className="text-xs text-brand-green-mid/60 uppercase font-bold tracking-wider">Monto Total</span>
                                <div className="text-right">
                                   <span className="text-xl font-bold text-brand-gold">${cartTotal.toLocaleString()}</span>
                                   <p className="text-[9px] text-brand-green-mid/40 font-bold uppercase mt-0.5">ARS Estimado</p>
                                </div>
+                            </div>
+                            <div className="border-t border-brand-green-deep/5 pt-4">
+                               <div className="flex justify-between text-xs font-bold text-brand-green-deep mb-2">
+                                  <span>Cupo mensual receta</span>
+                                  <span>{prescriptionProjectedGrams}g / {PRESCRIPTION_MONTHLY_LIMIT_GRAMS}g</span>
+                               </div>
+                               <div className="h-2 overflow-hidden rounded-full bg-white">
+                                  <div
+                                    className={`h-full rounded-full ${cartExceedsPrescriptionLimit ? 'bg-red-400' : 'bg-brand-gold'}`}
+                                    style={{ width: `${prescriptionUsagePercent}%` }}
+                                  />
+                               </div>
+                               <p className="mt-2 text-[10px] text-brand-green-mid/50">
+                                  Disponible antes del retiro: {prescriptionRemainingGrams}g. Este retiro usa {cartGrams}g.
+                               </p>
                             </div>
                          </div>
 
@@ -3749,7 +3806,7 @@ export default function MockupPortal({
                             </label>
                             <button 
                               onClick={handleCompleteOnchainDispense}
-                              disabled={dispenseBusy || (!activePrescription && !dispensePrescriptionId.trim()) || !dispensarySignerReady}
+                              disabled={dispenseBusy || cartExceedsPrescriptionLimit || (!activePrescription && !dispensePrescriptionId.trim()) || !dispensarySignerReady}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
                                {dispenseBusy ? 'Registrando en testnet...' : 'Validar cupo y registrar retiro'} <CheckCircle size={20} />
