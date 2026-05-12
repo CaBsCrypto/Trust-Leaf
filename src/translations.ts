@@ -8,8 +8,8 @@ export const translations = {
     },
     hero: {
       badge: "Trust Leaf Network",
-      title: "Cannabis medicinal verificable",
-      desc: "Flores, aceites, vaporizables y preparados con receta digital, cupo mensual y trazabilidad por lote. El paciente controla su informacion clinica; la red solo verifica lo necesario.",
+      title: "Acceso seguro a cannabis medicinal",
+      desc: "Recetas privadas, cupos mensuales y trazabilidad por lote para flores, aceites y extractos. Tu informacion clinica queda bajo tu control; la red solo valida lo necesario.",
       cta: "Entrar como paciente",
       secondary: "Ver MVP en vivo",
     },
@@ -229,8 +229,8 @@ export const translations = {
     },
     hero: {
       badge: "Trust Leaf Network",
-      title: "Verifiable medical cannabis",
-      desc: "Flower, oils, vaporizables, and prepared medicine with digital prescriptions, monthly allowances, and batch traceability. Patients control clinical data; the network verifies only what is needed.",
+      title: "Secure access to medical cannabis",
+      desc: "Private prescriptions, monthly allowances, and batch traceability for flower, oils, and extracts. Your clinical information stays under your control; the network validates only what is needed.",
       cta: "Enter Patient Portal",
       secondary: "View Live MVP",
     },
