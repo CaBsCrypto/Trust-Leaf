@@ -2368,12 +2368,12 @@ export default function MockupPortal({
                              <ShoppingBag size={40} />
                           </div>
                          <h4 className="text-xl font-serif text-brand-green-deep mb-2">Acceso Restringido</h4>
-                         <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Necesitas una receta activa antes de preparar una compra con medicina trazable.</p>
+                         <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Necesitas una receta activa antes de preparar una compra con medicina trazable. Agenda primero con un medico validado.</p>
                          <button 
-                           onClick={() => switchView('prescriptions')}
+                           onClick={() => switchView('doctors')}
                            className="px-8 py-4 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-green-deep/20"
                          >
-                            Ver mis recetas
+                            Buscar medico
                          </button>
                        </div>
                     ) : (
