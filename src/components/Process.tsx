@@ -1,30 +1,27 @@
 import { motion } from 'motion/react';
-import { Users, FileDigit, Search, QrCode } from 'lucide-react';
-
-import { useLanguage } from '../context/LanguageContext';
+import { Database, FileDigit, Search, Stethoscope } from 'lucide-react';
 
 export default function Process() {
-  const { t } = useLanguage();
   const steps = [
     {
-      icon: <Users size={24} />,
-      title: t.process.step1Title,
-      desc: t.process.step1Desc
+      icon: <FileDigit size={24} />,
+      title: 'Expediente privado',
+      desc: 'El paciente porta sintomas, examenes y respaldos cifrados. Solo comparte acceso temporal cuando hace falta.'
     },
     {
-      icon: <FileDigit size={24} />,
-      title: t.process.step2Title,
-      desc: t.process.step2Desc
+      icon: <Stethoscope size={24} />,
+      title: 'Receta con cupo',
+      desc: 'El medico valida el caso, emite RX on-chain y define gramos mensuales para retiros parciales.'
     },
     {
       icon: <Search size={24} />,
-      title: t.process.step3Title,
-      desc: t.process.step3Desc
+      title: 'Dispensa por lote',
+      desc: 'El dispensario valida cupo, registra lote/cantidad y no quema el tratamiento completo.'
     },
     {
-      icon: <QrCode size={24} />,
-      title: t.process.step4Title,
-      desc: t.process.step4Desc
+      icon: <Database size={24} />,
+      title: 'Prueba verificable',
+      desc: 'Stellar conserva hashes, estado y trazabilidad. Los datos clinicos siguen privados.'
     }
   ];
 
@@ -32,8 +29,8 @@ export default function Process() {
     <section className="py-20 md:py-24 bg-brand-green-deep text-brand-ivory relative overflow-hidden">
       <div className="container mx-auto px-6 md:px-12 relative z-10">
         <div className="text-center mb-16 md:mb-20">
-          <h2 className="text-3xl md:text-5xl font-serif mb-6">{t.process.title}</h2>
-          <p className="text-brand-ivory/60 max-w-2xl mx-auto text-sm md:text-base">{t.process.desc}</p>
+          <h2 className="text-3xl md:text-5xl font-serif mb-6">El flujo que vamos a grabar</h2>
+          <p className="text-brand-ivory/60 max-w-2xl mx-auto text-sm md:text-base">Desde el historial privado del paciente hasta el retiro parcial en dispensario, cada paso queda separado por actor y verificable sin exponer informacion sensible.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">

@@ -7,11 +7,11 @@ export const translations = {
       language: "EN",
     },
     hero: {
-      badge: "Acceso Global Unificado",
-      title: "Tu Tratamiento Sin Fricciones, En Todo el Mundo.",
-      desc: "Conectamos a pacientes con especialistas certificados y una red global de dispensarios. Valida tu medicina una vez y accede a ella en cualquier nodo de nuestra infraestructura internacional.",
-      cta: "Obtener Mi Trust ID",
-      secondary: "Explorar Red de Acceso",
+      badge: "Expediente privado + receta verificable",
+      title: "Trust Leaf",
+      desc: "Un pasaporte medico para pacientes de cannabis: historial clinico cifrado, recetas con cupo mensual, retiros parciales y trazabilidad global sin exponer diagnosticos.",
+      cta: "Entrar como paciente",
+      secondary: "Ver MVP en vivo",
     },
     problem: {
       title: "La Medicina No Debería Estar Sujeta a Fronteras.",
@@ -228,11 +228,11 @@ export const translations = {
       language: "ES",
     },
     hero: {
-      badge: "Unified Global Access",
-      title: "Your Treatment Without Friction, Worldwide.",
-      desc: "We connect patients with certified specialists and a global network of dispensaries. Validate your medicine once and access it at any node of our international infrastructure.",
-      cta: "Get My Trust ID",
-      secondary: "Explore Access Network",
+      badge: "Private record + verifiable prescription",
+      title: "Trust Leaf",
+      desc: "A medical passport for cannabis patients: encrypted clinical history, monthly prescription allowances, partial pickups, and global traceability without exposing diagnoses.",
+      cta: "Enter Patient Portal",
+      secondary: "View Live MVP",
     },
     problem: {
       title: "Medicine Should Not Be Limited by Borders.",

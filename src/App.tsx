@@ -5,7 +5,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, FileText, Leaf, Package, ShieldCheck, ShoppingBag, Stethoscope, UserRound } from 'lucide-react';
+import { Activity, ArrowRight, Database, FileText, Globe, Leaf, Lock, Package, ShieldCheck, ShoppingBag, Stethoscope, UserRound } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Solution from './components/Solution';
@@ -232,15 +232,10 @@ function AppContent() {
 
   return (
     <div className="min-h-screen selection:bg-brand-gold/30 selection:text-brand-green-deep relative overflow-hidden bg-brand-ivory">
-      {/* Background elements */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10">
-        <div className="absolute top-0 right-0 w-[50vw] h-[50vw] bg-brand-green-mid/[0.03] rounded-full blur-[100px] translate-x-1/4 -translate-y-1/4" />
-        <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-brand-gold/[0.03] rounded-full blur-[100px] -translate-x-1/4 translate-y-1/4" />
-      </div>
-
       <Navbar onPortalClick={() => navigate('/paciente')} />
       <main>
         <Hero onStartClick={() => navigate('/paciente')} />
+        <MvpSnapshot onNavigate={navigate} />
         <ProfessionalAccess onNavigate={navigate} />
         <Ecosystem />
         <Problem />
@@ -281,6 +276,91 @@ function AppContent() {
   );
 }
 
+function MvpSnapshot({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const pillars = [
+    {
+      title: 'Paciente',
+      desc: 'Identidad, historial clinico privado, recetas con cupo mensual y retiros trazables.',
+      action: 'Abrir portal',
+      path: '/paciente',
+      icon: <UserRound size={20} />,
+    },
+    {
+      title: 'Medico',
+      desc: 'Agenda, emision de receta soulbound y definicion del limite mensual en gramos.',
+      action: 'Emitir receta',
+      path: '/medico/operacion',
+      icon: <Stethoscope size={20} />,
+    },
+    {
+      title: 'Dispensario',
+      desc: 'Inventario por lote, validacion de cupo y registro parcial de cada entrega.',
+      action: 'Operar stock',
+      path: '/dispensario/operacion',
+      icon: <ShoppingBag size={20} />,
+    },
+  ];
+
+  const trustLayer = [
+    ['402 privacy gate', 'Acceso temporal, auditado y aprobado por el paciente.', <Lock size={18} />],
+    ['Hashes on-chain', 'Stellar guarda integridad, estado y trazabilidad, no diagnosticos.', <Database size={18} />],
+    ['Pasaporte viajero', 'Documentos verificables para medicos y aliados segun regulacion local.', <Globe size={18} />],
+  ];
+
+  return (
+    <section className="bg-white py-12 md:py-16">
+      <div className="container mx-auto px-6 md:px-12">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">MVP en vivo</p>
+            <h2 className="mt-2 max-w-3xl text-3xl font-serif text-brand-green-deep md:text-5xl">
+              Una red de salud privada, verificable y operable por cada actor.
+            </h2>
+          </div>
+          <button
+            onClick={() => onNavigate('/paciente/historial')}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+          >
+            Ver expediente privado
+            <ArrowRight size={16} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {pillars.map((pillar) => (
+            <div key={pillar.title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-5">
+              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green-deep text-brand-gold">
+                {pillar.icon}
+              </div>
+              <h3 className="text-xl font-bold text-brand-green-deep">{pillar.title}</h3>
+              <p className="mt-2 min-h-[64px] text-sm leading-relaxed text-brand-green-mid/70">{pillar.desc}</p>
+              <button
+                onClick={() => onNavigate(pillar.path)}
+                className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-green-deep hover:text-brand-gold"
+              >
+                {pillar.action}
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 rounded-2xl bg-brand-green-deep p-4 text-brand-ivory md:grid-cols-3">
+          {trustLayer.map(([title, desc, icon]) => (
+            <div key={title as string} className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="text-brand-gold">{icon}</div>
+              <div>
+                <p className="text-sm font-bold">{title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-brand-ivory/60">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void }) {
   const entries = [
     {
@@ -304,7 +384,7 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
   ];
 
   return (
-    <section className="px-6 md:px-12 pb-10 -mt-8 relative z-10">
+    <section className="px-6 py-10 md:px-12 relative z-10">
       <div className="mx-auto max-w-5xl rounded-2xl border border-brand-green-deep/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="px-3 py-2 md:max-w-xs">
