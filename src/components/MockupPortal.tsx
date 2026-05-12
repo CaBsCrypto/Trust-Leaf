@@ -383,6 +383,33 @@ const DISPENSARY_INVENTORY_SEED = [
   },
 ];
 
+const PRIVATE_CLINICAL_DOSSIER = [
+  {
+    id: 'symptoms',
+    title: 'Sintomas reportados',
+    status: 'Privado',
+    summary: 'Dolor cronico lumbar, dificultad para dormir y episodios de ansiedad.',
+    details: ['Evolucion registrada por el paciente', 'Escala de dolor: 7/10', 'Frecuencia: diaria', 'Ultima actualizacion: hace 6 dias'],
+    proof: 'hash:symptoms-9f31',
+  },
+  {
+    id: 'exams',
+    title: 'Examenes y respaldos',
+    status: 'Validado',
+    summary: 'Resonancia, informe traumatologico y certificado de tratamiento previo.',
+    details: ['3 documentos cifrados', 'Firmas de clinica verificadas', 'OCR local para extraer solo metadatos', 'Contenido medico no se publica on-chain'],
+    proof: 'hash:docs-2b77',
+  },
+  {
+    id: 'treatment',
+    title: 'Historial terapeutico',
+    status: 'Listo para medico',
+    summary: 'Tratamientos previos, respuesta a dosis y tolerancia del paciente.',
+    details: ['AINEs con respuesta parcial', 'Fisioterapia documentada', 'Uso cannabis medicinal supervisado', 'Alertas de interaccion: sin registros criticos'],
+    proof: 'hash:treatment-a140',
+  },
+];
+
 
 const MOCK_ORDERS = [
   { 
@@ -563,6 +590,7 @@ export default function MockupPortal({
   const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
   const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
+  const [selectedClinicalRecord, setSelectedClinicalRecord] = useState<any | null>(null);
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<'date' | 'time' | 'confirm' | 'success'>('date');
   const [selectedDispensary, setSelectedDispensary] = useState<any | null>(null);
@@ -2732,12 +2760,57 @@ export default function MockupPortal({
                   >
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                       <div>
-                        <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Registros Inmutables</p>
-                        <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">Historial de Pedidos</h3>
+                        <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Expediente privado</p>
+                        <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">Historial del Paciente</h3>
                       </div>
                       <div className="bg-brand-neutral px-4 py-2 rounded-xl border border-brand-green-deep/5 flex items-center gap-2">
                         <Database size={16} className="text-brand-gold" />
                         <span className="text-xs font-bold text-brand-green-deep uppercase tracking-tighter">Blockchain Sync: OK</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-brand-green-deep rounded-[32px] p-6 md:p-8 text-brand-ivory">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-6">
+                        <div>
+                          <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-2">Agente 402 privado</p>
+                          <h4 className="text-2xl md:text-3xl font-serif">Resumen clinico portable</h4>
+                          <p className="mt-2 text-sm text-brand-ivory/65 max-w-2xl">
+                            Sintomas, examenes y respaldos quedan cifrados. En otro pais el medico recibe pruebas verificables y documentos autorizados por el paciente, no datos abiertos por defecto.
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 min-w-[220px]">
+                          <p className="text-[10px] uppercase tracking-widest text-brand-ivory/50 font-bold">Modo de acceso</p>
+                          <p className="mt-1 text-sm font-bold text-brand-gold">Consentimiento temporal</p>
+                          <p className="mt-2 text-xs text-brand-ivory/55">Lectura limitada, auditada y revocable.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        {PRIVATE_CLINICAL_DOSSIER.map((record) => (
+                          <button
+                            key={record.id}
+                            type="button"
+                            onClick={() => setSelectedClinicalRecord(record)}
+                            className="text-left rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-3 mb-3">
+                              <FileText size={18} className="text-brand-gold" />
+                              <span className="rounded-full bg-white/10 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-brand-ivory/70">
+                                {record.status}
+                              </span>
+                            </div>
+                            <h5 className="text-sm font-bold text-brand-ivory">{record.title}</h5>
+                            <p className="mt-2 text-xs leading-relaxed text-brand-ivory/55">{record.summary}</p>
+                            <p className="mt-4 text-[10px] font-mono text-brand-gold">{record.proof}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 pt-4">
+                      <div>
+                        <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Registros inmutables</p>
+                        <h4 className="text-2xl font-serif text-brand-green-deep">Retiros y trazabilidad</h4>
                       </div>
                     </div>
 
@@ -3710,6 +3783,55 @@ export default function MockupPortal({
                       </motion.div>
                     )}
                  </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait" key="modal-clinical-record">
+        {selectedClinicalRecord && (
+          <motion.div
+            key="clinical-record-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-brand-green-deep/80 backdrop-blur-md"
+            onClick={() => setSelectedClinicalRecord(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 16 }}
+              className="bg-white w-full max-w-lg rounded-[28px] overflow-hidden shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="p-6 border-b border-brand-green-deep/5 flex items-start justify-between gap-4 bg-brand-neutral/30">
+                <div>
+                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Dato clinico privado</p>
+                  <h4 className="text-2xl font-serif text-brand-green-deep">{selectedClinicalRecord.title}</h4>
+                  <p className="mt-2 text-sm text-brand-green-mid/65">{selectedClinicalRecord.summary}</p>
+                </div>
+                <button onClick={() => setSelectedClinicalRecord(null)} className="p-2 hover:bg-white rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 gap-3">
+                  {selectedClinicalRecord.details.map((detail: string) => (
+                    <div key={detail} className="flex items-start gap-3 rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/40 p-4">
+                      <ShieldCheck size={16} className="mt-0.5 text-brand-green-deep shrink-0" />
+                      <p className="text-sm text-brand-green-deep">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700 leading-relaxed">
+                  402 privacy gate: el medico solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.
+                </div>
+                <div className="rounded-2xl border border-brand-gold/20 bg-brand-gold/5 p-4">
+                  <p className="text-[10px] uppercase tracking-widest text-brand-gold font-bold mb-1">Prueba publica</p>
+                  <p className="font-mono text-xs text-brand-green-deep">{selectedClinicalRecord.proof}</p>
+                </div>
               </div>
             </motion.div>
           </motion.div>
