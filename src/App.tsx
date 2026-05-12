@@ -47,6 +47,10 @@ interface DoctorRegistration {
   reviewedAt?: string;
 }
 
+// Future hardening: these local registration records should move to Supabase
+// with encrypted documents and an Agent 402 verification result. Admin approval
+// should then write only the actor wallet + metadata hash to the Stellar registry.
+
 const PATIENT_VIEWS: PortalView[] = ['overview', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
@@ -383,6 +387,36 @@ function AdminRoute({
               <p className="text-sm text-brand-green-mid/70">{desc}</p>
             </div>
           ))}
+        </section>
+
+        <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Agentes 402</p>
+              <h2 className="text-2xl font-serif mb-2">Privacidad verificable</h2>
+              <p className="max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
+                Los agentes validan informacion sensible sin exponer documentos completos. El resultado que viaja a Stellar es una wallet autorizada, estado verificable y hash de metadata.
+              </p>
+            </div>
+            <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
+              MVP conceptual
+            </span>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {[
+              ['Compliance Agent', 'Verifica licencias, documentos y estado profesional antes de aprobar actores.'],
+              ['Prescription Agent', 'Valida RX, vigencia y consumo sin revelar diagnostico o notas clinicas.'],
+              ['Eligibility Agent', 'Responde si el paciente puede acceder segun permisos privados y jurisdiccion.'],
+            ].map(([title, desc]) => (
+              <div key={title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+                  <ShieldCheck size={16} />
+                </div>
+                <h3 className="text-sm font-bold text-brand-green-deep">{title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_0.8fr]">

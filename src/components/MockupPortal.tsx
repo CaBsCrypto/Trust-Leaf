@@ -116,6 +116,10 @@ function shortenHash(value: string, size = 8) {
 const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
 const DEMO_PRESCRIPTION_ID = '1';
 
+// Future hardening: Agent 402 checks should resolve against a private vault
+// (Supabase + encrypted storage) and publish only decisions, hashes and state
+// transitions to Stellar. The UI below keeps that privacy model visible in MVP.
+
 const MOCK_DOCTORS = [
   { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
   { id: 'doc-2', name: "Dra. Elena Sotillo", specialty: "Medicina Interna", rating: 4.8, reviews: 89, availability: "Mañana" },
@@ -1501,6 +1505,23 @@ export default function MockupPortal({
                           )}
                         </div>
 
+                        <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-6 shadow-sm">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Agente 402</p>
+                          <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Datos privados, prueba verificable</h5>
+                          <div className="mt-5 space-y-3">
+                            {[
+                              ['Identidad', 'Wallet paciente verificada sin exponer documentos personales.'],
+                              ['Receta', 'El dispensario solo recibe validez, vigencia y estado de consumo.'],
+                              ['Clinica', 'Diagnostico y notas quedan fuera de cadena; Stellar guarda hash y estado.'],
+                            ].map(([label, desc]) => (
+                              <div key={label} className="rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/40 p-4">
+                                <p className="text-xs font-bold uppercase tracking-widest text-brand-green-deep">{label}</p>
+                                <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="bg-brand-neutral/40 rounded-[32px] border border-brand-green-deep/5 p-6">
                           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Última receta</p>
                           {patientDashboardLoading ? (
@@ -1712,6 +1733,10 @@ export default function MockupPortal({
                           {doctorSignerReady
                             ? `Signer medico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
                             : 'Modo lectura activo. Para emitir recetas reales en produccion falta configurar STELLAR_DOCTOR_SECRET en Vercel.'}
+                        </div>
+
+                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+                          Agente 402: valida licencia medica y genera un hash clinico. El RX se emite sin publicar diagnostico ni notas completas.
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/55">
@@ -3238,6 +3263,9 @@ export default function MockupPortal({
                               {dispensarySignerReady
                                 ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
                                 : 'Modo lectura activo. Para registrar dispensaciones reales en produccion falta configurar STELLAR_DISPENSARY_SECRET en Vercel.'}
+                            </div>
+                            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+                              Agente 402: confirma que el RX esta vigente y no consumido sin revelar diagnostico. La entrega registra solo prueba, lote y estado on-chain.
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
