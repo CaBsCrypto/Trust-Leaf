@@ -18,6 +18,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/medico/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/dispensario",
       "destination": "/index.html"
     },
