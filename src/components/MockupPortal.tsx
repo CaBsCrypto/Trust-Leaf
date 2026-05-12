@@ -1341,6 +1341,21 @@ export default function MockupPortal({
 
                       {!walletConnected && (
                         <div className="space-y-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          {[
+                            ['1', 'Crear identidad', 'Passkey, Freighter o demo testnet.'],
+                            ['2', 'Recibir receta', 'El medico emite un RX on-chain a tu wallet.'],
+                            ['3', 'Retirar medicina', 'El dispensario valida el RX desde su propia URL.'],
+                          ].map(([step, title, desc]) => (
+                            <div key={step} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4 shadow-sm">
+                              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-brand-green-deep text-xs font-bold text-brand-ivory">
+                                {step}
+                              </div>
+                              <h4 className="text-sm font-bold text-brand-green-deep">{title}</h4>
+                              <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">{desc}</p>
+                            </div>
+                          ))}
+                        </div>
                         <WalletOnboarding
                           title={t.portal.onboarding.title}
                           eyebrow={t.portal.onboarding.eyebrow}
@@ -1384,10 +1399,10 @@ export default function MockupPortal({
                         <button
                           type="button"
                           onClick={connectDemoPatientWallet}
-                          className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:border-brand-gold/50 hover:text-brand-green-mid transition-colors"
+                          className="w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:border-brand-gold/50 hover:text-brand-green-mid transition-colors"
                         >
                           <Database size={16} />
-                          Usar paciente demo testnet
+                          Entrar rapido con paciente demo testnet
                         </button>
                         </div>
                       )}
@@ -1408,12 +1423,21 @@ export default function MockupPortal({
                            <p className="text-brand-ivory/60 text-sm md:text-base leading-relaxed mb-8">
                               Inicie su protocolo de tratamiento verificado. Conectamos su necesidad médica con una red de trazabilidad absoluta para garantizar un consumo seguro y responsable.
                            </p>
-                           <button 
-                             onClick={() => setActiveView('doctors')}
-                             className="flex items-center gap-4 px-8 py-4 bg-brand-gold text-brand-green-deep rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-gold/20 group/btn"
-                           >
-                               {t.portal.onboarding.startCareAction} <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-                           </button>
+                           <div className="flex flex-col gap-3 sm:flex-row">
+                             <button 
+                               onClick={() => setActiveView(primaryPrescription ? 'prescriptions' : 'doctors')}
+                               className="flex items-center justify-center gap-3 px-6 py-4 bg-brand-gold text-brand-green-deep rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-gold/20 group/btn"
+                             >
+                                 {primaryPrescription ? 'Ver receta activa' : t.portal.onboarding.startCareAction}
+                                 <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+                             </button>
+                             <button
+                               onClick={() => setActiveView('dispensaries')}
+                               className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-bold text-brand-ivory transition-colors hover:bg-white/10"
+                             >
+                               Buscar dispensario
+                             </button>
+                           </div>
                         </div>
 
                         {/* Background Decoration */}
