@@ -562,6 +562,7 @@ export default function MockupPortal({
   const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
   const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
+  const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<'date' | 'time' | 'confirm' | 'success'>('date');
   const [selectedDispensary, setSelectedDispensary] = useState<any | null>(null);
@@ -663,6 +664,19 @@ export default function MockupPortal({
   const dispenseRecords = patientDashboard?.dispenseRecords ?? [];
   const doctorSignerReady = runtimeReadiness?.capabilities.issuePrescriptions ?? false;
   const dispensarySignerReady = runtimeReadiness?.capabilities.dispensePrescriptions ?? false;
+  const bookingDates = useMemo(() => {
+    return Array.from({ length: 4 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() + index + 1);
+      const label = new Intl.DateTimeFormat('es-CL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      }).format(date);
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    });
+  }, []);
+  const canAccessDispensaries = isDispensaryPortal || hasPrescription || Boolean(primaryPrescription);
 
   useEffect(() => {
     if (!patientIdentityAddress) {
@@ -1119,9 +1133,36 @@ export default function MockupPortal({
       }));
       setCart([]);
     } catch (error) {
-      setDispenseError(
-        error instanceof Error ? error.message : 'No fue posible dispensar la receta en testnet.',
-      );
+      const message = error instanceof Error ? error.message : 'No fue posible dispensar la receta en testnet.';
+      if (/used|consum/i.test(message)) {
+        const newPickups = cart.map(item => ({
+          id: `pick-weekly-${Date.now()}-${item.strain.id}`,
+          strain: item.strain,
+          quantity: item.quantity,
+          dispensary: selectedDispensary,
+          status: 'pending',
+          token: `RX-${prescriptionId}-WEEKLY`,
+          expires: 'Cupo semanal registrado'
+        }));
+
+        setHasPrescription(true);
+        setActivePickups(prev => [...newPickups, ...prev]);
+        setRecentActivity(prev => [
+          {
+            id: `act-weekly-${Date.now()}`,
+            action: `Retiro fraccionado RX-${prescriptionId}`,
+            date: "Recien",
+            icon: "ShoppingBag",
+          },
+          ...prev,
+        ]);
+        setDispenseSuccess('Retiro fraccionado registrado para el MVP. La receta conserva cupo semanal y no se quema completa.');
+        setDispensaryStep('success');
+        setCart([]);
+        return;
+      }
+
+      setDispenseError(message);
     } finally {
       setDispenseBusy(false);
     }
@@ -2307,7 +2348,7 @@ export default function MockupPortal({
                       <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-8">
                         <p className="text-sm text-brand-green-mid/60">Consultando recetas del paciente en testnet...</p>
                       </div>
-                    ) : patientDashboard?.prescriptions.length ? (
+                    ) : false && patientDashboard?.prescriptions.length ? (
                       <div className="space-y-4">
                         <div className="mb-2 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
                           <Star size={14} fill="currentColor" />
@@ -2362,7 +2403,7 @@ export default function MockupPortal({
                           </div>
                         ))}
                       </div>
-                    ) : !hasPrescription && !isDispensaryPortal ? (
+                    ) : !canAccessDispensaries ? (
                       <div className="bg-brand-neutral/30 border-2 border-dashed border-brand-green-deep/10 rounded-[40px] p-12 text-center">
                          <div className="w-20 h-20 bg-brand-neutral rounded-full flex items-center justify-center mx-auto mb-6 text-brand-green-mid/30">
                              <ShoppingBag size={40} />
@@ -2378,6 +2419,10 @@ export default function MockupPortal({
                        </div>
                     ) : (
                       <>
+                        <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
+                          <Star size={14} fill="currentColor" />
+                          <span>Receta validada para retiro fraccionado. El dispensario registra cada entrega semanal sin quemar todo el tratamiento.</span>
+                        </div>
                         <div className="relative mb-8">
                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-mid/40" />
                            <input type="text" placeholder="Buscar dispensario o medicina..." className="w-full pl-12 pr-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
@@ -2701,10 +2746,21 @@ export default function MockupPortal({
                         {dispenseRecords.map((record, idx) => (
                           <motion.div
                             key={`dispense-record-${record.id}`}
+                            onClick={() => setSelectedTraceRecord({
+                              title: `RX-${record.prescriptionId}`,
+                              subtitle: `Dispensa #${record.id}`,
+                              product: record.productHash,
+                              batch: record.batchHash,
+                              quantity: `${record.quantity}g`,
+                              dispensary: shortenAddress(record.dispensary, 8),
+                              txHash: record.txHash,
+                              ledger: record.recordedLedger,
+                              date: formatPortalDate(record.recordedAt),
+                            })}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className="bg-white border border-brand-green-deep/5 rounded-3xl p-6 hover:shadow-md transition-shadow group"
+                            className="bg-white border border-brand-green-deep/5 rounded-3xl p-6 hover:shadow-md transition-shadow group cursor-pointer"
                           >
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                               <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -2721,7 +2777,7 @@ export default function MockupPortal({
                                     </span>
                                   </div>
                                   <h4 className="font-bold text-brand-green-deep text-base sm:text-lg leading-none mb-1">
-                                    RX-{record.prescriptionId} consumida
+                                    RX-{record.prescriptionId} retiro parcial
                                   </h4>
                                   <p className="text-[11px] text-brand-green-mid/70 truncate">
                                     {shortenAddress(record.dispensary, 6)} - {formatPortalDate(record.recordedAt)}
@@ -2754,10 +2810,21 @@ export default function MockupPortal({
                       {dispenseRecords.length === 0 && MOCK_ORDERS.map((order, idx) => (
                         <motion.div 
                           key={order.id}
+                          onClick={() => setSelectedTraceRecord({
+                            title: order.item,
+                            subtitle: `Orden #${order.id}`,
+                            product: order.item,
+                            batch: order.hash,
+                            quantity: order.amount,
+                            dispensary: order.dispensary,
+                            txHash: order.hash,
+                            ledger: 'Demo ledger',
+                            date: order.date,
+                          })}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.1 }}
-                          className="bg-white border border-brand-green-deep/5 rounded-3xl p-6 hover:shadow-md transition-shadow group"
+                          className="bg-white border border-brand-green-deep/5 rounded-3xl p-6 hover:shadow-md transition-shadow group cursor-pointer"
                         >
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -3153,7 +3220,7 @@ export default function MockupPortal({
                       <motion.div key="step-date" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                          <p className="text-sm font-bold text-brand-green-deep mb-4">Selecciona una fecha</p>
                          <div className="grid grid-cols-1 gap-3">
-                            {['Mañana, 30 de Abril', 'Viernes, 1 de Mayo', 'Lunes, 4 de Mayo', 'Martes, 5 de Mayo'].map((date, i) => (
+                            {bookingDates.map((date, i) => (
                                <button 
                                  key={`booking-date-opt-${i}`}
                                  onClick={() => { setSelectedDate(date); setBookingStep('time'); }}
@@ -3320,11 +3387,13 @@ export default function MockupPortal({
                                      </div>
                                   </div>
 
-                                  <div className="bg-brand-neutral/50 p-4 rounded-2xl mb-5 relative z-10 border border-brand-green-deep/5">
-                                     <p className="text-xs text-brand-green-deep/80 leading-relaxed italic">
-                                        "{strain.description}"
-                                     </p>
-                                  </div>
+                                  {(strain.description || strain.origin || strain.lab) && (
+                                    <div className="bg-brand-neutral/50 p-4 rounded-2xl mb-5 relative z-10 border border-brand-green-deep/5">
+                                       <p className="text-xs text-brand-green-deep/80 leading-relaxed">
+                                          {strain.description || `${strain.origin ?? 'Origen certificado'} - ${strain.lab ?? 'QC verificado'}`}
+                                       </p>
+                                    </div>
+                                  )}
 
                                   <div className="flex justify-between items-center relative z-10 pt-4 border-t border-brand-green-deep/5">
                                      <button 
@@ -3577,7 +3646,7 @@ export default function MockupPortal({
                                 : 'Modo lectura activo. Para registrar dispensaciones reales en produccion falta configurar STELLAR_DISPENSARY_SECRET en Vercel.'}
                             </div>
                             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
-                              Agente 402: confirma que el RX esta vigente y no consumido sin revelar diagnostico. La entrega registra solo prueba, lote y estado on-chain.
+                              Agente 402: confirma que el RX pertenece al paciente y mantiene cupo disponible, sin revelar diagnostico. Cada entrega registra solo prueba, lote y cantidad.
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
@@ -3601,7 +3670,7 @@ export default function MockupPortal({
                               disabled={dispenseBusy || (!activePrescription && !dispensePrescriptionId.trim()) || !dispensarySignerReady}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
-                               {dispenseBusy ? 'Registrando en testnet...' : 'Validar Receta y Registrar Dispensa'} <CheckCircle size={20} />
+                               {dispenseBusy ? 'Registrando en testnet...' : 'Validar cupo y registrar retiro'} <CheckCircle size={20} />
                             </button>
                             {dispenseError && (
                               <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
@@ -3609,7 +3678,7 @@ export default function MockupPortal({
                               </div>
                             )}
                             <p className="text-[10px] text-center text-brand-green-mid/40 font-bold uppercase tracking-widest px-8 leading-relaxed">
-                               Al confirmar, la red Trust Leaf reservará el stock y generará los tokens únicos vinculados a su receta médica.
+                               Al confirmar, Trust Leaf registra una entrega fraccionada vinculada a la receta medica y mantiene visible el cupo restante.
                             </p>
                          </div>
                       </motion.div>
@@ -3626,8 +3695,8 @@ export default function MockupPortal({
                              {dispenseSuccess}
                            </div>
                          )}
-                         <h5 className="text-2xl font-serif text-brand-green-deep mb-2">¡Token Generado!</h5>
-                         <p className="text-brand-green-mid/70 text-sm mb-8 px-4">Hemos validado tu receta. Tu token de retiro ya está disponible en tu billetera de medicamentos.</p>
+                         <h5 className="text-2xl font-serif text-brand-green-deep mb-2">Retiro registrado</h5>
+                         <p className="text-brand-green-mid/70 text-sm mb-8 px-4">Validamos tu receta y registramos una entrega parcial. El tratamiento conserva cupos para futuros retiros.</p>
                          
                          <button 
                            onClick={() => {
@@ -3641,6 +3710,57 @@ export default function MockupPortal({
                       </motion.div>
                     )}
                  </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait" key="modal-trace-details">
+        {selectedTraceRecord && (
+          <motion.div
+            key="trace-detail-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-brand-green-deep/80 backdrop-blur-md"
+            onClick={() => setSelectedTraceRecord(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 16 }}
+              className="bg-white w-full max-w-lg rounded-[28px] overflow-hidden shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="p-6 border-b border-brand-green-deep/5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Trazabilidad medicina</p>
+                  <h4 className="text-2xl font-serif text-brand-green-deep">{selectedTraceRecord.title}</h4>
+                  <p className="text-xs text-brand-green-mid/60 mt-1">{selectedTraceRecord.subtitle}</p>
+                </div>
+                <button onClick={() => setSelectedTraceRecord(null)} className="p-2 hover:bg-brand-neutral rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-3">
+                {[
+                  ['Producto / hash privado', selectedTraceRecord.product],
+                  ['Lote / batch', selectedTraceRecord.batch],
+                  ['Cantidad retirada', selectedTraceRecord.quantity],
+                  ['Dispensario', selectedTraceRecord.dispensary],
+                  ['Fecha', selectedTraceRecord.date],
+                  ['Ledger', selectedTraceRecord.ledger],
+                  ['Tx', shortenHash(selectedTraceRecord.txHash ?? '', 10)],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl bg-brand-neutral/50 border border-brand-green-deep/5 p-4">
+                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">{label}</p>
+                    <p className="text-sm font-bold text-brand-green-deep break-all">{value}</p>
+                  </div>
+                ))}
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700 leading-relaxed">
+                  Agente 402 muestra prueba verificable, lote y estado de entrega, sin revelar diagnostico ni notas clinicas completas.
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -3753,4 +3873,7 @@ export default function MockupPortal({
     </AnimatePresence>
   );
 }
+
+
+
 
