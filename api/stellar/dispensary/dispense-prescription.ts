@@ -33,11 +33,22 @@ export default async function handler(req: any, res: any) {
 
     res.status(200).json(result);
   } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'No fue posible dispensar la receta en testnet.';
+
+    if (/Error\(Contract,\s*#4\)|is_valid.*false|not valid|invalid|used|consum/i.test(message)) {
+      res.status(409).json({
+        code: 'PRESCRIPTION_NOT_VALID',
+        message:
+          'La receta no tiene cupo activo en el contrato actual. Para el MVP se debe emitir una nueva receta o usar el modo de retiro fraccionado.',
+      });
+      return;
+    }
+
     res.status(500).json({
-      message:
-        error instanceof Error
-          ? error.message
-          : 'No fue posible dispensar la receta en testnet.',
+      message,
     });
   }
 }

@@ -116,9 +116,15 @@ function shortenHash(value: string, size = 8) {
 const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
 const DEMO_PRESCRIPTION_ID = '1';
 
+function isPrescriptionNotValidError(message: string) {
+  return /PRESCRIPTION_NOT_VALID|Error\(Contract,\s*#4\)|is_valid.*false|not valid|invalid|used|consum/i.test(message);
+}
+
 // Future hardening: Agent 402 checks should resolve against a private vault
 // (Supabase + encrypted storage) and publish only decisions, hashes and state
 // transitions to Stellar. The UI below keeps that privacy model visible in MVP.
+// Current Soroban MVP consumes RX state in one call; production should model
+// weekly allowances/remaining grams instead of burning the whole prescription.
 
 const MOCK_DOCTORS = [
   { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
@@ -1118,7 +1124,7 @@ export default function MockupPortal({
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(payload.message || 'No fue posible dispensar la receta en testnet.');
+        throw new Error(payload.code || payload.message || 'No fue posible dispensar la receta en testnet.');
       }
 
       setPatientDashboard(payload.dashboard);
@@ -1162,7 +1168,7 @@ export default function MockupPortal({
       setCart([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No fue posible dispensar la receta en testnet.';
-      if (/used|consum/i.test(message)) {
+      if (isPrescriptionNotValidError(message)) {
         const newPickups = cart.map(item => ({
           id: `pick-weekly-${Date.now()}-${item.strain.id}`,
           strain: item.strain,
@@ -1184,7 +1190,7 @@ export default function MockupPortal({
           },
           ...prev,
         ]);
-        setDispenseSuccess('Retiro fraccionado registrado para el MVP. La receta conserva cupo semanal y no se quema completa.');
+        setDispenseSuccess('El contrato testnet marco este RX sin cupo activo. Para el MVP registramos un retiro fraccionado privado; en produccion el contrato debe manejar cupos semanales/gramos restantes.');
         setDispensaryStep('success');
         setCart([]);
         return;
@@ -3720,6 +3726,9 @@ export default function MockupPortal({
                             </div>
                             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
                               Agente 402: confirma que el RX pertenece al paciente y mantiene cupo disponible, sin revelar diagnostico. Cada entrega registra solo prueba, lote y cantidad.
+                            </div>
+                            <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
+                              Nota MVP: el contrato actual marca algunas recetas como usadas en una sola transaccion. La version de grant debe guardar cupos semanales o gramos restantes para permitir retiros parciales globales.
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
