@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowRight, Database, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Database, Droplets, FileText, ShieldCheck, Wind } from 'lucide-react';
 
 interface HeroProps {
   onStartClick: () => void;
@@ -9,6 +9,26 @@ import { useLanguage } from '../context/LanguageContext';
 
 export default function Hero({ onStartClick }: HeroProps) {
   const { t } = useLanguage();
+  const treatmentFormats = [
+    {
+      label: 'Flores',
+      detail: 'Lote trazable',
+      icon: <FileText size={16} />,
+      image: 'https://images.pexels.com/photos/6429022/pexels-photo-6429022.jpeg?auto=compress&cs=tinysrgb&w=500',
+    },
+    {
+      label: 'Aceites',
+      detail: 'Dosis verificable',
+      icon: <Droplets size={16} />,
+      image: 'https://images.pexels.com/photos/12996477/pexels-photo-12996477.jpeg?auto=compress&cs=tinysrgb&w=500',
+    },
+    {
+      label: 'Vaporizables',
+      detail: 'Uso controlado',
+      icon: <Wind size={16} />,
+      image: 'https://images.pexels.com/photos/29612649/pexels-photo-29612649.jpeg?auto=compress&cs=tinysrgb&w=500',
+    },
+  ];
 
   return (
     <section className="relative min-h-[86vh] overflow-hidden bg-brand-green-deep text-brand-ivory">
@@ -64,8 +84,43 @@ export default function Hero({ onStartClick }: HeroProps) {
                 </div>
               ))}
             </div>
+
+            <div className="mt-5 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3 lg:hidden">
+              {treatmentFormats.map((format) => (
+                <div key={format.label} className="overflow-hidden border border-white/15 bg-brand-green-deep/35 backdrop-blur-sm">
+                  <img src={format.image} alt={format.label} className="h-20 w-full object-cover opacity-85" referrerPolicy="no-referrer" />
+                  <div className="p-3">
+                    <p className="text-xs font-bold">{format.label}</p>
+                    <p className="mt-1 text-[10px] text-brand-ivory/60">{format.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
+      </div>
+
+      <div className="absolute bottom-14 right-8 z-10 hidden w-[360px] grid-cols-1 gap-3 xl:grid">
+        {treatmentFormats.map((format, index) => (
+          <motion.div
+            key={format.label}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25 + index * 0.08, duration: 0.5 }}
+            className="grid grid-cols-[92px_1fr] overflow-hidden border border-white/15 bg-brand-green-deep/45 shadow-xl backdrop-blur-md"
+          >
+            <img src={format.image} alt={format.label} className="h-24 w-full object-cover" referrerPolicy="no-referrer" />
+            <div className="flex items-center gap-3 p-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-brand-gold text-brand-green-deep">
+                {format.icon}
+              </div>
+              <div>
+                <p className="text-sm font-bold">{format.label}</p>
+                <p className="mt-1 text-xs text-brand-ivory/60">{format.detail}</p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </div>
     </section>
   );
