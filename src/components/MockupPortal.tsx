@@ -1874,6 +1874,8 @@ export default function MockupPortal({
                         )}
                       </div>
 
+                      {!isDoctorPortal && (
+                      <>
                       <div className="relative">
                         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-mid/40" />
                         <input 
@@ -1884,8 +1886,6 @@ export default function MockupPortal({
                           className="w-full pl-12 pr-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" 
                         />
                       </div>
-                    </div>
-
                     <div className="grid grid-cols-1 gap-4">
                       {MOCK_DOCTORS.filter(doc => 
                         doc.name.toLowerCase().includes(doctorSearchQuery.toLowerCase()) || 
@@ -1916,6 +1916,9 @@ export default function MockupPortal({
                           </div>
                         </div>
                       ))}
+                    </div>
+                    </>
+                    )}
                     </div>
                   </motion.div>
                 )}
