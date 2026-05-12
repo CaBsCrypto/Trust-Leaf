@@ -354,6 +354,35 @@ const MOCK_DISPENSARIES = [
   },
 ];
 
+const DISPENSARY_INVENTORY_SEED = [
+  {
+    id: 'inv-cbd-balance',
+    name: 'CBD Balance 10:10',
+    type: 'Aceite sublingual',
+    batch: 'TL-CBD-10-2026-A',
+    stockGrams: 42,
+    thc: '10%',
+    cbd: '10%',
+    lab: 'Trust Leaf QC',
+    origin: 'Cultivo certificado - Lote Mendoza',
+    effect: 'Equilibrado / analgesico',
+    description: 'Producto listo para dispensar contra receta validada.',
+  },
+  {
+    id: 'inv-northern-sky',
+    name: 'Northern Sky',
+    type: 'Flor seca',
+    batch: 'TL-NS-2026-X01',
+    stockGrams: 18,
+    thc: '18%',
+    cbd: '2%',
+    lab: 'Pure Labs',
+    origin: 'Cultivo organico - Mendoza',
+    effect: 'Sedativo / relajante',
+    description: 'Inventario trazable con certificado de laboratorio cargado.',
+  },
+];
+
 
 const MOCK_ORDERS = [
   { 
@@ -551,6 +580,20 @@ export default function MockupPortal({
     const saved = localStorage.getItem('trust_cart');
     return saved ? JSON.parse(saved) : [];
   });
+  const [dispensaryInventory, setDispensaryInventory] = useState<any[]>(() => {
+    const saved = localStorage.getItem('trust_dispensary_inventory');
+    return saved ? JSON.parse(saved) : DISPENSARY_INVENTORY_SEED;
+  });
+  const [inventoryForm, setInventoryForm] = useState({
+    name: 'CBD Balance 10:10',
+    type: 'Aceite sublingual',
+    batch: `TL-${new Date().getFullYear()}-001`,
+    stockGrams: 10,
+    thc: '10%',
+    cbd: '10%',
+    lab: 'Trust Leaf QC',
+    origin: 'Cultivo certificado',
+  });
   const [travelerActive, setTravelerActive] = useState(false);
   const [regionFilter, setRegionFilter] = useState<'Todos' | 'América' | 'Europa' | 'Oceanía'>('Todos');
   const [selectedRegion, setSelectedRegion] = useState<any | null>(null);
@@ -583,6 +626,10 @@ export default function MockupPortal({
   useEffect(() => {
     localStorage.setItem('trust_cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_dispensary_inventory', JSON.stringify(dispensaryInventory));
+  }, [dispensaryInventory]);
 
   useEffect(() => {
     localStorage.setItem('trust_wallet_setup', JSON.stringify(walletSetup));
@@ -1059,6 +1106,17 @@ export default function MockupPortal({
         },
         ...prev,
       ]);
+      setDispensaryInventory(prev => prev.map((product) => {
+        const dispensed = cart.find((item) => item.strain.id === product.id)?.quantity ?? 0;
+        if (!dispensed) {
+          return product;
+        }
+
+        return {
+          ...product,
+          stockGrams: Math.max(0, Number(product.stockGrams ?? 0) - dispensed),
+        };
+      }));
       setCart([]);
     } catch (error) {
       setDispenseError(
@@ -1095,6 +1153,64 @@ export default function MockupPortal({
       }
       return item;
     }));
+  };
+
+  const addInventoryProduct = () => {
+    const stockGrams = Math.max(0, Number(inventoryForm.stockGrams) || 0);
+    if (!inventoryForm.name.trim() || !inventoryForm.batch.trim() || stockGrams <= 0) {
+      return;
+    }
+
+    setDispensaryInventory(prev => [
+      {
+        id: `inv-${Date.now()}`,
+        name: inventoryForm.name.trim(),
+        type: inventoryForm.type.trim() || 'Producto medicinal',
+        batch: inventoryForm.batch.trim(),
+        stockGrams,
+        thc: inventoryForm.thc.trim() || 'N/D',
+        cbd: inventoryForm.cbd.trim() || 'N/D',
+        lab: inventoryForm.lab.trim() || 'Pendiente QC',
+        origin: inventoryForm.origin.trim() || 'Origen declarado',
+        effect: 'Inventario operador',
+        description: 'Producto cargado por el dispensario para validar contra receta antes de dispensar.',
+      },
+      ...prev,
+    ]);
+    setInventoryForm(prev => ({
+      ...prev,
+      batch: `TL-${new Date().getFullYear()}-${Math.floor(Math.random() * 900 + 100)}`,
+      stockGrams: 10,
+    }));
+  };
+
+  const updateInventoryStock = (productId: string, delta: number) => {
+    setDispensaryInventory(prev => prev.map(product => {
+      if (product.id !== productId) {
+        return product;
+      }
+
+      return {
+        ...product,
+        stockGrams: Math.max(0, Number(product.stockGrams ?? 0) + delta),
+      };
+    }));
+  };
+
+  const prepareInventoryDispense = (product: any) => {
+    setSelectedDispensary({
+      id: 'dispensary-operator',
+      name: 'Mi dispensario',
+      address: 'Operacion autorizada',
+      status: 'Abierto',
+      stock: 'Operativo',
+      inventory: dispensaryInventory,
+    });
+    setCart([{ strain: product, quantity: 1 }]);
+    setSelectedStrain(product);
+    setDispenseError(null);
+    setDispenseSuccess(null);
+    setDispensaryStep('confirm');
   };
 
   const cartTotal = useMemo(() => {
@@ -1994,7 +2110,177 @@ export default function MockupPortal({
                       </div>
                     )}
 
-                    {patientDashboardLoading ? (
+                    {isDispensaryPortal ? (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="p-4 bg-white border border-brand-green-deep/10 rounded-2xl">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-green-mid/50 mb-2">Productos</p>
+                            <p className="text-2xl font-serif text-brand-green-deep">{dispensaryInventory.length}</p>
+                          </div>
+                          <div className="p-4 bg-white border border-brand-green-deep/10 rounded-2xl">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-green-mid/50 mb-2">Stock total</p>
+                            <p className="text-2xl font-serif text-brand-green-deep">
+                              {dispensaryInventory.reduce((total, product) => total + Number(product.stockGrams ?? 0), 0)}g
+                            </p>
+                          </div>
+                          <div className="p-4 bg-white border border-brand-green-deep/10 rounded-2xl">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-green-mid/50 mb-2">Bajo stock</p>
+                            <p className="text-2xl font-serif text-brand-green-deep">
+                              {dispensaryInventory.filter((product) => Number(product.stockGrams ?? 0) <= 10).length}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-brand-green-deep/10 rounded-[28px] p-5 md:p-6">
+                          <div className="flex items-start justify-between gap-4 mb-5">
+                            <div>
+                              <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Inventario dispensario</p>
+                              <h3 className="text-2xl md:text-3xl font-serif text-brand-green-deep">Cargar producto trazable</h3>
+                            </div>
+                            <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-brand-neutral items-center justify-center text-brand-green-deep">
+                              <Package size={22} />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input
+                              value={inventoryForm.name}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, name: event.target.value }))}
+                              placeholder="Nombre del producto"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              value={inventoryForm.type}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, type: event.target.value }))}
+                              placeholder="Tipo o formato"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              value={inventoryForm.batch}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, batch: event.target.value }))}
+                              placeholder="Lote"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              type="number"
+                              min="1"
+                              value={inventoryForm.stockGrams}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, stockGrams: Number(event.target.value) }))}
+                              placeholder="Cantidad en gramos"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              value={inventoryForm.thc}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, thc: event.target.value }))}
+                              placeholder="THC"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              value={inventoryForm.cbd}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, cbd: event.target.value }))}
+                              placeholder="CBD"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              value={inventoryForm.lab}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, lab: event.target.value }))}
+                              placeholder="Laboratorio / QC"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                            <input
+                              value={inventoryForm.origin}
+                              onChange={(event) => setInventoryForm(prev => ({ ...prev, origin: event.target.value }))}
+                              placeholder="Origen"
+                              className="px-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={addInventoryProduct}
+                            className="mt-4 w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95"
+                          >
+                            <Plus size={16} />
+                            Agregar al inventario
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {dispensaryInventory.map((product) => {
+                            const stock = Number(product.stockGrams ?? 0);
+                            const isLowStock = stock <= 10;
+
+                            return (
+                              <div key={product.id} className="p-5 bg-white border border-brand-green-deep/10 rounded-2xl">
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                  <div>
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                      <h4 className="font-bold text-brand-green-deep text-lg">{product.name}</h4>
+                                      <span className="text-[9px] bg-brand-green-deep text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                        {product.type}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-brand-green-mid/60">{product.batch}</p>
+                                  </div>
+                                  <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${isLowStock ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                                    {isLowStock ? 'Bajo stock' : 'Disponible'}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                  <div className="p-3 rounded-xl bg-brand-neutral/60">
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Stock</p>
+                                    <p className="font-bold text-brand-green-deep">{stock}g</p>
+                                  </div>
+                                  <div className="p-3 rounded-xl bg-brand-neutral/60">
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Potencia</p>
+                                    <p className="font-bold text-brand-green-deep">THC {product.thc} / CBD {product.cbd}</p>
+                                  </div>
+                                  <div className="p-3 rounded-xl bg-brand-neutral/60">
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">QC</p>
+                                    <p className="font-bold text-brand-green-deep truncate">{product.lab}</p>
+                                  </div>
+                                  <div className="p-3 rounded-xl bg-brand-neutral/60">
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Origen</p>
+                                    <p className="font-bold text-brand-green-deep truncate">{product.origin}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateInventoryStock(product.id, -1)}
+                                      className="w-11 h-11 rounded-xl border border-brand-green-deep/10 flex items-center justify-center text-brand-green-deep hover:bg-brand-neutral active:scale-95"
+                                      aria-label="Restar stock"
+                                    >
+                                      <Minus size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateInventoryStock(product.id, 1)}
+                                      className="w-11 h-11 rounded-xl border border-brand-green-deep/10 flex items-center justify-center text-brand-green-deep hover:bg-brand-neutral active:scale-95"
+                                      aria-label="Sumar stock"
+                                    >
+                                      <Plus size={16} />
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => prepareInventoryDispense(product)}
+                                    disabled={stock <= 0}
+                                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    Validar receta y dispensar
+                                    <ArrowRight size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : patientDashboardLoading ? (
                       <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-8">
                         <p className="text-sm text-brand-green-mid/60">Consultando recetas del paciente en testnet...</p>
                       </div>
@@ -2952,7 +3238,7 @@ export default function MockupPortal({
               <div className="p-6 border-b border-brand-green-deep/5 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
                    <h4 className="text-xl font-serif text-brand-green-deep">
-                     {dispensaryStep === 'success' ? '¡Retiro Autorizado!' : 'Adquirir Medicina'}
+                     {dispensaryStep === 'success' ? '¡Retiro Autorizado!' : isDispensaryPortal ? 'Registrar dispensa' : 'Adquirir Medicina'}
                    </h4>
                    {dispensaryStep !== 'success' && (
                      <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest mt-1">En {selectedDispensary.name}</p>
