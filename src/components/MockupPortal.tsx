@@ -2205,6 +2205,16 @@ export default function MockupPortal({
                           </button>
                         </div>
 
+                        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Inventario disponible</p>
+                            <h3 className="text-2xl md:text-3xl font-serif text-brand-green-deep">Productos cargados para dispensar</h3>
+                            <p className="text-sm text-brand-green-mid/60 mt-2 max-w-2xl">
+                              Cada tarjeta representa un producto/lote del dispensario. Ajusta stock si entra o sale mercaderia, o prepara una dispensa para validar la receta del paciente.
+                            </p>
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           {dispensaryInventory.map((product) => {
                             const stock = Number(product.stockGrams ?? 0);
@@ -2229,41 +2239,46 @@ export default function MockupPortal({
 
                                 <div className="grid grid-cols-2 gap-3 mb-4">
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
-                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Stock</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Stock disponible</p>
                                     <p className="font-bold text-brand-green-deep">{stock}g</p>
                                   </div>
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
-                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Potencia</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Concentracion</p>
                                     <p className="font-bold text-brand-green-deep">THC {product.thc} / CBD {product.cbd}</p>
                                   </div>
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
-                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">QC</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Certificado QC</p>
                                     <p className="font-bold text-brand-green-deep truncate">{product.lab}</p>
                                   </div>
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
                                     <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Origen</p>
-                                    <p className="font-bold text-brand-green-deep truncate">{product.origin}</p>
+                                    <p className="font-bold text-brand-green-deep line-clamp-2">{product.origin}</p>
                                   </div>
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                  <div className="flex gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => updateInventoryStock(product.id, -1)}
-                                      className="w-11 h-11 rounded-xl border border-brand-green-deep/10 flex items-center justify-center text-brand-green-deep hover:bg-brand-neutral active:scale-95"
-                                      aria-label="Restar stock"
-                                    >
-                                      <Minus size={16} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => updateInventoryStock(product.id, 1)}
-                                      className="w-11 h-11 rounded-xl border border-brand-green-deep/10 flex items-center justify-center text-brand-green-deep hover:bg-brand-neutral active:scale-95"
-                                      aria-label="Sumar stock"
-                                    >
-                                      <Plus size={16} />
-                                    </button>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Stock</span>
+                                    <div className="flex gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => updateInventoryStock(product.id, -1)}
+                                        className="w-11 h-11 rounded-xl border border-brand-green-deep/10 flex items-center justify-center text-brand-green-deep hover:bg-brand-neutral active:scale-95"
+                                        aria-label="Restar 1g de stock"
+                                        title="Restar 1g de stock"
+                                      >
+                                        <Minus size={16} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateInventoryStock(product.id, 1)}
+                                        className="w-11 h-11 rounded-xl border border-brand-green-deep/10 flex items-center justify-center text-brand-green-deep hover:bg-brand-neutral active:scale-95"
+                                        aria-label="Sumar 1g de stock"
+                                        title="Sumar 1g de stock"
+                                      >
+                                        <Plus size={16} />
+                                      </button>
+                                    </div>
                                   </div>
                                   <button
                                     type="button"
@@ -2271,7 +2286,7 @@ export default function MockupPortal({
                                     disabled={stock <= 0}
                                     className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
-                                    Validar receta y dispensar
+                                    Preparar dispensa
                                     <ArrowRight size={16} />
                                   </button>
                                 </div>
