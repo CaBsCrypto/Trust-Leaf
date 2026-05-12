@@ -480,7 +480,7 @@ const MOCK_GLOBAL_REGIONS = [
     partner: 'Asociación Cannábica MVD',
     flag: '🇺🇾',
     continent: 'América',
-    requirements: ['Cédula o Pasaporte', 'Validación Trust Leaf'],
+    requirements: ['Documento de identidad', 'Validación Trust Leaf'],
     description: 'Pioneros en regulación. Acceso simple para pacientes internacionales validados.'
   },
   {
@@ -490,7 +490,7 @@ const MOCK_GLOBAL_REGIONS = [
     partner: 'Berlin Medical Botanical',
     flag: '🇩🇪',
     continent: 'Europa',
-    requirements: ['Pasaporte Médico', 'Sync Blockchain Trust'],
+    requirements: ['Credencial medica', 'Sync Blockchain Trust'],
     description: 'Protocolos estrictos de la UE. Su receta tiene validez transatlántica.'
   },
   {
@@ -500,7 +500,7 @@ const MOCK_GLOBAL_REGIONS = [
     partner: 'Florida Health Network',
     flag: '🇺🇸',
     continent: 'América',
-    requirements: ['Pasaporte', 'Medical Registration'],
+    requirements: ['Documento de identidad', 'Medical Registration'],
     description: 'Altos estándares farmacéuticos. Protocolos HIPAA en dispensarios premium de South Beach.'
   }
 ];

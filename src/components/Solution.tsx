@@ -47,8 +47,8 @@ export default function Solution() {
                  className="relative z-10 p-2 bg-white shadow-[-20px_20px_60px_-15px_rgba(0,0,0,0.1)] rounded-[40px] border border-brand-green-mid/5 overflow-hidden"
                >
                  <img 
-                   src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=1200" 
-                   alt="Trust ID Digitalization" 
+                   src="https://images.pexels.com/photos/12996477/pexels-photo-12996477.jpeg?auto=compress&cs=tinysrgb&w=1200" 
+                   alt="Frascos de aceite de cannabis medicinal" 
                    className="rounded-[32px] w-full aspect-[4/5] lg:aspect-[5/6] object-cover"
                    referrerPolicy="no-referrer"
                  />
@@ -96,9 +96,6 @@ export default function Solution() {
                  </div>
                </motion.div>
                
-               {/* Decorative background elements */}
-               <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-brand-gold/10 rounded-full blur-[80px] -z-10" />
-               <div className="absolute -top-10 -right-10 w-64 h-64 bg-brand-green-mid/5 rounded-full blur-[100px] -z-10" />
             </div>
          </div>
       </div>

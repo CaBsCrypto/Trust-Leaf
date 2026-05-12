@@ -13,12 +13,12 @@ export default function Hero({ onStartClick }: HeroProps) {
   return (
     <section className="relative min-h-[88vh] overflow-hidden bg-brand-green-deep text-brand-ivory">
       <img
-        src="https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&q=80&w=1800"
-        alt="Paciente revisando documentos clinicos"
-        className="absolute inset-0 h-full w-full object-cover opacity-35"
+        src="https://images.pexels.com/photos/6442512/pexels-photo-6442512.jpeg?auto=compress&cs=tinysrgb&w=1800"
+        alt="Aceites de cannabis medicinal en frascos de tratamiento"
+        className="absolute inset-0 h-full w-full object-cover opacity-42"
         referrerPolicy="no-referrer"
       />
-      <div className="absolute inset-0 bg-brand-green-deep/70" />
+      <div className="absolute inset-0 bg-brand-green-deep/68" />
       <div className="container relative z-10 mx-auto flex min-h-[88vh] items-center px-6 pb-16 pt-32 md:px-12 md:pt-40">
         <div className="max-w-4xl">
           <motion.div
@@ -54,8 +54,8 @@ export default function Hero({ onStartClick }: HeroProps) {
             <div className="mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
               {[
                 ['Expediente privado', <FileText size={18} />],
-                ['Receta con cupo', <Database size={18} />],
-                ['Red global validada', <ShieldCheck size={18} />],
+                ['Cupo mensual', <Database size={18} />],
+                ['Trazabilidad por lote', <ShieldCheck size={18} />],
               ].map(([label, icon]) => (
                 <div key={label as string} className="flex items-center gap-3 border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold backdrop-blur-sm">
                   <span className="text-brand-gold">{icon}</span>

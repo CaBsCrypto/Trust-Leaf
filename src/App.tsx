@@ -5,7 +5,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, FileText, Globe, Leaf, Lock, Package, ShieldCheck, ShoppingBag, Stethoscope, UserRound } from 'lucide-react';
+import { Activity, ArrowRight, Database, FileText, Leaf, Lock, Package, ShieldCheck, ShoppingBag, Stethoscope, UserRound } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Solution from './components/Solution';
@@ -302,9 +302,9 @@ function MvpSnapshot({ onNavigate }: { onNavigate: (path: string) => void }) {
   ];
 
   const trustLayer = [
-    ['402 privacy gate', 'Acceso temporal, auditado y aprobado por el paciente.', <Lock size={18} />],
-    ['Hashes on-chain', 'Stellar guarda integridad, estado y trazabilidad, no diagnosticos.', <Database size={18} />],
-    ['Pasaporte viajero', 'Documentos verificables para medicos y aliados segun regulacion local.', <Globe size={18} />],
+    ['Acceso 402 privado', 'El paciente autoriza vistas temporales de su informacion sensible.', <Lock size={18} />],
+    ['Pruebas on-chain', 'Stellar guarda integridad, estado y trazabilidad, no diagnosticos.', <Database size={18} />],
+    ['Credencial medica', 'Documentos verificables para medicos y aliados segun regulacion local.', <FileText size={18} />],
   ];
 
   return (

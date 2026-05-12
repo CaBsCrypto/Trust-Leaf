@@ -7,9 +7,9 @@ export const translations = {
       language: "EN",
     },
     hero: {
-      badge: "Expediente privado + receta verificable",
+      badge: "Cannabis medicinal + privacidad verificable",
       title: "Trust Leaf",
-      desc: "Un pasaporte medico para pacientes de cannabis: historial clinico cifrado, recetas con cupo mensual, retiros parciales y trazabilidad global sin exponer diagnosticos.",
+      desc: "Una red privada para tratamientos de cannabis medicinal: historial clinico cifrado, recetas con cupo mensual, retiros parciales y trazabilidad por lote sin exponer diagnosticos.",
       cta: "Entrar como paciente",
       secondary: "Ver MVP en vivo",
     },
@@ -228,9 +228,9 @@ export const translations = {
       language: "ES",
     },
     hero: {
-      badge: "Private record + verifiable prescription",
+      badge: "Medical cannabis + verifiable privacy",
       title: "Trust Leaf",
-      desc: "A medical passport for cannabis patients: encrypted clinical history, monthly prescription allowances, partial pickups, and global traceability without exposing diagnoses.",
+      desc: "A private network for medical cannabis treatment: encrypted clinical records, monthly prescription allowances, partial pickups, and batch traceability without exposing diagnoses.",
       cta: "Enter Patient Portal",
       secondary: "View Live MVP",
     },
