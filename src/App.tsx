@@ -326,6 +326,36 @@ function MvpSnapshot({ onNavigate }: { onNavigate: (path: string) => void }) {
           </button>
         </div>
 
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_0.8fr]">
+          <div className="relative min-h-[280px] overflow-hidden rounded-2xl bg-brand-green-deep">
+            <img
+              src="https://images.pexels.com/photos/7773107/pexels-photo-7773107.jpeg?auto=compress&cs=tinysrgb&w=1400"
+              alt="Flores de cannabis medicinal en contenedor de vidrio"
+              className="absolute inset-0 h-full w-full object-cover opacity-80"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep/80 via-brand-green-deep/30 to-transparent" />
+            <div className="relative z-10 flex min-h-[280px] max-w-md flex-col justify-end p-6 text-brand-ivory">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Flor medicinal</p>
+              <h3 className="mt-2 text-3xl font-serif">Cada lote puede verificarse sin revelar el diagnostico.</h3>
+              <p className="mt-3 text-sm leading-relaxed text-brand-ivory/70">
+                El paciente ve su cupo disponible; el dispensario valida receta, cantidad y origen del producto.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
+            <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Formatos</p>
+              <p className="mt-3 text-xl font-bold text-brand-green-deep">Aceites, flores y preparados trazables.</p>
+            </div>
+            <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Dispensa</p>
+              <p className="mt-3 text-xl font-bold text-brand-green-deep">Retiros parciales contra cupo mensual.</p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {pillars.map((pillar) => (
             <div key={pillar.title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-5">

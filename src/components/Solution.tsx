@@ -47,8 +47,8 @@ export default function Solution() {
                  className="relative z-10 p-2 bg-white shadow-[-20px_20px_60px_-15px_rgba(0,0,0,0.1)] rounded-[40px] border border-brand-green-mid/5 overflow-hidden"
                >
                  <img 
-                   src="https://images.pexels.com/photos/12996477/pexels-photo-12996477.jpeg?auto=compress&cs=tinysrgb&w=1200" 
-                   alt="Frascos de aceite de cannabis medicinal" 
+                   src="https://images.pexels.com/photos/6429022/pexels-photo-6429022.jpeg?auto=compress&cs=tinysrgb&w=1200" 
+                   alt="Flor de cannabis medicinal con tricomas visibles" 
                    className="rounded-[32px] w-full aspect-[4/5] lg:aspect-[5/6] object-cover"
                    referrerPolicy="no-referrer"
                  />
