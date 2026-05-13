@@ -441,32 +441,34 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
   ];
 
   return (
-    <section id="profesionales" className="px-6 py-10 md:px-12 relative z-10">
-      <div className="mx-auto max-w-5xl rounded-2xl border border-brand-green-deep/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="px-3 py-2 md:max-w-xs">
+    <section id="profesionales" className="relative z-10 px-6 py-10 md:px-12">
+      <div className="mx-auto max-w-6xl rounded-2xl border border-brand-green-deep/10 bg-white/86 p-5 shadow-sm backdrop-blur-md md:p-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.7fr] lg:items-start">
+          <div className="max-w-md">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Accesos separados</p>
-            <p className="mt-1 text-xs text-brand-green-mid/60">
+            <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Cada rol tiene su propio camino.</h3>
+            <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
               Cada actor entra por su propio flujo y ve solo sus herramientas.
             </p>
           </div>
-          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {entries.map((entry) => (
               <button
                 key={entry.path}
                 onClick={() => onNavigate(entry.path)}
-                className="group flex min-h-[86px] items-center justify-between gap-3 rounded-xl border border-brand-green-deep/10 bg-brand-ivory/70 px-4 py-3 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
+                className="group flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
               >
-                <span className="flex items-start gap-3">
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-green-deep text-brand-ivory">
+                <span>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
                     {entry.icon}
                   </span>
-                  <span>
-                    <span className="block text-sm font-bold text-brand-green-deep">{entry.label}</span>
-                    <span className="mt-1 block text-[11px] leading-snug text-brand-green-mid/60">{entry.desc}</span>
-                  </span>
+                  <span className="mt-4 block text-base font-bold text-brand-green-deep">{entry.label}</span>
+                  <span className="mt-2 block text-xs leading-relaxed text-brand-green-mid/65">{entry.desc}</span>
                 </span>
-                <ArrowRight size={16} className="shrink-0 text-brand-gold transition-transform group-hover:translate-x-1" />
+                <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-brand-green-deep group-hover:text-brand-gold">
+                  Entrar
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </span>
               </button>
             ))}
           </div>
