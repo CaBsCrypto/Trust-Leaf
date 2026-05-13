@@ -268,17 +268,19 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
     path: string;
     icon: ReactNode;
     eyebrow: string;
+    invite: string;
     points: string[];
   }>(null);
 
   const flowSteps = [
     {
       title: 'Expediente privado',
-      desc: 'El paciente conserva sintomas, examenes y recetas bajo consentimiento temporal.',
-      action: 'Ver paciente',
-      path: '/paciente/historial',
+      desc: 'Unete para controlar tu historial, recetas y accesos privados.',
+      action: 'Unirme como paciente',
+      path: '/paciente',
       icon: <Activity size={20} />,
       eyebrow: 'Paciente',
+      invite: 'Crea tu espacio privado para agendar con medicos, recibir recetas y revisar dispensarios autorizados.',
       points: [
         'Historial clinico portable con sintomas, examenes y tratamiento.',
         'Acceso por consentimiento temporal para medicos o validadores.',
@@ -287,11 +289,12 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
     },
     {
       title: 'Receta verificable',
-      desc: 'El medico valida evidencia, define dosis y emite una orden usable por la red.',
-      action: 'Panel medico',
-      path: '/medico/operacion',
+      desc: 'Postula como profesional y opera recetas verificables.',
+      action: 'Registrarme como medico',
+      path: '/medico',
       icon: <Stethoscope size={20} />,
       eyebrow: 'Medico',
+      invite: 'Solicita alta profesional para que el equipo admin revise licencia, especialidad y wallet antes de habilitar tu panel.',
       points: [
         'Agenda y seguimiento de pacientes desde el panel profesional.',
         'Emision de receta vinculada a wallet y evidencia autorizada.',
@@ -300,11 +303,12 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
     },
     {
       title: 'Entrega trazable',
-      desc: 'El dispensario registra lote, cantidad y entrega parcial sin ver datos clinicos completos.',
-      action: 'Operar stock',
-      path: '/dispensario/operacion',
+      desc: 'Suma tu dispensario para validar recetas y operar inventario.',
+      action: 'Unir mi dispensario',
+      path: '/dispensario',
       icon: <ShoppingBag size={20} />,
       eyebrow: 'Dispensario',
+      invite: 'Postula tu dispensario para operar inventario, validar recetas y registrar entregas cuando admin apruebe el acceso.',
       points: [
         'Inventario por producto, lote y formato medicinal.',
         'Validacion de receta vigente sin exponer historia clinica.',
@@ -375,6 +379,9 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">{selectedDetail.eyebrow}</p>
                 <h3 className="mt-2 text-3xl font-serif text-brand-green-deep">{selectedDetail.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-brand-green-mid/70">{selectedDetail.desc}</p>
+                <p className="mt-4 rounded-2xl border border-brand-gold/20 bg-white/70 p-4 text-sm font-bold leading-relaxed text-brand-green-deep">
+                  {selectedDetail.invite}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedDetail(null)}
