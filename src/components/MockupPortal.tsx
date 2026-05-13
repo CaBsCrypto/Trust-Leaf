@@ -945,7 +945,7 @@ export default function MockupPortal({
   const connectDemoPatientWallet = () => {
     setWalletSetup((current) => ({
       ...current,
-      primaryMethod: 'freighter',
+      primaryMethod: 'demo',
       hasFreighterBackup: false,
       walletLabel: 'Paciente demo testnet',
       contractAccount: DEMO_PATIENT_ADDRESS,
@@ -1651,6 +1651,9 @@ export default function MockupPortal({
                           freighterTitle={t.portal.onboarding.freighterTitle}
                           freighterDescription={t.portal.onboarding.freighterDesc}
                           freighterAction={t.portal.onboarding.freighterAction}
+                          demoTitle="Entrar en modo demo"
+                          demoDescription="Usa una identidad testnet preconfigurada para probar el flujo completo aunque Passkey o Freighter fallen."
+                          demoAction="Usar demo testnet"
                           linkedLabel={t.portal.onboarding.linked}
                           backupTitle={t.portal.onboarding.backupTitle}
                           backupDescription={t.portal.onboarding.backupDesc}
@@ -1663,6 +1666,7 @@ export default function MockupPortal({
                           networkValue={walletSetup.networkLabel ?? stellarConfig.networkLabel}
                           primaryPasskeyValue={t.portal.onboarding.primaryPasskeyValue}
                           primaryFreighterValue={t.portal.onboarding.primaryFreighterValue}
+                          primaryDemoValue="Demo testnet"
                           primaryEmptyValue={t.portal.onboarding.primaryEmptyValue}
                           backupConnectedValue={t.portal.onboarding.backupConnectedValue}
                           backupEmptyValue={t.portal.onboarding.backupEmptyValue}
@@ -1674,17 +1678,10 @@ export default function MockupPortal({
                           backupBusy={walletBusy === 'backup'}
                           onConnectPasskey={connectPasskeyWallet}
                           onConnectFreighter={connectFreighterWallet}
+                          onConnectDemo={connectDemoPatientWallet}
                           onLinkFreighterBackup={linkFreighterBackup}
                           onContinue={() => switchView('doctors')}
                         />
-                        <button
-                          type="button"
-                          onClick={connectDemoPatientWallet}
-                          className="w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:border-brand-gold/50 hover:text-brand-green-mid transition-colors"
-                        >
-                          <Database size={16} />
-                          Entrar rapido con paciente demo testnet
-                        </button>
                         </div>
                       )}
 

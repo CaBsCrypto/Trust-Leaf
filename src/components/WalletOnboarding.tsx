@@ -2,13 +2,14 @@ import { motion } from 'motion/react';
 import {
   ArrowRight,
   CheckCircle2,
+  Database,
   Fingerprint,
   ShieldCheck,
   Wallet,
 } from 'lucide-react';
 import { ReactNode } from 'react';
 
-type PrimaryMethod = 'passkey' | 'freighter' | null;
+type PrimaryMethod = 'passkey' | 'freighter' | 'demo' | null;
 
 export interface WalletSetupState {
   primaryMethod: PrimaryMethod;
@@ -34,6 +35,9 @@ interface WalletOnboardingProps {
   freighterTitle: string;
   freighterDescription: string;
   freighterAction: string;
+  demoTitle: string;
+  demoDescription: string;
+  demoAction: string;
   linkedLabel: string;
   backupTitle: string;
   backupDescription: string;
@@ -46,6 +50,7 @@ interface WalletOnboardingProps {
   networkValue: string;
   primaryPasskeyValue: string;
   primaryFreighterValue: string;
+  primaryDemoValue: string;
   primaryEmptyValue: string;
   backupConnectedValue: string;
   backupEmptyValue: string;
@@ -57,6 +62,7 @@ interface WalletOnboardingProps {
   backupBusy?: boolean;
   onConnectPasskey: () => void | Promise<void>;
   onConnectFreighter: () => void | Promise<void>;
+  onConnectDemo: () => void | Promise<void>;
   onLinkFreighterBackup: () => void | Promise<void>;
   onContinue: () => void;
 }
@@ -75,6 +81,9 @@ export default function WalletOnboarding({
   freighterTitle,
   freighterDescription,
   freighterAction,
+  demoTitle,
+  demoDescription,
+  demoAction,
   linkedLabel,
   backupTitle,
   backupDescription,
@@ -87,6 +96,7 @@ export default function WalletOnboarding({
   networkValue,
   primaryPasskeyValue,
   primaryFreighterValue,
+  primaryDemoValue,
   primaryEmptyValue,
   backupConnectedValue,
   backupEmptyValue,
@@ -98,6 +108,7 @@ export default function WalletOnboarding({
   backupBusy = false,
   onConnectPasskey,
   onConnectFreighter,
+  onConnectDemo,
   onLinkFreighterBackup,
   onContinue,
 }: WalletOnboardingProps) {
@@ -109,7 +120,9 @@ export default function WalletOnboarding({
       ? primaryPasskeyValue
       : primaryMethod === 'freighter'
         ? primaryFreighterValue
-        : primaryEmptyValue;
+        : primaryMethod === 'demo'
+          ? primaryDemoValue
+          : primaryEmptyValue;
 
   return (
     <div className="space-y-6">
@@ -139,7 +152,7 @@ export default function WalletOnboarding({
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-3">
               <WalletMethodCard
                 icon={<Fingerprint size={22} />}
                 title={passkeyTitle}
@@ -158,6 +171,16 @@ export default function WalletOnboarding({
                 active={primaryMethod === 'freighter'}
                 disabled={passkeyBusy || freighterBusy || backupBusy}
                 onClick={onConnectFreighter}
+              />
+
+              <WalletMethodCard
+                icon={<Database size={22} />}
+                title={demoTitle}
+                description={demoDescription}
+                actionLabel={primaryMethod === 'demo' ? linkedLabel : demoAction}
+                active={primaryMethod === 'demo'}
+                disabled={passkeyBusy || freighterBusy || backupBusy}
+                onClick={onConnectDemo}
               />
             </div>
 
@@ -217,9 +240,11 @@ export default function WalletOnboarding({
                 Smart Wallet
               </p>
               <p className="mt-2 text-sm leading-relaxed text-brand-ivory/65">
-                {onboardingComplete
-                  ? 'Tu acceso diario queda optimizado para passkey y puedes sumar Freighter como respaldo cuando quieras.'
-                  : 'Crea primero tu acceso principal. Luego podras sumar un metodo alternativo sin introducir seed phrases en el flujo principal.'}
+                {primaryMethod === 'demo'
+                  ? 'Modo demo testnet activo: ideal para revisar el flujo completo mientras se habilitan passkeys y wallet real.'
+                  : onboardingComplete
+                    ? 'Tu acceso diario queda optimizado para passkey y puedes sumar Freighter como respaldo cuando quieras.'
+                    : 'Elige Passkey, Freighter o modo demo para continuar. Demo permite probar el flujo sin bloquear el registro.'}
               </p>
             </div>
 
