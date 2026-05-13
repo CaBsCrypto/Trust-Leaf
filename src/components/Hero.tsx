@@ -16,13 +16,13 @@ export default function Hero({ onStartClick }: HeroProps) {
         <img
           src="https://images.pexels.com/photos/6429022/pexels-photo-6429022.jpeg?auto=compress&cs=tinysrgb&w=2200"
           alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-65"
+          className="absolute inset-0 h-full w-full object-cover opacity-78"
           referrerPolicy="no-referrer"
         />
         <img
           src="https://cdn.pixabay.com/photo/2020/11/16/12/33/cannabis-5748860_1280.jpg"
           alt=""
-          className="absolute bottom-0 right-[1%] hidden h-[56%] w-[36%] object-cover object-center opacity-66 [mask-image:radial-gradient(ellipse_at_center,black_44%,transparent_76%)] md:block"
+          className="absolute bottom-[6%] right-[1%] hidden h-[52%] w-[34%] object-cover object-center opacity-72 [mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_82%)] md:block"
           referrerPolicy="no-referrer"
         />
         <img
@@ -31,11 +31,11 @@ export default function Hero({ onStartClick }: HeroProps) {
           className="absolute right-[19%] top-[12%] hidden h-[36%] w-[28%] rotate-[-5deg] object-cover object-center opacity-58 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_74%)] lg:block"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep via-brand-green-deep/70 to-brand-green-deep/18" />
-        <div className="absolute inset-0 bg-brand-green-deep/12" />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep/92 via-brand-green-deep/58 to-brand-green-deep/12" />
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-green-deep/20 via-transparent to-brand-green-deep/30" />
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-ivory to-transparent" />
-      <div className="container relative z-10 mx-auto flex min-h-[86vh] items-center px-6 pb-20 pt-28 md:px-12 md:pt-36">
+      <div className="absolute inset-x-0 bottom-0 h-px bg-white/10" />
+      <div className="container relative z-10 mx-auto flex min-h-[86vh] items-center px-6 pb-16 pt-28 md:px-12 md:pt-36">
         <div className="max-w-3xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
