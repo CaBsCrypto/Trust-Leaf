@@ -16,23 +16,23 @@ export default function Hero({ onStartClick }: HeroProps) {
         <img
           src="https://images.pexels.com/photos/6429022/pexels-photo-6429022.jpeg?auto=compress&cs=tinysrgb&w=2200"
           alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-78"
+          className="absolute inset-0 h-full w-full object-cover object-[42%_center] opacity-78 md:object-center"
           referrerPolicy="no-referrer"
         />
         <img
           src="https://cdn.pixabay.com/photo/2020/11/16/12/33/cannabis-5748860_1280.jpg"
           alt=""
-          className="absolute bottom-[6%] right-[1%] hidden h-[52%] w-[34%] object-cover object-center opacity-72 [mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_82%)] md:block"
+          className="absolute bottom-[1%] right-[-35%] h-[44%] w-[88%] object-cover object-center opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_46%,transparent_80%)] sm:right-[-20%] sm:w-[70%] md:bottom-[6%] md:right-[1%] md:h-[52%] md:w-[34%] md:opacity-72 md:[mask-image:radial-gradient(ellipse_at_center,black_50%,transparent_82%)]"
           referrerPolicy="no-referrer"
         />
         <img
           src="https://images.pexels.com/photos/9419514/pexels-photo-9419514.jpeg?auto=compress&cs=tinysrgb&w=1200"
           alt=""
-          className="absolute right-[19%] top-[12%] hidden h-[36%] w-[28%] rotate-[-5deg] object-cover object-center opacity-58 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_74%)] lg:block"
+          className="absolute right-[-18%] top-[34%] h-[30%] w-[58%] rotate-[-5deg] object-cover object-center opacity-46 [mask-image:radial-gradient(ellipse_at_center,black_38%,transparent_76%)] sm:right-[-2%] sm:top-[26%] sm:w-[44%] md:right-[12%] md:top-[13%] md:h-[32%] md:w-[30%] md:opacity-50 lg:right-[19%] lg:top-[12%] lg:h-[36%] lg:w-[28%] lg:opacity-58"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep/92 via-brand-green-deep/58 to-brand-green-deep/12" />
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-green-deep/20 via-transparent to-brand-green-deep/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-green-deep/94 via-brand-green-deep/62 to-brand-green-deep/8 md:from-brand-green-deep/92 md:via-brand-green-deep/58 md:to-brand-green-deep/12" />
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-green-deep/22 via-transparent to-brand-green-deep/24 md:to-brand-green-deep/30" />
       </div>
       <div className="absolute inset-x-0 bottom-0 h-px bg-white/10" />
       <div className="container relative z-10 mx-auto flex min-h-[86vh] items-center px-6 pb-16 pt-28 md:px-12 md:pt-36">
