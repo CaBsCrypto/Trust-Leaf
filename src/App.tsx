@@ -462,7 +462,7 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
     {
       path: '/dispensario',
       label: 'Dispensarios',
-      desc: 'Solicitar alta, validar RX y registrar entregas.',
+      desc: 'Solicitar alta, validar receta y registrar entregas.',
       icon: <ShoppingBag size={18} />,
     },
     {
@@ -577,7 +577,7 @@ function AdminRoute({
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
             {[
               ['Compliance Agent', 'Verifica licencias, documentos y estado profesional antes de aprobar actores.'],
-              ['Prescription Agent', 'Valida RX, vigencia y consumo sin revelar diagnostico o notas clinicas.'],
+              ['Prescription Agent', 'Valida receta, vigencia y consumo sin revelar diagnostico o notas clinicas.'],
               ['Eligibility Agent', 'Responde si el paciente puede acceder segun permisos privados y jurisdiccion.'],
             ].map(([title, desc]) => (
               <div key={title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
@@ -986,7 +986,7 @@ function DoctorRegistrationRoute({
               onClick={() => onNavigate('/medico/operacion')}
               className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory active:scale-95"
             >
-              Emitir RX
+              Emitir receta
             </button>
             <button
               onClick={() => onNavigate('/admin')}
@@ -1005,7 +1005,7 @@ function DoctorRegistrationRoute({
           className="rounded-[28px] border border-brand-green-deep/10 bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10"
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro medico</p>
-          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Despues emites RX.</h1>
+          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Despues emites recetas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
             El medico presenta licencia, especialidad y wallet. Admin revisa y habilita el acceso profesional para emitir recetas verificables.
           </p>

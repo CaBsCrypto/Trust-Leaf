@@ -11,7 +11,7 @@ export default function Process() {
     {
       icon: <Stethoscope size={24} />,
       title: 'Receta con cupo',
-      desc: 'El medico valida el caso, emite RX on-chain y define gramos mensuales para retiros parciales.'
+      desc: 'El medico valida el caso, emite una receta on-chain y define gramos disponibles para retiros parciales.'
     },
     {
       icon: <Search size={24} />,

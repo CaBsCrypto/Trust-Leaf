@@ -1045,7 +1045,7 @@ export default function MockupPortal({
       setPatientDashboard(payload.dashboard);
       setHasPrescription(payload.dashboard.summary.total > 0);
       setDoctorIssueSuccess(
-        `Receta emitida en testnet. RX-${payload.issuedId ?? 'pendiente'} • Tx ${shortenHash(payload.txHash)}`,
+        `Receta emitida en testnet. Numero ${payload.issuedId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
       );
       setPrescriptionAllowance({
         monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
@@ -1137,7 +1137,7 @@ export default function MockupPortal({
     const prescriptionId = activePrescription?.id ?? manualPrescriptionId;
 
     if (!Number.isFinite(prescriptionId)) {
-      setDispenseError('Ingresa el numero RX on-chain que emitio el medico.');
+      setDispenseError('Ingresa el numero de receta on-chain que emitio el medico.');
       return;
     }
 
@@ -1209,7 +1209,7 @@ export default function MockupPortal({
       setRecentActivity(prev => [
         {
           id: `act-disp-${Date.now()}`,
-          action: `Retiro parcial on-chain RX-${prescriptionId}`,
+          action: `Retiro parcial de receta ${prescriptionId}`,
           date: "Recien",
           icon: "ShoppingBag",
         },
@@ -1252,13 +1252,13 @@ export default function MockupPortal({
         setRecentActivity(prev => [
           {
             id: `act-weekly-${Date.now()}`,
-            action: `Retiro fraccionado RX-${prescriptionId}`,
+            action: `Retiro fraccionado de receta ${prescriptionId}`,
             date: "Recien",
             icon: "ShoppingBag",
           },
           ...prev,
         ]);
-        setDispenseSuccess('El contrato testnet marco este RX sin cupo activo. Para el MVP registramos un retiro fraccionado privado; en produccion el contrato debe manejar cupos semanales/gramos restantes.');
+        setDispenseSuccess('El contrato testnet marco esta receta sin cupo activo. Para el MVP registramos un retiro fraccionado privado; en produccion el contrato debe manejar cupos semanales/gramos restantes.');
         setDispensaryStep('success');
         setCart([]);
         return;
@@ -1544,7 +1544,7 @@ export default function MockupPortal({
                 className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'doctors' ? 'text-brand-gold' : 'text-white/40'}`}
               >
                 <Stethoscope size={20} className={activeView === 'doctors' ? 'scale-110' : ''} />
-                <span className="text-[10px] font-bold uppercase tracking-tighter">{isDoctorPortal ? 'Emitir RX' : t.portal.navDoctors}</span>
+                <span className="text-[10px] font-bold uppercase tracking-tighter">{isDoctorPortal ? 'Emitir receta' : t.portal.navDoctors}</span>
               </button>
               )}
               {isViewAllowed('dispensaries') && (
@@ -1625,8 +1625,8 @@ export default function MockupPortal({
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                           {[
                             ['1', 'Crear identidad', 'Passkey, Freighter o demo testnet.'],
-                            ['2', 'Recibir receta', 'El medico emite un RX on-chain a tu wallet.'],
-                            ['3', 'Retirar medicina', 'El dispensario valida el RX desde su propia URL.'],
+                            ['2', 'Recibir receta', 'El medico emite una receta on-chain a tu wallet.'],
+                            ['3', 'Retirar medicina', 'El dispensario valida la receta desde su propia URL.'],
                           ].map(([step, title, desc]) => (
                             <div key={step} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4 shadow-sm">
                               <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-brand-green-deep text-xs font-bold text-brand-ivory">
@@ -1810,7 +1810,7 @@ export default function MockupPortal({
                               <div className="flex items-center justify-between gap-4">
                                 <div>
                                   <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/40">
-                                    RX-{primaryPrescription.id}
+                                    Receta #{primaryPrescription.id}
                                   </p>
                                   <h6 className="mt-2 text-lg font-bold text-brand-green-deep">
                                     {primaryPrescription.status === 'active'
@@ -1984,7 +1984,7 @@ export default function MockupPortal({
                               {[
                                 ['Pacientes', DOCTOR_SESSION_PATIENTS.length],
                                 ['Hoy', 2],
-                                ['RX activas', patientDashboard?.summary.active ?? 1],
+                                ['Recetas activas', patientDashboard?.summary.active ?? 1],
                               ].map(([label, value]) => (
                                 <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                                   <p className="text-2xl font-bold text-brand-gold">{value}</p>
@@ -2018,7 +2018,7 @@ export default function MockupPortal({
                       )}
                       {isDoctorPortal && (
                         <div className="hidden rounded-2xl border border-brand-green-deep/10 bg-brand-neutral p-4 text-sm text-brand-green-mid/70">
-                          Portal profesional separado: emite recetas on-chain y entrega el RX para que el dispensario lo valide desde su propia URL.
+                          Portal profesional separado: emite recetas on-chain y entrega el comprobante para que el dispensario lo valide desde su propia URL.
                         </div>
                       )}
                       {!isDoctorPortal && (
@@ -2088,11 +2088,11 @@ export default function MockupPortal({
                         </div>
 
                         <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
-                          Agente 402: valida licencia medica y genera un hash clinico. El RX se emite sin publicar diagnostico ni notas completas.
+                          Agente 402: valida licencia medica y genera un hash clinico. La receta se emite sin publicar diagnostico ni notas completas.
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/55">
-                          {['1. Paciente objetivo', '2. Emitir RX', '3. Dispensario valida'].map((step) => (
+                          {['1. Paciente objetivo', '2. Emitir receta', '3. Dispensario valida'].map((step) => (
                             <div key={step} className="rounded-xl border border-brand-green-deep/5 bg-brand-neutral px-3 py-2">
                               {step}
                             </div>
@@ -2330,7 +2330,7 @@ export default function MockupPortal({
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="text-xs font-bold text-brand-green-mid/40 uppercase tracking-widest">
-                                    ID: RX-{prescription.id}
+                                    ID receta #{prescription.id}
                                   </p>
                                   <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
                                     <Database size={10} /> ON-CHAIN
@@ -2576,7 +2576,7 @@ export default function MockupPortal({
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="text-xs font-bold text-brand-green-mid/40 uppercase tracking-widest">
-                                    ID: RX-{prescription.id}
+                                    ID receta #{prescription.id}
                                   </p>
                                   <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
                                     <Database size={10} /> ON-CHAIN
@@ -2648,7 +2648,7 @@ export default function MockupPortal({
                                 </div>
                                 <div>
                                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                                    <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/45">RX TL-8829-QX</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/45">Receta TL-8829-QX</p>
                                     <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[9px] font-bold text-blue-600">
                                       <Database size={10} /> ON-CHAIN
                                     </span>
@@ -3140,7 +3140,7 @@ export default function MockupPortal({
                           <motion.div
                             key={`dispense-record-${record.id}`}
                             onClick={() => setSelectedTraceRecord({
-                              title: `RX-${record.prescriptionId}`,
+                              title: `Receta #${record.prescriptionId}`,
                               subtitle: `Dispensa #${record.id}`,
                               product: record.productHash,
                               batch: record.batchHash,
@@ -3170,7 +3170,7 @@ export default function MockupPortal({
                                     </span>
                                   </div>
                                   <h4 className="font-bold text-brand-green-deep text-base sm:text-lg leading-none mb-1">
-                                    RX-{record.prescriptionId} retiro parcial
+                                    Receta #{record.prescriptionId} retiro parcial
                                   </h4>
                                   <p className="text-[11px] text-brand-green-mid/70 truncate">
                                     {shortenAddress(record.dispensary, 6)} - {formatPortalDate(record.recordedAt)}
@@ -4084,26 +4084,26 @@ export default function MockupPortal({
                                 : 'Modo lectura activo. Para registrar dispensaciones reales en produccion falta configurar STELLAR_DISPENSARY_SECRET en Vercel.'}
                             </div>
                             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
-                              Agente 402: confirma que el RX pertenece al paciente y mantiene cupo disponible, sin revelar diagnostico. Cada entrega registra solo prueba, lote y cantidad.
+                              Agente 402: confirma que la receta pertenece al paciente y mantiene cupo disponible, sin revelar diagnostico. Cada entrega registra solo prueba, lote y cantidad.
                             </div>
                             <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
                               Nota MVP: el contrato actual marca algunas recetas como usadas en una sola transaccion. La version de grant debe guardar cupos semanales o gramos restantes para permitir retiros parciales globales.
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                                RX on-chain a validar
+                                Receta on-chain a validar
                               </span>
                               <input
                                 type="text"
                                 inputMode="numeric"
-                                value={activePrescription ? `RX-${activePrescription.id}` : dispensePrescriptionId}
+                                value={activePrescription ? `Receta #${activePrescription.id}` : dispensePrescriptionId}
                                 disabled={Boolean(activePrescription)}
                                 onChange={(event) => setDispensePrescriptionId(event.target.value.replace(/^RX-/i, ''))}
                                 placeholder="Ej: 1"
                                 className="w-full px-4 py-3 bg-white rounded-xl border border-brand-green-deep/10 text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 disabled:bg-brand-neutral disabled:text-brand-green-mid/60"
                               />
                               <p className="text-[10px] text-brand-green-mid/45 leading-relaxed">
-                                Si no hay wallet paciente conectada, pega aqui el RX que emitio medico. El demo carga RX-{DEMO_PRESCRIPTION_ID} y luego recuerda el ultimo RX emitido.
+                                Si no hay wallet paciente conectada, pega aqui el numero de receta que emitio el medico. El demo carga la receta #{DEMO_PRESCRIPTION_ID} y luego recuerda la ultima receta emitida.
                               </p>
                             </label>
                             <button 
