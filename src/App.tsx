@@ -5,7 +5,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope } from 'lucide-react';
+import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
@@ -261,6 +261,16 @@ function AppContent() {
 }
 
 function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const [selectedDetail, setSelectedDetail] = useState<null | {
+    title: string;
+    desc: string;
+    action: string;
+    path: string;
+    icon: ReactNode;
+    eyebrow: string;
+    points: string[];
+  }>(null);
+
   const flowSteps = [
     {
       title: 'Expediente privado',
@@ -268,6 +278,12 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
       action: 'Ver paciente',
       path: '/paciente/historial',
       icon: <Activity size={20} />,
+      eyebrow: 'Paciente',
+      points: [
+        'Historial clinico portable con sintomas, examenes y tratamiento.',
+        'Acceso por consentimiento temporal para medicos o validadores.',
+        'Hashes verificables sin publicar diagnostico ni documentos completos.',
+      ],
     },
     {
       title: 'Receta verificable',
@@ -275,6 +291,12 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
       action: 'Panel medico',
       path: '/medico/operacion',
       icon: <Stethoscope size={20} />,
+      eyebrow: 'Medico',
+      points: [
+        'Agenda y seguimiento de pacientes desde el panel profesional.',
+        'Emision de receta vinculada a wallet y evidencia autorizada.',
+        'Dosis, vigencia y saldo disponible listos para validacion.',
+      ],
     },
     {
       title: 'Entrega trazable',
@@ -282,12 +304,27 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
       action: 'Operar stock',
       path: '/dispensario/operacion',
       icon: <ShoppingBag size={20} />,
+      eyebrow: 'Dispensario',
+      points: [
+        'Inventario por producto, lote y formato medicinal.',
+        'Validacion de receta vigente sin exponer historia clinica.',
+        'Registro de entrega parcial para no quemar todo el tratamiento.',
+      ],
     },
   ];
 
   return (
-    <section id="red" className="bg-white py-12 md:py-16">
-      <div className="container mx-auto px-6 md:px-12">
+    <section id="red" className="relative overflow-hidden bg-white py-12 md:py-16">
+      <div aria-hidden="true" className="absolute inset-0">
+        <img
+          src="https://images.pexels.com/photos/7667731/pexels-photo-7667731.jpeg?auto=compress&cs=tinysrgb&w=1800"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.09]"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-white/88 to-brand-neutral/70" />
+      </div>
+      <div className="container relative mx-auto px-6 md:px-12">
         <div className="mb-8 max-w-3xl">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Red Trust Leaf</p>
           <h2 className="mt-2 text-3xl font-serif text-brand-green-deep md:text-5xl">
@@ -302,8 +339,8 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
           {flowSteps.map((item) => (
             <button
               key={item.title}
-              onClick={() => onNavigate(item.path)}
-              className="group rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/50 p-5 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
+              onClick={() => setSelectedDetail(item)}
+              className="group rounded-2xl border border-brand-green-deep/10 bg-white/82 p-5 text-left shadow-sm backdrop-blur-sm transition-colors hover:border-brand-gold/50 hover:bg-white"
             >
               <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green-deep text-brand-gold">
                 {item.icon}
@@ -318,12 +355,64 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
           ))}
         </div>
       </div>
+
+      {selectedDetail && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedDetail(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 18, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/10 bg-brand-neutral/60 p-6">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">{selectedDetail.eyebrow}</p>
+                <h3 className="mt-2 text-3xl font-serif text-brand-green-deep">{selectedDetail.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-brand-green-mid/70">{selectedDetail.desc}</p>
+              </div>
+              <button
+                onClick={() => setSelectedDetail(null)}
+                className="rounded-full p-2 text-brand-green-mid hover:bg-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-3 p-6">
+              {selectedDetail.points.map((point) => (
+                <div key={point} className="flex gap-3 rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/50 p-4">
+                  <ShieldCheck size={17} className="mt-0.5 shrink-0 text-brand-gold" />
+                  <p className="text-sm leading-relaxed text-brand-green-deep">{point}</p>
+                </div>
+              ))}
+              <button
+                onClick={() => onNavigate(selectedDetail.path)}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory"
+              >
+                {selectedDetail.action}
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </section>
   );
 }
 
 function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void }) {
   const entries = [
+    {
+      path: '/paciente',
+      label: 'Pacientes',
+      desc: 'Entrar al portal, buscar medico y revisar recetas.',
+      icon: <UserRound size={18} />,
+    },
     {
       path: '/medico',
       label: 'Medicos',
@@ -349,12 +438,12 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
       <div className="mx-auto max-w-5xl rounded-2xl border border-brand-green-deep/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="px-3 py-2 md:max-w-xs">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso profesional</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Accesos separados</p>
             <p className="mt-1 text-xs text-brand-green-mid/60">
-              Entradas separadas para actores operativos. Pacientes continúan por el portal principal.
+              Cada actor entra por su propio flujo y ve solo sus herramientas.
             </p>
           </div>
-          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {entries.map((entry) => (
               <button
                 key={entry.path}
