@@ -5,17 +5,9 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, FileText, Leaf, Lock, Package, ShieldCheck, ShoppingBag, Stethoscope, UserRound } from 'lucide-react';
+import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
-import Solution from './components/Solution';
-import Problem from './components/Problem';
-import Process from './components/Process';
-import Ecosystem from './components/Ecosystem';
-import TrustDetail from './components/TrustDetail';
-import FAQ from './components/FAQ';
-import Metrics from './components/Metrics';
-import PartnerCTA from './components/PartnerCTA';
 import Footer from './components/Footer';
 import MockupPortal, { PortalView } from './components/MockupPortal';
 
@@ -235,16 +227,8 @@ function AppContent() {
       <Navbar onPortalClick={() => navigate('/paciente')} />
       <main>
         <Hero onStartClick={() => navigate('/paciente')} />
-        <MvpSnapshot onNavigate={navigate} />
+        <NetworkPreview onNavigate={navigate} />
         <ProfessionalAccess onNavigate={navigate} />
-        <Ecosystem />
-        <Problem />
-        <Solution />
-        <Metrics />
-        <Process />
-        <TrustDetail />
-        <PartnerCTA />
-        <FAQ />
         
         {/* Closure Section */}
         <section className="py-16 md:py-20 text-center px-6">
@@ -276,124 +260,62 @@ function AppContent() {
   );
 }
 
-function MvpSnapshot({ onNavigate }: { onNavigate: (path: string) => void }) {
+function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) {
   const flowSteps = [
     {
-      step: '01',
-      title: 'Paciente prepara su expediente',
-      desc: 'Sintomas, examenes y tratamiento viven cifrados. Comparte solo lo necesario con acceso 402.',
+      title: 'Expediente privado',
+      desc: 'El paciente conserva sintomas, examenes y recetas bajo consentimiento temporal.',
       action: 'Ver paciente',
       path: '/paciente/historial',
-      icon: <UserRound size={20} />,
+      icon: <Activity size={20} />,
     },
     {
-      step: '02',
-      title: 'Medico valida y receta',
-      desc: 'Agenda una consulta, revisa evidencia privada y emite una receta vinculada al paciente.',
+      title: 'Receta verificable',
+      desc: 'El medico valida evidencia, define dosis y emite una orden usable por la red.',
       action: 'Panel medico',
       path: '/medico/operacion',
       icon: <Stethoscope size={20} />,
     },
     {
-      step: '03',
-      title: 'Dispensario entrega por lote',
-      desc: 'Valida tratamiento vigente, registra producto, cantidad y prueba de entrega sin exponer diagnostico.',
+      title: 'Entrega trazable',
+      desc: 'El dispensario registra lote, cantidad y entrega parcial sin ver datos clinicos completos.',
       action: 'Operar stock',
       path: '/dispensario/operacion',
       icon: <ShoppingBag size={20} />,
     },
   ];
 
-  const trustLayer = [
-    ['Acceso 402 privado', 'El paciente autoriza vistas temporales de su informacion sensible.', <Lock size={18} />],
-    ['Pruebas on-chain', 'Stellar guarda integridad, estado y trazabilidad, no diagnosticos.', <Database size={18} />],
-    ['Credencial medica', 'Documentos verificables para medicos y aliados segun regulacion local.', <FileText size={18} />],
-  ];
-
   return (
-    <section className="bg-white py-14 md:py-20">
+    <section id="red" className="bg-white py-12 md:py-16">
       <div className="container mx-auto px-6 md:px-12">
-        <div className="mb-9 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">MVP en vivo</p>
-            <h2 className="mt-2 max-w-3xl text-3xl font-serif text-brand-green-deep md:text-5xl">
-              Un flujo privado desde la consulta hasta la entrega.
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-brand-green-mid/70 md:text-base">
-              Trust Leaf separa cada rol para que el paciente conserve control, el medico valide evidencia y el dispensario entregue medicina trazable.
-            </p>
-          </div>
-          <button
-            onClick={() => onNavigate('/paciente/historial')}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
-          >
-            Ver expediente privado
-            <ArrowRight size={16} />
-          </button>
+        <div className="mb-8 max-w-3xl">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Red Trust Leaf</p>
+          <h2 className="mt-2 text-3xl font-serif text-brand-green-deep md:text-5xl">
+            Privacidad clinica, receta verificable y medicina trazable.
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-brand-green-mid/70 md:text-base">
+            La plataforma separa lo que ve cada actor: el paciente controla sus datos, el medico valida el tratamiento y el dispensario confirma solo lo necesario para entregar.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="relative min-h-[420px] overflow-hidden rounded-2xl bg-brand-green-deep">
-            <img
-              src="https://images.pexels.com/photos/7773107/pexels-photo-7773107.jpeg?auto=compress&cs=tinysrgb&w=1400"
-              alt="Flores de cannabis medicinal en contenedor de vidrio"
-              className="absolute inset-0 h-full w-full object-cover opacity-80"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-green-deep via-brand-green-deep/45 to-brand-green-deep/10" />
-            <div className="relative z-10 flex min-h-[420px] flex-col justify-end p-6 text-brand-ivory md:p-8">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Prueba verificable</p>
-              <h3 className="mt-2 max-w-md text-3xl font-serif md:text-4xl">Cada entrega conserva origen, lote y cantidad.</h3>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-brand-ivory/70">
-                La trazabilidad se puede auditar sin publicar diagnosticos, notas clinicas ni documentos completos.
-              </p>
-              <div className="mt-6 grid grid-cols-3 gap-2 text-xs font-bold">
-                {['Flores', 'Aceites', 'Extractos'].map((item) => (
-                  <div key={item} className="border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm">{item}</div>
-                ))}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {flowSteps.map((item) => (
+            <button
+              key={item.title}
+              onClick={() => onNavigate(item.path)}
+              className="group rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/50 p-5 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
+            >
+              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green-deep text-brand-gold">
+                {item.icon}
               </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-4 md:p-5">
-            <div className="grid grid-cols-1 gap-3">
-              {flowSteps.map((item) => (
-                <div key={item.step} className="group rounded-xl border border-brand-green-deep/10 bg-white p-4 transition-colors hover:border-brand-gold/50">
-                  <div className="flex gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-green-deep text-brand-gold">
-                      {item.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">{item.step}</p>
-                        <button
-                          onClick={() => onNavigate(item.path)}
-                          className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-brand-green-deep hover:text-brand-gold"
-                        >
-                          {item.action}
-                          <ArrowRight size={13} />
-                        </button>
-                      </div>
-                      <h3 className="mt-2 text-lg font-bold text-brand-green-deep">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-brand-green-mid/70">{item.desc}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-brand-green-deep p-3 text-brand-ivory md:grid-cols-3">
-              {trustLayer.map(([title, desc, icon]) => (
-                <div key={title as string} className="flex gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
-                  <div className="text-brand-gold">{icon}</div>
-                  <div>
-                    <p className="text-xs font-bold">{title}</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-brand-ivory/60">{desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+              <h3 className="text-xl font-bold text-brand-green-deep">{item.title}</h3>
+              <p className="mt-2 min-h-[64px] text-sm leading-relaxed text-brand-green-mid/70">{item.desc}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-green-deep group-hover:text-brand-gold">
+                {item.action}
+                <ArrowRight size={15} />
+              </span>
+            </button>
+          ))}
         </div>
       </div>
     </section>
@@ -423,7 +345,7 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
   ];
 
   return (
-    <section className="px-6 py-10 md:px-12 relative z-10">
+    <section id="profesionales" className="px-6 py-10 md:px-12 relative z-10">
       <div className="mx-auto max-w-5xl rounded-2xl border border-brand-green-deep/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="px-3 py-2 md:max-w-xs">

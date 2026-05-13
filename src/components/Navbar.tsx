@@ -28,8 +28,8 @@ export default function Navbar({ onPortalClick }: NavbarProps) {
       </div>
       
       <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-        <button onClick={() => scrollTo('experiencia')} className="hover:text-brand-green-mid transition-colors">Trust Network</button>
-        <button onClick={() => scrollTo('ecosistema')} className="hover:text-brand-green-mid transition-colors">Marketplace</button>
+        <button onClick={() => scrollTo('red')} className="hover:text-brand-green-mid transition-colors">Red</button>
+        <button onClick={() => scrollTo('profesionales')} className="hover:text-brand-green-mid transition-colors">Profesionales</button>
       </div>
       
       <div className="flex items-center gap-4">

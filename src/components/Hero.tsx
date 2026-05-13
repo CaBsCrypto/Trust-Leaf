@@ -59,12 +59,6 @@ export default function Hero({ onStartClick }: HeroProps) {
               >
                 {t.hero.cta} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button 
-                onClick={onStartClick}
-                className="px-10 py-5 text-base md:text-lg font-bold text-brand-ivory border border-white/20 bg-white/10 backdrop-blur-sm rounded-2xl hover:bg-white/15 transition-all text-center active:scale-95 flex items-center justify-center gap-2"
-              >
-                <ShieldCheck size={20} className="text-brand-gold" /> {t.hero.secondary}
-              </button>
             </div>
 
             <div className="mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">

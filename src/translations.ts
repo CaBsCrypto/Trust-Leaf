@@ -11,7 +11,7 @@ export const translations = {
       title: "Acceso seguro a cannabis medicinal",
       desc: "Recetas privadas, dosis autorizadas y trazabilidad por lote para flores, aceites y extractos. Tu informacion clinica queda bajo tu control; la red solo valida lo necesario.",
       cta: "Entrar como paciente",
-      secondary: "Ver MVP en vivo",
+      secondary: "Ver red",
     },
     problem: {
       title: "La Medicina No Debería Estar Sujeta a Fronteras.",
@@ -217,9 +217,9 @@ export const translations = {
       cta: "Contactar con Alianzas",
     },
     closure: {
-      title: "El Futuro del Bienestar es Digital y Trazable.",
-      desc: "Sea parte de la primera red de salud validada por nodos. Convertimos la complejidad en una experiencia blindada, privada y de calidad superior.",
-      cta: "Empezar ahora",
+      title: "Tu tratamiento, bajo tu control.",
+      desc: "Ingresa al portal para revisar medicos, recetas, dispensarios autorizados e historial privado.",
+      cta: "Entrar al portal",
     }
   },
   en: {
@@ -232,7 +232,7 @@ export const translations = {
       title: "Secure access to medical cannabis",
       desc: "Private prescriptions, authorized dosing, and batch traceability for flower, oils, and extracts. Your clinical information stays under your control; the network validates only what is needed.",
       cta: "Enter Patient Portal",
-      secondary: "View Live MVP",
+      secondary: "View network",
     },
     problem: {
       title: "Medicine Should Not Be Limited by Borders.",
@@ -438,9 +438,9 @@ export const translations = {
       cta: "Contact Partnerships",
     },
     closure: {
-      title: "The Future of Wellbeing is Digital and Traceable.",
-      desc: "Be part of the first node-validated health network. We turn complexity into a shielded, private, and superior quality experience.",
-      cta: "Start now",
+      title: "Your treatment, under your control.",
+      desc: "Enter the portal to review doctors, prescriptions, authorized dispensaries, and private history.",
+      cta: "Enter portal",
     }
   }
 };
