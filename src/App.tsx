@@ -230,27 +230,60 @@ function AppContent() {
         <NetworkPreview onNavigate={navigate} />
         <ProfessionalAccess onNavigate={navigate} />
         
-        {/* Closure Section */}
-        <section className="py-16 md:py-20 text-center px-6">
-           <div className="max-w-2xl mx-auto text-brand-green-deep">
-              <motion.h2 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-3xl sm:text-4xl md:text-6xl font-serif mb-6 md:mb-8 leading-tight"
-              >
-                 {t.closure.title}
-              </motion.h2>
-              <p className="text-brand-green-mid/70 mb-10 md:mb-12 leading-relaxed text-sm md:text-base max-w-lg mx-auto font-medium px-4">
-                 {t.closure.desc}
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4 px-6 md:px-0">
-                <button 
-                   onClick={() => navigate('/paciente')}
-                   className="w-full sm:w-auto px-10 py-5 font-bold bg-brand-green-deep text-brand-ivory rounded-2xl md:rounded-full hover:bg-brand-green-mid transition-all shadow-xl active:scale-95 text-lg"
+        <section className="px-6 py-14 md:px-12 md:py-18">
+           <div className="mx-auto grid max-w-6xl grid-cols-1 overflow-hidden rounded-3xl border border-brand-green-deep/10 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="p-8 md:p-12">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Siguiente paso</p>
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="mt-3 text-4xl font-serif leading-tight text-brand-green-deep md:text-6xl"
                 >
-                  {t.closure.cta}
-                </button>
+                   {t.closure.title}
+                </motion.h2>
+                <p className="mt-5 max-w-xl text-sm font-medium leading-relaxed text-brand-green-mid/70 md:text-base">
+                   {t.closure.desc}
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <button
+                     onClick={() => navigate('/paciente')}
+                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-8 py-4 text-base font-bold text-brand-ivory shadow-xl transition-all hover:bg-brand-green-mid active:scale-95"
+                  >
+                    {t.closure.cta}
+                    <ArrowRight size={18} />
+                  </button>
+                  <button
+                     onClick={() => navigate('/medico')}
+                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-green-deep/10 bg-brand-neutral px-8 py-4 text-base font-bold text-brand-green-deep transition-all hover:border-brand-gold/50"
+                  >
+                    Soy profesional
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-brand-green-deep p-6 text-brand-ivory md:p-8">
+                <div className="grid h-full grid-cols-1 gap-3">
+                  {[
+                    ['Paciente', 'Crear expediente privado y buscar medico validado.', <UserRound size={18} />],
+                    ['Medico', 'Solicitar alta, configurar agenda y emitir receta.', <Stethoscope size={18} />],
+                    ['Dispensario', 'Postular inventario y registrar entregas trazables.', <ShoppingBag size={18} />],
+                  ].map(([title, desc, icon]) => (
+                    <button
+                      key={title as string}
+                      onClick={() => navigate(title === 'Paciente' ? '/paciente' : title === 'Medico' ? '/medico' : '/dispensario')}
+                      className="group flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-gold text-brand-green-deep">
+                        {icon}
+                      </span>
+                      <span>
+                        <span className="block text-sm font-bold">{title}</span>
+                        <span className="mt-1 block text-xs leading-relaxed text-brand-ivory/62">{desc}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
            </div>
         </section>
