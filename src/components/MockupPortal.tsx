@@ -639,6 +639,7 @@ export default function MockupPortal({
   const [dispenseBusy, setDispenseBusy] = useState(false);
   const [dispenseError, setDispenseError] = useState<string | null>(null);
   const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
+  const [manualPrescriptionEntry, setManualPrescriptionEntry] = useState(false);
   const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
   const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
@@ -745,6 +746,10 @@ export default function MockupPortal({
   const activePrescription = patientDashboard?.prescriptions.find(
     (prescription) => prescription.status === 'active',
   ) ?? null;
+  const manualPrescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
+  const resolvedPrescriptionId = activePrescription?.id ?? (
+    Number.isFinite(manualPrescriptionId) ? manualPrescriptionId : Number(DEMO_PRESCRIPTION_ID)
+  );
   const dispenseRecords = patientDashboard?.dispenseRecords ?? [];
   const doctorSignerReady = runtimeReadiness?.capabilities.issuePrescriptions ?? false;
   const dispensarySignerReady = runtimeReadiness?.capabilities.dispensePrescriptions ?? false;
@@ -1130,11 +1135,7 @@ export default function MockupPortal({
   };
 
   const handleCompleteOnchainDispense = async () => {
-    const normalizedPrescriptionInput = dispensePrescriptionId.trim().replace(/^RX-/i, '');
-    const manualPrescriptionId = normalizedPrescriptionInput
-      ? Number(normalizedPrescriptionInput)
-      : Number.NaN;
-    const prescriptionId = activePrescription?.id ?? manualPrescriptionId;
+    const prescriptionId = resolvedPrescriptionId;
 
     if (!Number.isFinite(prescriptionId)) {
       setDispenseError('Ingresa el numero de receta on-chain que emitio el medico.');
@@ -4091,24 +4092,61 @@ export default function MockupPortal({
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                                Receta on-chain a validar
+                                Receta on-chain detectada
                               </span>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={activePrescription ? `Receta #${activePrescription.id}` : dispensePrescriptionId}
-                                disabled={Boolean(activePrescription)}
-                                onChange={(event) => setDispensePrescriptionId(event.target.value.replace(/^RX-/i, ''))}
-                                placeholder="Ej: 1"
-                                className="w-full px-4 py-3 bg-white rounded-xl border border-brand-green-deep/10 text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 disabled:bg-brand-neutral disabled:text-brand-green-mid/60"
-                              />
-                              <p className="text-[10px] text-brand-green-mid/45 leading-relaxed">
-                                Si no hay wallet paciente conectada, pega aqui el numero de receta que emitio el medico. El demo carga la receta #{DEMO_PRESCRIPTION_ID} y luego recuerda la ultima receta emitida.
-                              </p>
+                              <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-lg font-bold text-brand-green-deep">Receta #{resolvedPrescriptionId}</p>
+                                    <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/55">
+                                      {activePrescription
+                                        ? 'Detectada automaticamente desde la wallet del paciente.'
+                                        : 'Modo demo: usamos la ultima receta emitida o la receta activa de testnet.'}
+                                    </p>
+                                  </div>
+                                  <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
+                                    Vigente
+                                  </span>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                                  <div className="rounded-xl bg-brand-neutral px-3 py-2">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Disponible</p>
+                                    <p className="mt-1 font-bold text-brand-green-deep">{prescriptionRemainingGrams}g</p>
+                                  </div>
+                                  <div className="rounded-xl bg-brand-neutral px-3 py-2">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Este retiro</p>
+                                    <p className="mt-1 font-bold text-brand-green-deep">{cartGrams}g</p>
+                                  </div>
+                                </div>
+
+                                {!activePrescription && (
+                                  <div className="mt-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => setManualPrescriptionEntry((current) => !current)}
+                                      className="text-[10px] font-bold uppercase tracking-widest text-brand-gold"
+                                    >
+                                      {manualPrescriptionEntry ? 'Ocultar entrada manual' : 'Usar otro numero de receta'}
+                                    </button>
+                                    {manualPrescriptionEntry && (
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={dispensePrescriptionId}
+                                        onClick={(event) => event.stopPropagation()}
+                                        onChange={(event) => setDispensePrescriptionId(event.target.value.replace(/[^\d]/g, ''))}
+                                        placeholder={`Ej: ${DEMO_PRESCRIPTION_ID}`}
+                                        className="mt-3 w-full rounded-xl border border-brand-green-deep/10 bg-brand-neutral px-4 py-3 text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </label>
                             <button 
                               onClick={handleCompleteOnchainDispense}
-                              disabled={dispenseBusy || cartExceedsPrescriptionLimit || (!activePrescription && !dispensePrescriptionId.trim()) || !dispensarySignerReady}
+                              disabled={dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId) || !dispensarySignerReady}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
                                {dispenseBusy ? 'Registrando en testnet...' : 'Validar cupo y registrar retiro'} <CheckCircle size={20} />
