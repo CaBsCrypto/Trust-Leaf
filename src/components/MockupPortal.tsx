@@ -750,6 +750,7 @@ export default function MockupPortal({
   const selectedClinicalAccess = selectedClinicalRecord
     ? clinicalAccessState[selectedClinicalRecord.id] ?? 'private'
     : 'private';
+  const clinicalAccessDoctor = 'Dr. Alejandro Merino';
   const manualPrescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
   const resolvedPrescriptionId = activePrescription?.id ?? (
     Number.isFinite(manualPrescriptionId) ? manualPrescriptionId : Number(DEMO_PRESCRIPTION_ID)
@@ -4235,6 +4236,20 @@ export default function MockupPortal({
                     </div>
                   ))}
                 </div>
+                <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                  <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-2">Solicitud de acceso</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-base font-bold text-brand-green-deep">{clinicalAccessDoctor}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">
+                        Endocannabinologia - solicita leer este dato para validar tratamiento y emitir receta verificable.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-brand-neutral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                      24h
+                    </span>
+                  </div>
+                </div>
                 <div className={`rounded-2xl border p-4 text-xs leading-relaxed ${
                   selectedClinicalAccess === 'authorized'
                     ? 'border-green-100 bg-green-50 text-green-700'
@@ -4243,10 +4258,10 @@ export default function MockupPortal({
                       : 'border-blue-100 bg-blue-50 text-blue-700'
                 }`}>
                   {selectedClinicalAccess === 'authorized'
-                    ? 'Acceso autorizado por 24h. El medico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.'
+                    ? `Acceso autorizado por 24h para ${clinicalAccessDoctor}. El medico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.`
                     : selectedClinicalAccess === 'revoked'
-                      ? 'Acceso revocado. El medico conserva solo el hash publico y pierde la ventana temporal de lectura privada.'
-                      : '402 privacy gate: el medico solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.'}
+                      ? `Acceso revocado para ${clinicalAccessDoctor}. El medico conserva solo el hash publico y pierde la ventana temporal de lectura privada.`
+                      : `402 privacy gate: ${clinicalAccessDoctor} solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.`}
                 </div>
                 <div className="rounded-2xl border border-brand-gold/20 bg-brand-gold/5 p-4">
                   <div className="mb-1 flex items-center justify-between gap-3">
@@ -4268,9 +4283,9 @@ export default function MockupPortal({
                   <p className="font-mono text-xs text-brand-green-deep">{selectedClinicalRecord.proof}</p>
                   <p className="mt-2 text-[10px] leading-relaxed text-brand-green-mid/55">
                     {selectedClinicalAccess === 'authorized'
-                      ? `Permiso temporal: permiso-${selectedClinicalRecord.id}-24h - expira manana.`
+                      ? `Permiso temporal para ${clinicalAccessDoctor}: permiso-${selectedClinicalRecord.id}-24h - expira manana.`
                       : selectedClinicalAccess === 'revoked'
-                        ? `Revocacion registrada: revoke-${selectedClinicalRecord.id}-402.`
+                        ? `Revocacion para ${clinicalAccessDoctor}: revoke-${selectedClinicalRecord.id}-402.`
                         : 'Sin permiso activo. Solo esta prueba publica puede validarse fuera del portal.'}
                   </p>
                 </div>
