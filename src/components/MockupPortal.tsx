@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe } from 'lucide-react';
+import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
@@ -418,6 +418,30 @@ const PRIVATE_CLINICAL_DOSSIER = [
   },
 ];
 
+const CLINICAL_EXAM_GALLERY = [
+  {
+    id: 'exam-mri',
+    name: 'Resonancia lumbar',
+    type: 'Imagen medica',
+    date: '08 may 2026',
+    proof: 'hash:mri-82f1',
+  },
+  {
+    id: 'exam-trauma',
+    name: 'Informe traumatologico',
+    type: 'Documento PDF',
+    date: '04 may 2026',
+    proof: 'hash:trauma-61d0',
+  },
+  {
+    id: 'exam-lab',
+    name: 'Laboratorio base',
+    type: 'Resultados',
+    date: '28 abr 2026',
+    proof: 'hash:lab-a903',
+  },
+];
+
 const DOCTOR_SESSION_PATIENTS = [
   {
     id: 'pat-001',
@@ -645,6 +669,14 @@ export default function MockupPortal({
   const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
   const [selectedClinicalRecord, setSelectedClinicalRecord] = useState<any | null>(null);
   const [clinicalAccessState, setClinicalAccessState] = useState<Record<string, 'private' | 'authorized' | 'revoked'>>({});
+  const [uploadedClinicalExams, setUploadedClinicalExams] = useState<Array<{
+    id: string;
+    name: string;
+    type: string;
+    date: string;
+    proof: string;
+  }>>([]);
+  const [showClinicalGallery, setShowClinicalGallery] = useState(false);
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<'date' | 'time' | 'confirm' | 'success'>('date');
   const [selectedDispensary, setSelectedDispensary] = useState<any | null>(null);
@@ -751,6 +783,7 @@ export default function MockupPortal({
     ? clinicalAccessState[selectedClinicalRecord.id] ?? 'private'
     : 'private';
   const clinicalAccessDoctor = 'Dr. Alejandro Merino';
+  const clinicalExamGallery = [...CLINICAL_EXAM_GALLERY, ...uploadedClinicalExams];
   const manualPrescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
   const resolvedPrescriptionId = activePrescription?.id ?? (
     Number.isFinite(manualPrescriptionId) ? manualPrescriptionId : Number(DEMO_PRESCRIPTION_ID)
@@ -1109,6 +1142,24 @@ export default function MockupPortal({
       };
       setRecentActivity(prev => [newActivity, ...prev]);
     }, 500);
+  };
+
+  const handleClinicalExamUpload = (files: FileList | null) => {
+    if (!files?.length) {
+      return;
+    }
+
+    const uploaded = Array.from(files).map((file, index) => ({
+      id: `exam-upload-${Date.now()}-${index}`,
+      name: file.name.replace(/\.[^/.]+$/, '') || 'Examen cargado',
+      type: file.type.includes('image') ? 'Imagen medica' : 'Documento privado',
+      date: 'Subido hoy',
+      proof: `hash:upload-${Math.random().toString(16).slice(2, 8)}`,
+    }));
+
+    setUploadedClinicalExams((current) => [...uploaded, ...current]);
+    setSelectedClinicalRecord(PRIVATE_CLINICAL_DOSSIER[1]);
+    setShowClinicalGallery(true);
   };
 
   const handleCompleteAcquisition = () => {
@@ -3083,9 +3134,25 @@ export default function MockupPortal({
                         <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Expediente privado</p>
                         <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">Historial del Paciente</h3>
                       </div>
-                      <div className="bg-brand-neutral px-4 py-2 rounded-xl border border-brand-green-deep/5 flex items-center gap-2">
-                        <Database size={16} className="text-brand-gold" />
-                        <span className="text-xs font-bold text-brand-green-deep uppercase tracking-tighter">Blockchain Sync: OK</span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="cursor-pointer rounded-xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory shadow-sm transition-all active:scale-95 flex items-center gap-2">
+                          <Upload size={15} />
+                          Subir examen
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            onChange={(event) => {
+                              handleClinicalExamUpload(event.target.files);
+                              event.target.value = '';
+                            }}
+                          />
+                        </label>
+                        <div className="bg-brand-neutral px-4 py-2 rounded-xl border border-brand-green-deep/5 flex items-center gap-2">
+                          <Database size={16} className="text-brand-gold" />
+                          <span className="text-xs font-bold text-brand-green-deep uppercase tracking-tighter">Blockchain Sync: OK</span>
+                        </div>
                       </div>
                     </div>
 
@@ -3108,6 +3175,15 @@ export default function MockupPortal({
                           >
                             Compartir con medico
                           </button>
+                          <button
+                            onClick={() => {
+                              setSelectedClinicalRecord(PRIVATE_CLINICAL_DOSSIER[1]);
+                              setShowClinicalGallery(true);
+                            }}
+                            className="mt-2 w-full rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-brand-ivory"
+                          >
+                            Ver examenes
+                          </button>
                         </div>
                       </div>
 
@@ -3116,7 +3192,10 @@ export default function MockupPortal({
                           <button
                             key={record.id}
                             type="button"
-                            onClick={() => setSelectedClinicalRecord(record)}
+                            onClick={() => {
+                              setSelectedClinicalRecord(record);
+                              setShowClinicalGallery(record.id === 'exams');
+                            }}
                             className="text-left rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors"
                           >
                             <div className="flex items-center justify-between gap-3 mb-3">
@@ -4214,7 +4293,7 @@ export default function MockupPortal({
               initial={{ scale: 0.96, opacity: 0, y: 16 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 16 }}
-              className="bg-white w-full max-w-lg rounded-[28px] overflow-hidden shadow-2xl"
+              className="bg-white w-full max-w-2xl max-h-[92vh] rounded-[28px] overflow-hidden shadow-2xl flex flex-col"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="p-6 border-b border-brand-green-deep/5 flex items-start justify-between gap-4 bg-brand-neutral/30">
@@ -4227,7 +4306,7 @@ export default function MockupPortal({
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 <div className="grid grid-cols-1 gap-3">
                   {selectedClinicalRecord.details.map((detail: string) => (
                     <div key={detail} className="flex items-start gap-3 rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/40 p-4">
@@ -4235,6 +4314,56 @@ export default function MockupPortal({
                       <p className="text-sm text-brand-green-deep">{detail}</p>
                     </div>
                   ))}
+                </div>
+                <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-1">Examenes y documentos</p>
+                      <p className="text-sm font-bold text-brand-green-deep">
+                        {clinicalExamGallery.length} respaldos privados asociados
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowClinicalGallery((current) => !current)}
+                      className="rounded-xl border border-brand-green-deep/10 px-4 py-2 text-xs font-bold text-brand-green-deep transition-all active:scale-95"
+                    >
+                      {showClinicalGallery ? 'Ocultar galeria' : 'Ver galeria'}
+                    </button>
+                  </div>
+
+                  {showClinicalGallery && (
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {clinicalExamGallery.map((exam) => (
+                        <div key={exam.id} className="rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/50 p-3">
+                          <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded-xl bg-white text-brand-green-deep">
+                            <Images size={24} />
+                          </div>
+                          <p className="text-sm font-bold text-brand-green-deep leading-tight">{exam.name}</p>
+                          <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-green-mid/50">{exam.type}</p>
+                          <div className="mt-3 border-t border-brand-green-deep/5 pt-2">
+                            <p className="text-[10px] text-brand-green-mid/55">{exam.date}</p>
+                            <p className="mt-1 font-mono text-[10px] text-brand-gold">{exam.proof}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-neutral px-4 py-3 text-xs font-bold text-brand-green-deep transition-all active:scale-95">
+                    <Upload size={14} />
+                    Subir nuevo examen privado
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(event) => {
+                        handleClinicalExamUpload(event.target.files);
+                        event.target.value = '';
+                      }}
+                    />
+                  </label>
                 </div>
                 <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
                   <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-2">Solicitud de acceso</p>
