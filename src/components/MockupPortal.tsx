@@ -644,6 +644,7 @@ export default function MockupPortal({
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
   const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
   const [selectedClinicalRecord, setSelectedClinicalRecord] = useState<any | null>(null);
+  const [clinicalAccessState, setClinicalAccessState] = useState<Record<string, 'private' | 'authorized' | 'revoked'>>({});
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<'date' | 'time' | 'confirm' | 'success'>('date');
   const [selectedDispensary, setSelectedDispensary] = useState<any | null>(null);
@@ -746,6 +747,9 @@ export default function MockupPortal({
   const activePrescription = patientDashboard?.prescriptions.find(
     (prescription) => prescription.status === 'active',
   ) ?? null;
+  const selectedClinicalAccess = selectedClinicalRecord
+    ? clinicalAccessState[selectedClinicalRecord.id] ?? 'private'
+    : 'private';
   const manualPrescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
   const resolvedPrescriptionId = activePrescription?.id ?? (
     Number.isFinite(manualPrescriptionId) ? manualPrescriptionId : Number(DEMO_PRESCRIPTION_ID)
@@ -4231,18 +4235,72 @@ export default function MockupPortal({
                     </div>
                   ))}
                 </div>
-                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700 leading-relaxed">
-                  402 privacy gate: el medico solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.
+                <div className={`rounded-2xl border p-4 text-xs leading-relaxed ${
+                  selectedClinicalAccess === 'authorized'
+                    ? 'border-green-100 bg-green-50 text-green-700'
+                    : selectedClinicalAccess === 'revoked'
+                      ? 'border-red-100 bg-red-50 text-red-700'
+                      : 'border-blue-100 bg-blue-50 text-blue-700'
+                }`}>
+                  {selectedClinicalAccess === 'authorized'
+                    ? 'Acceso autorizado por 24h. El medico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.'
+                    : selectedClinicalAccess === 'revoked'
+                      ? 'Acceso revocado. El medico conserva solo el hash publico y pierde la ventana temporal de lectura privada.'
+                      : '402 privacy gate: el medico solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.'}
                 </div>
                 <div className="rounded-2xl border border-brand-gold/20 bg-brand-gold/5 p-4">
-                  <p className="text-[10px] uppercase tracking-widest text-brand-gold font-bold mb-1">Prueba publica</p>
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <p className="text-[10px] uppercase tracking-widest text-brand-gold font-bold">Prueba publica</p>
+                    <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                      selectedClinicalAccess === 'authorized'
+                        ? 'bg-green-50 text-green-700'
+                        : selectedClinicalAccess === 'revoked'
+                          ? 'bg-red-50 text-red-700'
+                          : 'bg-white text-brand-green-mid/60'
+                    }`}>
+                      {selectedClinicalAccess === 'authorized'
+                        ? 'Acceso 24h'
+                        : selectedClinicalAccess === 'revoked'
+                          ? 'Revocado'
+                          : 'Privado'}
+                    </span>
+                  </div>
                   <p className="font-mono text-xs text-brand-green-deep">{selectedClinicalRecord.proof}</p>
+                  <p className="mt-2 text-[10px] leading-relaxed text-brand-green-mid/55">
+                    {selectedClinicalAccess === 'authorized'
+                      ? `Permiso temporal: permiso-${selectedClinicalRecord.id}-24h - expira manana.`
+                      : selectedClinicalAccess === 'revoked'
+                        ? `Revocacion registrada: revoke-${selectedClinicalRecord.id}-402.`
+                        : 'Sin permiso activo. Solo esta prueba publica puede validarse fuera del portal.'}
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
-                    Autorizar lectura 24h
+                  <button
+                    type="button"
+                    onClick={() => setClinicalAccessState((current) => ({
+                      ...current,
+                      [selectedClinicalRecord.id]: 'authorized',
+                    }))}
+                    className={`rounded-2xl px-4 py-3 text-sm font-bold transition-all active:scale-95 ${
+                      selectedClinicalAccess === 'authorized'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-brand-green-deep text-brand-ivory hover:bg-brand-green-mid'
+                    }`}
+                  >
+                    {selectedClinicalAccess === 'authorized' ? 'Lectura autorizada' : 'Autorizar lectura 24h'}
                   </button>
-                  <button className="rounded-2xl border border-brand-green-deep/10 px-4 py-3 text-sm font-bold text-brand-green-deep">
+                  <button
+                    type="button"
+                    onClick={() => setClinicalAccessState((current) => ({
+                      ...current,
+                      [selectedClinicalRecord.id]: 'revoked',
+                    }))}
+                    className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all active:scale-95 ${
+                      selectedClinicalAccess === 'revoked'
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-brand-green-deep/10 text-brand-green-deep hover:bg-brand-neutral'
+                    }`}
+                  >
                     Revocar acceso
                   </button>
                 </div>
