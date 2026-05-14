@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images } from 'lucide-react';
+import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images, Leaf } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
@@ -677,6 +677,8 @@ export default function MockupPortal({
     proof: string;
   }>>([]);
   const [showClinicalGallery, setShowClinicalGallery] = useState(false);
+  const [cannabisMarketOpen, setCannabisMarketOpen] = useState(false);
+  const [cannabisMarketInterest, setCannabisMarketInterest] = useState(false);
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<'date' | 'time' | 'confirm' | 'success'>('date');
   const [selectedDispensary, setSelectedDispensary] = useState<any | null>(null);
@@ -1569,10 +1571,24 @@ export default function MockupPortal({
                 )}
               </nav>
               
-              <div className="mt-auto p-4 bg-brand-gold/20 rounded-2xl border border-brand-gold/20">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold mb-1">{t.portal.statusLabel}</p>
-                <p className="text-sm font-medium">{t.portal.statusValue}</p>
-              </div>
+              {!isDoctorPortal && !isDispensaryPortal ? (
+                <button
+                  type="button"
+                  onClick={() => setCannabisMarketOpen(true)}
+                  className="mt-auto rounded-2xl border border-brand-gold/20 bg-brand-gold/20 p-4 text-left transition-all hover:bg-brand-gold/25 active:scale-95"
+                >
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold mb-1">Ecosistema cannabis</p>
+                  <p className="text-sm font-medium">Ropa, calzado y productos de cañamo</p>
+                  <span className="mt-3 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-gold">
+                    Ver negocios <ArrowRight size={12} />
+                  </span>
+                </button>
+              ) : (
+                <div className="mt-auto p-4 bg-brand-gold/20 rounded-2xl border border-brand-gold/20">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold mb-1">Estado operativo</p>
+                  <p className="text-sm font-medium">Validado hasta Dic 2026</p>
+                </div>
+              )}
             </div>
 
             {/* Mobile Bottom Navigation */}
@@ -4512,6 +4528,74 @@ export default function MockupPortal({
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700 leading-relaxed">
                   Agente 402 muestra prueba verificable, lote y estado de entrega, sin revelar diagnostico ni notas clinicas completas. Los hashes completos quedan disponibles para auditoria tecnica, pero la vista del paciente prioriza informacion entendible.
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait" key="modal-cannabis-market">
+        {cannabisMarketOpen && (
+          <motion.div
+            key="cannabis-market-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-brand-green-deep/80 p-4 backdrop-blur-md"
+            onClick={() => setCannabisMarketOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 16 }}
+              className="w-full max-w-2xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/5 bg-brand-neutral/30 p-6">
+                <div>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Marketplace aliado</p>
+                  <h4 className="text-2xl font-serif text-brand-green-deep">Negocios desde el cannabis</h4>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-green-mid/65">
+                    Marcas y productores que trabajan con cañamo, fibras naturales y derivados no medicinales. Separado del flujo clinico y de dispensacion.
+                  </p>
+                </div>
+                <button onClick={() => setCannabisMarketOpen(false)} className="rounded-full p-2 transition-colors hover:bg-white">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 p-6 sm:grid-cols-3">
+                {[
+                  ['Indumentaria de cañamo', 'Ropa tecnica, textiles y prendas regenerativas.', 'Cáñamo textil'],
+                  ['Calzado y accesorios', 'Zapatillas, bolsos y materiales de fibra vegetal.', 'Diseño circular'],
+                  ['Bienestar y cultura', 'Cosmetica, educacion y experiencias legales del ecosistema.', 'Aliados locales'],
+                ].map(([title, desc, tag]) => (
+                  <div key={title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-gold">
+                      <Leaf size={18} />
+                    </div>
+                    <p className="text-sm font-bold text-brand-green-deep">{title}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
+                    <span className="mt-4 inline-flex rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                      {tag}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-brand-green-deep/5 bg-brand-neutral/30 p-6">
+                {cannabisMarketInterest && (
+                  <div className="mb-3 rounded-2xl border border-green-100 bg-green-50 p-3 text-xs text-green-700">
+                    Interes registrado. En el MVP real esto abriria el directorio de marcas y solicitudes para nuevos negocios del ecosistema.
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setCannabisMarketInterest(true)}
+                  className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all active:scale-95"
+                >
+                  {cannabisMarketInterest ? 'Interes registrado' : 'Explorar negocios aliados'}
+                </button>
               </div>
             </motion.div>
           </motion.div>
