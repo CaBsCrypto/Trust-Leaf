@@ -112,12 +112,34 @@ function AppContent() {
     setDoctorRegistrations((current) => [request, ...current]);
   };
 
+  const addDoctorManually = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => {
+    const request: DoctorRegistration = {
+      ...input,
+      id: `doc-manual-${Date.now()}`,
+      status: 'approved',
+      submittedAt: new Date().toISOString(),
+      reviewedAt: new Date().toISOString(),
+    };
+    setDoctorRegistrations((current) => [request, ...current]);
+  };
+
   const submitDispensaryRegistration = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => {
     const request: DispensaryRegistration = {
       ...input,
       id: `disp-req-${Date.now()}`,
       status: 'pending',
       submittedAt: new Date().toISOString(),
+    };
+    setDispensaryRegistrations((current) => [request, ...current]);
+  };
+
+  const addDispensaryManually = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => {
+    const request: DispensaryRegistration = {
+      ...input,
+      id: `disp-manual-${Date.now()}`,
+      status: 'approved',
+      submittedAt: new Date().toISOString(),
+      reviewedAt: new Date().toISOString(),
     };
     setDispensaryRegistrations((current) => [request, ...current]);
   };
@@ -218,6 +240,8 @@ function AppContent() {
         registrations={dispensaryRegistrations}
         onReviewDoctorRegistration={reviewDoctorRegistration}
         onReviewRegistration={reviewDispensaryRegistration}
+        onAddDoctorManually={addDoctorManually}
+        onAddDispensaryManually={addDispensaryManually}
       />
     );
   }
@@ -517,17 +541,52 @@ function AdminRoute({
   registrations,
   onReviewDoctorRegistration,
   onReviewRegistration,
+  onAddDoctorManually,
+  onAddDispensaryManually,
 }: {
   onBack: () => void;
   doctorRegistrations: DoctorRegistration[];
   registrations: DispensaryRegistration[];
   onReviewDoctorRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
   onReviewRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
+  onAddDoctorManually: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+  onAddDispensaryManually: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
   const pendingDoctors = doctorRegistrations.filter((request) => request.status === 'pending');
   const approvedDoctors = doctorRegistrations.filter((request) => request.status === 'approved');
+  const [registryModal, setRegistryModal] = useState<'doctors' | 'dispensaries' | null>(null);
+  const [manualDoctor, setManualDoctor] = useState({
+    name: 'Dra. Sofia Lagos',
+    licenseId: 'MED-CL-20441',
+    specialty: 'Medicina cannabica',
+    contact: 'sofia@trustleaf.org',
+    wallet: 'GDOCMANUALTRUSTLEAFTESTNET000000000000000000000',
+  });
+  const [manualDispensary, setManualDispensary] = useState({
+    name: 'Green Leaf Center',
+    legalId: 'DSP-CL-8821',
+    address: 'Av. Principal 123',
+    contact: 'operaciones@greenleaf.test',
+    wallet: 'GDISPMANUALTRUSTLEAFTESTNET00000000000000000000',
+  });
+
+  const addManualDoctor = () => {
+    if (!manualDoctor.name || !manualDoctor.licenseId || !manualDoctor.specialty || !manualDoctor.contact || !manualDoctor.wallet) {
+      return;
+    }
+
+    onAddDoctorManually(manualDoctor);
+  };
+
+  const addManualDispensary = () => {
+    if (!manualDispensary.name || !manualDispensary.legalId || !manualDispensary.address || !manualDispensary.contact || !manualDispensary.wallet) {
+      return;
+    }
+
+    onAddDispensaryManually(manualDispensary);
+  };
 
   return (
     <div className="min-h-screen bg-brand-ivory text-brand-green-deep">
@@ -561,36 +620,6 @@ function AdminRoute({
           ))}
         </section>
 
-        <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Agentes 402</p>
-              <h2 className="text-2xl font-serif mb-2">Privacidad verificable</h2>
-              <p className="max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
-                Los agentes validan informacion sensible sin exponer documentos completos. El resultado que viaja a Stellar es una wallet autorizada, estado verificable y hash de metadata.
-              </p>
-            </div>
-            <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
-              MVP conceptual
-            </span>
-          </div>
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-            {[
-              ['Compliance Agent', 'Verifica licencias, documentos y estado profesional antes de aprobar actores.'],
-              ['Prescription Agent', 'Valida receta, vigencia y consumo sin revelar diagnostico o notas clinicas.'],
-              ['Eligibility Agent', 'Responde si el paciente puede acceder segun permisos privados y jurisdiccion.'],
-            ].map(([title, desc]) => (
-              <div key={title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
-                  <ShieldCheck size={16} />
-                </div>
-                <h3 className="text-sm font-bold text-brand-green-deep">{title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="bg-white border border-brand-green-deep/10 rounded-2xl p-6">
             <div className="flex items-start justify-between gap-4">
@@ -610,7 +639,13 @@ function AdminRoute({
             <div className="mt-6 space-y-3">
               {doctorRegistrations.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
-                  Aun no hay solicitudes. Entra a `/medico` y completa el formulario de registro.
+                  <p>Aun no hay solicitudes. Los medicos pueden entrar a `/medico`, pero admin tambien puede cargar uno manualmente.</p>
+                  <button
+                    onClick={() => setRegistryModal('doctors')}
+                    className="mt-4 rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory"
+                  >
+                    Agregar medico manual
+                  </button>
                 </div>
               )}
 
@@ -659,12 +694,21 @@ function AdminRoute({
             </div>
           </div>
 
-          <div className="bg-brand-green-deep text-brand-ivory border border-brand-green-deep/10 rounded-2xl p-6">
+          <button
+            type="button"
+            onClick={() => setRegistryModal('doctors')}
+            className="bg-brand-green-deep text-left text-brand-ivory border border-brand-green-deep/10 rounded-2xl p-6 transition-transform active:scale-[0.99]"
+          >
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Medical network</p>
-            <h2 className="text-2xl font-serif mb-4">{approvedDoctors.length} medicos live</h2>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-serif mb-4">{approvedDoctors.length} medicos live</h2>
+              <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-ivory/70">
+                Ver detalle
+              </span>
+            </div>
             <div className="space-y-3">
               {approvedDoctors.length === 0 ? (
-                <p className="text-sm text-brand-ivory/60">Cuando apruebes una solicitud, aparecera aqui como medico autorizado.</p>
+                <p className="text-sm text-brand-ivory/60">Cuando apruebes o agregues un medico, aparecera aqui como autorizado.</p>
               ) : (
                 approvedDoctors.map((request) => (
                   <div key={request.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -674,7 +718,7 @@ function AdminRoute({
                 ))
               )}
             </div>
-          </div>
+          </button>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_0.8fr]">
@@ -696,7 +740,13 @@ function AdminRoute({
             <div className="mt-6 space-y-3">
               {registrations.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
-                  Aun no hay solicitudes. Entra a `/dispensario` y completa el formulario de registro.
+                  <p>Aun no hay solicitudes. Los dispensarios pueden entrar a `/dispensario`, pero admin tambien puede cargar uno manualmente.</p>
+                  <button
+                    onClick={() => setRegistryModal('dispensaries')}
+                    className="mt-4 rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory"
+                  >
+                    Agregar dispensario manual
+                  </button>
                 </div>
               )}
 
@@ -745,12 +795,21 @@ function AdminRoute({
             </div>
           </div>
 
-          <div className="bg-brand-green-deep text-brand-ivory border border-brand-green-deep/10 rounded-2xl p-6">
+          <button
+            type="button"
+            onClick={() => setRegistryModal('dispensaries')}
+            className="bg-brand-green-deep text-left text-brand-ivory border border-brand-green-deep/10 rounded-2xl p-6 transition-transform active:scale-[0.99]"
+          >
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Live network</p>
-            <h2 className="text-2xl font-serif mb-4">{approved.length} dispensarios live</h2>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-serif mb-4">{approved.length} dispensarios live</h2>
+              <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-ivory/70">
+                Ver detalle
+              </span>
+            </div>
             <div className="space-y-3">
               {approved.length === 0 ? (
-                <p className="text-sm text-brand-ivory/60">Cuando apruebes una solicitud, aparecera aqui como autorizada.</p>
+                <p className="text-sm text-brand-ivory/60">Cuando apruebes o agregues un dispensario, aparecera aqui como autorizado.</p>
               ) : (
                 approved.map((request) => (
                   <div key={request.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -760,9 +819,167 @@ function AdminRoute({
                 ))
               )}
             </div>
+          </button>
+        </section>
+
+        <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Agentes 402</p>
+              <h2 className="text-2xl font-serif mb-2">Privacidad verificable</h2>
+              <p className="max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
+                Los agentes validan informacion sensible sin exponer documentos completos. El resultado que viaja a Stellar es una wallet autorizada, estado verificable y hash de metadata.
+              </p>
+            </div>
+            <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
+              MVP conceptual
+            </span>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {[
+              ['Compliance Agent', 'Verifica licencias, documentos y estado profesional antes de aprobar actores.'],
+              ['Prescription Agent', 'Valida receta, vigencia y consumo sin revelar diagnostico o notas clinicas.'],
+              ['Eligibility Agent', 'Responde si el paciente puede acceder segun permisos privados y jurisdiccion.'],
+            ].map(([title, desc]) => (
+              <div key={title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+                  <ShieldCheck size={16} />
+                </div>
+                <h3 className="text-sm font-bold text-brand-green-deep">{title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
+              </div>
+            ))}
           </div>
         </section>
       </main>
+      {registryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-md">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/10 p-6">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">
+                  {registryModal === 'doctors' ? 'Medical network' : 'Live network'}
+                </p>
+                <h2 className="mt-2 text-2xl font-serif">
+                  {registryModal === 'doctors' ? 'Medicos autorizados' : 'Dispensarios autorizados'}
+                </h2>
+                <p className="mt-2 max-w-xl text-sm text-brand-green-mid/65">
+                  Revisa actores ya aprobados o agrega manualmente un actor validado por admin.
+                </p>
+              </div>
+              <button onClick={() => setRegistryModal(null)} className="rounded-full p-2 hover:bg-brand-neutral">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+              {registryModal === 'doctors' ? (
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_0.9fr]">
+                  <div className="space-y-3">
+                    {approvedDoctors.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-5 text-sm text-brand-green-mid/70">
+                        Aun no hay medicos live. Agrega uno manualmente para preparar el demo.
+                      </div>
+                    ) : (
+                      approvedDoctors.map((doctor) => (
+                        <div key={doctor.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-brand-green-deep">{doctor.name}</p>
+                              <p className="mt-1 text-xs text-brand-green-mid/65">{doctor.specialty}</p>
+                            </div>
+                            <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">Live</span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70">
+                            <span>Licencia: <strong>{doctor.licenseId}</strong></span>
+                            <span>Contacto: <strong>{doctor.contact}</strong></span>
+                            <span className="break-all font-mono">{doctor.wallet}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
+                    <div className="mt-4 space-y-3">
+                      {[
+                        ['name', 'Nombre medico'],
+                        ['licenseId', 'Licencia'],
+                        ['specialty', 'Especialidad'],
+                        ['contact', 'Contacto'],
+                        ['wallet', 'Wallet Stellar'],
+                      ].map(([key, label]) => (
+                        <label key={key} className="block">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</span>
+                          <input
+                            value={manualDoctor[key as keyof typeof manualDoctor]}
+                            onChange={(event) => setManualDoctor((current) => ({ ...current, [key]: event.target.value }))}
+                            className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+                          />
+                        </label>
+                      ))}
+                      <button onClick={addManualDoctor} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
+                        Agregar medico autorizado
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_0.9fr]">
+                  <div className="space-y-3">
+                    {approved.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-5 text-sm text-brand-green-mid/70">
+                        Aun no hay dispensarios live. Agrega uno manualmente para preparar el demo.
+                      </div>
+                    ) : (
+                      approved.map((dispensary) => (
+                        <div key={dispensary.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-brand-green-deep">{dispensary.name}</p>
+                              <p className="mt-1 text-xs text-brand-green-mid/65">{dispensary.address}</p>
+                            </div>
+                            <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">Live</span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70">
+                            <span>Registro legal: <strong>{dispensary.legalId}</strong></span>
+                            <span>Contacto: <strong>{dispensary.contact}</strong></span>
+                            <span className="break-all font-mono">{dispensary.wallet}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
+                    <div className="mt-4 space-y-3">
+                      {[
+                        ['name', 'Nombre dispensario'],
+                        ['legalId', 'Registro legal'],
+                        ['address', 'Direccion'],
+                        ['contact', 'Contacto'],
+                        ['wallet', 'Wallet Stellar'],
+                      ].map(([key, label]) => (
+                        <label key={key} className="block">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</span>
+                          <input
+                            value={manualDispensary[key as keyof typeof manualDispensary]}
+                            onChange={(event) => setManualDispensary((current) => ({ ...current, [key]: event.target.value }))}
+                            className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+                          />
+                        </label>
+                      ))}
+                      <button onClick={addManualDispensary} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
+                        Agregar dispensario autorizado
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
