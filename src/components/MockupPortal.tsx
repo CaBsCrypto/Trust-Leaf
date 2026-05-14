@@ -3188,7 +3188,7 @@ export default function MockupPortal({
                                 <div className="flex justify-between sm:block text-right">
                                   <p className="sm:text-lg font-bold text-brand-green-deep">{record.quantity}g</p>
                                   <p className="text-[10px] text-brand-green-mid/40 font-bold uppercase tracking-tighter sm:mt-0.5">
-                                    Ledger {record.recordedLedger}
+                                    Red #{record.recordedLedger}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2 bg-brand-neutral/50 px-3 py-1.5 rounded-lg border border-brand-green-deep/5">
@@ -4332,43 +4332,56 @@ export default function MockupPortal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-brand-green-deep/80 backdrop-blur-md"
+            className="fixed inset-0 z-[120] flex items-center justify-center p-3 md:p-6 bg-brand-green-deep/80 backdrop-blur-md"
             onClick={() => setSelectedTraceRecord(null)}
           >
             <motion.div
               initial={{ scale: 0.96, opacity: 0, y: 16 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 16 }}
-              className="bg-white w-full max-w-lg rounded-[28px] overflow-hidden shadow-2xl"
+              className="bg-white w-full max-w-3xl max-h-[92vh] rounded-[28px] overflow-hidden shadow-2xl flex flex-col"
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="p-6 border-b border-brand-green-deep/5 flex items-start justify-between gap-4">
+              <div className="p-5 md:p-6 border-b border-brand-green-deep/5 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Trazabilidad medicina</p>
-                  <h4 className="text-2xl font-serif text-brand-green-deep">{selectedTraceRecord.title}</h4>
-                  <p className="text-xs text-brand-green-mid/60 mt-1">{selectedTraceRecord.subtitle}</p>
+                  <h4 className="text-2xl md:text-3xl font-serif text-brand-green-deep">{selectedTraceRecord.title}</h4>
+                  <p className="text-xs text-brand-green-mid/60 mt-1">{selectedTraceRecord.subtitle} - entrega parcial verificada</p>
                 </div>
                 <button onClick={() => setSelectedTraceRecord(null)} className="p-2 hover:bg-brand-neutral rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6 space-y-3">
-                {[
-                  ['Producto / hash privado', selectedTraceRecord.product],
-                  ['Lote / batch', selectedTraceRecord.batch],
-                  ['Cantidad retirada', selectedTraceRecord.quantity],
-                  ['Dispensario', selectedTraceRecord.dispensary],
-                  ['Fecha', selectedTraceRecord.date],
-                  ['Ledger', selectedTraceRecord.ledger],
-                  ['Tx', shortenHash(selectedTraceRecord.txHash ?? '', 10)],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-brand-neutral/50 border border-brand-green-deep/5 p-4">
-                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">{label}</p>
-                    <p className="text-sm font-bold text-brand-green-deep break-all">{value}</p>
-                  </div>
-                ))}
+              <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {[
+                    ['Cantidad entregada', selectedTraceRecord.quantity],
+                    ['Fecha del retiro', selectedTraceRecord.date],
+                    ['Confirmacion en red', `#${selectedTraceRecord.ledger}`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl bg-brand-neutral/50 border border-brand-green-deep/5 p-4">
+                      <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">{label}</p>
+                      <p className="text-lg font-bold text-brand-green-deep break-words">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {[
+                    ['Dispensario autorizado', selectedTraceRecord.dispensary],
+                    ['Lote del producto', shortenHash(String(selectedTraceRecord.batch ?? ''), 12)],
+                    ['Prueba privada del producto', shortenHash(String(selectedTraceRecord.product ?? ''), 12)],
+                    ['Comprobante de transaccion', shortenHash(selectedTraceRecord.txHash ?? '', 10)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl bg-brand-neutral/50 border border-brand-green-deep/5 p-4">
+                      <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">{label}</p>
+                      <p className="text-sm font-bold text-brand-green-deep break-words">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700 leading-relaxed">
-                  Agente 402 muestra prueba verificable, lote y estado de entrega, sin revelar diagnostico ni notas clinicas completas.
+                  Agente 402 muestra prueba verificable, lote y estado de entrega, sin revelar diagnostico ni notas clinicas completas. Los hashes completos quedan disponibles para auditoria tecnica, pero la vista del paciente prioriza informacion entendible.
                 </div>
               </div>
             </motion.div>
