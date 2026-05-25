@@ -1038,6 +1038,26 @@ export default function MockupPortal({
   }, [availableAgendaBlocks, selectedDate]);
   const canAccessDispensaries = isDispensaryPortal || hasPrescription || Boolean(primaryPrescription);
   const activePrivacyPermissions = privacyPermissions.filter((permission) => permission.status === 'active');
+  const patientTrustAccountAddress = patientIdentityAddress ?? DEMO_PATIENT_ADDRESS;
+  const doctorCredentialAddress =
+    runtimeReadiness?.signers.doctor.address ?? 'GD2MXRXH...UGJ57VNX';
+  const dispensaryCredentialAddress =
+    runtimeReadiness?.signers.dispensary.address ?? 'GCJLFG6P...CWEJZRJ6';
+  const trustAccountMetrics = [
+    ['Recetas verificables', patientDashboardLoading ? '...' : String(patientDashboard?.summary.total ?? 0)],
+    ['Permisos activos', String(activePrivacyPermissions.length)],
+    ['Retiros trazables', String(activePickups.length + dispenseRecords.length)],
+  ] as const;
+  const doctorCredentialMetrics = [
+    ['Estado', doctorSignerReady ? 'Autorizado' : 'Demo'],
+    ['Recetas emitidas', String(patientDashboard?.summary.total ?? 1)],
+    ['Pacientes con permiso', String(activePrivacyPermissions.filter((permission) => permission.role === 'Medico').length || 1)],
+  ] as const;
+  const dispensaryCredentialMetrics = [
+    ['Estado', dispensarySignerReady ? 'Autorizado' : 'Demo'],
+    ['Entregas registradas', String(activePickups.length + dispenseRecords.length)],
+    ['Lotes activos', String(dispensaryInventory.length)],
+  ] as const;
   const latestMedicalPermission = activePrivacyPermissions.find((permission) => permission.kind === 'medical-consultation') ?? null;
   const latestDispensaryPermission = activePrivacyPermissions.find((permission) => permission.kind === 'dispensary-prescription') ?? null;
   const recordingFlowSteps = [
@@ -2248,6 +2268,14 @@ export default function MockupPortal({
                   <Activity size={18} /> {t.portal.navResume}
                 </button>
                 )}
+                {isViewAllowed('profile') && (
+                <button
+                  onClick={() => switchView('profile')}
+                  className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'profile' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
+                >
+                  <ShieldCheck size={18} /> Mi Cuenta
+                </button>
+                )}
                 {isViewAllowed('doctors') && (
                 <button 
                   onClick={() => switchView('doctors')}
@@ -2329,6 +2357,15 @@ export default function MockupPortal({
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navHome}</span>
               </button>
               )}
+              {isViewAllowed('profile') && (
+              <button
+                onClick={() => switchView('profile')}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all ${activeView === 'profile' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
+              >
+                <ShieldCheck size={20} className={activeView === 'profile' ? 'scale-110' : ''} />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">Cuenta</span>
+              </button>
+              )}
               {isViewAllowed('prescriptions') && (
               <button 
                 onClick={() => switchView('prescriptions')}
@@ -2396,7 +2433,7 @@ export default function MockupPortal({
                   {activeView === 'pickups' && t.portal.navPickups}
                   {activeView === 'history' && t.portal.viewHistory}
                   {activeView === 'traveler' && t.portal.viewTraveler}
-                  {activeView === 'profile' && t.portal.viewProfile}
+                  {activeView === 'profile' && 'Mi Cuenta Trust Leaf'}
                 </h3>
                 <button onClick={onClose} className="p-3 md:p-2 -mr-2 md:mr-0 hover:bg-brand-neutral rounded-full transition-colors">
                   <X size={24} className="md:w-5 md:h-5 w-6 h-6" />
@@ -2628,7 +2665,7 @@ export default function MockupPortal({
                           <div className="flex items-center justify-between gap-4 mb-4">
                             <div>
                               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Estado On-Chain</p>
-                              <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Wallet del Paciente</h5>
+                              <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Cuenta Trust Leaf</h5>
                             </div>
                             <div className="px-3 py-1 rounded-full bg-brand-neutral text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
                               {stellarConfig.networkLabel}
@@ -2660,11 +2697,11 @@ export default function MockupPortal({
 
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-green-deep/5 px-4 py-3">
-                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Identidad paciente</span>
-                              <span className="text-xs font-mono text-brand-green-deep">{shortenAddress(patientIdentityAddress ?? '', 8)}</span>
+                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Identidad verificable</span>
+                              <span className="text-xs font-mono text-brand-green-deep">{shortenAddress(patientTrustAccountAddress, 8)}</span>
                             </div>
                             <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-green-deep/5 px-4 py-3">
-                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Prescription Contract</span>
+                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Contrato de receta</span>
                               <span className="text-xs font-mono text-brand-green-deep">
                                 {shortenAddress(patientDashboard?.prescriptionContractId ?? '', 8)}
                               </span>
@@ -2917,6 +2954,99 @@ export default function MockupPortal({
                     </motion.div>
                   )}
 
+                  {activeView === 'profile' && isViewAllowed('profile') && (
+                    <motion.div
+                      key="view-profile"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-6"
+                    >
+                      <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-6 md:p-8">
+                        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="max-w-2xl">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Identidad verificable</p>
+                            <h3 className="mt-2 text-3xl md:text-4xl font-serif text-brand-green-deep">Mi Cuenta Trust Leaf</h3>
+                            <p className="mt-3 text-sm md:text-base leading-relaxed text-brand-green-mid/70">
+                              Esta cuenta no es una billetera para manejar saldo. Es tu identidad medica verificable: recetas, permisos, retiros y trazabilidad quedan bajo tu control, mientras Trust Leaf patrocina las fees de red.
+                            </p>
+                          </div>
+                          <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5 lg:min-w-[340px]">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green-deep text-brand-gold">
+                                <ShieldCheck size={22} />
+                              </div>
+                              <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
+                                {walletConnected ? 'Activa' : 'Demo lista'}
+                              </span>
+                            </div>
+                            <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Cuenta Stellar del paciente</p>
+                            <p className="mt-1 break-all font-mono text-sm font-bold text-brand-green-deep">{patientTrustAccountAddress}</p>
+                            <p className="mt-3 rounded-2xl border border-brand-gold/20 bg-brand-gold/10 px-4 py-3 text-xs leading-relaxed text-brand-green-mid/75">
+                              Fees patrocinadas por Trust Leaf. El paciente firma consentimiento y propiedad; no necesita cargar saldo.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        {trustAccountMetrics.map(([label, value]) => (
+                          <div key={label} className="rounded-3xl border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                            <p className="mt-2 text-3xl font-bold text-brand-green-deep">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr]">
+                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Activos verificables</p>
+                          <h4 className="mt-2 text-2xl font-serif text-brand-green-deep">Receta, permisos y pruebas</h4>
+                          <div className="mt-5 space-y-3">
+                            {[
+                              ['Receta tipo soulbound', primaryPrescription ? `Receta #${primaryPrescription.id} vigente en testnet` : 'Lista para emitirse desde el panel medico'],
+                              ['Permisos temporales', activePrivacyPermissions.length ? `${activePrivacyPermissions.length} permisos activos` : 'El paciente decide cuando compartir datos'],
+                              ['Trazabilidad recibida', activePickups.length ? `${activePickups.length} retiros con lote y cantidad` : 'Aparece al registrar la primera entrega'],
+                            ].map(([label, value]) => (
+                              <div key={label} className="rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/40 p-4">
+                                <p className="text-xs font-bold text-brand-green-deep">{label}</p>
+                                <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/65">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Accesos</p>
+                          <h4 className="mt-2 text-2xl font-serif text-brand-green-deep">Compartir sin exponer todo</h4>
+                          <div className="mt-5 grid grid-cols-1 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => switchView('history')}
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
+                            >
+                              Ver permisos activos
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => switchView('prescriptions')}
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep"
+                            >
+                              Ver recetas verificables
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => switchView('pickups')}
+                              className="rounded-2xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-3 text-sm font-bold text-brand-green-deep"
+                            >
+                              Ver retiros y trazabilidad
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
                   {activeView === 'doctors' && isViewAllowed('doctors') && (
                     <motion.div 
                       key="view-doctors"
@@ -2926,6 +3056,29 @@ export default function MockupPortal({
                       className="space-y-6"
                     >
                     <div className="space-y-6">
+                      {isDoctorPortal && (
+                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+                          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="max-w-2xl">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial profesional</p>
+                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Medico autorizado en Trust Leaf</h3>
+                              <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
+                                La wallet profesional identifica al medico ante DoctorRegistry y deja auditoria de recetas, permisos revisados y consultas. Las fees quedan patrocinadas por Trust Leaf.
+                              </p>
+                              <p className="mt-3 break-all font-mono text-xs font-bold text-brand-green-deep">{doctorCredentialAddress}</p>
+                            </div>
+                            <div className="grid min-w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[520px]">
+                              {doctorCredentialMetrics.map(([label, value]) => (
+                                <div key={label} className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                                  <p className="mt-1 text-lg font-bold text-brand-green-deep">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {isDoctorPortal && (
                         <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.78fr_1.22fr]">
                           <div className="rounded-3xl border border-brand-gold/25 bg-[#fbf7ef] p-5 text-brand-green-deep shadow-sm">
@@ -3500,6 +3653,27 @@ export default function MockupPortal({
 
                     {isDispensaryPortal ? (
                       <div className="space-y-6">
+                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+                          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="max-w-2xl">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial operativa</p>
+                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Dispensario autorizado en Trust Leaf</h3>
+                              <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
+                                La wallet operativa registra entregas, lotes y actividad verificable ante DispensaryRegistry. El equipo no necesita saldo manual: Trust Leaf patrocina las fees del flujo.
+                              </p>
+                              <p className="mt-3 break-all font-mono text-xs font-bold text-brand-green-deep">{dispensaryCredentialAddress}</p>
+                            </div>
+                            <div className="grid min-w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[520px]">
+                              {dispensaryCredentialMetrics.map(([label, value]) => (
+                                <div key={label} className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                                  <p className="mt-1 text-lg font-bold text-brand-green-deep">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
                           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                             <div className="max-w-3xl">

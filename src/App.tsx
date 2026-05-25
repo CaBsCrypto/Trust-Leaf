@@ -28,7 +28,7 @@ type DoctorRegistration = DoctorApplication;
 // with encrypted documents and an Agent 402 verification result. Admin approval
 // should then write only the actor wallet + metadata hash to the Stellar registry.
 
-const PATIENT_VIEWS: PortalView[] = ['overview', 'doctors', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
+const PATIENT_VIEWS: PortalView[] = ['overview', 'profile', 'doctors', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
 
@@ -41,6 +41,7 @@ const ROLE_ROUTES = [
 
 const PATIENT_ROUTE_VIEWS: Record<string, PortalView> = {
   '/paciente': 'overview',
+  '/paciente/cuenta': 'profile',
   '/paciente/recetas': 'prescriptions',
   '/paciente/dispensarios': 'dispensaries',
   '/paciente/retiros': 'pickups',
