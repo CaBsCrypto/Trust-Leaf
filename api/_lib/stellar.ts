@@ -11,6 +11,12 @@ const DEFAULT_PRESCRIPTION_CONTRACT_ID =
   'CBINKAIKPD7WMF4VF7L74HWVQJ5NBNYB3LG7VNB7VC7H4JZG65GMOJVE';
 const DEFAULT_DISPENSE_RECORD_CONTRACT_ID =
   'CAKTCQO2BOBBCSMOL3Z7GKCIAM7DS3JFK6CA6LYVO32E6HWGOVISETGN';
+const DEFAULT_DEMO_PATIENT_ADDRESS =
+  'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
+const DEFAULT_DEMO_DOCTOR_ADDRESS =
+  'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX';
+const DEFAULT_DEMO_DISPENSARY_ADDRESS =
+  'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
 export function getRpcUrl() {
   return process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org';
@@ -54,6 +60,10 @@ export function getReadonlyAccountId() {
   return process.env.STELLAR_READONLY_ACCOUNT_ID || DEFAULT_READONLY_ACCOUNT;
 }
 
+export function getDemoPatientAddress() {
+  return process.env.STELLAR_DEMO_PATIENT_ADDRESS || DEFAULT_DEMO_PATIENT_ADDRESS;
+}
+
 export function getDoctorSecret() {
   return process.env.STELLAR_DOCTOR_SECRET?.trim() || '';
 }
@@ -61,7 +71,7 @@ export function getDoctorSecret() {
 export function getDoctorAddress() {
   const secret = getDoctorSecret();
   if (!secret) {
-    return process.env.STELLAR_DOCTOR_ADDRESS || '';
+    return process.env.STELLAR_DOCTOR_ADDRESS || DEFAULT_DEMO_DOCTOR_ADDRESS;
   }
 
   return StellarSdk.Keypair.fromSecret(secret).publicKey();
@@ -74,7 +84,7 @@ export function getDispensarySecret() {
 export function getDispensaryAddress() {
   const secret = getDispensarySecret();
   if (!secret) {
-    return process.env.STELLAR_DISPENSARY_ADDRESS || '';
+    return process.env.STELLAR_DISPENSARY_ADDRESS || DEFAULT_DEMO_DISPENSARY_ADDRESS;
   }
 
   return StellarSdk.Keypair.fromSecret(secret).publicKey();
@@ -87,7 +97,7 @@ export function getAdminSecret() {
 export function getAdminAddress() {
   const secret = getAdminSecret();
   if (!secret) {
-    return process.env.STELLAR_ADMIN_ADDRESS || '';
+    return process.env.STELLAR_ADMIN_ADDRESS || DEFAULT_READONLY_ACCOUNT;
   }
 
   return StellarSdk.Keypair.fromSecret(secret).publicKey();
@@ -148,6 +158,71 @@ export function getRuntimeReadiness() {
       ...(!hasMercuryLookup ? ['STELLAR_MERCURY_URL', 'STELLAR_MERCURY_JWT or STELLAR_MERCURY_KEY'] : []),
     ],
   };
+}
+
+export async function fundTestnetAccount(input: {
+  role?: 'admin' | 'doctor' | 'dispensary' | 'patient';
+  address?: string;
+}) {
+  const address = resolveFaucetAddress(input).trim();
+
+  if (!address) {
+    throw new Error('No hay address testnet para fondear.');
+  }
+
+  try {
+    StellarSdk.Keypair.fromPublicKey(address);
+  } catch {
+    throw new Error('La address Stellar no es valida.');
+  }
+
+  const response = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`);
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const detail = payload?.detail || payload?.title || 'Friendbot no pudo fondear la cuenta.';
+    if (/exist|already|funded/i.test(String(detail))) {
+      return {
+        network: 'Stellar Testnet',
+        address,
+        role: input.role ?? 'custom',
+        funded: false,
+        alreadyFunded: true,
+        hash: null,
+        message: 'La cuenta ya existe en testnet. Puede operar si mantiene saldo XLM de prueba.',
+      };
+    }
+
+    throw new Error(String(detail));
+  }
+
+  return {
+    network: 'Stellar Testnet',
+    address,
+    role: input.role ?? 'custom',
+    funded: true,
+    hash: payload?.hash ?? null,
+  };
+}
+
+function resolveFaucetAddress(input: {
+  role?: 'admin' | 'doctor' | 'dispensary' | 'patient';
+  address?: string;
+}) {
+  if (input.address) return input.address;
+
+  switch (input.role) {
+    case 'admin':
+      return getAdminAddress();
+    case 'doctor':
+      return getDoctorAddress();
+    case 'dispensary':
+      return getDispensaryAddress();
+    case 'patient':
+      return getDemoPatientAddress();
+    default:
+      return '';
+  }
 }
 
 export async function registerDoctorOnTestnet(input: { doctorAddress: string }) {

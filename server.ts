@@ -7,6 +7,7 @@ import * as LegacyStellarSdk from "stellar-sdk";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   dispensePrescriptionForPatient as dispensePrescriptionForPatientShared,
+  fundTestnetAccount,
   getRuntimeReadiness,
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
 } from "./api/_lib/stellar";
@@ -81,6 +82,24 @@ async function startServer() {
 
   app.get("/api/stellar/readiness", (_req, res) => {
     res.json(getRuntimeReadiness());
+  });
+
+  app.post("/api/stellar/faucet", async (req, res) => {
+    try {
+      const { role, address } = req.body ?? {};
+      const result = await fundTestnetAccount({
+        role: role ? String(role) as "admin" | "doctor" | "dispensary" | "patient" : undefined,
+        address: address ? String(address) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible fondear la cuenta en Stellar Testnet.";
+      res.status(500).json({ message });
+    }
   });
 
   app.get("/api/stellar/patient/:address/dashboard", async (req, res) => {

@@ -80,6 +80,10 @@ interface RuntimeReadiness {
     passkeyDiscovery: boolean;
   };
   signers: {
+    admin?: {
+      configured: boolean;
+      address: string | null;
+    };
     doctor: {
       configured: boolean;
       address: string | null;
@@ -787,6 +791,8 @@ export default function MockupPortal({
   const [dispenseBusy, setDispenseBusy] = useState(false);
   const [dispenseError, setDispenseError] = useState<string | null>(null);
   const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
+  const [faucetBusy, setFaucetBusy] = useState<'doctor' | 'dispensary' | 'patient' | null>(null);
+  const [faucetNotice, setFaucetNotice] = useState<string | null>(null);
   const [manualPrescriptionEntry, setManualPrescriptionEntry] = useState(false);
   const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
@@ -1042,6 +1048,34 @@ export default function MockupPortal({
     ['QR dispensario', Boolean(latestDispensaryPermission), 'El paciente comparte solo receta, saldo y formatos autorizados.'],
     ['Retiro parcial', activePickups.length > 0, 'El dispensario registra lote, cantidad y trazabilidad.'],
   ] as const;
+
+  const fundTestnetRole = async (role: 'doctor' | 'dispensary' | 'patient') => {
+    setFaucetBusy(role);
+    setFaucetNotice(null);
+
+    try {
+      const response = await fetch('/api/stellar/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible usar el faucet testnet.');
+      }
+
+      const roleLabel = {
+        doctor: 'medico',
+        dispensary: 'dispensario',
+        patient: 'paciente',
+      }[role];
+      setFaucetNotice(`Faucet testnet listo para ${roleLabel}: ${shortenAddress(payload.address, 8)}.`);
+    } catch (error) {
+      setFaucetNotice(error instanceof Error ? error.message : 'No fue posible usar el faucet testnet.');
+    } finally {
+      setFaucetBusy(null);
+    }
+  };
 
   useEffect(() => {
     if (!patientIdentityAddress) {
@@ -5561,6 +5595,21 @@ export default function MockupPortal({
                                 ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
                                 : 'Modo demo activo. Puedes registrar retiros fraccionados para grabación; la firma real requiere STELLAR_DISPENSARY_SECRET en Vercel.'}
                             </div>
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => fundTestnetRole('dispensary')}
+                                disabled={faucetBusy === 'dispensary'}
+                                className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid disabled:cursor-wait disabled:opacity-60"
+                              >
+                                {faucetBusy === 'dispensary' ? 'Fondeando...' : 'Faucet testnet'}
+                              </button>
+                            </div>
+                            {faucetNotice && (
+                              <div className="rounded-xl border border-brand-gold/20 bg-brand-gold/10 p-3 text-xs text-brand-green-deep">
+                                {faucetNotice}
+                              </div>
+                            )}
                             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
                               Agente 402: confirma que la receta pertenece al paciente y mantiene cupo disponible, sin revelar diagnóstico. Cada entrega registra solo prueba, lote y cantidad.
                             </div>
@@ -5714,6 +5763,22 @@ export default function MockupPortal({
                     ? `Signer médico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
                     : 'Modo demo activo. Puedes grabar el flujo completo; la firma real requiere STELLAR_DOCTOR_SECRET en Vercel.'}
                 </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => fundTestnetRole('doctor')}
+                    disabled={faucetBusy === 'doctor'}
+                    className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {faucetBusy === 'doctor' ? 'Fondeando...' : 'Faucet testnet'}
+                  </button>
+                </div>
+                {faucetNotice && (
+                  <div className="rounded-xl border border-brand-gold/20 bg-brand-gold/10 p-3 text-xs text-brand-green-deep">
+                    {faucetNotice}
+                  </div>
+                )}
 
                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
                   Agente 402: valida licencia médica y genera un hash clínico. La receta se emite sin publicar diagnóstico ni notas completas.
