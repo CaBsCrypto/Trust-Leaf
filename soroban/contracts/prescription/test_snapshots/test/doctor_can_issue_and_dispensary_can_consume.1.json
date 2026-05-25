@@ -111,6 +111,9 @@
                 },
                 {
                   "u64": "3600"
+                },
+                {
+                  "u64": "30"
                 }
               ]
             }
@@ -120,6 +123,35 @@
       ]
     ],
     [],
+    [],
+    [],
+    [],
+    [],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
+              "function_name": "record_partial_dispense",
+              "args": [
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                },
+                {
+                  "u64": "0"
+                },
+                {
+                  "u64": "5"
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
     [],
     [],
     [],
@@ -145,6 +177,7 @@
         }
       ]
     ],
+    [],
     [],
     []
   ],
@@ -268,6 +301,26 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "4270020994084947596"
+                }
+              },
+              "durability": "temporary",
+              "val": "void"
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 6311999
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
+              "key": {
+                "ledger_key_nonce": {
+                  "nonce": "8370022561469687789"
                 }
               },
               "durability": "temporary",
@@ -426,6 +479,14 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "dispensed_quantity"
+                    },
+                    "val": {
+                      "u64": "30"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "doctor"
                     },
                     "val": {
@@ -478,6 +539,14 @@
                     },
                     "val": {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "total_quantity"
+                    },
+                    "val": {
+                      "u64": "30"
                     }
                   }
                 ]

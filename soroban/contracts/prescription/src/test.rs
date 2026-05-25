@@ -137,8 +137,13 @@ fn doctor_can_issue_and_dispensary_can_consume() {
     prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
 
     let medication_hash = BytesN::from_array(&env, &[7; 32]);
-    let issued_id =
-        prescription_client.issue_prescription(&doctor, &patient, &medication_hash, &3600_u64);
+    let issued_id = prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &30_u64,
+    );
 
     let issued = prescription_client.get_prescription(&issued_id);
     assert_eq!(issued.id, 0);
@@ -146,6 +151,9 @@ fn doctor_can_issue_and_dispensary_can_consume() {
     assert_eq!(issued.doctor, doctor);
     assert_eq!(issued.medication_hash, medication_hash);
     assert!(issued.issued_at <= issued.expires_at);
+    assert_eq!(issued.total_quantity, 30);
+    assert_eq!(issued.dispensed_quantity, 0);
+    assert_eq!(prescription_client.get_remaining_quantity(&issued_id), 30);
     assert!(!issued.is_used);
     assert!(prescription_client.is_valid(&issued_id));
     assert_eq!(prescription_client.get_doctor_registry(), doctor_registry_id);
@@ -154,8 +162,19 @@ fn doctor_can_issue_and_dispensary_can_consume() {
         dispensary_registry_id
     );
 
+    let remaining_after_first =
+        prescription_client.record_partial_dispense(&dispensary, &issued_id, &5_u64);
+    let partial = prescription_client.get_prescription(&issued_id);
+    assert_eq!(remaining_after_first, 25);
+    assert_eq!(partial.dispensed_quantity, 5);
+    assert!(!partial.is_used);
+    assert!(prescription_client.is_valid(&issued_id));
+    assert_eq!(prescription_client.get_remaining_quantity(&issued_id), 25);
+
     prescription_client.consume_prescription(&dispensary, &issued_id);
     let consumed = prescription_client.get_prescription(&issued_id);
+    assert_eq!(consumed.dispensed_quantity, 30);
     assert!(consumed.is_used);
     assert!(!prescription_client.is_valid(&issued_id));
+    assert_eq!(prescription_client.get_remaining_quantity(&issued_id), 0);
 }

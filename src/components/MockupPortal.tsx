@@ -28,6 +28,9 @@ interface PatientPrescriptionRecord {
   doctor: string;
   medicationHash: string;
   expiresAt: number;
+  totalQuantity?: number;
+  dispensedQuantity?: number;
+  remainingQuantity?: number;
   isUsed: boolean;
   status: 'active' | 'used' | 'expired';
   issuedAt: string;
@@ -89,6 +92,42 @@ interface RuntimeReadiness {
   missing: string[];
 }
 
+interface DoctorAgendaBlock {
+  id: string;
+  date: string;
+  time: string;
+  status: 'Disponible' | 'Reservado';
+  patient?: string;
+  reason?: string;
+}
+
+type ConsultationStatus = 'scheduled' | 'checked_in' | 'active' | 'completed';
+
+interface PrivateClinicalRecord {
+  id: string;
+  title: string;
+  status: string;
+  summary: string;
+  details: string[];
+  proof: string;
+}
+
+type PrivacyPermissionKind = 'medical-consultation' | 'dispensary-prescription';
+type PrivacyPermissionStatus = 'active' | 'revoked';
+
+interface PrivacyPermission {
+  id: string;
+  kind: PrivacyPermissionKind;
+  actor: string;
+  role: 'Medico' | 'Dispensario';
+  scope: string;
+  expiresAt: string;
+  status: PrivacyPermissionStatus;
+  hash: string;
+  qrToken: string;
+  createdAt: string;
+}
+
 function formatPortalDate(value: string) {
   return new Intl.DateTimeFormat('es-CL', {
     day: '2-digit',
@@ -105,12 +144,102 @@ function formatExpiryDate(timestamp: number) {
   }).format(new Date(timestamp * 1000));
 }
 
+function capitalizeDateLabel(label: string) {
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function formatLiveDate(value: Date) {
+  return capitalizeDateLabel(new Intl.DateTimeFormat('es-CL', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(value));
+}
+
+function formatLiveTime(value: Date) {
+  return new Intl.DateTimeFormat('es-CL', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(value);
+}
+
+function formatRelativeAgendaDate(baseDate: Date, offsetDays: number) {
+  const date = new Date(baseDate);
+  date.setDate(baseDate.getDate() + offsetDays);
+
+  const dayLabel = offsetDays === 0
+    ? 'Hoy'
+    : offsetDays === 1
+      ? 'Mañana'
+      : capitalizeDateLabel(new Intl.DateTimeFormat('es-CL', { weekday: 'long' }).format(date));
+
+  const calendarLabel = new Intl.DateTimeFormat('es-CL', {
+    day: '2-digit',
+    month: 'short',
+  }).format(date);
+
+  return `${dayLabel}, ${calendarLabel}`;
+}
+
+function buildLiveDoctorAvailabilitySlots(baseDate: Date) {
+  return [
+    [formatRelativeAgendaDate(baseDate, 0), '16:30', 'Disponible'],
+    [formatRelativeAgendaDate(baseDate, 1), '10:00', 'Disponible'],
+    [formatRelativeAgendaDate(baseDate, 1), '12:30', 'Reservado'],
+    [formatRelativeAgendaDate(baseDate, 3), '09:00', 'Disponible'],
+  ];
+}
+
+function buildDefaultDoctorAgenda(baseDate: Date): DoctorAgendaBlock[] {
+  return buildLiveDoctorAvailabilitySlots(baseDate).map(([date, time, status], index) => ({
+    id: `agenda-seed-${index}`,
+    date,
+    time,
+    status: status as DoctorAgendaBlock['status'],
+    patient: status === 'Reservado' ? 'Camila R.' : undefined,
+    reason: status === 'Reservado' ? 'Primera consulta y revisión de historial' : undefined,
+  }));
+}
+
 function shortenHash(value: string, size = 8) {
   if (!value || value.length <= size * 2) {
     return value;
   }
 
   return `${value.slice(0, size)}...${value.slice(-size)}`;
+}
+
+function makeDemoHash(seed: string) {
+  const text = `${seed}-${Date.now()}-${Math.random()}`;
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return Math.abs(hash).toString(16).padStart(16, '0');
+}
+
+function normalizeDemoText(value: unknown) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  return value
+    .replaceAll('organico', 'orgánico')
+    .replaceAll('analgesico', 'analgésico')
+    .replaceAll('traumatologico', 'traumatológico')
+    .replaceAll('cronico', 'crónico')
+    .replaceAll('medica', 'médica')
+    .replaceAll('clinico', 'clínico');
+}
+
+function normalizeInventoryProduct<T extends Record<string, any>>(product: T): T {
+  return Object.fromEntries(
+    Object.entries(product).map(([key, value]) => [key, normalizeDemoText(value)]),
+  ) as T;
 }
 
 const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
@@ -373,7 +502,7 @@ const DISPENSARY_INVENTORY_SEED = [
     cbd: '10%',
     lab: 'Trust Leaf QC',
     origin: 'Cultivo certificado - Lote Mendoza',
-    effect: 'Equilibrado / analgesico',
+    effect: 'Equilibrado / analgésico',
     description: 'Producto listo para dispensar contra receta validada.',
   },
   {
@@ -385,7 +514,7 @@ const DISPENSARY_INVENTORY_SEED = [
     thc: '18%',
     cbd: '2%',
     lab: 'Pure Labs',
-    origin: 'Cultivo organico - Mendoza',
+    origin: 'Cultivo orgánico - Mendoza',
     effect: 'Sedativo / relajante',
     description: 'Inventario trazable con certificado de laboratorio cargado.',
   },
@@ -394,26 +523,26 @@ const DISPENSARY_INVENTORY_SEED = [
 const PRIVATE_CLINICAL_DOSSIER = [
   {
     id: 'symptoms',
-    title: 'Sintomas reportados',
+    title: 'Síntomas reportados',
     status: 'Privado',
-    summary: 'Dolor cronico lumbar, dificultad para dormir y episodios de ansiedad.',
-    details: ['Evolucion registrada por el paciente', 'Escala de dolor: 7/10', 'Frecuencia: diaria', 'Ultima actualizacion: hace 6 dias'],
+    summary: 'Dolor crónico lumbar, dificultad para dormir y episodios de ansiedad.',
+    details: ['Evolución registrada por el paciente', 'Escala de dolor: 7/10', 'Frecuencia: diaria', 'Última actualización: hace 6 días'],
     proof: 'hash:symptoms-9f31',
   },
   {
     id: 'exams',
-    title: 'Examenes y respaldos',
+    title: 'Exámenes y respaldos',
     status: 'Validado',
-    summary: 'Resonancia, informe traumatologico y certificado de tratamiento previo.',
-    details: ['3 documentos cifrados', 'Firmas de clinica verificadas', 'OCR local para extraer solo metadatos', 'Contenido medico no se publica on-chain'],
+    summary: 'Resonancia, informe traumatológico y certificado de tratamiento previo.',
+    details: ['3 documentos cifrados', 'Firmas de clínica verificadas', 'OCR local para extraer solo metadatos', 'Contenido médico no se publica on-chain'],
     proof: 'hash:docs-2b77',
   },
   {
     id: 'treatment',
-    title: 'Historial terapeutico',
-    status: 'Listo para medico',
+    title: 'Historial terapéutico',
+    status: 'Listo para médico',
     summary: 'Tratamientos previos, respuesta a dosis y tolerancia del paciente.',
-    details: ['AINEs con respuesta parcial', 'Fisioterapia documentada', 'Uso cannabis medicinal supervisado', 'Alertas de interaccion: sin registros criticos'],
+    details: ['AINEs con respuesta parcial', 'Fisioterapia documentada', 'Uso cannabis medicinal supervisado', 'Alertas de interacción: sin registros críticos'],
     proof: 'hash:treatment-a140',
   },
 ];
@@ -422,13 +551,13 @@ const CLINICAL_EXAM_GALLERY = [
   {
     id: 'exam-mri',
     name: 'Resonancia lumbar',
-    type: 'Imagen medica',
+    type: 'Imagen médica',
     date: '08 may 2026',
     proof: 'hash:mri-82f1',
   },
   {
     id: 'exam-trauma',
-    name: 'Informe traumatologico',
+    name: 'Informe traumatológico',
     type: 'Documento PDF',
     date: '04 may 2026',
     proof: 'hash:trauma-61d0',
@@ -446,9 +575,9 @@ const DOCTOR_SESSION_PATIENTS = [
   {
     id: 'pat-001',
     name: 'Paciente 0',
-    reason: 'Dolor cronico lumbar',
+    reason: 'Dolor crónico lumbar',
     status: 'Listo para revisar',
-    lastVisit: 'Control en 30 dias',
+    lastVisit: 'Control en 30 días',
     wallet: DEMO_PATIENT_ADDRESS,
   },
   {
@@ -462,20 +591,12 @@ const DOCTOR_SESSION_PATIENTS = [
   {
     id: 'pat-003',
     name: 'Rafael P.',
-    reason: 'Ansiedad y dolor neuropatico',
+    reason: 'Ansiedad y dolor neuropático',
     status: 'Seguimiento activo',
-    lastVisit: 'Hace 14 dias',
+    lastVisit: 'Hace 14 días',
     wallet: 'GCFW6WEVFOLLOWUPPRIVATE402PATIENT0003',
   },
 ];
-
-const DOCTOR_AVAILABILITY_SLOTS = [
-  ['Hoy', '16:30', 'Disponible'],
-  ['Mañana', '10:00', 'Disponible'],
-  ['Mañana', '12:30', 'Reservado'],
-  ['Viernes', '09:00', 'Disponible'],
-];
-
 
 const MOCK_ORDERS = [
   { 
@@ -548,7 +669,7 @@ const MOCK_GLOBAL_REGIONS = [
     partner: 'Berlin Medical Botanical',
     flag: '🇩🇪',
     continent: 'Europa',
-    requirements: ['Credencial medica', 'Sync Blockchain Trust'],
+    requirements: ['Credencial médica', 'Sync Blockchain Trust'],
     description: 'Protocolos estrictos de la UE. Su receta tiene validez transatlántica.'
   },
   {
@@ -602,7 +723,7 @@ export default function MockupPortal({
 }: MockupPortalProps) {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PortalView>(initialView);
-  const isDoctorPortal = roleLabel === 'Portal Medico';
+  const isDoctorPortal = roleLabel === 'Portal Médico';
   const isDispensaryPortal = roleLabel === 'Portal Dispensario';
   const isViewAllowed = (view: PortalView) => !allowedViews || allowedViews.includes(view);
   const switchView = (view: PortalView) => {
@@ -629,7 +750,10 @@ export default function MockupPortal({
   const [walletHint, setWalletHint] = useState<string | null>(
     'Todos los accesos de esta versión operan exclusivamente sobre Stellar Testnet.',
   );
-  const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(null);
+  const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(() => {
+    const saved = localStorage.getItem('trust_patient_dashboard');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [patientDashboardLoading, setPatientDashboardLoading] = useState(false);
   const [patientDashboardError, setPatientDashboardError] = useState<string | null>(null);
   const [runtimeReadiness, setRuntimeReadiness] = useState<RuntimeReadiness | null>(null);
@@ -669,6 +793,12 @@ export default function MockupPortal({
   const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
   const [selectedClinicalRecord, setSelectedClinicalRecord] = useState<any | null>(null);
   const [clinicalAccessState, setClinicalAccessState] = useState<Record<string, 'private' | 'authorized' | 'revoked'>>({});
+  const [privacyPermissions, setPrivacyPermissions] = useState<PrivacyPermission[]>(() => {
+    const saved = localStorage.getItem('trust_privacy_permissions');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedQrPermission, setSelectedQrPermission] = useState<PrivacyPermission | null>(null);
+  const [dispensaryValidation, setDispensaryValidation] = useState<PrivacyPermission | null>(null);
   const [uploadedClinicalExams, setUploadedClinicalExams] = useState<Array<{
     id: string;
     name: string;
@@ -676,9 +806,37 @@ export default function MockupPortal({
     date: string;
     proof: string;
   }>>([]);
+  const [consultationClinicalRecords, setConsultationClinicalRecords] = useState<PrivateClinicalRecord[]>(() => {
+    const saved = localStorage.getItem('trust_consultation_clinical_records');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showClinicalGallery, setShowClinicalGallery] = useState(false);
   const [cannabisMarketOpen, setCannabisMarketOpen] = useState(false);
   const [cannabisMarketInterest, setCannabisMarketInterest] = useState(false);
+  const [currentNow, setCurrentNow] = useState(() => new Date());
+  const [doctorAgendaBlocks, setDoctorAgendaBlocks] = useState<DoctorAgendaBlock[]>(() => {
+    const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+    return saved ? JSON.parse(saved) : buildDefaultDoctorAgenda(new Date());
+  });
+  const [showAgendaForm, setShowAgendaForm] = useState(false);
+  const [agendaForm, setAgendaForm] = useState({
+    date: formatRelativeAgendaDate(new Date(), 1),
+    time: '15:00',
+    status: 'Disponible' as DoctorAgendaBlock['status'],
+    patient: '',
+  });
+  const [selectedConsultationId, setSelectedConsultationId] = useState<string | null>(() =>
+    localStorage.getItem('trust_selected_consultation_id'),
+  );
+  const [consultationStatusById, setConsultationStatusById] = useState<Record<string, ConsultationStatus>>(() => {
+    const saved = localStorage.getItem('trust_consultation_status');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [consultationSummaryDraft, setConsultationSummaryDraft] = useState(() =>
+    localStorage.getItem('trust_consultation_summary_draft') ||
+    'Paciente refiere dolor persistente, dificultad para dormir y tolerancia previa a preparados de cannabis medicinal. Se revisan antecedentes autorizados por el paciente.',
+  );
+  const [prescriptionToolOpen, setPrescriptionToolOpen] = useState(false);
   const [bookingDoctor, setBookingDoctor] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState<'date' | 'time' | 'confirm' | 'success'>('date');
   const [selectedDispensary, setSelectedDispensary] = useState<any | null>(null);
@@ -699,7 +857,8 @@ export default function MockupPortal({
   });
   const [dispensaryInventory, setDispensaryInventory] = useState<any[]>(() => {
     const saved = localStorage.getItem('trust_dispensary_inventory');
-    return saved ? JSON.parse(saved) : DISPENSARY_INVENTORY_SEED;
+    const source = saved ? JSON.parse(saved) : DISPENSARY_INVENTORY_SEED;
+    return source.map(normalizeInventoryProduct);
   });
   const [inventoryForm, setInventoryForm] = useState({
     name: 'CBD Balance 10:10',
@@ -737,6 +896,12 @@ export default function MockupPortal({
   }, [hasPrescription]);
 
   useEffect(() => {
+    if (patientDashboard) {
+      localStorage.setItem('trust_patient_dashboard', JSON.stringify(patientDashboard));
+    }
+  }, [patientDashboard]);
+
+  useEffect(() => {
     localStorage.setItem('trust_activity', JSON.stringify(recentActivity));
   }, [recentActivity]);
 
@@ -764,6 +929,42 @@ export default function MockupPortal({
     localStorage.setItem('trust_prescription_allowance', JSON.stringify(prescriptionAllowance));
   }, [prescriptionAllowance]);
 
+  useEffect(() => {
+    localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify(doctorAgendaBlocks));
+  }, [doctorAgendaBlocks]);
+
+  useEffect(() => {
+    if (selectedConsultationId) {
+      localStorage.setItem('trust_selected_consultation_id', selectedConsultationId);
+    } else {
+      localStorage.removeItem('trust_selected_consultation_id');
+    }
+  }, [selectedConsultationId]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_consultation_status', JSON.stringify(consultationStatusById));
+  }, [consultationStatusById]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_consultation_clinical_records', JSON.stringify(consultationClinicalRecords));
+  }, [consultationClinicalRecords]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_consultation_summary_draft', consultationSummaryDraft);
+  }, [consultationSummaryDraft]);
+
+  useEffect(() => {
+    localStorage.setItem('trust_privacy_permissions', JSON.stringify(privacyPermissions));
+  }, [privacyPermissions]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentNow(new Date());
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const walletConnected = walletSetup.primaryMethod !== null;
   const passkeyAvailability = getPasskeyAvailability();
   const patientIdentityAddress = useMemo(() => {
@@ -786,6 +987,7 @@ export default function MockupPortal({
     : 'private';
   const clinicalAccessDoctor = 'Dr. Alejandro Merino';
   const clinicalExamGallery = [...CLINICAL_EXAM_GALLERY, ...uploadedClinicalExams];
+  const portableClinicalDossier = [...consultationClinicalRecords, ...PRIVATE_CLINICAL_DOSSIER];
   const manualPrescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
   const resolvedPrescriptionId = activePrescription?.id ?? (
     Number.isFinite(manualPrescriptionId) ? manualPrescriptionId : Number(DEMO_PRESCRIPTION_ID)
@@ -793,10 +995,22 @@ export default function MockupPortal({
   const dispenseRecords = patientDashboard?.dispenseRecords ?? [];
   const doctorSignerReady = runtimeReadiness?.capabilities.issuePrescriptions ?? false;
   const dispensarySignerReady = runtimeReadiness?.capabilities.dispensePrescriptions ?? false;
+  const reservedAgendaBlocks = doctorAgendaBlocks.filter((block) => block.status === 'Reservado');
+  const availableAgendaBlocks = doctorAgendaBlocks.filter((block) => block.status === 'Disponible');
+  const patientUpcomingConsultation = reservedAgendaBlocks.find((block) =>
+    block.patient === 'Paciente demo' || block.reason?.includes('portal paciente'),
+  ) ?? null;
+  const selectedConsultationBlock = reservedAgendaBlocks.find((block) => block.id === selectedConsultationId) ?? null;
+  const prescriptionPatientAddress = selectedConsultationBlock
+    ? DEMO_PATIENT_ADDRESS
+    : doctorPatientAddress.trim();
+  const selectedConsultationStatus = selectedConsultationBlock
+    ? consultationStatusById[selectedConsultationBlock.id] ?? 'scheduled'
+    : null;
   const bookingDates = useMemo(() => {
     return Array.from({ length: 4 }, (_, index) => {
-      const date = new Date();
-      date.setDate(date.getDate() + index + 1);
+      const date = new Date(currentNow);
+      date.setDate(currentNow.getDate() + index + 1);
       const label = new Intl.DateTimeFormat('es-CL', {
         weekday: 'long',
         day: 'numeric',
@@ -804,12 +1018,33 @@ export default function MockupPortal({
       }).format(date);
       return label.charAt(0).toUpperCase() + label.slice(1);
     });
-  }, []);
+  }, [currentNow]);
+  const bookingTimeOptions = useMemo(() => {
+    if (!selectedDate) {
+      return ['09:00 AM', '10:30 AM', '02:00 PM', '04:30 PM'];
+    }
+
+    const availableForDate = availableAgendaBlocks
+      .filter((block) => block.date === selectedDate)
+      .map((block) => block.time);
+
+    return availableForDate.length ? availableForDate : ['09:00 AM', '10:30 AM', '02:00 PM', '04:30 PM'];
+  }, [availableAgendaBlocks, selectedDate]);
   const canAccessDispensaries = isDispensaryPortal || hasPrescription || Boolean(primaryPrescription);
+  const activePrivacyPermissions = privacyPermissions.filter((permission) => permission.status === 'active');
+  const latestMedicalPermission = activePrivacyPermissions.find((permission) => permission.kind === 'medical-consultation') ?? null;
+  const latestDispensaryPermission = activePrivacyPermissions.find((permission) => permission.kind === 'dispensary-prescription') ?? null;
+  const recordingFlowSteps = [
+    ['Identidad', walletConnected, 'Paciente entra con wallet demo, passkey o Freighter.'],
+    ['Consulta', Boolean(patientUpcomingConsultation || selectedConsultationBlock), 'El paciente agenda y el medico valida llegada.'],
+    ['Permiso medico', Boolean(latestMedicalPermission), 'El paciente comparte ficha privada por ventana temporal.'],
+    ['Receta', Boolean(hasPrescription || primaryPrescription), 'El medico emite receta verificable para el paciente.'],
+    ['QR dispensario', Boolean(latestDispensaryPermission), 'El paciente comparte solo receta, saldo y formatos autorizados.'],
+    ['Retiro parcial', activePickups.length > 0, 'El dispensario registra lote, cantidad y trazabilidad.'],
+  ] as const;
 
   useEffect(() => {
     if (!patientIdentityAddress) {
-      setPatientDashboard(null);
       setPatientDashboardError(null);
       return;
     }
@@ -1002,6 +1237,53 @@ export default function MockupPortal({
     setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
   };
 
+  const resetDemoState = () => {
+    [
+      'trust_patient_dashboard',
+      'trust_pickups',
+      'trust_has_rx',
+      'trust_cart',
+      'trust_privacy_permissions',
+      'trust_prescription_allowance',
+      'trust_latest_prescription_id',
+      'trust_dispense_prescription_id',
+      'trust_activity',
+      'trust_selected_consultation_id',
+      'trust_consultation_status',
+      'trust_consultation_clinical_records',
+      'trust_consultation_summary_draft',
+    ].forEach((key) => localStorage.removeItem(key));
+
+    setPatientDashboard(null);
+    setActivePickups([]);
+    setHasPrescription(false);
+    setCart([]);
+    setPrivacyPermissions([]);
+    setSelectedQrPermission(null);
+    setDispensaryValidation(null);
+    setPrescriptionAllowance({
+      monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+      usedGrams: DEFAULT_PRESCRIPTION_USED_GRAMS,
+    });
+    setDispensePrescriptionId(DEMO_PRESCRIPTION_ID);
+    setRecentActivity([
+      { id: 'act-reset-1', action: 'Demo reiniciado para grabacion', date: 'ReciÃ©n', icon: 'Activity' },
+      { id: 'act-init-1', action: 'Consulta medico especialista pendiente', date: 'Demo limpio', icon: 'Stethoscope' },
+    ]);
+    setSelectedConsultationId(null);
+    setConsultationStatusById({});
+    setConsultationClinicalRecords([]);
+    setConsultationSummaryDraft('Paciente refiere dolor persistente, dificultad para dormir y tolerancia previa a preparados de cannabis medicinal. Se revisan antecedentes autorizados por el paciente.');
+    setDoctorIssueSuccess(null);
+    setDoctorIssueError(null);
+    setDispenseSuccess(null);
+    setDispenseError(null);
+    resetBooking();
+    resetDispensaryFlow();
+    switchView('overview');
+    connectDemoPatientWallet();
+  };
+
   const linkFreighterBackup = async () => {
     setWalletBusy('backup');
     setWalletError(null);
@@ -1051,15 +1333,10 @@ export default function MockupPortal({
   };
 
   const handleDoctorIssuePrescription = async () => {
-    const targetPatientAddress = doctorPatientAddress.trim();
+    const targetPatientAddress = prescriptionPatientAddress.trim();
 
     if (!targetPatientAddress) {
-      setDoctorIssueError('Ingresa la direccion Stellar del paciente para emitir la receta.');
-      return;
-    }
-
-    if (!doctorSignerReady) {
-      setDoctorIssueError('Produccion ya lee contratos, pero falta STELLAR_DOCTOR_SECRET en Vercel para firmar emisiones reales.');
+      setDoctorIssueError('Ingresa la dirección Stellar del paciente para emitir la receta.');
       return;
     }
 
@@ -1068,6 +1345,13 @@ export default function MockupPortal({
     setDoctorIssueSuccess(null);
 
     try {
+      if (!doctorSignerReady) {
+        issueDemoPrescription(targetPatientAddress);
+        setConsultationStatus('completed');
+        setPrescriptionToolOpen(false);
+        return;
+      }
+
       const response = await fetch('/api/stellar/doctor/issue-prescription', {
         method: 'POST',
         headers: {
@@ -1079,6 +1363,10 @@ export default function MockupPortal({
           dosage: doctorIssueForm.dosage,
           notes: doctorIssueForm.notes,
           durationDays: doctorIssueForm.durationDays,
+          totalQuantity: Math.max(
+            1,
+            Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+          ),
         }),
       });
 
@@ -1090,8 +1378,9 @@ export default function MockupPortal({
       setPatientDashboard(payload.dashboard);
       setHasPrescription(payload.dashboard.summary.total > 0);
       setDoctorIssueSuccess(
-        `Receta emitida en testnet. Numero ${payload.issuedId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
+        `Receta emitida en testnet. Número ${payload.issuedId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
       );
+      setPrescriptionToolOpen(false);
       setPrescriptionAllowance({
         monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
         usedGrams: 0,
@@ -1133,7 +1422,29 @@ export default function MockupPortal({
 
   const handleCompleteBooking = () => {
     setBookingStep('success');
-    setHasPrescription(true);
+    if (bookingDoctor && selectedDate && selectedTime) {
+      const bookedBlock: DoctorAgendaBlock = {
+        id: `agenda-booking-${Date.now()}`,
+        date: selectedDate,
+        time: selectedTime,
+        status: 'Reservado',
+        patient: 'Paciente demo',
+        reason: `Reserva desde portal paciente con ${bookingDoctor.name}`,
+      };
+      setDoctorAgendaBlocks((prev) => {
+        const hasExistingBlock = prev.some((block) => block.date === selectedDate && block.time === selectedTime);
+
+        if (!hasExistingBlock) {
+          return [bookedBlock, ...prev];
+        }
+
+        return prev.map((block) => (
+          block.date === selectedDate && block.time === selectedTime
+            ? { ...block, ...bookedBlock, id: block.id }
+            : block
+        ));
+      });
+    }
     // Simulate updating activity
     setTimeout(() => {
       const newActivity = { 
@@ -1146,6 +1457,274 @@ export default function MockupPortal({
     }, 500);
   };
 
+  const handleAddAgendaBlock = () => {
+    const block: DoctorAgendaBlock = {
+      id: `agenda-custom-${Date.now()}`,
+      date: agendaForm.date.trim() || formatRelativeAgendaDate(currentNow, 1),
+      time: agendaForm.time.trim() || '15:00',
+      status: agendaForm.status,
+      patient: agendaForm.status === 'Reservado' ? (agendaForm.patient.trim() || 'Paciente por confirmar') : undefined,
+      reason: agendaForm.status === 'Reservado' ? 'Bloque reservado manualmente' : undefined,
+    };
+
+    setDoctorAgendaBlocks((prev) => [block, ...prev]);
+    setAgendaForm({
+      date: formatRelativeAgendaDate(currentNow, 1),
+      time: '15:00',
+      status: 'Disponible',
+      patient: '',
+    });
+    setShowAgendaForm(false);
+  };
+
+  const toggleAgendaBlockStatus = (blockId: string) => {
+    setDoctorAgendaBlocks((prev) => prev.map((block) => {
+      if (block.id !== blockId) {
+        return block;
+      }
+
+      if (block.status === 'Reservado') {
+        return {
+          ...block,
+          status: 'Disponible',
+          patient: undefined,
+          reason: undefined,
+        };
+      }
+
+      return {
+        ...block,
+        status: 'Reservado',
+        patient: 'Paciente demo',
+        reason: 'Reserva manual desde panel médico',
+      };
+    }));
+  };
+
+  const openConsultationFromBlock = (block: DoctorAgendaBlock) => {
+    setSelectedConsultationId(block.id);
+    setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
+    setConsultationSummaryDraft(
+      `Motivo: ${block.reason ?? 'Consulta de seguimiento'}. Paciente ${block.patient ?? 'demo'} autoriza revision de ficha privada, examenes y antecedentes relevantes para evaluar tratamiento con cannabis medicinal.`,
+    );
+    setConsultationStatusById((prev) => ({
+      ...prev,
+      [block.id]: prev[block.id] ?? 'scheduled',
+    }));
+  };
+
+  const saveConsultationSummaryToRecord = (statusOverride?: ConsultationStatus) => {
+    if (!selectedConsultationBlock) {
+      return;
+    }
+
+    const recordId = `consultation-${selectedConsultationBlock.id}`;
+    const savedAt = formatLiveDate(new Date());
+    const summary = consultationSummaryDraft.trim() || 'Resumen clinico pendiente de completar.';
+
+    setConsultationClinicalRecords((prev) => {
+      const nextRecord: PrivateClinicalRecord = {
+        id: recordId,
+        title: `Consulta ${selectedConsultationBlock.patient ?? 'paciente'}`,
+        status: (statusOverride ?? selectedConsultationStatus) === 'completed' ? 'Consulta cerrada' : 'Resumen en curso',
+        summary,
+        details: [
+          `Atencion realizada por ${clinicalAccessDoctor}`,
+          `Fecha y hora: ${selectedConsultationBlock.date} · ${selectedConsultationBlock.time}`,
+          `Motivo: ${selectedConsultationBlock.reason ?? 'Revision clinica'}`,
+          `Resumen medico privado: ${summary}`,
+          'Notas, examenes e imagenes permanecen cifrados off-chain; Stellar recibe solo hash y estado verificable',
+        ],
+        proof: `hash:consult-${makeDemoHash(`${selectedConsultationBlock.id}-${summary}`).slice(0, 8)}`,
+      };
+
+      if (prev.some((record) => record.id === recordId)) {
+        return prev.map((record) => (record.id === recordId ? nextRecord : record));
+      }
+
+      return [nextRecord, ...prev];
+    });
+
+    setDoctorIssueForm((prev) => ({
+      ...prev,
+      notes: `${summary} Control clinico en 30 dias.`,
+    }));
+
+    setRecentActivity((prev: any[]) => [
+      {
+        id: `act-consultation-summary-${Date.now()}`,
+        action: `Resumen clinico guardado · ${savedAt}`,
+        date: 'Recien',
+        icon: 'FileText',
+      },
+      ...prev,
+    ]);
+  };
+
+  const setConsultationStatus = (status: ConsultationStatus, consultationId = selectedConsultationId) => {
+    if (!consultationId) {
+      return;
+    }
+
+    setConsultationStatusById((prev) => ({
+      ...prev,
+      [consultationId]: status,
+    }));
+
+    setRecentActivity((prev: any[]) => [
+      {
+        id: `act-consultation-${Date.now()}-${status}`,
+        action: status === 'active' ? 'Consulta médica iniciada' : 'Consulta médica finalizada',
+        date: 'Recién',
+        icon: 'Stethoscope',
+      },
+      ...prev,
+    ]);
+
+    const targetConsultationBlock = reservedAgendaBlocks.find((block) => block.id === consultationId);
+
+    if (status === 'completed' && targetConsultationBlock) {
+      const selectedConsultationBlock = targetConsultationBlock;
+      saveConsultationSummaryToRecord('completed');
+      const recordId = `consultation-${targetConsultationBlock.id}`;
+      const completedAt = formatLiveDate(new Date());
+      setConsultationClinicalRecords((prev) => {
+        if (prev.some((record) => record.id === recordId)) {
+          return prev;
+        }
+
+        return [
+          {
+            id: recordId,
+            title: `Consulta ${targetConsultationBlock.patient ?? 'paciente'}`,
+            status: 'Consulta',
+            summary: `${selectedConsultationBlock.reason ?? 'Consulta médica finalizada'} · ${completedAt}.`,
+            details: [
+              `Atención realizada por ${clinicalAccessDoctor}`,
+              `Fecha y hora: ${selectedConsultationBlock.date} · ${selectedConsultationBlock.time}`,
+              `Motivo: ${selectedConsultationBlock.reason ?? 'Revisión clínica'}`,
+              'Notas y documentos permanecen cifrados; solo se comparte hash verificable con permiso del paciente',
+            ],
+            proof: `hash:consult-${makeDemoHash(selectedConsultationBlock.id).slice(0, 8)}`,
+          },
+          ...prev,
+        ];
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedConsultationBlock) {
+      return;
+    }
+
+    setDoctorIssueForm((prev) => ({
+      ...prev,
+      treatment: prev.treatment || 'Cannabis medicinal para manejo de dolor crónico',
+      notes: selectedConsultationBlock.reason
+        ? `${selectedConsultationBlock.reason}. Control clínico en 30 días.`
+        : prev.notes,
+    }));
+  }, [selectedConsultationBlock]);
+
+  const issueDemoPrescription = (targetPatientAddress: string) => {
+    const issuedId = Number(localStorage.getItem('trust_latest_prescription_id') ?? DEMO_PRESCRIPTION_ID) + 1;
+    const issuedAt = new Date();
+    const expiresAt = Math.floor(issuedAt.getTime() / 1000) + (Number(doctorIssueForm.durationDays) || 30) * 24 * 60 * 60;
+    const medicationHash = makeDemoHash(`${targetPatientAddress}-${doctorIssueForm.treatment}-${doctorIssueForm.dosage}`);
+    const txHash = makeDemoHash(`demo-rx-${issuedId}`);
+    const demoPrescription: PatientPrescriptionRecord = {
+      id: issuedId,
+      patient: targetPatientAddress,
+      doctor: runtimeReadiness?.signers.doctor.address ?? 'GDOCTORDEMO402TRUSTLEAFTESTNET000000000000',
+      medicationHash,
+      expiresAt,
+      isUsed: false,
+      status: 'active',
+      issuedAt: issuedAt.toISOString(),
+      issuedLedger: runtimeReadiness ? 2540000 + issuedId : 2540000 + issuedId,
+      txHash,
+    };
+
+    setPatientDashboard((current) => ({
+      patientAddress: targetPatientAddress,
+      network: stellarConfig.networkLabel,
+      rpcUrl: stellarConfig.rpcUrl,
+      latestLedger: current?.latestLedger ?? 2540000 + issuedId,
+      latestLedgerClosedAt: issuedAt.toISOString(),
+      registryContractId: current?.registryContractId ?? 'DoctorRegistry demo',
+      prescriptionContractId: current?.prescriptionContractId ?? 'Prescription demo',
+      summary: {
+        total: (current?.summary.total ?? 0) + 1,
+        active: (current?.summary.active ?? 0) + 1,
+        used: current?.summary.used ?? 0,
+        expired: current?.summary.expired ?? 0,
+      },
+      prescriptions: [demoPrescription, ...(current?.prescriptions ?? [])],
+      dispenseRecords: current?.dispenseRecords ?? [],
+    }));
+    setHasPrescription(true);
+    setPrescriptionAllowance({
+      monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
+      usedGrams: 0,
+    });
+    localStorage.setItem('trust_latest_prescription_id', String(issuedId));
+    setDispensePrescriptionId(String(issuedId));
+    setDoctorIssueSuccess(
+      `Receta demo generada para grabación. Número ${issuedId} - Hash ${shortenHash(txHash)}. Pendiente de firma real en Stellar Testnet.`,
+    );
+    const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
+    setDispensaryValidation(dispensaryPermission);
+    setRecentActivity((prev: any[]) => [
+      {
+        id: `act-demo-issue-${Date.now()}`,
+        action: `Receta demo creada para ${shortenAddress(targetPatientAddress, 5)}`,
+        date: 'Recién',
+        icon: 'FileText',
+      },
+      ...prev,
+    ]);
+
+    if (selectedConsultationBlock) {
+      const recordId = `consultation-${selectedConsultationBlock.id}`;
+      setConsultationClinicalRecords((prev) => {
+        const prescriptionDetail = `Receta #${issuedId} asociada · hash ${shortenHash(txHash)} · cupo ${doctorIssueForm.monthlyLimitGrams}g`;
+        if (prev.some((record) => record.id === recordId)) {
+          return prev.map((record) => (
+            record.id === recordId
+              ? {
+                  ...record,
+                  status: 'Receta asociada',
+                  details: record.details.includes(prescriptionDetail)
+                    ? record.details
+                    : [...record.details, prescriptionDetail],
+                  proof: `hash:consult-rx-${makeDemoHash(`${recordId}-${issuedId}`).slice(0, 8)}`,
+                }
+              : record
+          ));
+        }
+
+        return [
+          {
+            id: recordId,
+            title: `Consulta ${selectedConsultationBlock.patient ?? 'paciente'}`,
+            status: 'Receta asociada',
+            summary: `${selectedConsultationBlock.reason ?? 'Consulta médica'} · receta #${issuedId} generada.`,
+            details: [
+              `Atención realizada por ${clinicalAccessDoctor}`,
+              `Fecha y hora: ${selectedConsultationBlock.date} · ${selectedConsultationBlock.time}`,
+              `Tratamiento: ${doctorIssueForm.treatment}`,
+              prescriptionDetail,
+              'Diagnóstico y notas completas permanecen cifrados off-chain',
+            ],
+            proof: `hash:consult-rx-${makeDemoHash(`${recordId}-${issuedId}`).slice(0, 8)}`,
+          },
+          ...prev,
+        ];
+      });
+    }
+  };
+
   const handleClinicalExamUpload = (files: FileList | null) => {
     if (!files?.length) {
       return;
@@ -1154,7 +1733,7 @@ export default function MockupPortal({
     const uploaded = Array.from(files).map((file, index) => ({
       id: `exam-upload-${Date.now()}-${index}`,
       name: file.name.replace(/\.[^/.]+$/, '') || 'Examen cargado',
-      type: file.type.includes('image') ? 'Imagen medica' : 'Documento privado',
+      type: file.type.includes('image') ? 'Imagen médica' : 'Documento privado',
       date: 'Subido hoy',
       proof: `hash:upload-${Math.random().toString(16).slice(2, 8)}`,
     }));
@@ -1192,16 +1771,62 @@ export default function MockupPortal({
     }, 500);
   };
 
+  const registerLocalDispense = (prescriptionId: number, mode: 'demo' | 'fallback') => {
+    const quantity = cart.reduce((total, item) => total + item.quantity, 0);
+    const recordId = `${mode === 'demo' ? 'DEMO' : 'PRIVATE'}-${Date.now().toString().slice(-5)}`;
+    const newPickups = cart.map(item => ({
+      id: `pick-${mode}-${Date.now()}-${item.strain.id}`,
+      strain: item.strain,
+      quantity: item.quantity,
+      dispensary: selectedDispensary,
+      status: 'pending',
+      token: `RX-${prescriptionId}-${recordId}`,
+      expires: mode === 'demo' ? 'Retiro demo registrado' : 'Cupo privado registrado'
+    }));
+
+    setHasPrescription(true);
+    setPrescriptionAllowance((current: any) => ({
+      ...current,
+      usedGrams: Math.min(
+        Number(current.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+        (Number(current.usedGrams) || 0) + quantity,
+      ),
+    }));
+    setDispensaryInventory(prev => prev.map((product) => {
+      const dispensed = cart.find((item) => item.strain.id === product.id)?.quantity ?? 0;
+      if (!dispensed) {
+        return product;
+      }
+
+      return {
+        ...product,
+        stockGrams: Math.max(0, Number(product.stockGrams ?? 0) - dispensed),
+      };
+    }));
+    setActivePickups(prev => [...newPickups, ...prev]);
+    setRecentActivity(prev => [
+      {
+        id: `act-${mode}-disp-${Date.now()}`,
+        action: `Retiro fraccionado de receta ${prescriptionId}`,
+        date: "Recién",
+        icon: "ShoppingBag",
+      },
+      ...prev,
+    ]);
+    setDispenseSuccess(
+      mode === 'demo'
+        ? `Retiro demo registrado. Record ${recordId}. La receta mantiene saldo para futuras entregas.`
+        : 'El contrato testnet marcó esta receta sin cupo activo. Para el MVP registramos un retiro fraccionado privado; en producción el contrato debe manejar cupos semanales/gramos restantes.',
+    );
+    setDispensaryStep('success');
+    setCart([]);
+  };
+
   const handleCompleteOnchainDispense = async () => {
     const prescriptionId = resolvedPrescriptionId;
 
     if (!Number.isFinite(prescriptionId)) {
-      setDispenseError('Ingresa el numero de receta on-chain que emitio el medico.');
-      return;
-    }
-
-    if (!dispensarySignerReady) {
-      setDispenseError('Produccion ya lee contratos, pero falta STELLAR_DISPENSARY_SECRET en Vercel para firmar dispensaciones reales.');
+      setDispenseError('Ingresa el número de receta on-chain que emitió el médico.');
       return;
     }
 
@@ -1215,6 +1840,11 @@ export default function MockupPortal({
     setDispenseSuccess(null);
 
     try {
+      if (!dispensarySignerReady) {
+        registerLocalDispense(prescriptionId, 'demo');
+        return;
+      }
+
       const productLabel = cart
         .map((item) => `${item.strain.name} x${item.quantity}g`)
         .join(' + ');
@@ -1269,7 +1899,7 @@ export default function MockupPortal({
         {
           id: `act-disp-${Date.now()}`,
           action: `Retiro parcial de receta ${prescriptionId}`,
-          date: "Recien",
+          date: "Recién",
           icon: "ShoppingBag",
         },
         ...prev,
@@ -1289,37 +1919,7 @@ export default function MockupPortal({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No fue posible dispensar la receta en testnet.';
       if (isPrescriptionNotValidError(message)) {
-        const newPickups = cart.map(item => ({
-          id: `pick-weekly-${Date.now()}-${item.strain.id}`,
-          strain: item.strain,
-          quantity: item.quantity,
-          dispensary: selectedDispensary,
-          status: 'pending',
-          token: `RX-${prescriptionId}-WEEKLY`,
-          expires: 'Cupo semanal registrado'
-        }));
-
-        setHasPrescription(true);
-        setPrescriptionAllowance((current: any) => ({
-          ...current,
-          usedGrams: Math.min(
-            Number(current.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-            (Number(current.usedGrams) || 0) + cart.reduce((total, item) => total + item.quantity, 0),
-          ),
-        }));
-        setActivePickups(prev => [...newPickups, ...prev]);
-        setRecentActivity(prev => [
-          {
-            id: `act-weekly-${Date.now()}`,
-            action: `Retiro fraccionado de receta ${prescriptionId}`,
-            date: "Recien",
-            icon: "ShoppingBag",
-          },
-          ...prev,
-        ]);
-        setDispenseSuccess('El contrato testnet marco esta receta sin cupo activo. Para el MVP registramos un retiro fraccionado privado; en produccion el contrato debe manejar cupos semanales/gramos restantes.');
-        setDispensaryStep('success');
-        setCart([]);
+        registerLocalDispense(prescriptionId, 'fallback');
         return;
       }
 
@@ -1399,11 +1999,86 @@ export default function MockupPortal({
     }));
   };
 
+  const createPrivacyPermission = (kind: PrivacyPermissionKind, openQr = true) => {
+    const isMedical = kind === 'medical-consultation';
+    const actor = isMedical ? clinicalAccessDoctor : selectedDispensary?.name ?? 'Green Leaf Center';
+    const permission: PrivacyPermission = {
+      id: `perm-${kind}-${Date.now()}`,
+      kind,
+      actor,
+      role: isMedical ? 'Medico' : 'Dispensario',
+      scope: isMedical
+        ? 'Ficha clinica, examenes autorizados y ventana de consulta'
+        : 'Receta vigente, saldo disponible, formatos autorizados y retiros previos',
+      expiresAt: isMedical ? '24h desde autorizacion' : '30 min desde emision del QR',
+      status: 'active',
+      hash: `hash:permit-${makeDemoHash(`${kind}-${actor}`).slice(0, 10)}`,
+      qrToken: `TL-${kind === 'medical-consultation' ? 'MED' : 'RX'}-${makeDemoHash(`${actor}-${Date.now()}`).slice(0, 8).toUpperCase()}`,
+      createdAt: 'Ahora',
+    };
+
+    setPrivacyPermissions((current) => [permission, ...current]);
+    setRecentActivity((prev: any[]) => [
+      {
+        id: `act-permission-${Date.now()}`,
+        action: isMedical
+          ? `Permiso privado creado para ${actor}`
+          : `QR de receta compartible creado para ${actor}`,
+        date: 'ReciÃ©n',
+        icon: 'ShieldCheck',
+      },
+      ...prev,
+    ]);
+
+    if (openQr) {
+      setSelectedQrPermission(permission);
+    }
+
+    return permission;
+  };
+
+  const revokePrivacyPermission = (permissionId: string) => {
+    setPrivacyPermissions((current) => current.map((permission) => (
+      permission.id === permissionId
+        ? { ...permission, status: 'revoked' }
+        : permission
+    )));
+  };
+
+  const validatePatientQrForDoctor = () => {
+    const consultationId = selectedConsultationId ?? reservedAgendaBlocks[0]?.id ?? null;
+    if (consultationId && !selectedConsultationId) {
+      setSelectedConsultationId(consultationId);
+    }
+
+    const permission = latestMedicalPermission ?? createPrivacyPermission('medical-consultation', false);
+    setSelectedQrPermission(permission);
+    setConsultationStatus('checked_in', consultationId);
+  };
+
+  const validatePrescriptionQrForDispensary = () => {
+    const operator = buildOperatorDispensary();
+    setSelectedDispensary(operator);
+    setDispensaryStep('inventory');
+    const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+    setDispensaryValidation(permission);
+    setSelectedQrPermission(permission);
+  };
+
+  const buildOperatorDispensary = () => ({
+    id: 'dispensary-operator',
+    name: 'Mi dispensario',
+    address: 'Operacion autorizada',
+    status: 'Abierto',
+    stock: 'Operativo',
+    inventory: dispensaryInventory,
+  });
+
   const prepareInventoryDispense = (product: any) => {
     setSelectedDispensary({
       id: 'dispensary-operator',
       name: 'Mi dispensario',
-      address: 'Operacion autorizada',
+      address: 'Operación autorizada',
       status: 'Abierto',
       stock: 'Operativo',
       inventory: dispensaryInventory,
@@ -1413,6 +2088,24 @@ export default function MockupPortal({
     setDispenseError(null);
     setDispenseSuccess(null);
     setDispensaryStep('confirm');
+  };
+
+  const openPickupTraceability = (pickup: any) => {
+    const productName = pickup.strain?.name ?? 'Producto medicinal';
+    const batch = pickup.strain?.batch ?? `batch-${productName}`;
+    const productProof = makeDemoHash(`${productName}-${batch}-${pickup.quantity}`);
+
+    setSelectedTraceRecord({
+      title: productName,
+      subtitle: `Receta ${pickup.token ?? 'validada'}`,
+      quantity: `${pickup.quantity ?? 0}g`,
+      date: 'Registrado hoy',
+      ledger: pickup.recordId ?? pickup.token ?? 'local-demo',
+      dispensary: pickup.dispensary?.name ?? 'Dispensario autorizado',
+      batch,
+      product: productProof,
+      txHash: makeDemoHash(`${pickup.id}-${pickup.token ?? productProof}`),
+    });
   };
 
   const cartTotal = useMemo(() => {
@@ -1526,7 +2219,7 @@ export default function MockupPortal({
                   onClick={() => switchView('doctors')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'doctors' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
-                  <Stethoscope size={18} /> {isDoctorPortal ? 'Panel medico' : t.portal.navDoctors}
+                  <Stethoscope size={18} /> {isDoctorPortal ? 'Panel médico' : t.portal.navDoctors}
                 </button>
                 )}
                 {isViewAllowed('dispensaries') && (
@@ -1534,7 +2227,7 @@ export default function MockupPortal({
                   onClick={() => switchView('dispensaries')}
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'dispensaries' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
-                  <ShoppingBag size={18} /> {isDispensaryPortal ? 'Operacion' : t.portal.navDispensaries}
+                  <ShoppingBag size={18} /> {isDispensaryPortal ? 'Operación' : t.portal.navDispensaries}
                 </button>
                 )}
                 {isViewAllowed('prescriptions') && (
@@ -1592,11 +2285,11 @@ export default function MockupPortal({
             </div>
 
             {/* Mobile Bottom Navigation */}
-            <div className="md:hidden fixed bottom-2 left-4 right-4 bg-brand-green-deep/95 backdrop-blur-xl h-16 flex justify-around items-center z-[110] border border-white/10 rounded-[24px] pb-safe shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+            <div className="md:hidden fixed bottom-2 left-4 right-4 bg-[#fbf7ef]/95 backdrop-blur-xl min-h-16 flex justify-around items-center z-[110] border border-brand-green-deep/10 rounded-[24px] pb-safe shadow-[0_16px_44px_rgba(26,59,50,0.16)]">
               {isViewAllowed('overview') && (
               <button 
                 onClick={() => switchView('overview')}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'overview' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all ${activeView === 'overview' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <Activity size={20} className={activeView === 'overview' ? 'scale-110' : ''} />
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navHome}</span>
@@ -1605,7 +2298,7 @@ export default function MockupPortal({
               {isViewAllowed('prescriptions') && (
               <button 
                 onClick={() => switchView('prescriptions')}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'prescriptions' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all ${activeView === 'prescriptions' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <Activity size={20} className={activeView === 'prescriptions' ? 'scale-110' : ''} />
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{t.portal.navHealth}</span>
@@ -1614,16 +2307,16 @@ export default function MockupPortal({
               {isViewAllowed('doctors') && (
               <button 
                 onClick={() => switchView('doctors')}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'doctors' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all ${activeView === 'doctors' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <Stethoscope size={20} className={activeView === 'doctors' ? 'scale-110' : ''} />
-                <span className="text-[10px] font-bold uppercase tracking-tighter">{isDoctorPortal ? 'Emitir receta' : t.portal.navDoctors}</span>
+                <span className="text-[10px] font-bold uppercase tracking-tighter">{isDoctorPortal ? 'Receta' : t.portal.navDoctors}</span>
               </button>
               )}
               {isViewAllowed('dispensaries') && (
               <button 
                 onClick={() => switchView('dispensaries')}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${activeView === 'dispensaries' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all ${activeView === 'dispensaries' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <ShoppingBag size={20} className={activeView === 'dispensaries' ? 'scale-110' : ''} />
                 <span className="text-[10px] font-bold uppercase tracking-tighter">{isDispensaryPortal ? 'Operar' : t.portal.navStore}</span>
@@ -1632,7 +2325,7 @@ export default function MockupPortal({
               {isViewAllowed('pickups') && (
               <button 
                 onClick={() => switchView('pickups')}
-                className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'pickups' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'pickups' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <Package size={20} />
                 <span className="text-[10px] font-bold">{t.portal.navPickups}</span>
@@ -1641,7 +2334,7 @@ export default function MockupPortal({
               {isViewAllowed('history') && (
               <button 
                 onClick={() => switchView('history')}
-                className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'history' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'history' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <Database size={20} />
                 <span className="text-[10px] font-bold">{t.portal.navRecord}</span>
@@ -1650,7 +2343,7 @@ export default function MockupPortal({
               {isViewAllowed('traveler') && (
               <button 
                 onClick={() => switchView('traveler')}
-                className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'traveler' ? 'text-brand-gold' : 'text-white/40'}`}
+                className={`p-3 rounded-xl transition-colors flex flex-col items-center gap-1 ${activeView === 'traveler' ? 'bg-white text-brand-green-deep shadow-sm' : 'text-brand-green-mid/45'}`}
               >
                 <Globe size={20} />
                 <span className="text-[10px] font-bold">{t.portal.navTraveler}</span>
@@ -1663,8 +2356,8 @@ export default function MockupPortal({
               <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 px-6 md:px-8 py-4 md:py-6 border-b border-brand-green-deep/5 flex justify-between items-center">
                 <h3 className="text-xl md:text-2xl font-serif text-brand-green-deep">
                   {activeView === 'overview' && t.portal.viewWelcome}
-                  {activeView === 'doctors' && (isDoctorPortal ? 'Panel medico' : t.portal.viewDoctors)}
-                  {activeView === 'dispensaries' && (isDispensaryPortal ? 'Operacion dispensario' : t.portal.viewDispensaries)}
+                  {activeView === 'doctors' && (isDoctorPortal ? 'Panel médico' : t.portal.viewDoctors)}
+                  {activeView === 'dispensaries' && (isDispensaryPortal ? 'Operación dispensario' : t.portal.viewDispensaries)}
                   {activeView === 'prescriptions' && t.portal.viewPrescriptions}
                   {activeView === 'pickups' && t.portal.navPickups}
                   {activeView === 'history' && t.portal.viewHistory}
@@ -1691,14 +2384,69 @@ export default function MockupPortal({
                           <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">{t.portal.panelControl}</p>
                           <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">{t.portal.viewWelcome}</h3>
                         </div>
+                        {!isDoctorPortal && !isDispensaryPortal && (
+                          <button
+                            type="button"
+                            onClick={resetDemoState}
+                            className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral"
+                          >
+                            Reiniciar demo
+                          </button>
+                        )}
                       </div>
+
+                      {!walletConnected && (
+                        <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
+                          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de grabacion</p>
+                              <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Flujo paciente - medico - dispensario</h4>
+                              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
+                                Primero entra como paciente demo. Luego agenda, comparte permiso, recibe receta, genera QR y valida retiro parcial en dispensario.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={connectDemoPatientWallet}
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                            >
+                              Activar demo paciente
+                            </button>
+                          </div>
+                          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                            {recordingFlowSteps.map(([label, done, description], index) => (
+                              <div
+                                key={label}
+                                className={`rounded-2xl border p-4 ${
+                                  done
+                                    ? 'border-green-100 bg-green-50'
+                                    : 'border-brand-green-deep/10 bg-white'
+                                }`}
+                              >
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-green-deep text-xs font-bold text-brand-ivory">
+                                    {index + 1}
+                                  </span>
+                                  <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                                    done ? 'bg-white text-green-700' : 'bg-brand-neutral text-brand-green-mid/55'
+                                  }`}>
+                                    {done ? 'Listo' : 'Pendiente'}
+                                  </span>
+                                </div>
+                                <p className="text-sm font-bold text-brand-green-deep">{label}</p>
+                                <p className="mt-2 text-[11px] leading-relaxed text-brand-green-mid/60">{description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {!walletConnected && (
                         <div className="space-y-3">
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                           {[
                             ['1', 'Crear identidad', 'Passkey, Freighter o demo testnet.'],
-                            ['2', 'Recibir receta', 'El medico emite una receta on-chain a tu wallet.'],
+                            ['2', 'Recibir receta', 'El médico emite una receta on-chain a tu wallet.'],
                             ['3', 'Retirar medicina', 'El dispensario valida la receta desde su propia URL.'],
                           ].map(([step, title, desc]) => (
                             <div key={step} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4 shadow-sm">
@@ -1797,6 +2545,50 @@ export default function MockupPortal({
                         </div>
                       </motion.div>
 
+                      <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de grabacion</p>
+                            <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Flujo paciente - medico - dispensario</h4>
+                            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
+                              Usa esta barra como checklist del demo. Cada paso se activa con datos locales y deja claro que el paciente controla permisos y QR.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => switchView('history')}
+                            className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                          >
+                            Ver permisos
+                          </button>
+                        </div>
+                        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                          {recordingFlowSteps.map(([label, done, description], index) => (
+                            <div
+                              key={label}
+                              className={`rounded-2xl border p-4 ${
+                                done
+                                  ? 'border-green-100 bg-green-50'
+                                  : 'border-brand-green-deep/10 bg-white'
+                              }`}
+                            >
+                              <div className="mb-3 flex items-center justify-between gap-3">
+                                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-green-deep text-xs font-bold text-brand-ivory">
+                                  {index + 1}
+                                </span>
+                                <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                                  done ? 'bg-white text-green-700' : 'bg-brand-neutral text-brand-green-mid/55'
+                                }`}>
+                                  {done ? 'Listo' : 'Pendiente'}
+                                </span>
+                              </div>
+                              <p className="text-sm font-bold text-brand-green-deep">{label}</p>
+                              <p className="mt-2 text-[11px] leading-relaxed text-brand-green-mid/60">{description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
                         <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-6 shadow-sm">
                           <div className="flex items-center justify-between gap-4 mb-4">
@@ -1869,6 +2661,57 @@ export default function MockupPortal({
                           </div>
                         </div>
 
+                        <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-6 shadow-sm">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Proxima consulta</p>
+                          {patientUpcomingConsultation ? (
+                            <div className="rounded-3xl border border-brand-gold/20 bg-[#fbf7ef] p-5">
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <h5 className="text-lg font-bold text-brand-green-deep">{patientUpcomingConsultation.patient ?? 'Paciente demo'}</h5>
+                                  <p className="mt-1 text-sm text-brand-green-mid/70">
+                                    {patientUpcomingConsultation.date} · {patientUpcomingConsultation.time}
+                                  </p>
+                                  <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/60">
+                                    {patientUpcomingConsultation.reason ?? 'Consulta reservada con medico validado.'}
+                                  </p>
+                                </div>
+                                <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
+                                  Reservada
+                                </span>
+                              </div>
+                              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedClinicalRecord(portableClinicalDossier[0])}
+                                  className="rounded-xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep"
+                                >
+                                  Preparar ficha
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => switchView('doctors')}
+                                  className="rounded-xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                                >
+                                  Ver medicos
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-3xl border border-dashed border-brand-green-deep/10 bg-brand-neutral/40 p-5">
+                              <p className="text-sm leading-relaxed text-brand-green-mid/70">
+                                Aun no tienes una consulta reservada. Agenda con un medico validado antes de solicitar medicina en dispensarios.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => switchView('doctors')}
+                                className="mt-4 rounded-xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                              >
+                                Buscar medico
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="bg-brand-neutral/40 rounded-[32px] border border-brand-green-deep/5 p-6">
                           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Última receta</p>
                           {patientDashboardLoading ? (
@@ -1935,9 +2778,13 @@ export default function MockupPortal({
                                 <FileText size={20} />
                               </div>
                           </div>
-                          <p className="text-xl font-bold text-brand-green-deep mb-1">Cannabis Terapéutico</p>
+                          <p className="text-xl font-bold text-brand-green-deep mb-1">
+                            {primaryPrescription ? 'Cannabis terapéutico' : 'Sin receta vigente'}
+                          </p>
                           <p className="text-xs text-brand-green-mid/70 flex items-center gap-1">
-                            Dr. Alejandro Merino <span className="w-1 h-1 rounded-full bg-brand-gold"></span> Emitida hoy
+                            {primaryPrescription ? 'Dr. Alejandro Merino' : 'Pendiente de consulta'}
+                            <span className="w-1 h-1 rounded-full bg-brand-gold"></span>
+                            {primaryPrescription ? 'Emitida hoy' : 'Agenda primero'}
                           </p>
                           <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-brand-gold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                             Ver detalles <ArrowRight size={12} />
@@ -2046,43 +2893,138 @@ export default function MockupPortal({
                     >
                     <div className="space-y-6">
                       {isDoctorPortal && (
-                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.85fr]">
-                          <div className="rounded-3xl bg-brand-green-deep p-6 text-brand-ivory">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Sesion de trabajo</p>
-                            <h3 className="mt-2 text-3xl font-serif">Agenda, pacientes y recetas en un solo panel.</h3>
-                            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-ivory/65">
-                              El medico revisa documentos privados autorizados, administra horarios disponibles y emite una receta cuando la evidencia clinica esta completa.
+                        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.78fr_1.22fr]">
+                          <div className="rounded-3xl border border-brand-gold/25 bg-[#fbf7ef] p-5 text-brand-green-deep shadow-sm">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Workspace medico</p>
+                            <h3 className="mt-2 text-2xl font-serif leading-tight">Consulta, ficha y receta en una misma mesa de trabajo.</h3>
+                            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-green-mid/70">
+                              Selecciona una reserva, abre la ficha autorizada, registra el estado de consulta y emite la receta verificable sin salir del panel.
                             </p>
-                            <div className="mt-6 grid grid-cols-3 gap-3">
+                            <div className="mt-5 grid grid-cols-3 gap-2">
                               {[
                                 ['Pacientes', DOCTOR_SESSION_PATIENTS.length],
-                                ['Hoy', 2],
+                                ['Reservadas', reservedAgendaBlocks.length],
                                 ['Recetas activas', patientDashboard?.summary.active ?? 1],
                               ].map(([label, value]) => (
-                                <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                                  <p className="text-2xl font-bold text-brand-gold">{value}</p>
-                                  <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-ivory/45">{label}</p>
+                                <div key={label} className="rounded-2xl border border-brand-gold/20 bg-white/65 p-3">
+                                  <p className="text-2xl font-bold text-brand-green-deep">{value}</p>
+                                  <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-green-mid/55">{label}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4 grid grid-cols-3 gap-2 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/55">
+                              {['1. Reserva', '2. Consulta', '3. Receta'].map((step) => (
+                                <div key={step} className="rounded-xl border border-brand-green-deep/5 bg-white/50 px-3 py-2">
+                                  {step}
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+                          <div className="rounded-3xl border border-brand-gold/20 bg-[#fffdf8] p-5 shadow-sm">
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Horarios</p>
                                 <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Disponibilidad</h4>
                               </div>
-                              <button className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory">Agregar bloque</button>
+                              <button
+                                type="button"
+                                onClick={() => setShowAgendaForm((current) => !current)}
+                                className="rounded-xl border border-brand-green-deep/15 bg-white px-4 py-2 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral/60"
+                              >
+                                {showAgendaForm ? 'Cerrar' : 'Agregar bloque'}
+                              </button>
                             </div>
+                            <div className="mt-4 rounded-2xl border border-brand-gold/20 bg-white/70 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-green-mid/45">Fecha actual</p>
+                              <p className="mt-1 text-sm font-bold leading-relaxed text-brand-green-deep">
+                                {formatLiveDate(currentNow)}
+                                <span className="block text-xs font-semibold text-brand-green-mid/60">Actualizado {formatLiveTime(currentNow)}</span>
+                              </p>
+                            </div>
+                            {showAgendaForm && (
+                              <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                  <label className="space-y-1">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Fecha</span>
+                                    <input
+                                      value={agendaForm.date}
+                                      onChange={(event) => setAgendaForm((current) => ({ ...current, date: event.target.value }))}
+                                      className="w-full rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                    />
+                                  </label>
+                                  <label className="space-y-1">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Hora</span>
+                                    <input
+                                      value={agendaForm.time}
+                                      onChange={(event) => setAgendaForm((current) => ({ ...current, time: event.target.value }))}
+                                      className="w-full rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                    />
+                                  </label>
+                                </div>
+                                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+                                  <select
+                                    value={agendaForm.status}
+                                    onChange={(event) => setAgendaForm((current) => ({
+                                      ...current,
+                                      status: event.target.value as DoctorAgendaBlock['status'],
+                                    }))}
+                                    className="rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                  >
+                                    <option value="Disponible">Disponible</option>
+                                    <option value="Reservado">Reservado</option>
+                                  </select>
+                                  <input
+                                    value={agendaForm.patient}
+                                    onChange={(event) => setAgendaForm((current) => ({ ...current, patient: event.target.value }))}
+                                    placeholder="Paciente, si ya esta reservado"
+                                    className="rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleAddAgendaBlock}
+                                  className="mt-3 w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+                                >
+                                  Guardar bloque horario
+                                </button>
+                              </div>
+                            )}
                             <div className="mt-4 grid grid-cols-1 gap-2">
-                              {DOCTOR_AVAILABILITY_SLOTS.map(([day, time, status]) => (
-                                <div key={`${day}-${time}`} className="flex items-center justify-between rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/50 px-4 py-3">
+                              {doctorAgendaBlocks.map((block) => (
+                                <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green-deep/5 bg-white/70 px-4 py-3">
                                   <div>
-                                    <p className="text-sm font-bold text-brand-green-deep">{day} · {time}</p>
-                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45">{status}</p>
+                                    <p className="text-sm font-bold text-brand-green-deep">{block.date} · {block.time}</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45">
+                                      {block.status}
+                                      {block.patient ? ` · ${block.patient}` : ''}
+                                    </p>
+                                    {block.reason && (
+                                      <p className="mt-1 text-xs text-brand-green-mid/55">{block.reason}</p>
+                                    )}
                                   </div>
-                                  <span className={`h-2.5 w-2.5 rounded-full ${status === 'Disponible' ? 'bg-green-500' : 'bg-brand-gold'}`} />
+                                  <div className="flex shrink-0 flex-col gap-2">
+                                    {block.status === 'Reservado' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => openConsultationFromBlock(block)}
+                                        className="rounded-full bg-brand-green-deep px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-ivory"
+                                      >
+                                        Consulta
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleAgendaBlockStatus(block.id)}
+                                      className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+                                        block.status === 'Disponible'
+                                          ? 'bg-green-100 text-green-700'
+                                          : 'bg-brand-gold/15 text-brand-green-deep'
+                                      }`}
+                                    >
+                                      {block.status === 'Disponible' ? 'Reservar' : 'Liberar'}
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -2094,15 +3036,178 @@ export default function MockupPortal({
                           Portal profesional separado: emite recetas on-chain y entrega el comprobante para que el dispensario lo valide desde su propia URL.
                         </div>
                       )}
+                      {isDoctorPortal && (
+                        <div className={`rounded-3xl border p-5 shadow-sm ${
+                          selectedConsultationBlock
+                            ? 'border-brand-gold/25 bg-[#fbf7ef]'
+                            : 'border-brand-green-deep/10 bg-white'
+                        }`}>
+                          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">
+                                {selectedConsultationBlock ? 'Consulta activa' : 'Mesa de consulta'}
+                              </p>
+                              <h4 className="mt-1 text-xl font-bold text-brand-green-deep">
+                                {selectedConsultationBlock?.patient ?? 'Selecciona una reserva para comenzar'}
+                              </h4>
+                              <p className="mt-1 text-sm text-brand-green-mid/70">
+                                {selectedConsultationBlock
+                                  ? `${selectedConsultationBlock.date} · ${selectedConsultationBlock.time}`
+                                  : 'La consulta abre el acceso a ficha privada, seguimiento y emisión de receta.'}
+                              </p>
+                              <p className="mt-2 max-w-2xl text-sm text-brand-green-mid/65">
+                                {selectedConsultationBlock?.reason ?? 'Usa el botón Consulta en un bloque reservado para traer el paciente a esta mesa de trabajo.'}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl border border-brand-green-deep/10 bg-white/70 p-3 text-sm">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Estado</p>
+                              <p className="mt-1 font-bold text-brand-green-deep">
+                                {!selectedConsultationBlock
+                                  ? 'Sin consulta'
+                                  : selectedConsultationStatus === 'active'
+                                  ? 'En consulta'
+                                  : selectedConsultationStatus === 'completed'
+                                    ? 'Finalizada'
+                                    : selectedConsultationStatus === 'checked_in'
+                                      ? 'Paciente validado'
+                                    : 'Agendada'}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedConsultationBlock && (
+                            <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white/80 p-4">
+                              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Validacion de llegada</p>
+                                  <h5 className="mt-1 text-lg font-bold text-brand-green-deep">
+                                    Confirmar identidad antes de iniciar
+                                  </h5>
+                                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-brand-green-mid/65">
+                                    El medico valida que el paciente llego a la hora reservada, confirma wallet/QR y deja evidencia local antes de abrir la consulta.
+                                  </p>
+                                  {latestMedicalPermission && (
+                                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+                                      <p className="text-[9px] font-bold uppercase tracking-widest text-blue-600/60">Permiso activo del paciente</p>
+                                      <p className="mt-1 font-mono text-[10px] text-blue-700">{latestMedicalPermission.qrToken}</p>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[auto_auto]">
+                                  <div className="rounded-xl bg-brand-neutral/70 px-3 py-2 text-xs">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Ahora</p>
+                                    <p className="font-bold text-brand-green-deep">{formatLiveTime(currentNow)}</p>
+                                  </div>
+                                  {latestMedicalPermission && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedQrPermission(latestMedicalPermission)}
+                                      className="rounded-xl border border-brand-green-deep/10 bg-white px-4 py-2.5 text-xs font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                                    >
+                                      Ver permiso
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={validatePatientQrForDoctor}
+                                    disabled={selectedConsultationStatus !== 'scheduled'}
+                                    className="rounded-xl bg-brand-green-deep px-4 py-2.5 text-xs font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-not-allowed disabled:opacity-45"
+                                  >
+                                    {selectedConsultationStatus === 'scheduled' ? 'Validar QR paciente' : 'Paciente validado'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {selectedConsultationBlock && (
+                            <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white/75 p-4">
+                              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="max-w-xl">
+                                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Resumen clinico privado</p>
+                                  <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">
+                                    Este texto queda en la ficha del paciente y alimenta la receta. On-chain solo viaja un hash verificable.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedClinicalRecord(
+                                    consultationClinicalRecords.find((record) => record.id === `consultation-${selectedConsultationBlock.id}`) ?? portableClinicalDossier[0],
+                                  )}
+                                  className="rounded-xl border border-brand-green-deep/10 px-3 py-2 text-xs font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                                >
+                                  Ver ficha
+                                </button>
+                              </div>
+                              <textarea
+                                value={consultationSummaryDraft}
+                                onChange={(event) => setConsultationSummaryDraft(event.target.value)}
+                                rows={3}
+                                className="mt-3 w-full resize-none rounded-xl bg-brand-neutral/70 px-4 py-3 text-sm leading-relaxed text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                              />
+                              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                <button
+                                  type="button"
+                                  onClick={() => saveConsultationSummaryToRecord()}
+                                  className="rounded-xl bg-brand-green-deep px-4 py-2.5 text-xs font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+                                >
+                                  Guardar en ficha clinica
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setConsultationStatus('completed');
+                                    setPrescriptionToolOpen(true);
+                                  }}
+                                  disabled={selectedConsultationStatus !== 'active'}
+                                  className="rounded-xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-2.5 text-xs font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:opacity-45"
+                                >
+                                  Cerrar consulta y preparar receta
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedClinicalRecord(portableClinicalDossier[0])}
+                              disabled={!selectedConsultationBlock}
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep"
+                            >
+                              Ver ficha privada
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConsultationStatus('active')}
+                              disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'checked_in'}
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory disabled:opacity-45"
+                            >
+                              Iniciar consulta
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConsultationStatus('completed');
+                                setPrescriptionToolOpen(true);
+                              }}
+                              disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'active'}
+                              className="rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep disabled:opacity-45"
+                            >
+                              Finalizar y recetar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       {!isDoctorPortal && (
                         <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf están validados y poseen licencias vigentes para la prescripción de cannabis medicinal.</p>
                       )}
                       
                       {isDoctorPortal && (
-                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.78fr_1.22fr]">
+                      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.64fr_1.36fr]">
                         <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
                           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pacientes</p>
-                          <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Casos para revisar</h4>
+                          <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Lista de trabajo</h4>
+                          <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/60">
+                            Selecciona un paciente para preparar la receta o usa una reserva para abrir la consulta completa.
+                          </p>
                           <div className="mt-4 space-y-3">
                             {DOCTOR_SESSION_PATIENTS.map((patient) => (
                               <button
@@ -2130,190 +3235,109 @@ export default function MockupPortal({
                           </div>
                         </div>
 
-                      <div className="bg-white border border-brand-green-deep/10 rounded-3xl p-5 shadow-sm space-y-5">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">
-                              Receta verificable
-                            </p>
-                            <h3 className="text-xl font-bold text-brand-green-deep mt-1">
-                              Emitir receta al paciente seleccionado
-                            </h3>
-                            <p className="text-xs text-brand-green-mid/60 mt-2 max-w-2xl">
-                              La receta se firma con el medico autorizado, queda ligada a la wallet del paciente y el dispensario valida solo estado, vigencia y dosis.
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Herramientas</p>
+                            <h3 className="mt-1 text-xl font-bold text-brand-green-deep">Acciones de consulta</h3>
+                            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-brand-green-mid/60">
+                              Abre solo la herramienta que necesitas en el momento. La ficha y la receta se trabajan como ventanas separadas para mantener el workspace limpio.
                             </p>
                           </div>
-                          <div className="px-3 py-2 rounded-xl bg-brand-neutral text-xs font-mono text-brand-green-mid/70 break-all md:max-w-[280px]">
-                            {doctorPatientAddress.trim()
-                              ? shortenAddress(doctorPatientAddress.trim(), 10)
-                              : 'Paciente sin direccion'}
+                          <div className="rounded-2xl bg-brand-neutral px-3 py-2 text-xs text-brand-green-mid/70 md:max-w-[300px]">
+                            <p className="mb-1 font-bold uppercase tracking-widest text-brand-green-mid/45">Paciente destino</p>
+                            <p className="font-mono break-all">
+                              {prescriptionPatientAddress
+                                ? shortenAddress(prescriptionPatientAddress, 10)
+                                : 'Paciente sin dirección'}
+                            </p>
                           </div>
                         </div>
 
-                        <div className={`rounded-xl border p-3 text-xs ${
-                          doctorSignerReady
-                            ? 'border-green-100 bg-green-50 text-green-700'
-                            : 'border-amber-100 bg-amber-50 text-amber-800'
-                        }`}>
-                          {doctorSignerReady
-                            ? `Signer medico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
-                            : 'Modo lectura activo. Para emitir recetas reales en produccion falta configurar STELLAR_DOCTOR_SECRET en Vercel.'}
+                        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-4">
+                          <button
+                            type="button"
+                            onClick={validatePatientQrForDoctor}
+                            className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
+                          >
+                            <ShieldCheck size={18} className="mb-3 text-blue-700" />
+                            <p className="text-sm font-bold text-brand-green-deep">Validar QR paciente</p>
+                            <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">Confirmar llegada, permiso y wallet antes de iniciar consulta.</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedClinicalRecord(portableClinicalDossier[0])}
+                            disabled={!selectedConsultationBlock}
+                            className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4 text-left transition-colors hover:bg-brand-neutral disabled:opacity-45"
+                          >
+                            <ShieldCheck size={18} className="mb-3 text-brand-green-deep" />
+                            <p className="text-sm font-bold text-brand-green-deep">Ficha privada</p>
+                            <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">Revisar sintomas, examenes y permisos 402.</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPrescriptionToolOpen(true)}
+                            disabled={!prescriptionPatientAddress}
+                            className="rounded-2xl bg-brand-green-deep p-4 text-left text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:opacity-45"
+                          >
+                            <FileText size={18} className="mb-3 text-brand-gold" />
+                            <p className="text-sm font-bold">Preparar receta</p>
+                            <p className="mt-1 text-xs leading-relaxed text-brand-ivory/65">Tratamiento, dosis, vigencia y cupo autorizado.</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => window.location.assign('/dispensario/operacion')}
+                            className="rounded-2xl border border-brand-gold/20 bg-[#fbf7ef] p-4 text-left transition-colors hover:bg-brand-gold/10"
+                          >
+                            <ArrowRight size={18} className="mb-3 text-brand-gold" />
+                            <p className="text-sm font-bold text-brand-green-deep">Probar dispensario</p>
+                            <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">Validar receta y registrar retiro parcial.</p>
+                          </button>
                         </div>
 
-                        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
-                          Agente 402: valida licencia medica y genera un hash clinico. La receta se emite sin publicar diagnostico ni notas completas.
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/55">
-                          {['1. Paciente objetivo', '2. Emitir receta', '3. Dispensario valida'].map((step) => (
-                            <div key={step} className="rounded-xl border border-brand-green-deep/5 bg-brand-neutral px-3 py-2">
-                              {step}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <label className="space-y-2 md:col-span-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Wallet Stellar del paciente
-                            </span>
-                            <input
-                              type="text"
-                              value={doctorPatientAddress}
-                              onChange={(event) => setDoctorPatientAddress(event.target.value)}
-                              placeholder={DEMO_PATIENT_ADDRESS}
-                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm font-mono text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                            />
-                          </label>
-
-                          <label className="space-y-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Tratamiento
-                            </span>
-                            <input
-                              type="text"
-                              value={doctorIssueForm.treatment}
-                              onChange={(event) =>
-                                setDoctorIssueForm((prev) => ({
-                                  ...prev,
-                                  treatment: event.target.value,
-                                }))
-                              }
-                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                            />
-                          </label>
-
-                          <label className="space-y-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Dosis
-                            </span>
-                            <input
-                              type="text"
-                              value={doctorIssueForm.dosage}
-                              onChange={(event) =>
-                                setDoctorIssueForm((prev) => ({
-                                  ...prev,
-                                  dosage: event.target.value,
-                                }))
-                              }
-                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                            />
-                          </label>
-
-                          <label className="space-y-2 md:col-span-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Notas clinicas
-                            </span>
-                            <textarea
-                              value={doctorIssueForm.notes}
-                              onChange={(event) =>
-                                setDoctorIssueForm((prev) => ({
-                                  ...prev,
-                                  notes: event.target.value,
-                                }))
-                              }
-                              rows={3}
-                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 resize-none"
-                            />
-                          </label>
-
-                          <label className="space-y-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Vigencia en dias
-                            </span>
-                            <input
-                              type="number"
-                              min={1}
-                              max={365}
-                              value={doctorIssueForm.durationDays}
-                              onChange={(event) =>
-                                setDoctorIssueForm((prev) => ({
-                                  ...prev,
-                                  durationDays: Number(event.target.value),
-                                }))
-                              }
-                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                            />
-                          </label>
-
-                          <label className="space-y-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                              Dosis autorizada gramos
-                            </span>
-                            <input
-                              type="number"
-                              min={1}
-                              max={500}
-                              value={doctorIssueForm.monthlyLimitGrams}
-                              onChange={(event) =>
-                                setDoctorIssueForm((prev) => ({
-                                  ...prev,
-                                  monthlyLimitGrams: Number(event.target.value),
-                                }))
-                              }
-                              className="w-full px-4 py-3 bg-brand-neutral rounded-xl text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
-                            />
-                          </label>
-
-                          <div className="flex items-end">
-                            <button
-                              type="button"
-                              onClick={handleDoctorIssuePrescription}
-                              disabled={doctorIssueBusy || !doctorPatientAddress.trim() || !doctorSignerReady}
-                              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold hover:bg-brand-green-mid transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                            >
-                              {doctorIssueBusy ? (
-                                <>
-                                  <Activity size={16} className="animate-spin" />
-                                  Emitiendo...
-                                </>
-                              ) : (
-                                <>
-                                  <FileText size={16} />
-                                  Emitir en testnet
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        {doctorIssueError && (
-                          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
-                            {doctorIssueError}
-                          </div>
-                        )}
-
-                        {doctorIssueSuccess && (
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-green-50 border border-green-100 rounded-xl text-xs text-green-700">
-                            <span>{doctorIssueSuccess}</span>
-                            <button
-                              type="button"
-                              onClick={() => window.location.assign('/dispensario/operacion')}
-                              className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-white border border-green-100 rounded-lg font-bold text-green-700 hover:border-green-200"
-                            >
-                              Ir a dispensar
-                              <ArrowRight size={14} />
-                            </button>
+                        {(doctorIssueError || doctorIssueSuccess) && (
+                          <div className="mt-4 space-y-3">
+                            {doctorIssueError && (
+                              <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
+                                {doctorIssueError}
+                              </div>
+                            )}
+                            {doctorIssueSuccess && (
+                              <div className="rounded-xl border border-green-100 bg-green-50 p-3 text-xs text-green-700">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <span className="leading-relaxed">{doctorIssueSuccess}</span>
+                                  <span className="rounded-full bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-green-700">
+                                    QR listo
+                                  </span>
+                                </div>
+                                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => createPrivacyPermission('dispensary-prescription')}
+                                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-green-100 bg-white px-3 py-2 font-bold text-green-700 hover:border-green-200"
+                                  >
+                                    Mostrar QR receta
+                                    <ShieldCheck size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => window.location.assign('/paciente')}
+                                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-green-100 bg-white px-3 py-2 font-bold text-green-700 hover:border-green-200"
+                                  >
+                                    Ver en paciente
+                                    <ArrowRight size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => window.location.assign('/dispensario/operacion')}
+                                    className="inline-flex items-center justify-center gap-1 rounded-lg bg-green-700 px-3 py-2 font-bold text-white hover:bg-green-800"
+                                  >
+                                    Ir a dispensar
+                                    <ArrowRight size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2442,6 +3466,123 @@ export default function MockupPortal({
 
                     {isDispensaryPortal ? (
                       <div className="space-y-6">
+                        <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
+                          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                            <div className="max-w-3xl">
+                              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Operacion diaria</p>
+                              <h3 className="mt-2 text-2xl md:text-3xl font-serif text-brand-green-deep">Inventario, QR del paciente y entrega parcial.</h3>
+                              <p className="mt-3 text-sm leading-relaxed text-brand-green-mid/70">
+                                El dispensario trabaja desde su propia pantalla: carga productos/lotes, recibe al paciente, valida receta y saldo, registra la entrega sin ver diagnostico ni ficha clinica completa.
+                              </p>
+                            </div>
+                            <div className="grid min-w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[420px]">
+                              {[
+                                ['1', 'Escanear QR', 'Receta y permiso temporal'],
+                                ['2', 'Validar saldo', 'Vigencia, formatos y gramos'],
+                                ['3', 'Registrar entrega', 'Lote, cantidad y prueba'],
+                              ].map(([step, title, desc]) => (
+                                <div key={step} className="rounded-2xl border border-brand-green-deep/10 bg-white/75 p-3">
+                                  <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-brand-green-deep text-xs font-bold text-brand-ivory">
+                                    {step}
+                                  </div>
+                                  <p className="text-sm font-bold text-brand-green-deep">{title}</p>
+                                  <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/60">{desc}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                            <button
+                              type="button"
+                              onClick={validatePrescriptionQrForDispensary}
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+                            >
+                              Escanear QR / validar receta
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setManualPrescriptionEntry((current) => !current)}
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                            >
+                              Ingresar numero de receta
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedDispensary(buildOperatorDispensary());
+                                setDispensaryStep('inventory');
+                              }}
+                              className="rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
+                            >
+                              Preparar desde inventario
+                            </button>
+                          </div>
+                        </div>
+
+                        {dispensaryValidation && (
+                          <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-5 md:p-6">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600/70">QR validado</p>
+                                <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Receta disponible sin datos clinicos</h3>
+                                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-blue-800/70">
+                                  El QR contiene solo un token temporal. El dispensario ve receta, saldo, formatos y retiros previos, pero no diagnostico ni ficha completa.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => revokePrivacyPermission(dispensaryValidation.id)}
+                                className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-xs font-bold text-blue-700"
+                              >
+                                Revocar permiso
+                              </button>
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+                              {[
+                                ['Estado receta', 'Vigente'],
+                                ['Saldo disponible', `${prescriptionRemainingGrams}g`],
+                                ['Formatos', 'Flores, aceites, extractos'],
+                                ['Retiros previos', `${activePickups.length}`],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-2xl border border-blue-100 bg-white p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600/50">{label}</p>
+                                  <p className="mt-1 text-sm font-bold text-brand-green-deep">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-4">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600/50">Permiso privado</p>
+                                  <p className="mt-1 font-mono text-xs text-brand-green-deep">{dispensaryValidation.qrToken}</p>
+                                  <p className="mt-1 text-xs text-brand-green-mid/55">{dispensaryValidation.hash} - {dispensaryValidation.expiresAt}</p>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedQrPermission(dispensaryValidation)}
+                                    className="rounded-xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                                  >
+                                    Ver QR
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedDispensary(buildOperatorDispensary());
+                                      setDispensaryStep('inventory');
+                                    }}
+                                    className="rounded-xl border border-blue-200 bg-white px-4 py-3 text-xs font-bold text-blue-700"
+                                  >
+                                    Elegir producto
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div className="p-4 bg-white border border-brand-green-deep/10 rounded-2xl">
                             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-green-mid/50 mb-2">Productos</p>
@@ -2540,7 +3681,7 @@ export default function MockupPortal({
                             <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Inventario disponible</p>
                             <h3 className="text-2xl md:text-3xl font-serif text-brand-green-deep">Productos cargados para dispensar</h3>
                             <p className="text-sm text-brand-green-mid/60 mt-2 max-w-2xl">
-                              Cada tarjeta representa un producto/lote del dispensario. Ajusta stock si entra o sale mercaderia, o prepara una dispensa para validar la receta del paciente.
+                              Cada tarjeta representa un producto/lote del dispensario. Ajusta stock si entra o sale mercadería, o prepara una dispensa para validar la receta del paciente.
                             </p>
                           </div>
                         </div>
@@ -2573,7 +3714,7 @@ export default function MockupPortal({
                                     <p className="font-bold text-brand-green-deep">{stock}g</p>
                                   </div>
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
-                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Concentracion</p>
+                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Concentración</p>
                                     <p className="font-bold text-brand-green-deep">THC {product.thc} / CBD {product.cbd}</p>
                                   </div>
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
@@ -2583,6 +3724,20 @@ export default function MockupPortal({
                                   <div className="p-3 rounded-xl bg-brand-neutral/60">
                                     <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">Origen</p>
                                     <p className="font-bold text-brand-green-deep line-clamp-2">{product.origin}</p>
+                                  </div>
+                                </div>
+
+                                <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-3">
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600/70">Hash trazable del lote</p>
+                                      <p className="mt-1 font-mono text-xs text-blue-700">
+                                        {shortenHash(makeDemoHash(`${product.name}-${product.batch}-${product.origin}`), 14)}
+                                      </p>
+                                    </div>
+                                    <span className="rounded-full bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-blue-700">
+                                      No revela proveedor completo
+                                    </span>
                                   </div>
                                 </div>
 
@@ -2620,9 +3775,57 @@ export default function MockupPortal({
                                     <ArrowRight size={16} />
                                   </button>
                                 </div>
+                                <p className="mt-3 text-[11px] leading-relaxed text-brand-green-mid/55">
+                                  Al confirmar, Trust Leaf registra receta, lote, cantidad, dispensario y prueba verificable. El diagnostico del paciente no se comparte.
+                                </p>
                               </div>
                             );
                           })}
+                        </div>
+
+                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Registro operativo</p>
+                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Entregas recientes</h3>
+                            </div>
+                            <span className="rounded-full bg-brand-neutral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                              Local demo
+                            </span>
+                          </div>
+                          <div className="mt-5 space-y-3">
+                            {activePickups.length ? (
+                              activePickups.slice(0, 4).map((pickup) => (
+                                <div key={pickup.id} className="flex flex-col gap-3 rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                  <div>
+                                    <p className="text-sm font-bold text-brand-green-deep">{pickup.strain?.name ?? 'Producto medicinal'}</p>
+                                    <p className="mt-1 text-xs text-brand-green-mid/60">
+                                      {pickup.quantity}g · {pickup.dispensary?.name ?? 'Dispensario operador'} · receta validada
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
+                                      Parcial
+                                    </span>
+                                    <span className="font-mono text-[10px] text-brand-green-mid/45">{pickup.token}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => openPickupTraceability(pickup)}
+                                      className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-deep transition-colors hover:bg-brand-green-deep hover:text-brand-ivory"
+                                    >
+                                      Ver trazabilidad
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="rounded-2xl border border-dashed border-brand-green-deep/10 bg-brand-neutral/25 p-5">
+                                <p className="text-sm leading-relaxed text-brand-green-mid/65">
+                                  Aun no hay entregas registradas. Cuando valides una receta y confirmes retiro, aparecera aqui con lote, cantidad y prueba de entrega parcial.
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ) : patientDashboardLoading ? (
@@ -2690,12 +3893,12 @@ export default function MockupPortal({
                              <ShoppingBag size={40} />
                           </div>
                          <h4 className="text-xl font-serif text-brand-green-deep mb-2">Acceso Restringido</h4>
-                         <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Necesitas una receta activa antes de preparar una compra con medicina trazable. Agenda primero con un medico validado.</p>
+                         <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Necesitas una receta activa antes de preparar una compra con medicina trazable. Agenda primero con un médico validado.</p>
                          <button 
                            onClick={() => switchView('doctors')}
                            className="px-8 py-4 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-green-deep/20"
                          >
-                            Buscar medico
+                            Buscar médico
                          </button>
                        </div>
                     ) : (
@@ -2710,7 +3913,7 @@ export default function MockupPortal({
                               treatment: "Cannabis Sativa L. (Flores secas)",
                               concentration: "THC 18%, CBD 2%",
                               dosage: "0.5g por via vaporizada cada 12hs",
-                              notes: "Acompanamiento por dolor cronico lumbar. Control en 30 dias."
+                              notes: "Acompañamiento por dolor crónico lumbar. Control en 30 días."
                             })}
                             className="group cursor-pointer rounded-3xl border border-brand-green-deep/10 bg-white p-5 transition-all hover:border-brand-gold hover:shadow-md"
                           >
@@ -2727,7 +3930,7 @@ export default function MockupPortal({
                                     </span>
                                     <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-600">Vigente</span>
                                   </div>
-                                  <h4 className="text-xl font-bold text-brand-green-deep">Tratamiento dolor cronico</h4>
+                                  <h4 className="text-xl font-bold text-brand-green-deep">Tratamiento dolor crónico</h4>
                                   <p className="mt-1 text-sm text-brand-green-mid/70">Dr. Alejandro Merino - emitida hoy</p>
                                 </div>
                               </div>
@@ -2764,12 +3967,20 @@ export default function MockupPortal({
                                 <p className="mt-1 text-2xl font-bold text-brand-green-deep">20g</p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => setActiveView('dispensaries')}
-                              className="mt-4 w-full rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
-                            >
-                              Buscar dispensario
-                            </button>
+                            <div className="mt-4 grid grid-cols-1 gap-2">
+                              <button
+                                onClick={() => createPrivacyPermission('dispensary-prescription')}
+                                className="w-full rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep"
+                              >
+                                Generar QR para dispensario
+                              </button>
+                              <button
+                                onClick={() => setActiveView('dispensaries')}
+                                className="w-full rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
+                              >
+                                Buscar dispensario
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -2832,20 +4043,102 @@ export default function MockupPortal({
                              <FileText size={40} />
                           </div>
                           <h4 className="text-xl font-serif text-brand-green-deep mb-2">Billetera de Recetas</h4>
-                          <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Cuando un medico emita tu receta, aparecera aca y podras usarla en dispensarios.</p>
+                          <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto mb-8">Cuando un médico emita tu receta, aparecerá acá y podrás usarla en dispensarios.</p>
                           <button 
-                            onClick={() => switchView('dispensaries')}
+                            onClick={() => switchView('doctors')}
                             className="px-8 py-4 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-green-deep/20"
                           >
-                             Ver dispensarios
+                             Buscar medico
                           </button>
                        </div>
                     ) : (
                       <>
+                        <div className="rounded-[32px] border border-green-100 bg-green-50 p-5 text-green-800">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-start gap-4">
+                              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-green-700">
+                                <CheckCircle size={22} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-700/70">Receta recibida</p>
+                                <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Lista para presentar en dispensario autorizado</h4>
+                                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-green-800/75">
+                                  El dispensario valida vigencia, identidad y saldo disponible. No accede a tu diagnostico ni a la ficha clinica completa.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => createPrivacyPermission('dispensary-prescription')}
+                              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-green-200 bg-white px-5 py-3 text-sm font-bold text-green-800 transition-all hover:border-green-300 active:scale-95"
+                            >
+                              Compartir QR receta
+                              <ShieldCheck size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveView('dispensaries')}
+                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-all hover:bg-brand-green-mid active:scale-95"
+                            >
+                              Buscar dispensario
+                              <ArrowRight size={16} />
+                            </button>
+                          </div>
+                        </div>
+
                         <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
                       <Star size={14} fill="currentColor" />
                       <span>Este es un ejemplo de cómo verás tus recetas legales emitidas por nuestra red.</span>
                     </div>
+
+                    {!!patientDashboard?.prescriptions.length && (
+                      <div className="space-y-4">
+                        {patientDashboard.prescriptions.map((prescription) => (
+                          <button
+                            key={`wallet-prescription-${prescription.id}`}
+                            type="button"
+                            onClick={() => openOnchainPrescription(prescription)}
+                            className="group w-full cursor-pointer rounded-2xl border border-brand-green-deep/10 bg-white p-6 text-left transition-all hover:border-brand-gold hover:shadow-md"
+                          >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="rounded-xl bg-brand-neutral p-3 text-brand-green-deep transition-colors group-hover:bg-brand-gold/10 group-hover:text-brand-gold">
+                                  <FileText size={24} />
+                                </div>
+                                <div>
+                                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/40">
+                                      Receta #{prescription.id}
+                                    </p>
+                                    <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                                      <Database size={10} /> {doctorSignerReady ? 'ON-CHAIN' : 'DEMO HASH'}
+                                    </span>
+                                  </div>
+                                  <h4 className="font-bold text-brand-green-deep">
+                                    {prescription.status === 'active' ? 'Receta vigente' : prescription.status === 'used' ? 'Receta usada' : 'Receta expirada'}
+                                  </h4>
+                                  <p className="text-sm text-brand-green-mid/70">
+                                    {shortenAddress(prescription.doctor, 6)} · {formatPortalDate(prescription.issuedAt)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-4 sm:justify-end">
+                                <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                  prescription.status === 'active'
+                                    ? 'bg-green-50 text-green-600'
+                                    : prescription.status === 'used'
+                                      ? 'bg-blue-50 text-blue-600'
+                                      : 'bg-amber-50 text-amber-700'
+                                }`}>
+                                  {prescription.status === 'active' ? 'Vigente' : prescription.status}
+                                </span>
+                                <ArrowRight size={20} className="text-brand-green-mid/40 transition-colors group-hover:text-brand-gold" />
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     <div 
                       onClick={() => setSelectedPrescription({
@@ -2858,7 +4151,7 @@ export default function MockupPortal({
                         dosage: "0.5g p/vía vaporizada cada 12hs",
                         notes: "Acompañamiento por dolor crónico lumbar. Control en 30 días."
                       })}
-                      className="hidden group cursor-pointer p-6 bg-white border border-brand-green-deep/10 rounded-2xl hover:border-brand-gold hover:shadow-md transition-all flex-col sm:flex-row justify-between items-center gap-4"
+                      className={`${patientDashboard?.prescriptions.length ? 'hidden' : 'group'} cursor-pointer p-6 bg-white border border-brand-green-deep/10 rounded-2xl hover:border-brand-gold hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-center gap-4`}
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-brand-neutral rounded-xl text-brand-green-deep group-hover:bg-brand-gold/10 group-hover:text-brand-gold transition-colors">
@@ -2919,15 +4212,15 @@ export default function MockupPortal({
                             <div className="rounded-3xl bg-brand-green-deep p-5 text-brand-ivory lg:col-span-1">
                               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Retiros pendientes</p>
                               <p className="mt-2 text-4xl font-bold">{activePickups.length}</p>
-                              <p className="mt-2 text-sm text-brand-ivory/60">Tokens listos para presentar en dispensario. No exponen diagnostico ni notas clinicas.</p>
+                              <p className="mt-2 text-sm text-brand-ivory/60">Tokens listos para presentar en dispensario. No exponen diagnóstico ni notas clínicas.</p>
                             </div>
                             <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5 lg:col-span-2">
                               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Saldo de receta</p>
                               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                                 {[
-                                  ['Autorizado', '30g'],
-                                  ['Retirado', '10g'],
-                                  ['Disponible', '20g'],
+                                  ['Autorizado', `${prescriptionMonthlyLimitGrams}g`],
+                                  ['Retirado', `${prescriptionUsedGrams}g`],
+                                  ['Disponible', `${prescriptionRemainingGrams}g`],
                                   ['Vigencia', '29 Oct'],
                                 ].map(([label, value]) => (
                                   <div key={label} className="rounded-2xl bg-brand-neutral/60 p-4">
@@ -3176,9 +4469,9 @@ export default function MockupPortal({
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-6">
                         <div>
                           <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-2">Agente 402 privado</p>
-                          <h4 className="text-2xl md:text-3xl font-serif">Resumen clinico portable</h4>
+                          <h4 className="text-2xl md:text-3xl font-serif">Resumen clínico portable</h4>
                           <p className="mt-2 text-sm text-brand-ivory/65 max-w-2xl">
-                            Sintomas, examenes y respaldos quedan cifrados. En otro pais el medico recibe pruebas verificables y documentos autorizados por el paciente, no datos abiertos por defecto.
+                            Síntomas, exámenes y respaldos quedan cifrados. En otro país el médico recibe pruebas verificables y documentos autorizados por el paciente, no datos abiertos por defecto.
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 min-w-[220px]">
@@ -3186,14 +4479,14 @@ export default function MockupPortal({
                           <p className="mt-1 text-sm font-bold text-brand-gold">Consentimiento temporal</p>
                           <p className="mt-2 text-xs text-brand-ivory/55">Lectura limitada, auditada y revocable.</p>
                           <button
-                            onClick={() => setSelectedClinicalRecord(PRIVATE_CLINICAL_DOSSIER[0])}
+                            onClick={() => setSelectedClinicalRecord(portableClinicalDossier[0])}
                             className="mt-4 w-full rounded-xl bg-brand-gold px-4 py-3 text-xs font-bold text-brand-green-deep"
                           >
-                            Compartir con medico
+                            Compartir con médico
                           </button>
                           <button
                             onClick={() => {
-                              setSelectedClinicalRecord(PRIVATE_CLINICAL_DOSSIER[1]);
+                              setSelectedClinicalRecord(portableClinicalDossier.find((record) => record.id === 'exams') ?? PRIVATE_CLINICAL_DOSSIER[1]);
                               setShowClinicalGallery(true);
                             }}
                             className="mt-2 w-full rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-brand-ivory"
@@ -3204,7 +4497,7 @@ export default function MockupPortal({
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                        {PRIVATE_CLINICAL_DOSSIER.map((record) => (
+                        {portableClinicalDossier.map((record) => (
                           <button
                             key={record.id}
                             type="button"
@@ -3225,6 +4518,90 @@ export default function MockupPortal({
                             <p className="mt-4 text-[10px] font-mono text-brand-gold">{record.proof}</p>
                           </button>
                         ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Permisos activos</p>
+                          <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Contratos privados del paciente</h4>
+                          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
+                            Tu historial y receta se comparten por ventanas temporales. El QR nunca contiene datos clinicos: solo una referencia revocable, alcance y prueba verificable.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => createPrivacyPermission('medical-consultation')}
+                            className="rounded-xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                          >
+                            Compartir con medico
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => createPrivacyPermission('dispensary-prescription')}
+                            className="rounded-xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-3 text-xs font-bold text-brand-green-deep"
+                          >
+                            Compartir receta con dispensario
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                        {privacyPermissions.length ? (
+                          privacyPermissions.map((permission) => (
+                            <div key={permission.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/35 p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{permission.role}</p>
+                                  <h5 className="mt-1 text-base font-bold text-brand-green-deep">{permission.actor}</h5>
+                                  <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/60">{permission.scope}</p>
+                                </div>
+                                <span className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                                  permission.status === 'active'
+                                    ? 'bg-green-50 text-green-700'
+                                    : 'bg-red-50 text-red-700'
+                                }`}>
+                                  {permission.status === 'active' ? 'Activo' : 'Revocado'}
+                                </span>
+                              </div>
+                              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <div className="rounded-xl bg-white px-3 py-2">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Expira</p>
+                                  <p className="mt-1 text-xs font-bold text-brand-green-deep">{permission.expiresAt}</p>
+                                </div>
+                                <div className="rounded-xl bg-white px-3 py-2">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Prueba</p>
+                                  <p className="mt-1 font-mono text-[10px] text-brand-green-deep">{permission.hash}</p>
+                                </div>
+                              </div>
+                              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedQrPermission(permission)}
+                                  className="flex-1 rounded-xl bg-brand-green-deep px-4 py-2.5 text-xs font-bold text-brand-ivory disabled:opacity-45"
+                                  disabled={permission.status !== 'active'}
+                                >
+                                  Mostrar QR
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => revokePrivacyPermission(permission.id)}
+                                  className="flex-1 rounded-xl border border-brand-green-deep/10 px-4 py-2.5 text-xs font-bold text-brand-green-deep"
+                                >
+                                  Revocar
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-brand-green-deep/10 bg-brand-neutral/30 p-5 lg:col-span-2">
+                            <p className="text-sm text-brand-green-mid/65">
+                              Aun no hay permisos activos. Genera uno para que un medico valide la consulta o para que un dispensario lea solo receta y saldo.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -3376,7 +4753,7 @@ export default function MockupPortal({
                                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.3em] leading-none">Global Health Identity</p>
                               </div>
                               <h3 className="text-3xl md:text-5xl font-serif mb-6 leading-[1.1]">Tu salud no tiene fronteras.</h3>
-                              <p className="text-sm md:text-base text-brand-ivory/60 mb-10 leading-relaxed">Active una credencial medica privada para presentar receta vigente, identidad y evidencia minima en destinos compatibles.</p>
+                              <p className="text-sm md:text-base text-brand-ivory/60 mb-10 leading-relaxed">Activa una credencial médica privada para presentar receta vigente, identidad y evidencia mínima en destinos compatibles.</p>
                               
                               <button 
                                 onClick={() => setTravelerActive(!travelerActive)}
@@ -3734,7 +5111,7 @@ export default function MockupPortal({
                          <button onClick={() => setBookingStep('date')} className="mb-4 text-xs font-bold text-brand-gold uppercase tracking-widest flex items-center gap-1">← Cambiar fecha</button>
                          <p className="text-sm font-bold text-brand-green-deep mb-4">Selecciona un horario ({selectedDate})</p>
                          <div className="grid grid-cols-2 gap-3">
-                            {['09:00 AM', '10:30 AM', '02:00 PM', '04:30 PM'].map((time, i) => (
+                            {bookingTimeOptions.map((time, i) => (
                                <button 
                                  key={`booking-time-opt-${i}`}
                                  onClick={() => { setSelectedTime(time); setBookingStep('confirm'); }}
@@ -3870,7 +5247,7 @@ export default function MockupPortal({
                             </div>
                             {cartExceedsPrescriptionLimit && (
                               <p className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
-                                Este carrito supera el cupo disponible de la receta. Reduce gramos o solicita actualizacion medica.
+                                Este carrito supera el cupo disponible de la receta. Reduce gramos o solicita actualización médica.
                               </p>
                             )}
                          </div>
@@ -4182,13 +5559,13 @@ export default function MockupPortal({
                             }`}>
                               {dispensarySignerReady
                                 ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
-                                : 'Modo lectura activo. Para registrar dispensaciones reales en produccion falta configurar STELLAR_DISPENSARY_SECRET en Vercel.'}
+                                : 'Modo demo activo. Puedes registrar retiros fraccionados para grabación; la firma real requiere STELLAR_DISPENSARY_SECRET en Vercel.'}
                             </div>
                             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
-                              Agente 402: confirma que la receta pertenece al paciente y mantiene cupo disponible, sin revelar diagnostico. Cada entrega registra solo prueba, lote y cantidad.
+                              Agente 402: confirma que la receta pertenece al paciente y mantiene cupo disponible, sin revelar diagnóstico. Cada entrega registra solo prueba, lote y cantidad.
                             </div>
                             <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
-                              Nota MVP: el contrato actual marca algunas recetas como usadas en una sola transaccion. La version de grant debe guardar cupos semanales o gramos restantes para permitir retiros parciales globales.
+                              Nota MVP: el contrato actual marca algunas recetas como usadas en una sola transacción. La versión de grant debe guardar cupos semanales o gramos restantes para permitir retiros parciales globales.
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
@@ -4200,8 +5577,8 @@ export default function MockupPortal({
                                     <p className="text-lg font-bold text-brand-green-deep">Receta #{resolvedPrescriptionId}</p>
                                     <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/55">
                                       {activePrescription
-                                        ? 'Detectada automaticamente desde la wallet del paciente.'
-                                        : 'Modo demo: usamos la ultima receta emitida o la receta activa de testnet.'}
+                                        ? 'Detectada automáticamente desde la wallet del paciente.'
+                                        : 'Modo demo: usamos la última receta emitida o la receta activa de testnet.'}
                                     </p>
                                   </div>
                                   <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
@@ -4246,10 +5623,10 @@ export default function MockupPortal({
                             </label>
                             <button 
                               onClick={handleCompleteOnchainDispense}
-                              disabled={dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId) || !dispensarySignerReady}
+                              disabled={dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId)}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
-                               {dispenseBusy ? 'Registrando en testnet...' : 'Validar cupo y registrar retiro'} <CheckCircle size={20} />
+                               {dispenseBusy ? 'Registrando...' : dispensarySignerReady ? 'Validar cupo y registrar retiro' : 'Registrar retiro demo'} <CheckCircle size={20} />
                             </button>
                             {dispenseError && (
                               <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
@@ -4257,7 +5634,7 @@ export default function MockupPortal({
                               </div>
                             )}
                             <p className="text-[10px] text-center text-brand-green-mid/40 font-bold uppercase tracking-widest px-8 leading-relaxed">
-                               Al confirmar, Trust Leaf registra una entrega fraccionada vinculada a la receta medica y mantiene visible el cupo restante.
+                               Al confirmar, Trust Leaf registra una entrega fraccionada vinculada a la receta médica y mantiene visible el cupo restante.
                             </p>
                          </div>
                       </motion.div>
@@ -4295,6 +5672,272 @@ export default function MockupPortal({
         )}
       </AnimatePresence>
 
+      <AnimatePresence mode="wait" key="modal-prescription-tool">
+        {prescriptionToolOpen && (
+          <motion.div
+            key="prescription-tool-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-brand-green-deep/80 p-4 backdrop-blur-md"
+            onClick={() => setPrescriptionToolOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 16 }}
+              className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/5 bg-[#fbf7ef] p-6">
+                <div>
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Herramienta de receta</p>
+                  <h4 className="text-2xl font-serif text-brand-green-deep">
+                    {selectedConsultationBlock ? 'Receta desde consulta' : 'Preparar receta verificable'}
+                  </h4>
+                  <p className="mt-2 max-w-2xl text-sm text-brand-green-mid/65">
+                    Define solo lo necesario para que el dispensario valide estado, vigencia, formatos y cupo sin acceder a la historia clínica completa.
+                  </p>
+                </div>
+                <button onClick={() => setPrescriptionToolOpen(false)} className="rounded-full p-2 transition-colors hover:bg-white">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-5 overflow-y-auto p-6">
+                <div className={`rounded-xl border p-3 text-xs ${
+                  doctorSignerReady
+                    ? 'border-green-100 bg-green-50 text-green-700'
+                    : 'border-amber-100 bg-amber-50 text-amber-800'
+                }`}>
+                  {doctorSignerReady
+                    ? `Signer médico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
+                    : 'Modo demo activo. Puedes grabar el flujo completo; la firma real requiere STELLAR_DOCTOR_SECRET en Vercel.'}
+                </div>
+
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
+                  Agente 402: valida licencia médica y genera un hash clínico. La receta se emite sin publicar diagnóstico ni notas completas.
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="space-y-2 md:col-span-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
+                      Wallet Stellar del paciente
+                    </span>
+                    <input
+                      type="text"
+                      value={prescriptionPatientAddress}
+                      onChange={(event) => {
+                        if (!selectedConsultationBlock) {
+                          setDoctorPatientAddress(event.target.value);
+                        }
+                      }}
+                      disabled={Boolean(selectedConsultationBlock)}
+                      placeholder={DEMO_PATIENT_ADDRESS}
+                      className="w-full rounded-xl bg-brand-neutral px-4 py-3 font-mono text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50 disabled:opacity-70"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Tratamiento</span>
+                    <input
+                      type="text"
+                      value={doctorIssueForm.treatment}
+                      onChange={(event) =>
+                        setDoctorIssueForm((prev) => ({
+                          ...prev,
+                          treatment: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Dosis</span>
+                    <input
+                      type="text"
+                      value={doctorIssueForm.dosage}
+                      onChange={(event) =>
+                        setDoctorIssueForm((prev) => ({
+                          ...prev,
+                          dosage: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Vigencia en días</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={doctorIssueForm.durationDays}
+                      onChange={(event) =>
+                        setDoctorIssueForm((prev) => ({
+                          ...prev,
+                          durationDays: Number(event.target.value),
+                        }))
+                      }
+                      className="w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Cupo autorizado gramos</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={doctorIssueForm.monthlyLimitGrams}
+                      onChange={(event) =>
+                        setDoctorIssueForm((prev) => ({
+                          ...prev,
+                          monthlyLimitGrams: Number(event.target.value),
+                        }))
+                      }
+                      className="w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                  </label>
+
+                  <label className="space-y-2 md:col-span-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Notas clínicas privadas</span>
+                    <textarea
+                      value={doctorIssueForm.notes}
+                      onChange={(event) =>
+                        setDoctorIssueForm((prev) => ({
+                          ...prev,
+                          notes: event.target.value,
+                        }))
+                      }
+                      rows={3}
+                      className="w-full resize-none rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="border-t border-brand-green-deep/5 bg-[#fbf7ef] p-5">
+                <button
+                  type="button"
+                  onClick={handleDoctorIssuePrescription}
+                  disabled={doctorIssueBusy || !prescriptionPatientAddress}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {doctorIssueBusy ? (
+                    <>
+                      <Activity size={16} className="animate-spin" />
+                      Emitiendo...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={16} />
+                      {doctorSignerReady ? 'Emitir en testnet' : 'Generar receta demo'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait" key="modal-privacy-qr">
+        {selectedQrPermission && (
+          <motion.div
+            key="privacy-qr-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[130] flex items-center justify-center bg-brand-green-deep/80 p-4 backdrop-blur-md"
+            onClick={() => setSelectedQrPermission(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 16 }}
+              className="w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/5 bg-brand-neutral/30 p-6">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Permiso privado</p>
+                  <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">
+                    {selectedQrPermission.kind === 'medical-consultation'
+                      ? 'QR para consulta medica'
+                      : 'QR para receta y saldo'}
+                  </h4>
+                  <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                    Este QR contiene una referencia temporal local. No incluye diagnostico, documentos, imagenes ni notas clinicas.
+                  </p>
+                </div>
+                <button onClick={() => setSelectedQrPermission(null)} className="rounded-full p-2 transition-colors hover:bg-white">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-[180px_1fr]">
+                <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-4 shadow-sm">
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 49 }).map((_, index) => {
+                      const tokenIndex = index % selectedQrPermission.qrToken.length;
+                      const filled = (selectedQrPermission.qrToken.charCodeAt(tokenIndex) + index * 7) % 3 !== 0;
+                      return (
+                        <div
+                          key={`${selectedQrPermission.id}-${index}`}
+                          className={`aspect-square rounded-[3px] ${filled ? 'bg-brand-green-deep' : 'bg-brand-neutral'}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    ['Receptor', `${selectedQrPermission.role}: ${selectedQrPermission.actor}`],
+                    ['Alcance', selectedQrPermission.scope],
+                    ['Expiracion', selectedQrPermission.expiresAt],
+                    ['Token', selectedQrPermission.qrToken],
+                    ['Hash verificable', selectedQrPermission.hash],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl bg-brand-neutral/60 p-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                      <p className="mt-1 break-words text-sm font-bold text-brand-green-deep">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-t border-brand-green-deep/5 p-6 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedQrPermission.kind === 'medical-consultation') {
+                      setConsultationStatus('checked_in');
+                    } else {
+                      setDispensaryValidation(selectedQrPermission);
+                    }
+                    setSelectedQrPermission(null);
+                  }}
+                  className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
+                >
+                  Validar QR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => revokePrivacyPermission(selectedQrPermission.id)}
+                  className="rounded-2xl border border-brand-green-deep/10 px-4 py-3 text-sm font-bold text-brand-green-deep"
+                >
+                  Revocar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait" key="modal-clinical-record">
         {selectedClinicalRecord && (
           <motion.div
@@ -4314,7 +5957,7 @@ export default function MockupPortal({
             >
               <div className="p-6 border-b border-brand-green-deep/5 flex items-start justify-between gap-4 bg-brand-neutral/30">
                 <div>
-                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Dato clinico privado</p>
+                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Dato clínico privado</p>
                   <h4 className="text-2xl font-serif text-brand-green-deep">{selectedClinicalRecord.title}</h4>
                   <p className="mt-2 text-sm text-brand-green-mid/65">{selectedClinicalRecord.summary}</p>
                 </div>
@@ -4334,7 +5977,7 @@ export default function MockupPortal({
                 <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-1">Examenes y documentos</p>
+                      <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-1">Exámenes y documentos</p>
                       <p className="text-sm font-bold text-brand-green-deep">
                         {clinicalExamGallery.length} respaldos privados asociados
                       </p>
@@ -4387,7 +6030,7 @@ export default function MockupPortal({
                     <div>
                       <p className="text-base font-bold text-brand-green-deep">{clinicalAccessDoctor}</p>
                       <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">
-                        Endocannabinologia - solicita leer este dato para validar tratamiento y emitir receta verificable.
+                        Endocannabinología - solicita leer este dato para validar tratamiento y emitir receta verificable.
                       </p>
                     </div>
                     <span className="rounded-full bg-brand-neutral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
@@ -4403,9 +6046,9 @@ export default function MockupPortal({
                       : 'border-blue-100 bg-blue-50 text-blue-700'
                 }`}>
                   {selectedClinicalAccess === 'authorized'
-                    ? `Acceso autorizado por 24h para ${clinicalAccessDoctor}. El medico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.`
+                    ? `Acceso autorizado por 24h para ${clinicalAccessDoctor}. El médico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.`
                     : selectedClinicalAccess === 'revoked'
-                      ? `Acceso revocado para ${clinicalAccessDoctor}. El medico conserva solo el hash publico y pierde la ventana temporal de lectura privada.`
+                      ? `Acceso revocado para ${clinicalAccessDoctor}. El médico conserva solo el hash público y pierde la ventana temporal de lectura privada.`
                       : `402 privacy gate: ${clinicalAccessDoctor} solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.`}
                 </div>
                 <div className="rounded-2xl border border-brand-gold/20 bg-brand-gold/5 p-4">
@@ -4428,19 +6071,22 @@ export default function MockupPortal({
                   <p className="font-mono text-xs text-brand-green-deep">{selectedClinicalRecord.proof}</p>
                   <p className="mt-2 text-[10px] leading-relaxed text-brand-green-mid/55">
                     {selectedClinicalAccess === 'authorized'
-                      ? `Permiso temporal para ${clinicalAccessDoctor}: permiso-${selectedClinicalRecord.id}-24h - expira manana.`
+                      ? `Permiso temporal para ${clinicalAccessDoctor}: permiso-${selectedClinicalRecord.id}-24h - expira mañana.`
                       : selectedClinicalAccess === 'revoked'
-                        ? `Revocacion para ${clinicalAccessDoctor}: revoke-${selectedClinicalRecord.id}-402.`
+                        ? `Revocación para ${clinicalAccessDoctor}: revoke-${selectedClinicalRecord.id}-402.`
                         : 'Sin permiso activo. Solo esta prueba publica puede validarse fuera del portal.'}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     type="button"
-                    onClick={() => setClinicalAccessState((current) => ({
-                      ...current,
-                      [selectedClinicalRecord.id]: 'authorized',
-                    }))}
+                    onClick={() => {
+                      setClinicalAccessState((current) => ({
+                        ...current,
+                        [selectedClinicalRecord.id]: 'authorized',
+                      }));
+                      createPrivacyPermission('medical-consultation');
+                    }}
                     className={`rounded-2xl px-4 py-3 text-sm font-bold transition-all active:scale-95 ${
                       selectedClinicalAccess === 'authorized'
                         ? 'bg-green-600 text-white'
@@ -4451,10 +6097,15 @@ export default function MockupPortal({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setClinicalAccessState((current) => ({
-                      ...current,
-                      [selectedClinicalRecord.id]: 'revoked',
-                    }))}
+                    onClick={() => {
+                      setClinicalAccessState((current) => ({
+                        ...current,
+                        [selectedClinicalRecord.id]: 'revoked',
+                      }));
+                      if (latestMedicalPermission) {
+                        revokePrivacyPermission(latestMedicalPermission.id);
+                      }
+                    }}
                     className={`rounded-2xl border px-4 py-3 text-sm font-bold transition-all active:scale-95 ${
                       selectedClinicalAccess === 'revoked'
                         ? 'border-red-200 bg-red-50 text-red-700'
@@ -4516,7 +6167,7 @@ export default function MockupPortal({
                     ['Dispensario autorizado', selectedTraceRecord.dispensary],
                     ['Lote del producto', shortenHash(String(selectedTraceRecord.batch ?? ''), 12)],
                     ['Prueba privada del producto', shortenHash(String(selectedTraceRecord.product ?? ''), 12)],
-                    ['Comprobante de transaccion', shortenHash(selectedTraceRecord.txHash ?? '', 10)],
+                    ['Comprobante de transacción', shortenHash(selectedTraceRecord.txHash ?? '', 10)],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-2xl bg-brand-neutral/50 border border-brand-green-deep/5 p-4">
                       <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold mb-1">{label}</p>
@@ -4526,7 +6177,7 @@ export default function MockupPortal({
                 </div>
 
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-700 leading-relaxed">
-                  Agente 402 muestra prueba verificable, lote y estado de entrega, sin revelar diagnostico ni notas clinicas completas. Los hashes completos quedan disponibles para auditoria tecnica, pero la vista del paciente prioriza informacion entendible.
+                  Agente 402 muestra prueba verificable, lote y estado de entrega, sin revelar diagnóstico ni notas clínicas completas. Los hashes completos quedan disponibles para auditoría técnica, pero la vista del paciente prioriza información entendible.
                 </div>
               </div>
             </motion.div>
@@ -4556,7 +6207,7 @@ export default function MockupPortal({
                   <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Marketplace aliado</p>
                   <h4 className="text-2xl font-serif text-brand-green-deep">Negocios desde el cannabis</h4>
                   <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-green-mid/65">
-                    Marcas y productores que trabajan con cañamo, fibras naturales y derivados no medicinales. Separado del flujo clinico y de dispensacion.
+                    Marcas y productores que trabajan con cáñamo, fibras naturales y derivados no medicinales. Separado del flujo clínico y de dispensación.
                   </p>
                 </div>
                 <button onClick={() => setCannabisMarketOpen(false)} className="rounded-full p-2 transition-colors hover:bg-white">
@@ -4586,7 +6237,7 @@ export default function MockupPortal({
               <div className="border-t border-brand-green-deep/5 bg-brand-neutral/30 p-6">
                 {cannabisMarketInterest && (
                   <div className="mb-3 rounded-2xl border border-green-100 bg-green-50 p-3 text-xs text-green-700">
-                    Interes registrado. En el MVP real esto abriria el directorio de marcas y solicitudes para nuevos negocios del ecosistema.
+                    Interés registrado. En el MVP real esto abriría el directorio de marcas y solicitudes para nuevos negocios del ecosistema.
                   </div>
                 )}
                 <button
@@ -4594,7 +6245,7 @@ export default function MockupPortal({
                   onClick={() => setCannabisMarketInterest(true)}
                   className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all active:scale-95"
                 >
-                  {cannabisMarketInterest ? 'Interes registrado' : 'Explorar negocios aliados'}
+                  {cannabisMarketInterest ? 'Interés registrado' : 'Explorar negocios aliados'}
                 </button>
               </div>
             </motion.div>

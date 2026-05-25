@@ -19,6 +19,8 @@ mod prescription_contract {
         pub medication_hash: BytesN<32>,
         pub issued_at: u64,
         pub expires_at: u64,
+        pub total_quantity: u64,
+        pub dispensed_quantity: u64,
         pub is_used: bool,
     }
 
@@ -52,6 +54,28 @@ mod prescription_contract {
                 .persistent()
                 .get(&DataKey::Valid(id))
                 .unwrap_or(false)
+        }
+
+        pub fn record_partial_dispense(
+            env: Env,
+            _dispensary: Address,
+            id: u64,
+            quantity: u64,
+        ) -> u64 {
+            let mut prescription: Prescription = env
+                .storage()
+                .persistent()
+                .get(&DataKey::Prescription(id))
+                .unwrap();
+            prescription.dispensed_quantity += quantity;
+            let remaining = prescription
+                .total_quantity
+                .saturating_sub(prescription.dispensed_quantity);
+            prescription.is_used = remaining == 0;
+            env.storage()
+                .persistent()
+                .set(&DataKey::Prescription(id), &prescription);
+            remaining
         }
     }
 }
@@ -117,6 +141,8 @@ fn dispensary_can_record_dispense_for_valid_prescription() {
             medication_hash,
             issued_at: 100,
             expires_at: 3_700,
+            total_quantity: 30,
+            dispensed_quantity: 0,
             is_used: false,
         },
         &true,
@@ -140,6 +166,16 @@ fn dispensary_can_record_dispense_for_valid_prescription() {
     assert_eq!(record.product_hash, product_hash);
     assert_eq!(record.batch_hash, batch_hash);
     assert_eq!(record.quantity, 2);
+
+    let updated_prescription = prescription_client.get_prescription(&0_u64);
+    assert_eq!(updated_prescription.dispensed_quantity, 2);
+    assert_eq!(
+        updated_prescription
+            .total_quantity
+            .saturating_sub(updated_prescription.dispensed_quantity),
+        28,
+    );
+    assert!(!updated_prescription.is_used);
 
     let last_record = client.get_last_record_for_prescription(&0_u64).unwrap();
     assert_eq!(last_record.id, record_id);

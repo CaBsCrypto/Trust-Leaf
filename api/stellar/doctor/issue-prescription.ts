@@ -13,6 +13,8 @@ export default async function handler(req: any, res: any) {
       dosage,
       notes,
       durationDays,
+      totalQuantity,
+      totalQuantityGrams,
     } = req.body ?? {};
 
     if (!patientAddress || !treatment || !dosage || !durationDays) {
@@ -24,9 +26,16 @@ export default async function handler(req: any, res: any) {
     }
 
     const normalizedDurationDays = Number(durationDays);
+    const normalizedTotalQuantity = Number(totalQuantity ?? totalQuantityGrams ?? 30);
     if (!Number.isFinite(normalizedDurationDays) || normalizedDurationDays < 1) {
       res.status(400).json({
         message: 'durationDays debe ser un numero mayor o igual a 1.',
+      });
+      return;
+    }
+    if (!Number.isFinite(normalizedTotalQuantity) || normalizedTotalQuantity < 1) {
+      res.status(400).json({
+        message: 'totalQuantity debe ser un numero mayor o igual a 1.',
       });
       return;
     }
@@ -37,6 +46,7 @@ export default async function handler(req: any, res: any) {
       dosage: String(dosage),
       notes: notes ? String(notes) : '',
       durationDays: normalizedDurationDays,
+      totalQuantity: normalizedTotalQuantity,
     });
 
     res.status(200).json(result);

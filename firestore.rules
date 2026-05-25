@@ -15,8 +15,21 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/appAdministrators/$(request.auth.uid));
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Admin allowlist. The client may read only its own admin marker to know
+    // whether `/admin` should unlock. Writes must happen from Firebase console,
+    // Admin SDK or deployment tooling, never from the public app.
+    match /appAdministrators/{userId} {
+      allow get: if isOwner(userId);
+      allow list, create, update, delete: if false;
     }
 
     // 1. Users Collection
@@ -66,6 +79,114 @@ service cloud.firestore {
         && isValidPickup(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       allow delete: if isSignedIn() && resource.data.patientId == request.auth.uid;
+    }
+
+    // 4. Doctor Applications
+    match /doctorApplications/{applicationId} {
+      function isValidDoctorApplication(data) {
+        return data.keys().hasAll([
+            'id',
+            'name',
+            'licenseId',
+            'specialty',
+            'contact',
+            'wallet',
+            'status',
+            'onchainStatus',
+            'submittedAt'
+          ])
+          && data.id == applicationId
+          && data.name is string && data.name.size() <= 120
+          && data.licenseId is string && data.licenseId.size() <= 80
+          && data.specialty is string && data.specialty.size() <= 120
+          && data.contact is string && data.contact.size() <= 160
+          && data.wallet is string && data.wallet.size() <= 128
+          && data.status in ['pending', 'needs_review', 'approved', 'rejected']
+          && data.onchainStatus in ['pending', 'registered', 'failed'];
+      }
+
+      allow create: if isSignedIn()
+        && isValidDoctorApplication(request.resource.data)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.onchainStatus == 'pending';
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && isValidDoctorApplication(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'reviewedAt',
+          'reviewerNote',
+          'onchainStatus',
+          'metadataHash'
+        ]);
+    }
+
+    // 5. Dispensary Applications
+    match /dispensaryApplications/{applicationId} {
+      function isValidDispensaryApplication(data) {
+        return data.keys().hasAll([
+            'id',
+            'name',
+            'legalId',
+            'address',
+            'contact',
+            'wallet',
+            'status',
+            'onchainStatus',
+            'submittedAt'
+          ])
+          && data.id == applicationId
+          && data.name is string && data.name.size() <= 140
+          && data.legalId is string && data.legalId.size() <= 100
+          && data.address is string && data.address.size() <= 200
+          && data.contact is string && data.contact.size() <= 160
+          && data.wallet is string && data.wallet.size() <= 128
+          && data.status in ['pending', 'needs_review', 'approved', 'rejected']
+          && data.onchainStatus in ['pending', 'registered', 'failed'];
+      }
+
+      allow create: if isSignedIn()
+        && isValidDispensaryApplication(request.resource.data)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.onchainStatus == 'pending';
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && isValidDispensaryApplication(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'reviewedAt',
+          'reviewerNote',
+          'onchainStatus',
+          'metadataHash'
+        ]);
+    }
+
+    // 6. Patient-controlled private clinical records
+    match /clinicalRecords/{recordId} {
+      function isValidClinicalRecord(data) {
+        return data.keys().hasAll(['patientId', 'recordType', 'privatePayloadRef', 'createdAt'])
+          && data.patientId == request.auth.uid
+          && data.recordType in ['symptoms', 'exam', 'treatment', 'note']
+          && data.privatePayloadRef is string && data.privatePayloadRef.size() <= 512;
+      }
+
+      allow create: if isSignedIn() && isValidClinicalRecord(request.resource.data);
+      allow read, update, delete: if isSignedIn() && resource.data.patientId == request.auth.uid;
+    }
+
+    // 7. Consent grants for Agent 402 privacy gates
+    match /consents/{consentId} {
+      function isValidConsent(data) {
+        return data.keys().hasAll(['patientId', 'actorWallet', 'actorRole', 'scope', 'status', 'expiresAt'])
+          && data.patientId == request.auth.uid
+          && data.actorWallet is string && data.actorWallet.size() <= 128
+          && data.actorRole in ['doctor', 'dispensary', 'admin', 'validator']
+          && data.scope is list
+          && data.status in ['active', 'revoked', 'expired'];
+      }
+
+      allow create: if isSignedIn() && isValidConsent(request.resource.data);
+      allow read, update: if isSignedIn() && resource.data.patientId == request.auth.uid;
     }
   }
 }

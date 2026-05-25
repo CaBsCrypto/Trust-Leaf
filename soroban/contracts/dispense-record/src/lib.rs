@@ -34,6 +34,8 @@ struct PrescriptionSnapshot {
     pub medication_hash: BytesN<32>,
     pub issued_at: u64,
     pub expires_at: u64,
+    pub total_quantity: u64,
+    pub dispensed_quantity: u64,
     pub is_used: bool,
 }
 
@@ -96,6 +98,7 @@ impl DispenseRecordContract {
             panic_with_error!(&env, DispenseRecordError::PrescriptionInvalid);
         }
 
+        record_partial_dispense(&env, &dispensary, prescription_id, quantity);
         let prescription = get_prescription_snapshot(&env, prescription_id);
         let id = next_id(&env);
         let record = DispenseRecord {
@@ -178,6 +181,19 @@ fn is_prescription_valid(env: &Env, prescription_id: u64) -> bool {
         &get_prescription_contract_address(env),
         &Symbol::new(env, "is_valid"),
         (prescription_id,).into_val(env),
+    )
+}
+
+fn record_partial_dispense(
+    env: &Env,
+    dispensary: &Address,
+    prescription_id: u64,
+    quantity: u64,
+) -> u64 {
+    env.invoke_contract::<u64>(
+        &get_prescription_contract_address(env),
+        &Symbol::new(env, "record_partial_dispense"),
+        (dispensary.clone(), prescription_id, quantity).into_val(env),
     )
 }
 

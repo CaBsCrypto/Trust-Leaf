@@ -20,6 +20,8 @@ pub struct Prescription {
     pub medication_hash: BytesN<32>,
     pub issued_at: u64,
     pub expires_at: u64,
+    pub total_quantity: u64,
+    pub dispensed_quantity: u64,
     pub is_used: bool,
 }
 
@@ -42,6 +44,8 @@ pub enum PrescriptionError {
     PrescriptionMissing = 4,
     PrescriptionAlreadyUsed = 5,
     PrescriptionExpired = 6,
+    InvalidQuantity = 7,
+    QuantityExceeded = 8,
 }
 
 #[contractimpl]
@@ -67,11 +71,15 @@ impl PrescriptionContract {
         patient: Address,
         medication_hash: BytesN<32>,
         duration: u64,
+        total_quantity: u64,
     ) -> u64 {
         doctor.require_auth();
 
         if !is_authorized_doctor(&env, &doctor) {
             panic_with_error!(&env, PrescriptionError::UnauthorizedDoctor);
+        }
+        if total_quantity == 0 {
+            panic_with_error!(&env, PrescriptionError::InvalidQuantity);
         }
 
         let id = next_id(&env);
@@ -84,6 +92,8 @@ impl PrescriptionContract {
             medication_hash,
             issued_at,
             expires_at,
+            total_quantity,
+            dispensed_quantity: 0,
             is_used: false,
         };
 
@@ -100,10 +110,26 @@ impl PrescriptionContract {
     }
 
     pub fn consume_prescription(env: Env, dispensary: Address, prescription_id: u64) {
+        let prescription = get_prescription_internal(&env, prescription_id);
+        let remaining = prescription
+            .total_quantity
+            .saturating_sub(prescription.dispensed_quantity);
+        Self::record_partial_dispense(env, dispensary, prescription_id, remaining);
+    }
+
+    pub fn record_partial_dispense(
+        env: Env,
+        dispensary: Address,
+        prescription_id: u64,
+        quantity: u64,
+    ) -> u64 {
         dispensary.require_auth();
 
         if !is_authorized_dispensary(&env, &dispensary) {
             panic_with_error!(&env, PrescriptionError::UnauthorizedDispensary);
+        }
+        if quantity == 0 {
+            panic_with_error!(&env, PrescriptionError::InvalidQuantity);
         }
 
         let mut prescription = get_prescription_internal(&env, prescription_id);
@@ -114,14 +140,29 @@ impl PrescriptionContract {
             panic_with_error!(&env, PrescriptionError::PrescriptionExpired);
         }
 
-        prescription.is_used = true;
+        let remaining = prescription
+            .total_quantity
+            .saturating_sub(prescription.dispensed_quantity);
+        if quantity > remaining {
+            panic_with_error!(&env, PrescriptionError::QuantityExceeded);
+        }
+
+        prescription.dispensed_quantity = prescription.dispensed_quantity.saturating_add(quantity);
+        let remaining_after = prescription
+            .total_quantity
+            .saturating_sub(prescription.dispensed_quantity);
+        prescription.is_used = remaining_after == 0;
         env.storage()
             .persistent()
             .set(&DataKey::Prescription(prescription_id), &prescription);
         extend_instance_ttl(&env);
 
-        env.events()
-            .publish(("PrescriptionConsumed",), (prescription_id, dispensary));
+        env.events().publish(
+            ("PrescriptionPartiallyDispensed",),
+            (prescription_id, dispensary, quantity, remaining_after),
+        );
+
+        remaining_after
     }
 
     pub fn get_prescription(env: Env, id: u64) -> Prescription {
@@ -130,7 +171,16 @@ impl PrescriptionContract {
 
     pub fn is_valid(env: Env, id: u64) -> bool {
         let prescription = get_prescription_internal(&env, id);
-        !prescription.is_used && env.ledger().timestamp() < prescription.expires_at
+        !prescription.is_used
+            && env.ledger().timestamp() < prescription.expires_at
+            && prescription.dispensed_quantity < prescription.total_quantity
+    }
+
+    pub fn get_remaining_quantity(env: Env, id: u64) -> u64 {
+        let prescription = get_prescription_internal(&env, id);
+        prescription
+            .total_quantity
+            .saturating_sub(prescription.dispensed_quantity)
     }
 
     pub fn get_doctor_registry(env: Env) -> Address {

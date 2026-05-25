@@ -10,34 +10,19 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
 import MockupPortal, { PortalView } from './components/MockupPortal';
+import {
+  trustDataStore,
+  type ActorRegistrationStatus,
+  type DispensaryApplication,
+  type DoctorApplication,
+  type PersistenceSource,
+} from './lib/trustData';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
-type DispensaryRegistrationStatus = 'pending' | 'approved' | 'rejected';
-
-interface DispensaryRegistration {
-  id: string;
-  name: string;
-  legalId: string;
-  address: string;
-  contact: string;
-  wallet: string;
-  status: DispensaryRegistrationStatus;
-  submittedAt: string;
-  reviewedAt?: string;
-}
-
-interface DoctorRegistration {
-  id: string;
-  name: string;
-  licenseId: string;
-  specialty: string;
-  contact: string;
-  wallet: string;
-  status: DispensaryRegistrationStatus;
-  submittedAt: string;
-  reviewedAt?: string;
-}
+type DispensaryRegistrationStatus = ActorRegistrationStatus;
+type DispensaryRegistration = DispensaryApplication;
+type DoctorRegistration = DoctorApplication;
 
 // Future hardening: these local registration records should move to Supabase
 // with encrypted documents and an Agent 402 verification result. Admin approval
@@ -49,7 +34,7 @@ const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
 
 const ROLE_ROUTES = [
   { path: '/paciente', label: 'Paciente' },
-  { path: '/medico', label: 'Medico' },
+  { path: '/medico', label: 'Médico' },
   { path: '/dispensario', label: 'Dispensario' },
   { path: '/admin', label: 'Admin' },
 ];
@@ -82,6 +67,7 @@ function AppContent() {
     const saved = localStorage.getItem('trust_doctor_registrations');
     return saved ? JSON.parse(saved) : [];
   });
+  const [registrationSource, setRegistrationSource] = useState<PersistenceSource>('local-demo');
 
   const navigate = (nextPath: string) => {
     window.history.pushState({}, '', nextPath);
@@ -94,74 +80,115 @@ function AppContent() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  const refreshActorRegistrations = async () => {
+    const [doctorResult, dispensaryResult] = await Promise.all([
+      trustDataStore.loadDoctorApplications(),
+      trustDataStore.loadDispensaryApplications(),
+    ]);
+
+    setDoctorRegistrations(doctorResult.records);
+    setDispensaryRegistrations(dispensaryResult.records);
+    setRegistrationSource(
+      doctorResult.source === 'supabase' || dispensaryResult.source === 'supabase'
+        ? 'supabase'
+        : doctorResult.source === 'firebase' || dispensaryResult.source === 'firebase'
+          ? 'firebase'
+        : 'local-demo',
+    );
+  };
+
   useEffect(() => {
-    localStorage.setItem('trust_dispensary_registrations', JSON.stringify(dispensaryRegistrations));
-  }, [dispensaryRegistrations]);
+    void refreshActorRegistrations();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('trust_doctor_registrations', JSON.stringify(doctorRegistrations));
-  }, [doctorRegistrations]);
-
-  const submitDoctorRegistration = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => {
-    const request: DoctorRegistration = {
-      ...input,
-      id: `doc-req-${Date.now()}`,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-    };
-    setDoctorRegistrations((current) => [request, ...current]);
+  const submitDoctorRegistration = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => {
+    void trustDataStore.createDoctorApplication(input).then((source) => {
+      setRegistrationSource(source);
+      return refreshActorRegistrations();
+    });
   };
 
-  const addDoctorManually = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => {
-    const request: DoctorRegistration = {
-      ...input,
-      id: `doc-manual-${Date.now()}`,
-      status: 'approved',
-      submittedAt: new Date().toISOString(),
-      reviewedAt: new Date().toISOString(),
-    };
-    setDoctorRegistrations((current) => [request, ...current]);
+  const addDoctorManually = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => {
+    void trustDataStore.createApprovedDoctor(input).then((source) => {
+      setRegistrationSource(source);
+      return refreshActorRegistrations();
+    });
   };
 
-  const submitDispensaryRegistration = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => {
-    const request: DispensaryRegistration = {
-      ...input,
-      id: `disp-req-${Date.now()}`,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-    };
-    setDispensaryRegistrations((current) => [request, ...current]);
+  const submitDispensaryRegistration = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => {
+    void trustDataStore.createDispensaryApplication(input).then((source) => {
+      setRegistrationSource(source);
+      return refreshActorRegistrations();
+    });
   };
 
-  const addDispensaryManually = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => {
-    const request: DispensaryRegistration = {
-      ...input,
-      id: `disp-manual-${Date.now()}`,
-      status: 'approved',
-      submittedAt: new Date().toISOString(),
-      reviewedAt: new Date().toISOString(),
-    };
-    setDispensaryRegistrations((current) => [request, ...current]);
+  const addDispensaryManually = (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => {
+    void trustDataStore.createApprovedDispensary(input).then((source) => {
+      setRegistrationSource(source);
+      return refreshActorRegistrations();
+    });
   };
 
   const reviewDispensaryRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
-    setDispensaryRegistrations((current) =>
-      current.map((request) =>
-        request.id === id
-          ? { ...request, status, reviewedAt: new Date().toISOString() }
-          : request,
-      ),
-    );
+    void trustDataStore.reviewDispensaryApplication(id, status).then((source) => {
+      setRegistrationSource(source);
+      return refreshActorRegistrations();
+    });
   };
 
   const reviewDoctorRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
-    setDoctorRegistrations((current) =>
-      current.map((request) =>
-        request.id === id
-          ? { ...request, status, reviewedAt: new Date().toISOString() }
-          : request,
-      ),
+    void trustDataStore.reviewDoctorApplication(id, status).then((source) => {
+      setRegistrationSource(source);
+      return refreshActorRegistrations();
+    });
+  };
+
+  const registerDoctorOnchain = async (request: DoctorRegistration) => {
+    const response = await fetch('/api/stellar/admin/register-doctor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ doctorAddress: request.wallet }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      await trustDataStore.updateDoctorOnchainStatus(request.id, 'failed', undefined, payload.message);
+      await refreshActorRegistrations();
+      throw new Error(payload.message || 'No fue posible registrar el medico en Testnet.');
+    }
+
+    const source = await trustDataStore.updateDoctorOnchainStatus(
+      request.id,
+      'registered',
+      payload.txHash,
+      `DoctorRegistry Testnet: ${payload.txHash}`,
     );
+    setRegistrationSource(source);
+    await refreshActorRegistrations();
+    return payload;
+  };
+
+  const registerDispensaryOnchain = async (request: DispensaryRegistration) => {
+    const response = await fetch('/api/stellar/admin/register-dispensary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dispensaryAddress: request.wallet }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      await trustDataStore.updateDispensaryOnchainStatus(request.id, 'failed', undefined, payload.message);
+      await refreshActorRegistrations();
+      throw new Error(payload.message || 'No fue posible registrar el dispensario en Testnet.');
+    }
+
+    const source = await trustDataStore.updateDispensaryOnchainStatus(
+      request.id,
+      'registered',
+      payload.txHash,
+      `DispensaryRegistry Testnet: ${payload.txHash}`,
+    );
+    setRegistrationSource(source);
+    await refreshActorRegistrations();
+    return payload;
   };
 
   const patientView = PATIENT_ROUTE_VIEWS[path];
@@ -197,7 +224,7 @@ function AppContent() {
         initialView="doctors"
         allowedViews={DOCTOR_VIEWS}
         pageMode
-        roleLabel="Portal Medico"
+        roleLabel="Portal Médico"
       />
     );
   }
@@ -238,10 +265,13 @@ function AppContent() {
         onBack={() => navigate('/')}
         doctorRegistrations={doctorRegistrations}
         registrations={dispensaryRegistrations}
+        registrationSource={registrationSource}
         onReviewDoctorRegistration={reviewDoctorRegistration}
         onReviewRegistration={reviewDispensaryRegistration}
         onAddDoctorManually={addDoctorManually}
         onAddDispensaryManually={addDispensaryManually}
+        onRegisterDoctorOnchain={registerDoctorOnchain}
+        onRegisterDispensaryOnchain={registerDispensaryOnchain}
       />
     );
   }
@@ -289,13 +319,13 @@ function AppContent() {
               <div className="bg-brand-green-deep p-6 text-brand-ivory md:p-8">
                 <div className="grid h-full grid-cols-1 gap-3">
                   {[
-                    ['Paciente', 'Crear expediente privado y buscar medico validado.', <UserRound size={18} />],
-                    ['Medico', 'Solicitar alta, configurar agenda y emitir receta.', <Stethoscope size={18} />],
+                    ['Paciente', 'Crear expediente privado y buscar médico validado.', <UserRound size={18} />],
+                    ['Médico', 'Solicitar alta, configurar agenda y emitir receta.', <Stethoscope size={18} />],
                     ['Dispensario', 'Postular inventario y registrar entregas trazables.', <ShoppingBag size={18} />],
                   ].map(([title, desc, icon]) => (
                     <button
                       key={title as string}
-                      onClick={() => navigate(title === 'Paciente' ? '/paciente' : title === 'Medico' ? '/medico' : '/dispensario')}
+                      onClick={() => navigate(title === 'Paciente' ? '/paciente' : title === 'Médico' ? '/medico' : '/dispensario')}
                       className="group flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
                     >
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-gold text-brand-green-deep">
@@ -332,30 +362,30 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
   const flowSteps = [
     {
       title: 'Expediente privado',
-      desc: 'Unete para controlar tu historial, recetas y accesos privados.',
+      desc: 'Únete para controlar tu historial, recetas y accesos privados.',
       action: 'Unirme como paciente',
       path: '/paciente',
       icon: <Activity size={20} />,
       eyebrow: 'Paciente',
-      invite: 'Crea tu espacio privado para agendar con medicos, recibir recetas y revisar dispensarios autorizados.',
+      invite: 'Crea tu espacio privado para agendar con médicos, recibir recetas y revisar dispensarios autorizados.',
       points: [
-        'Historial clinico portable con sintomas, examenes y tratamiento.',
-        'Acceso por consentimiento temporal para medicos o validadores.',
-        'Hashes verificables sin publicar diagnostico ni documentos completos.',
+        'Historial clínico portable con síntomas, exámenes y tratamiento.',
+        'Acceso por consentimiento temporal para médicos o validadores.',
+        'Hashes verificables sin publicar diagnóstico ni documentos completos.',
       ],
     },
     {
       title: 'Receta verificable',
       desc: 'Postula como profesional y opera recetas verificables.',
-      action: 'Registrarme como medico',
+      action: 'Registrarme como médico',
       path: '/medico',
       icon: <Stethoscope size={20} />,
-      eyebrow: 'Medico',
+      eyebrow: 'Médico',
       invite: 'Solicita alta profesional para que el equipo admin revise licencia, especialidad y wallet antes de habilitar tu panel.',
       points: [
         'Agenda y seguimiento de pacientes desde el panel profesional.',
-        'Emision de receta vinculada a wallet y evidencia autorizada.',
-        'Dosis, vigencia y saldo disponible listos para validacion.',
+        'Emisión de receta vinculada a wallet y evidencia autorizada.',
+        'Dosis, vigencia y saldo disponible listos para validación.',
       ],
     },
     {
@@ -368,7 +398,7 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
       invite: 'Postula tu dispensario para operar inventario, validar recetas y registrar entregas cuando admin apruebe el acceso.',
       points: [
         'Inventario por producto, lote y formato medicinal.',
-        'Validacion de receta vigente sin exponer historia clinica.',
+        'Validación de receta vigente sin exponer historia clínica.',
         'Registro de entrega parcial para no quemar todo el tratamiento.',
       ],
     },
@@ -389,10 +419,10 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
         <div className="mb-8 max-w-3xl">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Red Trust Leaf</p>
           <h2 className="mt-2 text-3xl font-serif text-brand-green-deep md:text-5xl">
-            Privacidad clinica, receta verificable y medicina trazable.
+            Privacidad clínica, receta verificable y medicina trazable.
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-brand-green-mid/70 md:text-base">
-            La plataforma separa lo que ve cada actor: el paciente controla sus datos, el medico valida el tratamiento y el dispensario confirma solo lo necesario para entregar.
+            La plataforma separa lo que ve cada actor: el paciente controla sus datos, el médico valida el tratamiento y el dispensario confirma solo lo necesario para entregar.
           </p>
         </div>
 
@@ -474,12 +504,12 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
     {
       path: '/paciente',
       label: 'Pacientes',
-      desc: 'Entrar al portal, buscar medico y revisar recetas.',
+      desc: 'Entrar al portal, buscar médico y revisar recetas.',
       icon: <UserRound size={18} />,
     },
     {
       path: '/medico',
-      label: 'Medicos',
+      label: 'Médicos',
       desc: 'Solicitar alta o entrar al panel de emision.',
       icon: <Stethoscope size={18} />,
     },
@@ -539,18 +569,24 @@ function AdminRoute({
   onBack,
   doctorRegistrations,
   registrations,
+  registrationSource,
   onReviewDoctorRegistration,
   onReviewRegistration,
   onAddDoctorManually,
   onAddDispensaryManually,
+  onRegisterDoctorOnchain,
+  onRegisterDispensaryOnchain,
 }: {
   onBack: () => void;
   doctorRegistrations: DoctorRegistration[];
   registrations: DispensaryRegistration[];
+  registrationSource: PersistenceSource;
   onReviewDoctorRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
   onReviewRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
-  onAddDoctorManually: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => void;
-  onAddDispensaryManually: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+  onAddDoctorManually: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => void;
+  onAddDispensaryManually: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => void;
+  onRegisterDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
+  onRegisterDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
@@ -560,7 +596,7 @@ function AdminRoute({
   const [manualDoctor, setManualDoctor] = useState({
     name: 'Dra. Sofia Lagos',
     licenseId: 'MED-CL-20441',
-    specialty: 'Medicina cannabica',
+    specialty: 'Medicina cannábica',
     contact: 'sofia@trustleaf.org',
     wallet: 'GDOCMANUALTRUSTLEAFTESTNET000000000000000000000',
   });
@@ -571,6 +607,25 @@ function AdminRoute({
     contact: 'operaciones@greenleaf.test',
     wallet: 'GDISPMANUALTRUSTLEAFTESTNET00000000000000000000',
   });
+  const [onchainAction, setOnchainAction] = useState<string | null>(null);
+  const [onchainNotice, setOnchainNotice] = useState<string | null>(null);
+
+  const runOnchainAction = async (
+    key: string,
+    action: () => Promise<unknown>,
+    successMessage: string,
+  ) => {
+    setOnchainAction(key);
+    setOnchainNotice(null);
+    try {
+      await action();
+      setOnchainNotice(successMessage);
+    } catch (error) {
+      setOnchainNotice(error instanceof Error ? error.message : 'No fue posible completar la accion on-chain.');
+    } finally {
+      setOnchainAction(null);
+    }
+  };
 
   const addManualDoctor = () => {
     if (!manualDoctor.name || !manualDoctor.licenseId || !manualDoctor.specialty || !manualDoctor.contact || !manualDoctor.wallet) {
@@ -588,6 +643,19 @@ function AdminRoute({
     onAddDispensaryManually(manualDispensary);
   };
 
+  const prepareAdminDemo = () => {
+    pendingDoctors.forEach((request) => onReviewDoctorRegistration(request.id, 'approved'));
+    pending.forEach((request) => onReviewRegistration(request.id, 'approved'));
+
+    if (approvedDoctors.length === 0 && pendingDoctors.length === 0) {
+      onAddDoctorManually(manualDoctor);
+    }
+
+    if (approved.length === 0 && pending.length === 0) {
+      onAddDispensaryManually(manualDispensary);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-brand-ivory text-brand-green-deep">
       <div className="border-b border-brand-green-deep/10 bg-white/80 backdrop-blur-md">
@@ -595,6 +663,9 @@ function AdminRoute({
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Trust Leaf</p>
             <h1 className="text-2xl md:text-3xl font-serif">Admin Operacional</h1>
+            <p className="mt-1 text-xs text-brand-green-mid/60">
+              Persistencia: {registrationSource === 'supabase' ? 'Supabase' : registrationSource === 'firebase' ? 'Firebase' : 'Demo local'}
+            </p>
           </div>
           <button
             onClick={onBack}
@@ -606,9 +677,46 @@ function AdminRoute({
       </div>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Centro de control</p>
+              <h2 className="mt-2 text-3xl font-serif">Preparar red para demo</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
+                Admin puede aprobar solicitudes reales o crear actores verificados manualmente. Para grabar, deja al menos un medico y un dispensario live antes de mostrar el flujo paciente.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={prepareAdminDemo}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all hover:bg-brand-green-mid active:scale-95"
+            >
+              Preparar demo admin
+              <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+            {[
+              ['Medicos live', approvedDoctors.length],
+              ['Dispensarios live', approved.length],
+              ['Solicitudes medico', pendingDoctors.length],
+              ['Solicitudes dispensario', pending.length],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                <p className="mt-1 text-2xl font-bold text-brand-green-deep">{value}</p>
+              </div>
+            ))}
+          </div>
+          {onchainNotice && (
+            <div className="mt-5 rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm text-brand-green-mid">
+              {onchainNotice}
+            </div>
+          )}
+        </section>
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            ['DoctorRegistry', 'Medicos autorizados para emitir recetas.'],
+            ['DoctorRegistry', 'Médicos autorizados para emitir recetas.'],
             ['DispensaryRegistry', 'Dispensarios autorizados para consumir recetas.'],
             ['Prescription + DispenseRecord', 'Recetas y entregas auditables en Testnet.'],
           ].map(([title, desc]) => (
@@ -625,10 +733,10 @@ function AdminRoute({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Solicitudes</p>
-                <h2 className="text-2xl font-serif mb-2">Registro de medicos</h2>
+                <h2 className="text-2xl font-serif mb-2">Registro de médicos</h2>
                 <p className="text-sm text-brand-green-mid/70 max-w-2xl">
-                  Revisa licencias, aprueba medicos y habilita el POV profesional para emitir recetas.
-                  En el siguiente paso esta aprobacion se conectara con DoctorRegistry.
+                  Revisa licencias, aprueba médicos y habilita el POV profesional para emitir recetas.
+                  En el siguiente paso esta aprobación se conectará con DoctorRegistry.
                 </p>
               </div>
               <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
@@ -639,12 +747,12 @@ function AdminRoute({
             <div className="mt-6 space-y-3">
               {doctorRegistrations.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
-                  <p>Aun no hay solicitudes. Los medicos pueden entrar a `/medico`, pero admin tambien puede cargar uno manualmente.</p>
+                  <p>Aún no hay solicitudes. Los médicos pueden entrar a `/medico`, pero admin también puede cargar uno manualmente.</p>
                   <button
                     onClick={() => setRegistryModal('doctors')}
                     className="mt-4 rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory"
                   >
-                    Agregar medico manual
+                    Agregar médico manual
                   </button>
                 </div>
               )}
@@ -688,6 +796,28 @@ function AdminRoute({
                         </button>
                       </div>
                     )}
+                    {request.status === 'approved' && (
+                      <div className="flex flex-col items-start gap-2 md:items-end">
+                        <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
+                          On-chain: {request.onchainStatus}
+                        </span>
+                        {request.onchainStatus !== 'registered' && (
+                          <button
+                            onClick={() =>
+                              runOnchainAction(
+                                `doctor-${request.id}`,
+                                () => onRegisterDoctorOnchain(request),
+                                'Medico registrado en DoctorRegistry Testnet.',
+                              )
+                            }
+                            disabled={onchainAction === `doctor-${request.id}`}
+                            className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {onchainAction === `doctor-${request.id}` ? 'Registrando...' : 'Registrar Testnet'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -701,14 +831,14 @@ function AdminRoute({
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Medical network</p>
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-serif mb-4">{approvedDoctors.length} medicos live</h2>
+              <h2 className="text-2xl font-serif mb-4">{approvedDoctors.length} médicos live</h2>
               <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-ivory/70">
                 Ver detalle
               </span>
             </div>
             <div className="space-y-3">
               {approvedDoctors.length === 0 ? (
-                <p className="text-sm text-brand-ivory/60">Cuando apruebes o agregues un medico, aparecera aqui como autorizado.</p>
+                <p className="text-sm text-brand-ivory/60">Cuando apruebes o agregues un médico, aparecerá aquí como autorizado.</p>
               ) : (
                 approvedDoctors.map((request) => (
                   <div key={request.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -740,7 +870,7 @@ function AdminRoute({
             <div className="mt-6 space-y-3">
               {registrations.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
-                  <p>Aun no hay solicitudes. Los dispensarios pueden entrar a `/dispensario`, pero admin tambien puede cargar uno manualmente.</p>
+                  <p>Aún no hay solicitudes. Los dispensarios pueden entrar a `/dispensario`, pero admin también puede cargar uno manualmente.</p>
                   <button
                     onClick={() => setRegistryModal('dispensaries')}
                     className="mt-4 rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory"
@@ -789,6 +919,28 @@ function AdminRoute({
                         </button>
                       </div>
                     )}
+                    {request.status === 'approved' && (
+                      <div className="flex flex-col items-start gap-2 md:items-end">
+                        <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
+                          On-chain: {request.onchainStatus}
+                        </span>
+                        {request.onchainStatus !== 'registered' && (
+                          <button
+                            onClick={() =>
+                              runOnchainAction(
+                                `dispensary-${request.id}`,
+                                () => onRegisterDispensaryOnchain(request),
+                                'Dispensario registrado en DispensaryRegistry Testnet.',
+                              )
+                            }
+                            disabled={onchainAction === `dispensary-${request.id}`}
+                            className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {onchainAction === `dispensary-${request.id}` ? 'Registrando...' : 'Registrar Testnet'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -809,7 +961,7 @@ function AdminRoute({
             </div>
             <div className="space-y-3">
               {approved.length === 0 ? (
-                <p className="text-sm text-brand-ivory/60">Cuando apruebes o agregues un dispensario, aparecera aqui como autorizado.</p>
+                <p className="text-sm text-brand-ivory/60">Cuando apruebes o agregues un dispensario, aparecer? aqu? como autorizado.</p>
               ) : (
                 approved.map((request) => (
                   <div key={request.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -828,7 +980,7 @@ function AdminRoute({
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Agentes 402</p>
               <h2 className="text-2xl font-serif mb-2">Privacidad verificable</h2>
               <p className="max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
-                Los agentes validan informacion sensible sin exponer documentos completos. El resultado que viaja a Stellar es una wallet autorizada, estado verificable y hash de metadata.
+                Los agentes validan información sensible sin exponer documentos completos. El resultado que viaja a Stellar es una wallet autorizada, estado verificable y hash de metadata.
               </p>
             </div>
             <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
@@ -838,8 +990,8 @@ function AdminRoute({
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
             {[
               ['Compliance Agent', 'Verifica licencias, documentos y estado profesional antes de aprobar actores.'],
-              ['Prescription Agent', 'Valida receta, vigencia y consumo sin revelar diagnostico o notas clinicas.'],
-              ['Eligibility Agent', 'Responde si el paciente puede acceder segun permisos privados y jurisdiccion.'],
+              ['Prescription Agent', 'Valida receta, vigencia y consumo sin revelar diagnóstico o notas clínicas.'],
+              ['Eligibility Agent', 'Responde si el paciente puede acceder según permisos privados y jurisdicción.'],
             ].map(([title, desc]) => (
               <div key={title} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
                 <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
@@ -861,7 +1013,7 @@ function AdminRoute({
                   {registryModal === 'doctors' ? 'Medical network' : 'Live network'}
                 </p>
                 <h2 className="mt-2 text-2xl font-serif">
-                  {registryModal === 'doctors' ? 'Medicos autorizados' : 'Dispensarios autorizados'}
+                  {registryModal === 'doctors' ? 'Médicos autorizados' : 'Dispensarios autorizados'}
                 </h2>
                 <p className="mt-2 max-w-xl text-sm text-brand-green-mid/65">
                   Revisa actores ya aprobados o agrega manualmente un actor validado por admin.
@@ -878,7 +1030,7 @@ function AdminRoute({
                   <div className="space-y-3">
                     {approvedDoctors.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-5 text-sm text-brand-green-mid/70">
-                        Aun no hay medicos live. Agrega uno manualmente para preparar el demo.
+                        Aún no hay médicos live. Agrega uno manualmente para preparar el demo.
                       </div>
                     ) : (
                       approvedDoctors.map((doctor) => (
@@ -903,7 +1055,7 @@ function AdminRoute({
                     <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
                     <div className="mt-4 space-y-3">
                       {[
-                        ['name', 'Nombre medico'],
+                        ['name', 'Nombre médico'],
                         ['licenseId', 'Licencia'],
                         ['specialty', 'Especialidad'],
                         ['contact', 'Contacto'],
@@ -919,7 +1071,7 @@ function AdminRoute({
                         </label>
                       ))}
                       <button onClick={addManualDoctor} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
-                        Agregar medico autorizado
+                        Agregar médico autorizado
                       </button>
                     </div>
                   </div>
@@ -929,7 +1081,7 @@ function AdminRoute({
                   <div className="space-y-3">
                     {approved.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-5 text-sm text-brand-green-mid/70">
-                        Aun no hay dispensarios live. Agrega uno manualmente para preparar el demo.
+                        Aún no hay dispensarios live. Agrega uno manualmente para preparar el demo.
                       </div>
                     ) : (
                       approved.map((dispensary) => (
@@ -956,7 +1108,7 @@ function AdminRoute({
                       {[
                         ['name', 'Nombre dispensario'],
                         ['legalId', 'Registro legal'],
-                        ['address', 'Direccion'],
+                        ['address', 'Dirección'],
                         ['contact', 'Contacto'],
                         ['wallet', 'Wallet Stellar'],
                       ].map(([key, label]) => (
@@ -993,7 +1145,7 @@ function DispensaryRegistrationRoute({
   onBack: () => void;
   onNavigate: (path: string) => void;
   dispensaryRegistrations: DispensaryRegistration[];
-  onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+  onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
 }) {
   const [registrationForm, setRegistrationForm] = useState({
     name: '',
@@ -1054,7 +1206,7 @@ function DispensaryRegistrationRoute({
           className="rounded-[28px] border border-brand-green-deep/10 bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10"
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro de dispensario</p>
-          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Despues operas.</h1>
+          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Después operas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
             El dispensario completa su solicitud, Trust Leaf revisa desde admin y, al aprobar, queda listo para validar recetas y registrar entregas.
           </p>
@@ -1102,7 +1254,7 @@ function DispensaryRegistrationRoute({
               {[
                 ['name', 'Nombre comercial'],
                 ['legalId', 'Registro sanitario / legal'],
-                ['address', 'Direccion operativa'],
+                ['address', 'Dirección operativa'],
                 ['contact', 'Contacto responsable'],
                 ['wallet', 'Wallet Stellar del dispensario'],
               ].map(([key, label]) => (
@@ -1135,7 +1287,7 @@ function DispensaryRegistrationRoute({
               onClick={() => onNavigate('/dispensario/operacion')}
               className="group flex items-center justify-between rounded-2xl border border-brand-green-deep/10 bg-white p-5 text-left shadow-sm hover:border-brand-gold/40"
             >
-              <span className="flex items-center gap-3 font-bold"><ShieldCheck size={18} /> Operacion</span>
+              <span className="flex items-center gap-3 font-bold"><ShieldCheck size={18} /> Operación</span>
               <ArrowRight size={18} className="text-brand-gold group-hover:translate-x-1" />
             </button>
             <button
@@ -1161,7 +1313,7 @@ function DoctorRegistrationRoute({
   onBack: () => void;
   onNavigate: (path: string) => void;
   doctorRegistrations: DoctorRegistration[];
-  onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+  onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
 }) {
   const [registrationForm, setRegistrationForm] = useState({
     name: '',
@@ -1221,10 +1373,10 @@ function DoctorRegistrationRoute({
           animate={{ opacity: 1, y: 0 }}
           className="rounded-[28px] border border-brand-green-deep/10 bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10"
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro medico</p>
-          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Despues emites recetas.</h1>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro médico</p>
+          <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Después emites recetas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-            El medico presenta licencia, especialidad y wallet. Admin revisa y habilita el acceso profesional para emitir recetas verificables.
+            El médico presenta licencia, especialidad y wallet. Admin revisa y habilita el acceso profesional para emitir recetas verificables.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1251,7 +1403,7 @@ function DoctorRegistrationRoute({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Solicitud</p>
-                <h2 className="mt-2 text-2xl font-serif">Datos para revision admin</h2>
+                <h2 className="mt-2 text-2xl font-serif">Datos para revisión admin</h2>
               </div>
               {latestRegistration && (
                 <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
@@ -1269,10 +1421,10 @@ function DoctorRegistrationRoute({
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
                 ['name', 'Nombre profesional'],
-                ['licenseId', 'Licencia / registro medico'],
+                ['licenseId', 'Licencia / registro médico'],
                 ['specialty', 'Especialidad'],
                 ['contact', 'Contacto responsable'],
-                ['wallet', 'Wallet Stellar del medico'],
+                ['wallet', 'Wallet Stellar del médico'],
               ].map(([key, label]) => (
                 <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
@@ -1302,7 +1454,7 @@ function DoctorRegistrationRoute({
             onClick={() => onNavigate('/medico/operacion')}
             className="group flex w-full items-center justify-between rounded-2xl border border-brand-green-deep/10 bg-white p-5 text-left shadow-sm hover:border-brand-gold/40"
           >
-            <span className="flex items-center gap-3 font-bold"><Stethoscope size={18} /> Ir al panel medico</span>
+            <span className="flex items-center gap-3 font-bold"><Stethoscope size={18} /> Ir al panel médico</span>
             <ArrowRight size={18} className="text-brand-gold group-hover:translate-x-1" />
           </button>
         </motion.section>
@@ -1446,7 +1598,7 @@ function RoleRoutePage({
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acciones del rol</p>
             <h2 className="mt-2 text-2xl font-serif">Workspace enfocado</h2>
             <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-              Cada boton abre solo las herramientas necesarias para este POV. Menos ruido visual, mas operacion real.
+              Cada botón abre solo las herramientas necesarias para este POV. Menos ruido visual, más operación real.
             </p>
           </div>
 
@@ -1498,7 +1650,7 @@ function RoleRoutePage({
                 {[
                   ['name', 'Nombre comercial'],
                   ['legalId', 'Registro sanitario / legal'],
-                  ['address', 'Direccion operativa'],
+                  ['address', 'Dirección operativa'],
                   ['contact', 'Contacto responsable'],
                   ['wallet', 'Wallet Stellar del dispensario'],
                 ].map(([key, label]) => (
@@ -1526,7 +1678,7 @@ function RoleRoutePage({
               </button>
 
               <p className="mt-3 text-xs leading-relaxed text-brand-green-mid/60">
-                En el MVP esta solicitud se guarda localmente para validar UX. En produccion se enviara al backend y, tras aprobacion, ejecutara `add_dispensary` en Soroban.
+                En el MVP esta solicitud se guarda localmente para validar UX. En producción se enviará al backend y, tras aprobación, ejecutará `add_dispensary` en Soroban.
               </p>
             </motion.div>
           )}

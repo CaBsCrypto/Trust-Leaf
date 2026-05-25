@@ -69,6 +69,7 @@
     [],
     [],
     [],
+    [],
     []
   ],
   "ledger": {
@@ -143,6 +144,14 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "dispensed_quantity"
+                    },
+                    "val": {
+                      "u64": "2"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "doctor"
                     },
                     "val": {
@@ -195,6 +204,14 @@
                     },
                     "val": {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "total_quantity"
+                    },
+                    "val": {
+                      "u64": "30"
                     }
                   }
                 ]

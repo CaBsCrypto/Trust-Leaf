@@ -41,6 +41,72 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["patientId", "dispensaryId", "token"]
+    },
+    "DoctorApplication": {
+      "title": "Doctor Application",
+      "description": "Private professional onboarding request reviewed by Trust Leaf admin before on-chain registry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "licenseId": { "type": "string" },
+        "specialty": { "type": "string" },
+        "contact": { "type": "string" },
+        "wallet": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "needs_review", "approved", "rejected"] },
+        "onchainStatus": { "type": "string", "enum": ["pending", "registered", "failed"] },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "metadataHash": { "type": "string" }
+      },
+      "required": ["id", "name", "licenseId", "specialty", "contact", "wallet", "status", "onchainStatus", "submittedAt"]
+    },
+    "DispensaryApplication": {
+      "title": "Dispensary Application",
+      "description": "Private dispensary onboarding request reviewed by Trust Leaf admin before on-chain registry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "legalId": { "type": "string" },
+        "address": { "type": "string" },
+        "contact": { "type": "string" },
+        "wallet": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "needs_review", "approved", "rejected"] },
+        "onchainStatus": { "type": "string", "enum": ["pending", "registered", "failed"] },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "metadataHash": { "type": "string" }
+      },
+      "required": ["id", "name", "legalId", "address", "contact", "wallet", "status", "onchainStatus", "submittedAt"]
+    },
+    "ClinicalRecord": {
+      "title": "Private Clinical Record",
+      "description": "Encrypted/off-chain patient history, symptoms, exams and treatment evidence",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "recordType": { "type": "string", "enum": ["symptoms", "exam", "treatment", "note"] },
+        "privatePayloadRef": { "type": "string" },
+        "publicHash": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientId", "recordType", "privatePayloadRef", "createdAt"]
+    },
+    "ConsentGrant": {
+      "title": "Patient Consent Grant",
+      "description": "Temporary patient permission for a doctor or validator to read scoped private records",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "actorWallet": { "type": "string" },
+        "actorRole": { "type": "string", "enum": ["doctor", "dispensary", "admin", "validator"] },
+        "scope": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["active", "revoked", "expired"] },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "publicHash": { "type": "string" }
+      },
+      "required": ["patientId", "actorWallet", "actorRole", "scope", "status", "expiresAt"]
     }
   },
   "firestore": {
@@ -55,6 +121,22 @@
     "pickups/{pickupId}": {
       "schema": "Pickup",
       "description": "Active medicine withdrawals"
+    },
+    "doctorApplications/{applicationId}": {
+      "schema": "DoctorApplication",
+      "description": "Doctor onboarding applications and admin review state"
+    },
+    "dispensaryApplications/{applicationId}": {
+      "schema": "DispensaryApplication",
+      "description": "Dispensary onboarding applications and admin review state"
+    },
+    "clinicalRecords/{recordId}": {
+      "schema": "ClinicalRecord",
+      "description": "Private patient clinical history and exam references"
+    },
+    "consents/{consentId}": {
+      "schema": "ConsentGrant",
+      "description": "Temporary patient-controlled access grants"
     }
   }
 }

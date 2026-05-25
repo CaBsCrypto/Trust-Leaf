@@ -4,13 +4,13 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 const DEFAULT_READONLY_ACCOUNT =
   'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6';
 const DEFAULT_REGISTRY_CONTRACT_ID =
-  'CDNV4BVPCLAZJXYZ2ADPA2SQMBGJQMSQDF33QABQ4YN2W63C5CJF3PHS';
+  'CAM6BHCGMIJ6KTCDPT6E3MW263YZPFMYT5TWRQ4VKYFO7KOR27EVGF3V';
 const DEFAULT_DISPENSARY_REGISTRY_CONTRACT_ID =
-  'CCFW6WEVV76EIRHKZDPIKIXHEFC53EMJ5FLND5ZBBES22NXZD3VUQNTX';
+  'CCYXOVG6YVU7QJRNPFEBLTAOLSYD7UZH7X5SEKKD7PNKT24IPH5SVA5C';
 const DEFAULT_PRESCRIPTION_CONTRACT_ID =
-  'CDPIIGBA6WAL7MBPUWSRIQNLCITKGRO5REWIYTAVSOS3FHSK373MEK42';
+  'CBINKAIKPD7WMF4VF7L74HWVQJ5NBNYB3LG7VNB7VC7H4JZG65GMOJVE';
 const DEFAULT_DISPENSE_RECORD_CONTRACT_ID =
-  'CBG6Z77BNEVMPOVAYI2RKGVFSNU4QJ4GBCP5ALRECDHDBJGWOO2DQJVI';
+  'CAKTCQO2BOBBCSMOL3Z7GKCIAM7DS3JFK6CA6LYVO32E6HWGOVISETGN';
 
 export function getRpcUrl() {
   return process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org';
@@ -80,7 +80,21 @@ export function getDispensaryAddress() {
   return StellarSdk.Keypair.fromSecret(secret).publicKey();
 }
 
+export function getAdminSecret() {
+  return process.env.STELLAR_ADMIN_SECRET?.trim() || '';
+}
+
+export function getAdminAddress() {
+  const secret = getAdminSecret();
+  if (!secret) {
+    return process.env.STELLAR_ADMIN_ADDRESS || '';
+  }
+
+  return StellarSdk.Keypair.fromSecret(secret).publicKey();
+}
+
 export function getRuntimeReadiness() {
+  const hasAdminSigner = Boolean(getAdminSecret());
   const hasDoctorSigner = Boolean(getDoctorSecret());
   const hasDispensarySigner = Boolean(getDispensarySecret());
   const hasPasskeyRelayer = Boolean(
@@ -101,6 +115,10 @@ export function getRuntimeReadiness() {
       dispenseRecordContractId: getDispenseRecordContractId(),
     },
     signers: {
+      admin: {
+        configured: hasAdminSigner,
+        address: getAdminAddress() || null,
+      },
       doctor: {
         configured: hasDoctorSigner,
         address: getDoctorAddress() || null,
@@ -116,17 +134,85 @@ export function getRuntimeReadiness() {
     },
     capabilities: {
       readContracts: true,
+      registerActors: hasAdminSigner,
       issuePrescriptions: hasDoctorSigner,
       dispensePrescriptions: hasDispensarySigner,
       passkeyRelay: hasPasskeyRelayer,
       passkeyDiscovery: hasMercuryLookup,
     },
     missing: [
+      ...(!hasAdminSigner ? ['STELLAR_ADMIN_SECRET'] : []),
       ...(!hasDoctorSigner ? ['STELLAR_DOCTOR_SECRET'] : []),
       ...(!hasDispensarySigner ? ['STELLAR_DISPENSARY_SECRET'] : []),
       ...(!hasPasskeyRelayer ? ['STELLAR_RELAYER_URL', 'STELLAR_RELAYER_API_KEY'] : []),
       ...(!hasMercuryLookup ? ['STELLAR_MERCURY_URL', 'STELLAR_MERCURY_JWT or STELLAR_MERCURY_KEY'] : []),
     ],
+  };
+}
+
+export async function registerDoctorOnTestnet(input: { doctorAddress: string }) {
+  const doctorAddress = input.doctorAddress.trim();
+  if (!doctorAddress) {
+    throw new Error('Falta la wallet Stellar del medico.');
+  }
+
+  const adminSecret = getAdminSecret();
+  if (!adminSecret) {
+    throw new Error('Falta STELLAR_ADMIN_SECRET para registrar medicos en DoctorRegistry Testnet.');
+  }
+
+  const server = getSorobanServer();
+  const adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+  const adminAddress = adminKeypair.publicKey();
+  const contract = new StellarSdk.Contract(getRegistryContractId());
+
+  const result = await submitSingleContractCall(
+    server,
+    adminKeypair,
+    contract,
+    'add_doctor',
+    [addressToScVal(adminAddress), addressToScVal(doctorAddress)],
+  );
+
+  return {
+    txHash: result.txHash,
+    adminAddress,
+    doctorAddress,
+    registryContractId: getRegistryContractId(),
+    network: 'Stellar Testnet',
+  };
+}
+
+export async function registerDispensaryOnTestnet(input: { dispensaryAddress: string }) {
+  const dispensaryAddress = input.dispensaryAddress.trim();
+  if (!dispensaryAddress) {
+    throw new Error('Falta la wallet Stellar del dispensario.');
+  }
+
+  const adminSecret = getAdminSecret();
+  if (!adminSecret) {
+    throw new Error('Falta STELLAR_ADMIN_SECRET para registrar dispensarios en DispensaryRegistry Testnet.');
+  }
+
+  const server = getSorobanServer();
+  const adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+  const adminAddress = adminKeypair.publicKey();
+  const contract = new StellarSdk.Contract(getDispensaryRegistryContractId());
+
+  const result = await submitSingleContractCall(
+    server,
+    adminKeypair,
+    contract,
+    'add_dispensary',
+    [addressToScVal(adminAddress), addressToScVal(dispensaryAddress)],
+  );
+
+  return {
+    txHash: result.txHash,
+    adminAddress,
+    dispensaryAddress,
+    dispensaryRegistryContractId: getDispensaryRegistryContractId(),
+    network: 'Stellar Testnet',
   };
 }
 
@@ -217,6 +303,7 @@ export async function issuePrescriptionForPatient(input: {
   dosage: string;
   notes?: string;
   durationDays: number;
+  totalQuantity?: number;
 }) {
   const treatment = input.treatment.trim();
   const dosage = input.dosage.trim();
@@ -228,6 +315,10 @@ export async function issuePrescriptionForPatient(input: {
 
   if (!Number.isFinite(input.durationDays) || input.durationDays < 1) {
     throw new Error('La vigencia de la receta debe ser de al menos 1 dia.');
+  }
+  const totalQuantity = Math.floor(input.totalQuantity ?? 30);
+  if (!Number.isFinite(totalQuantity) || totalQuantity < 1) {
+    throw new Error('La cantidad total autorizada debe ser mayor o igual a 1.');
   }
 
   const doctorSecret = getDoctorSecret();
@@ -249,6 +340,7 @@ export async function issuePrescriptionForPatient(input: {
     dosage,
     notes,
     durationDays: input.durationDays,
+    totalQuantity,
     network: 'testnet',
   };
   const medicationHashHex = createHash('sha256')
@@ -260,6 +352,7 @@ export async function issuePrescriptionForPatient(input: {
     addressToScVal(input.patientAddress),
     bytes32ToScVal(medicationHashBytes),
     u64ToScVal(BigInt(Math.floor(input.durationDays)) * 24n * 60n * 60n),
+    u64ToScVal(BigInt(totalQuantity)),
   ];
 
   let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
@@ -295,6 +388,7 @@ export async function issuePrescriptionForPatient(input: {
     issuedId,
     doctorAddress,
     medicationHash: medicationHashHex,
+    totalQuantity,
     dashboard,
   };
 }
@@ -559,7 +653,10 @@ function normalizePrescriptionRecord(
   },
 ) {
   const expiresAt = Number(onchain.expires_at);
-  const isUsed = Boolean(onchain.is_used);
+  const totalQuantity = Number(onchain.total_quantity ?? 1);
+  const dispensedQuantity = Number(onchain.dispensed_quantity ?? (onchain.is_used ? totalQuantity : 0));
+  const remainingQuantity = Math.max(totalQuantity - dispensedQuantity, 0);
+  const isUsed = Boolean(onchain.is_used) || remainingQuantity <= 0;
   const now = Math.floor(Date.now() / 1000);
   const status = isUsed ? 'used' : expiresAt <= now ? 'expired' : 'active';
 
@@ -569,6 +666,9 @@ function normalizePrescriptionRecord(
     doctor: String(onchain.doctor),
     medicationHash: bufferLikeToHex(onchain.medication_hash),
     expiresAt,
+    totalQuantity,
+    dispensedQuantity,
+    remainingQuantity,
     isUsed,
     status,
     issuedAt: event.ledgerClosedAt,
