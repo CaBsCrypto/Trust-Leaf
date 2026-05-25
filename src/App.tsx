@@ -23,6 +23,15 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
 type DoctorRegistration = DoctorApplication;
+type ActorRole = 'patient' | 'doctor' | 'dispensary' | 'admin';
+
+interface TrustSession {
+  role: ActorRole;
+  email: string;
+  name: string;
+  mode: 'demo' | 'email';
+  createdAt: string;
+}
 
 // Future hardening: these local registration records should move to Supabase
 // with encrypted documents and an Agent 402 verification result. Admin approval
@@ -31,6 +40,9 @@ type DoctorRegistration = DoctorApplication;
 const PATIENT_VIEWS: PortalView[] = ['overview', 'profile', 'doctors', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
+const TRUST_SESSION_KEY = 'trust_leaf_session';
+const DEFAULT_DOCTOR_WALLET = 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX';
+const DEFAULT_DISPENSARY_WALLET = 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
 const ROLE_ROUTES = [
   { path: '/paciente', label: 'Paciente' },
@@ -69,6 +81,33 @@ function AppContent() {
     return saved ? JSON.parse(saved) : [];
   });
   const [registrationSource, setRegistrationSource] = useState<PersistenceSource>('local-demo');
+  const [session, setSession] = useState<TrustSession | null>(() => {
+    try {
+      const saved = localStorage.getItem(TRUST_SESSION_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const startSession = (role: ActorRole, input: { email: string; name: string; mode?: TrustSession['mode'] }) => {
+    const nextSession: TrustSession = {
+      role,
+      email: input.email,
+      name: input.name,
+      mode: input.mode ?? 'email',
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
+  };
+
+  const endSession = () => {
+    localStorage.removeItem(TRUST_SESSION_KEY);
+    setSession(null);
+  };
+
+  const hasRoleSession = (role: ActorRole) => session?.role === role;
 
   const navigate = (nextPath: string) => {
     window.history.pushState({}, '', nextPath);
@@ -194,6 +233,22 @@ function AppContent() {
 
   const patientView = PATIENT_ROUTE_VIEWS[path];
   if (patientView) {
+    if (!hasRoleSession('patient')) {
+      return (
+        <AuthGate
+          role="patient"
+          title="Entra como paciente"
+          description="Tu cuenta Trust Leaf sera el punto de control para ficha clinica, recetas, permisos y trazabilidad. Las fees de red quedan patrocinadas por Trust Leaf."
+          primaryAction="Entrar al portal"
+          demoAction="Entrar con paciente demo"
+          defaultEmail="paciente@trustleaf.test"
+          defaultName="Paciente demo"
+          onBack={() => navigate('/')}
+          onStart={startSession}
+        />
+      );
+    }
+
     return (
       <MockupPortal
         isOpen
@@ -207,6 +262,22 @@ function AppContent() {
   }
 
   if (path === '/medico') {
+    if (!hasRoleSession('doctor')) {
+      return (
+        <AuthGate
+          role="doctor"
+          title="Cuenta profesional"
+          description="Primero el medico crea su cuenta y solicita alta. La wallet puede conectarse ahora o quedar como credencial gestionada por Trust Leaf al aprobar."
+          primaryAction="Crear cuenta y solicitar alta"
+          demoAction="Entrar como medico demo"
+          defaultEmail="medico@trustleaf.test"
+          defaultName="Dra. Sofia Lagos"
+          onBack={() => navigate('/')}
+          onStart={startSession}
+        />
+      );
+    }
+
     return (
       <DoctorRegistrationRoute
         onBack={() => navigate('/')}
@@ -218,6 +289,22 @@ function AppContent() {
   }
 
   if (path === '/medico/operacion') {
+    if (!hasRoleSession('doctor')) {
+      return (
+        <AuthGate
+          role="doctor"
+          title="Acceso medico aprobado"
+          description="El panel profesional queda disponible cuando admin aprueba la cuenta y registra la credencial medica. En demo puedes entrar como medico ya aprobado."
+          primaryAction="Entrar al panel"
+          demoAction="Entrar como medico demo aprobado"
+          defaultEmail="medico@trustleaf.test"
+          defaultName="Dra. Sofia Lagos"
+          onBack={() => navigate('/medico')}
+          onStart={startSession}
+        />
+      );
+    }
+
     return (
       <MockupPortal
         isOpen
@@ -231,6 +318,22 @@ function AppContent() {
   }
 
   if (path === '/dispensario') {
+    if (!hasRoleSession('dispensary')) {
+      return (
+        <AuthGate
+          role="dispensary"
+          title="Cuenta de dispensario"
+          description="El dispensario crea cuenta, solicita alta y luego admin habilita la credencial operativa. La wallet puede conectarse o ser gestionada por Trust Leaf."
+          primaryAction="Crear cuenta y solicitar alta"
+          demoAction="Entrar como dispensario demo"
+          defaultEmail="dispensario@trustleaf.test"
+          defaultName="Green Leaf Center"
+          onBack={() => navigate('/')}
+          onStart={startSession}
+        />
+      );
+    }
+
     return (
       <DispensaryRegistrationRoute
         onBack={() => navigate('/')}
@@ -242,6 +345,22 @@ function AppContent() {
   }
 
   if (path === '/dispensario/operacion' || path === '/dispensario/historial' || path === '/dispensario/retiros') {
+    if (!hasRoleSession('dispensary')) {
+      return (
+        <AuthGate
+          role="dispensary"
+          title="Acceso operativo"
+          description="El panel de inventario y entregas queda disponible para dispensarios aprobados. En demo puedes entrar como operador ya validado."
+          primaryAction="Entrar al panel"
+          demoAction="Entrar como dispensario demo aprobado"
+          defaultEmail="dispensario@trustleaf.test"
+          defaultName="Green Leaf Center"
+          onBack={() => navigate('/dispensario')}
+          onStart={startSession}
+        />
+      );
+    }
+
     return (
       <MockupPortal
         isOpen
@@ -261,9 +380,27 @@ function AppContent() {
   }
 
   if (path === '/admin') {
+    if (!hasRoleSession('admin')) {
+      return (
+        <AuthGate
+          role="admin"
+          title="Acceso admin"
+          description="Admin revisa solicitudes, aprueba actores y registra credenciales on-chain. En produccion esto ira con allowlist, 2FA y permisos estrictos."
+          primaryAction="Entrar como admin"
+          demoAction="Entrar admin demo"
+          defaultEmail="admin@trustleaf.test"
+          defaultName="Admin Trust Leaf"
+          onBack={() => navigate('/')}
+          onStart={startSession}
+        />
+      );
+    }
+
     return (
       <AdminRoute
         onBack={() => navigate('/')}
+        session={session}
+        onSignOut={endSession}
         doctorRegistrations={doctorRegistrations}
         registrations={dispensaryRegistrations}
         registrationSource={registrationSource}
@@ -566,8 +703,139 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
   );
 }
 
+function AuthGate({
+  role,
+  title,
+  description,
+  primaryAction,
+  demoAction,
+  defaultEmail,
+  defaultName,
+  onBack,
+  onStart,
+}: {
+  role: ActorRole;
+  title: string;
+  description: string;
+  primaryAction: string;
+  demoAction: string;
+  defaultEmail: string;
+  defaultName: string;
+  onBack: () => void;
+  onStart: (role: ActorRole, input: { email: string; name: string; mode?: TrustSession['mode'] }) => void;
+}) {
+  const [form, setForm] = useState({
+    email: defaultEmail,
+    name: defaultName,
+  });
+
+  const roleLabel = {
+    patient: 'Paciente',
+    doctor: 'Medico',
+    dispensary: 'Dispensario',
+    admin: 'Admin',
+  }[role];
+
+  const walletTiming = {
+    patient: 'La cuenta se crea al entrar. Luego puedes activar passkey o Freighter desde Mi Cuenta.',
+    doctor: 'La credencial profesional se vincula durante la solicitud o se crea automaticamente cuando admin aprueba.',
+    dispensary: 'La credencial operativa se vincula durante el alta o se crea automaticamente al quedar aprobado.',
+    admin: 'Admin usa una cuenta separada. La wallet pagadora y las secrets viven en backend, no en el navegador.',
+  }[role];
+
+  const submit = (mode: TrustSession['mode']) => {
+    if (!form.email.trim() || !form.name.trim()) return;
+    onStart(role, {
+      email: form.email.trim(),
+      name: form.name.trim(),
+      mode,
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <span className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
+            {roleLabel}
+          </span>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
+        <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9">
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso Trust Leaf</p>
+          <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">{title}</h1>
+          <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">{description}</p>
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Wallet / credencial</p>
+            <p className="mt-2 text-sm leading-relaxed text-brand-ivory/70">{walletTiming}</p>
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Login MVP</p>
+          <h2 className="mt-2 text-2xl font-serif">Sesion de trabajo</h2>
+          <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+            Primer corte de auth para ordenar roles. La siguiente iteracion conecta esta pantalla con Firebase/Supabase Auth y politicas por rol.
+          </p>
+
+          <div className="mt-5 grid grid-cols-1 gap-3">
+            <label>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Nombre</span>
+              <input
+                value={form.name}
+                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+              />
+            </label>
+            <label>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Email</span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => submit('email')}
+              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+            >
+              {primaryAction}
+            </button>
+            <button
+              type="button"
+              onClick={() => submit('demo')}
+              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
+            >
+              {demoAction}
+            </button>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-brand-gold/20 bg-brand-gold/10 p-4 text-xs leading-relaxed text-brand-green-mid/75">
+            MVP: el usuario no necesita saldo. Trust Leaf patrocina fees de Stellar; la wallet funciona como identidad, credencial y prueba verificable.
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function AdminRoute({
   onBack,
+  session,
+  onSignOut,
   doctorRegistrations,
   registrations,
   registrationSource,
@@ -579,6 +847,8 @@ function AdminRoute({
   onRegisterDispensaryOnchain,
 }: {
   onBack: () => void;
+  session: TrustSession | null;
+  onSignOut: () => void;
   doctorRegistrations: DoctorRegistration[];
   registrations: DispensaryRegistration[];
   registrationSource: PersistenceSource;
@@ -668,12 +938,25 @@ function AdminRoute({
               Persistencia: {registrationSource === 'supabase' ? 'Supabase' : registrationSource === 'firebase' ? 'Firebase' : 'Demo local'}
             </p>
           </div>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 rounded-xl bg-brand-green-deep text-brand-ivory text-sm font-bold hover:bg-brand-green-mid transition-colors"
-          >
-            Volver al landing
-          </button>
+          <div className="flex items-center gap-2">
+            {session && (
+              <span className="hidden rounded-xl border border-brand-green-deep/10 bg-brand-neutral px-3 py-2 text-xs font-bold text-brand-green-mid md:inline-flex">
+                {session.email}
+              </span>
+            )}
+            <button
+              onClick={onSignOut}
+              className="px-4 py-2 rounded-xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:bg-brand-neutral transition-colors"
+            >
+              Salir
+            </button>
+            <button
+              onClick={onBack}
+              className="px-4 py-2 rounded-xl bg-brand-green-deep text-brand-ivory text-sm font-bold hover:bg-brand-green-mid transition-colors"
+            >
+              Volver al landing
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1159,11 +1442,14 @@ function DispensaryRegistrationRoute({
   const approved = dispensaryRegistrations.filter((request) => request.status === 'approved');
 
   const submitRegistration = () => {
-    if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact || !registrationForm.wallet) {
+    if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact) {
       return;
     }
 
-    onSubmitDispensaryRegistration(registrationForm);
+    onSubmitDispensaryRegistration({
+      ...registrationForm,
+      wallet: registrationForm.wallet || DEFAULT_DISPENSARY_WALLET,
+    });
     setRegistrationForm({
       name: '',
       legalId: '',
@@ -1209,7 +1495,7 @@ function DispensaryRegistrationRoute({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro de dispensario</p>
           <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Después operas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-            El dispensario completa su solicitud, Trust Leaf revisa desde admin y, al aprobar, queda listo para validar recetas y registrar entregas.
+            El dispensario completa su solicitud, Trust Leaf revisa desde admin y, al aprobar, queda listo para validar recetas y registrar entregas. La credencial Stellar puede conectarse ahora o crearse al aprobar.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1257,7 +1543,7 @@ function DispensaryRegistrationRoute({
                 ['legalId', 'Registro sanitario / legal'],
                 ['address', 'Dirección operativa'],
                 ['contact', 'Contacto responsable'],
-                ['wallet', 'Wallet Stellar del dispensario'],
+                ['wallet', 'Wallet/Credencial Stellar del dispensario (opcional)'],
               ].map(([key, label]) => (
                 <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
@@ -1271,6 +1557,15 @@ function DispensaryRegistrationRoute({
                     }
                     className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
                   />
+                  {key === 'wallet' && (
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationForm((current) => ({ ...current, wallet: DEFAULT_DISPENSARY_WALLET }))}
+                      className="mt-2 rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-deep"
+                    >
+                      Usar credencial gestionada Trust Leaf
+                    </button>
+                  )}
                 </label>
               ))}
             </div>
@@ -1327,11 +1622,14 @@ function DoctorRegistrationRoute({
   const approved = doctorRegistrations.filter((request) => request.status === 'approved');
 
   const submitRegistration = () => {
-    if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact || !registrationForm.wallet) {
+    if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact) {
       return;
     }
 
-    onSubmitDoctorRegistration(registrationForm);
+    onSubmitDoctorRegistration({
+      ...registrationForm,
+      wallet: registrationForm.wallet || DEFAULT_DOCTOR_WALLET,
+    });
     setRegistrationForm({
       name: '',
       licenseId: '',
@@ -1377,7 +1675,7 @@ function DoctorRegistrationRoute({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro médico</p>
           <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Después emites recetas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-            El médico presenta licencia, especialidad y wallet. Admin revisa y habilita el acceso profesional para emitir recetas verificables.
+            El medico presenta licencia y especialidad. Puede conectar wallet ahora o dejar que Trust Leaf cree una credencial profesional al aprobar el alta.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1425,7 +1723,7 @@ function DoctorRegistrationRoute({
                 ['licenseId', 'Licencia / registro médico'],
                 ['specialty', 'Especialidad'],
                 ['contact', 'Contacto responsable'],
-                ['wallet', 'Wallet Stellar del médico'],
+                ['wallet', 'Wallet/Credencial Stellar del medico (opcional)'],
               ].map(([key, label]) => (
                 <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
@@ -1439,6 +1737,15 @@ function DoctorRegistrationRoute({
                     }
                     className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
                   />
+                  {key === 'wallet' && (
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationForm((current) => ({ ...current, wallet: DEFAULT_DOCTOR_WALLET }))}
+                      className="mt-2 rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-deep"
+                    >
+                      Usar credencial gestionada Trust Leaf
+                    </button>
+                  )}
                 </label>
               ))}
             </div>
