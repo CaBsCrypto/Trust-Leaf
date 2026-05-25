@@ -780,10 +780,10 @@ function AuthGate({
         </section>
 
         <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Login MVP</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso privado</p>
           <h2 className="mt-2 text-2xl font-serif">Sesion de trabajo</h2>
           <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-            Primer corte de auth para ordenar roles. La siguiente iteracion conecta esta pantalla con Firebase/Supabase Auth y politicas por rol.
+            Cada actor entra a su propio panel. La siguiente iteracion conecta este acceso con Auth y politicas por rol.
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-3">
@@ -1265,7 +1265,7 @@ function AdminRoute({
               </p>
             </div>
             <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
-              MVP conceptual
+              Arquitectura privada
             </span>
           </div>
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -1983,7 +1983,7 @@ function RoleRoutePage({
               </button>
 
               <p className="mt-3 text-xs leading-relaxed text-brand-green-mid/60">
-                En el MVP esta solicitud se guarda localmente para validar UX. En producción se enviará al backend y, tras aprobación, ejecutará `add_dispensary` en Soroban.
+                Esta solicitud queda preparada para revisión del admin. En producción se enviará al backend y, tras aprobación, ejecutará `add_dispensary` en Soroban.
               </p>
             </motion.div>
           )}

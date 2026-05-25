@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images, Leaf } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
 import { shortenAddress, stellarConfig } from '../lib/stellar/config';
@@ -118,6 +118,20 @@ interface PrivateClinicalRecord {
 
 type PrivacyPermissionKind = 'medical-consultation' | 'dispensary-prescription';
 type PrivacyPermissionStatus = 'active' | 'revoked';
+type ActionDrawerKey =
+  | 'doctor-agenda'
+  | 'doctor-consultation'
+  | 'doctor-clinical-summary'
+  | 'doctor-prescription'
+  | 'patient-account'
+  | 'patient-permissions'
+  | 'patient-record'
+  | 'patient-prescription'
+  | 'patient-traceability'
+  | 'dispensary-inventory'
+  | 'dispensary-qr'
+  | 'dispensary-dispense'
+  | 'dispensary-traceability';
 
 interface PrivacyPermission {
   id: string;
@@ -130,6 +144,134 @@ interface PrivacyPermission {
   hash: string;
   qrToken: string;
   createdAt: string;
+}
+
+function ActionCard({
+  icon,
+  eyebrow,
+  title,
+  description,
+  status,
+  onClick,
+  tone = 'light',
+  disabled = false,
+}: {
+  icon: ReactNode;
+  eyebrow?: string;
+  title: string;
+  description: string;
+  status?: string;
+  onClick: () => void;
+  tone?: 'light' | 'cream' | 'green' | 'blue';
+  disabled?: boolean;
+}) {
+  const toneClasses = {
+    light: 'border-brand-green-deep/10 bg-white hover:border-brand-gold/45',
+    cream: 'border-brand-gold/25 bg-[#fbf7ef] hover:border-brand-gold/55',
+    green: 'border-brand-green-deep/15 bg-brand-green-deep text-brand-ivory hover:bg-brand-green-mid',
+    blue: 'border-blue-100 bg-blue-50 hover:border-blue-200',
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`group flex min-h-[156px] w-full flex-col rounded-3xl border p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-45 ${toneClasses[tone]}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+          tone === 'green' ? 'bg-white/10 text-brand-gold' : 'bg-brand-green-deep text-brand-gold'
+        }`}>
+          {icon}
+        </span>
+        {status && (
+          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+            tone === 'green' ? 'bg-white/10 text-brand-ivory/80' : 'bg-brand-neutral text-brand-green-mid/65'
+          }`}>
+            {status}
+          </span>
+        )}
+      </div>
+      <div className="mt-5 flex-1">
+        {eyebrow && (
+          <p className={`mb-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
+            tone === 'green' ? 'text-brand-gold' : 'text-brand-gold'
+          }`}>
+            {eyebrow}
+          </p>
+        )}
+        <h4 className={`text-lg font-bold ${tone === 'green' ? 'text-brand-ivory' : 'text-brand-green-deep'}`}>{title}</h4>
+        <p className={`mt-2 text-sm leading-relaxed ${tone === 'green' ? 'text-brand-ivory/65' : 'text-brand-green-mid/65'}`}>
+          {description}
+        </p>
+      </div>
+      <span className={`mt-5 inline-flex items-center gap-2 text-sm font-bold ${tone === 'green' ? 'text-brand-gold' : 'text-brand-green-deep'}`}>
+        Abrir <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+      </span>
+    </button>
+  );
+}
+
+function ActionDrawer({
+  open,
+  eyebrow,
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="action-drawer-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[130] flex justify-end bg-brand-green-deep/45 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+            className="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl md:max-w-[760px] md:rounded-l-[32px]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-brand-green-deep/10 bg-[#fbf9f3] px-6 py-6 md:px-8">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  {eyebrow && <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">{eyebrow}</p>}
+                  <h3 className="mt-2 font-serif text-3xl leading-tight text-brand-green-deep md:text-4xl">{title}</h3>
+                  {description && <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-green-mid/70">{description}</p>}
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-brand-green-deep/10 bg-white text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                  aria-label="Cerrar panel"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8">
+              {children}
+            </div>
+          </motion.aside>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 function formatPortalDate(value: string) {
@@ -798,6 +940,7 @@ export default function MockupPortal({
   const [selectedPrescription, setSelectedPrescription] = useState<any | null>(null);
   const [selectedTraceRecord, setSelectedTraceRecord] = useState<any | null>(null);
   const [selectedClinicalRecord, setSelectedClinicalRecord] = useState<any | null>(null);
+  const [activeDrawer, setActiveDrawer] = useState<ActionDrawerKey | null>(null);
   const [clinicalAccessState, setClinicalAccessState] = useState<Record<string, 'private' | 'authorized' | 'revoked'>>({});
   const [privacyPermissions, setPrivacyPermissions] = useState<PrivacyPermission[]>(() => {
     const saved = localStorage.getItem('trust_privacy_permissions');
@@ -1870,7 +2013,7 @@ export default function MockupPortal({
     setDispenseSuccess(
       mode === 'demo'
         ? `Retiro demo registrado. Record ${recordId}. La receta mantiene saldo para futuras entregas.`
-        : 'El contrato testnet marcó esta receta sin cupo activo. Para el MVP registramos un retiro fraccionado privado; en producción el contrato debe manejar cupos semanales/gramos restantes.',
+        : 'El contrato testnet marcó esta receta sin cupo activo. Trust Leaf conserva un retiro fraccionado privado mientras la siguiente versión de contratos maneja gramos restantes por periodo.',
     );
     setDispensaryStep('success');
     setCart([]);
@@ -2233,6 +2376,584 @@ export default function MockupPortal({
       setActiveView(allowedViews?.[0] ?? 'overview');
     }
   }, [activeView, allowedViews]);
+
+  const drawerMeta: Record<ActionDrawerKey, { eyebrow: string; title: string; description: string }> = {
+    'doctor-agenda': {
+      eyebrow: 'Agenda profesional',
+      title: 'Gestionar disponibilidad',
+      description: 'Crea bloques, revisa reservas y abre la consulta correcta cuando el paciente llegue.',
+    },
+    'doctor-consultation': {
+      eyebrow: 'Consulta activa',
+      title: selectedConsultationBlock ? selectedConsultationBlock.patient ?? 'Paciente en consulta' : 'Selecciona una consulta',
+      description: 'Valida llegada por QR, inicia la atención y mantiene visible el estado de la sesión.',
+    },
+    'doctor-clinical-summary': {
+      eyebrow: 'Ficha privada',
+      title: 'Resumen clínico de consulta',
+      description: 'Registra solo lo necesario para el tratamiento. La información clínica queda bajo control del paciente.',
+    },
+    'doctor-prescription': {
+      eyebrow: 'Receta verificable',
+      title: 'Preparar receta',
+      description: 'Define tratamiento, dosis, vigencia y saldo autorizado antes de emitir la receta.',
+    },
+    'patient-account': {
+      eyebrow: 'Cuenta Trust Leaf',
+      title: 'Identidad y acceso',
+      description: 'El paciente controla su cuenta, permisos y pruebas verificables desde un solo lugar.',
+    },
+    'patient-permissions': {
+      eyebrow: 'Privacidad',
+      title: 'Permisos activos',
+      description: 'Revisa quién puede acceder a datos o recetas y revoca permisos cuando lo necesites.',
+    },
+    'patient-record': {
+      eyebrow: 'Ficha clínica',
+      title: 'Historial privado',
+      description: 'Síntomas, exámenes y consultas se comparten solo con consentimiento temporal.',
+    },
+    'patient-prescription': {
+      eyebrow: 'Receta',
+      title: 'Receta verificable',
+      description: 'Genera QR para dispensario y revisa saldo disponible sin exponer diagnóstico.',
+    },
+    'patient-traceability': {
+      eyebrow: 'Medicina trazable',
+      title: 'Retiros y lotes',
+      description: 'Consulta entregas parciales, lote, cantidad y prueba pública de cada retiro.',
+    },
+    'dispensary-inventory': {
+      eyebrow: 'Inventario',
+      title: 'Productos y lotes',
+      description: 'Carga productos, ajusta stock y prepara una entrega desde un lote trazable.',
+    },
+    'dispensary-qr': {
+      eyebrow: 'Validación',
+      title: 'Validar QR de receta',
+      description: 'El dispensario ve vigencia, saldo, formatos y retiros previos, no ficha clínica.',
+    },
+    'dispensary-dispense': {
+      eyebrow: 'Entrega parcial',
+      title: 'Registrar retiro',
+      description: 'Confirma producto, cantidad y receta para actualizar saldo y trazabilidad.',
+    },
+    'dispensary-traceability': {
+      eyebrow: 'Trazabilidad',
+      title: 'Entregas recientes',
+      description: 'Revisa el historial operativo de lotes entregados y sus pruebas verificables.',
+    },
+  };
+
+  const openDrawer = (drawer: ActionDrawerKey) => setActiveDrawer(drawer);
+
+  const renderDrawerContent = () => {
+    if (!activeDrawer) {
+      return null;
+    }
+
+    switch (activeDrawer) {
+      case 'doctor-agenda':
+        return (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-brand-gold/20 bg-[#fbf7ef] p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-green-mid/45">Fecha actual</p>
+              <p className="mt-2 text-lg font-bold leading-relaxed text-brand-green-deep">
+                {formatLiveDate(currentNow)}
+                <span className="block text-sm font-semibold text-brand-green-mid/60">Actualizado {formatLiveTime(currentNow)}</span>
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <h4 className="text-lg font-bold text-brand-green-deep">Nuevo bloque horario</h4>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Fecha</span>
+                  <input
+                    value={agendaForm.date}
+                    onChange={(event) => setAgendaForm((current) => ({ ...current, date: event.target.value }))}
+                    className="w-full rounded-xl bg-brand-neutral/60 px-3 py-3 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Hora</span>
+                  <input
+                    value={agendaForm.time}
+                    onChange={(event) => setAgendaForm((current) => ({ ...current, time: event.target.value }))}
+                    className="w-full rounded-xl bg-brand-neutral/60 px-3 py-3 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                  />
+                </label>
+                <select
+                  value={agendaForm.status}
+                  onChange={(event) => setAgendaForm((current) => ({
+                    ...current,
+                    status: event.target.value as DoctorAgendaBlock['status'],
+                  }))}
+                  className="rounded-xl bg-brand-neutral/60 px-3 py-3 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                >
+                  <option value="Disponible">Disponible</option>
+                  <option value="Reservado">Reservado</option>
+                </select>
+                <input
+                  value={agendaForm.patient}
+                  onChange={(event) => setAgendaForm((current) => ({ ...current, patient: event.target.value }))}
+                  placeholder="Paciente si ya está reservado"
+                  className="rounded-xl bg-brand-neutral/60 px-3 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddAgendaBlock}
+                className="mt-4 w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+              >
+                Guardar bloque horario
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {doctorAgendaBlocks.map((block) => (
+                <div key={block.id} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-brand-green-deep">{block.date} · {block.time}</p>
+                      <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-green-mid/45">
+                        {block.status}{block.patient ? ` · ${block.patient}` : ''}
+                      </p>
+                      {block.reason && <p className="mt-1 text-xs text-brand-green-mid/60">{block.reason}</p>}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {block.status === 'Reservado' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openConsultationFromBlock(block);
+                            setActiveDrawer('doctor-consultation');
+                          }}
+                          className="rounded-full bg-brand-green-deep px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-ivory"
+                        >
+                          Abrir consulta
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleAgendaBlockStatus(block.id)}
+                        className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest ${
+                          block.status === 'Disponible'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-brand-gold/15 text-brand-green-deep'
+                        }`}
+                      >
+                        {block.status === 'Disponible' ? 'Reservar' : 'Liberar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'doctor-consultation':
+        return (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Estado</p>
+              <p className="mt-2 text-2xl font-bold text-brand-green-deep">
+                {!selectedConsultationBlock
+                  ? 'Sin consulta seleccionada'
+                  : selectedConsultationStatus === 'active'
+                    ? 'En consulta'
+                    : selectedConsultationStatus === 'completed'
+                      ? 'Finalizada'
+                      : selectedConsultationStatus === 'checked_in'
+                        ? 'Paciente validado'
+                        : 'Agendada'}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                {selectedConsultationBlock
+                  ? `${selectedConsultationBlock.date} · ${selectedConsultationBlock.time} · ${selectedConsultationBlock.reason ?? 'Consulta médica'}`
+                  : 'Abre una reserva desde agenda para comenzar.'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={validatePatientQrForDoctor}
+                disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'scheduled'}
+                className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-left transition-colors hover:bg-blue-100 disabled:opacity-45"
+              >
+                <ShieldCheck size={20} className="mb-3 text-blue-700" />
+                <p className="font-bold text-brand-green-deep">Validar QR de llegada</p>
+                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/65">Confirma identidad, permiso temporal y wallet del paciente.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setConsultationStatus('active')}
+                disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'checked_in'}
+                className="rounded-2xl bg-brand-green-deep p-5 text-left text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:opacity-45"
+              >
+                <Activity size={20} className="mb-3 text-brand-gold" />
+                <p className="font-bold">Iniciar consulta</p>
+                <p className="mt-2 text-xs leading-relaxed text-brand-ivory/65">Abre la sesión clínica y habilita resumen/receta.</p>
+              </button>
+            </div>
+
+            {latestMedicalPermission && (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600/60">Permiso activo</p>
+                <p className="mt-2 font-mono text-xs text-blue-700">{latestMedicalPermission.qrToken}</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQrPermission(latestMedicalPermission)}
+                  className="mt-3 rounded-xl bg-white px-4 py-2 text-xs font-bold text-blue-700"
+                >
+                  Ver permiso privado
+                </button>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'doctor-clinical-summary':
+        return (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h4 className="text-lg font-bold text-brand-green-deep">Resumen para ficha del paciente</h4>
+                  <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                    Se guarda como registro privado. La capa verificable usa hashes y permisos, no notas clínicas abiertas.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedClinicalRecord(
+                    selectedConsultationBlock
+                      ? consultationClinicalRecords.find((record) => record.id === `consultation-${selectedConsultationBlock.id}`) ?? portableClinicalDossier[0]
+                      : portableClinicalDossier[0],
+                  )}
+                  className="rounded-xl border border-brand-green-deep/10 px-4 py-2 text-xs font-bold text-brand-green-deep"
+                >
+                  Ver ficha
+                </button>
+              </div>
+              <textarea
+                value={consultationSummaryDraft}
+                onChange={(event) => setConsultationSummaryDraft(event.target.value)}
+                rows={7}
+                className="mt-4 w-full resize-none rounded-2xl bg-brand-neutral/70 px-4 py-3 text-sm leading-relaxed text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+              />
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => saveConsultationSummaryToRecord()}
+                  disabled={!selectedConsultationBlock}
+                  className="rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:opacity-45"
+                >
+                  Guardar en ficha clínica
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConsultationStatus('completed');
+                    setActiveDrawer('doctor-prescription');
+                  }}
+                  disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'active'}
+                  className="rounded-xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:opacity-45"
+                >
+                  Cerrar y preparar receta
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'doctor-prescription':
+        return (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Paciente destino</p>
+              <p className="mt-2 break-all font-mono text-sm font-bold text-brand-green-deep">
+                {prescriptionPatientAddress || doctorPatientAddress}
+              </p>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-brand-neutral/60 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Tratamiento</p>
+                  <p className="mt-1 text-sm font-bold text-brand-green-deep">{doctorIssueForm.treatment}</p>
+                </div>
+                <div className="rounded-2xl bg-brand-neutral/60 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Límite mensual</p>
+                  <p className="mt-1 text-sm font-bold text-brand-green-deep">{doctorIssueForm.monthlyLimitGrams}g</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrescriptionToolOpen(true);
+                  setActiveDrawer(null);
+                }}
+                className="mt-5 w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+              >
+                Abrir editor de receta
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'patient-account':
+        return (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Cuenta Stellar del paciente</p>
+              <p className="mt-2 break-all font-mono text-sm font-bold text-brand-green-deep">{patientTrustAccountAddress}</p>
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {trustAccountMetrics.map(([label, value]) => (
+                  <div key={label} className="rounded-2xl bg-brand-neutral/60 p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                    <p className="mt-1 text-xl font-bold text-brand-green-deep">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'patient-permissions':
+        return (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => createPrivacyPermission('medical-consultation')}
+              className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory"
+            >
+              Compartir historial con médico
+            </button>
+            <button
+              type="button"
+              onClick={() => createPrivacyPermission('dispensary-prescription')}
+              className="w-full rounded-2xl border border-brand-gold/30 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep"
+            >
+              Compartir receta con dispensario
+            </button>
+            {privacyPermissions.length ? privacyPermissions.map((permission) => (
+              <div key={permission.id} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-brand-green-deep">{permission.actor}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/65">{permission.scope}</p>
+                    <p className="mt-2 font-mono text-[10px] text-brand-green-mid/55">{permission.hash}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                    permission.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-brand-neutral text-brand-green-mid/55'
+                  }`}>
+                    {permission.status === 'active' ? 'Activo' : 'Revocado'}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setSelectedQrPermission(permission)} className="rounded-xl border border-brand-green-deep/10 px-4 py-2 text-xs font-bold text-brand-green-deep">Ver QR</button>
+                  {permission.status === 'active' && (
+                    <button type="button" onClick={() => revokePrivacyPermission(permission.id)} className="rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-xs font-bold text-red-700">Revocar</button>
+                  )}
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/30 p-5 text-sm text-brand-green-mid/65">
+                Aún no hay permisos activos. El paciente decide cuándo compartir su ficha o receta.
+              </div>
+            )}
+          </div>
+        );
+
+      case 'patient-record':
+        return (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setShowClinicalGallery(true)}
+              className="w-full rounded-2xl border border-brand-green-deep/10 bg-white px-5 py-4 text-sm font-bold text-brand-green-deep"
+            >
+              Ver galería de exámenes
+            </button>
+            {[...portableClinicalDossier, ...consultationClinicalRecords].map((record) => (
+              <button
+                key={record.id}
+                type="button"
+                onClick={() => setSelectedClinicalRecord(record)}
+                className="w-full rounded-2xl border border-brand-green-deep/10 bg-white p-4 text-left transition-colors hover:border-brand-gold/40"
+              >
+                <p className="text-sm font-bold text-brand-green-deep">{record.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/65">{record.summary}</p>
+                <p className="mt-2 font-mono text-[10px] text-brand-green-mid/45">{record.proof}</p>
+              </button>
+            ))}
+          </div>
+        );
+
+      case 'patient-prescription':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <h4 className="text-lg font-bold text-brand-green-deep">Receta activa</h4>
+              <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                Saldo disponible: {prescriptionRemainingGrams}g de {prescriptionMonthlyLimitGrams}g autorizados.
+              </p>
+              <button
+                type="button"
+                onClick={() => createPrivacyPermission('dispensary-prescription')}
+                className="mt-4 w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory"
+              >
+                Generar QR para dispensario
+              </button>
+            </div>
+            {(patientDashboard?.prescriptions ?? []).map((prescription) => (
+              <button key={prescription.id} type="button" onClick={() => openOnchainPrescription(prescription)} className="w-full rounded-2xl border border-brand-green-deep/10 bg-white p-4 text-left">
+                <p className="text-sm font-bold text-brand-green-deep">Receta #{prescription.id}</p>
+                <p className="mt-1 text-xs text-brand-green-mid/65">{prescription.status} · {formatPortalDate(prescription.issuedAt)}</p>
+              </button>
+            ))}
+          </div>
+        );
+
+      case 'patient-traceability':
+      case 'dispensary-traceability':
+        return (
+          <div className="space-y-4">
+            {activePickups.length ? activePickups.map((pickup) => (
+              <div key={pickup.id} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-brand-green-deep">{pickup.strain?.name ?? 'Producto medicinal'}</p>
+                    <p className="mt-1 text-xs text-brand-green-mid/65">{pickup.quantity}g · {pickup.dispensary?.name ?? 'Dispensario autorizado'}</p>
+                  </div>
+                  <button type="button" onClick={() => openPickupTraceability(pickup)} className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory">
+                    Ver trazabilidad
+                  </button>
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/30 p-5 text-sm text-brand-green-mid/65">
+                Las entregas aparecerán aquí con lote, cantidad y prueba verificable.
+              </div>
+            )}
+          </div>
+        );
+
+      case 'dispensary-inventory':
+        return (
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <h4 className="text-lg font-bold text-brand-green-deep">Cargar producto trazable</h4>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input value={inventoryForm.name} onChange={(event) => setInventoryForm(prev => ({ ...prev, name: event.target.value }))} placeholder="Nombre del producto" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input value={inventoryForm.type} onChange={(event) => setInventoryForm(prev => ({ ...prev, type: event.target.value }))} placeholder="Formato" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input value={inventoryForm.batch} onChange={(event) => setInventoryForm(prev => ({ ...prev, batch: event.target.value }))} placeholder="Lote" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input type="number" min="1" value={inventoryForm.stockGrams} onChange={(event) => setInventoryForm(prev => ({ ...prev, stockGrams: Number(event.target.value) }))} placeholder="Gramos" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input value={inventoryForm.thc} onChange={(event) => setInventoryForm(prev => ({ ...prev, thc: event.target.value }))} placeholder="THC" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input value={inventoryForm.cbd} onChange={(event) => setInventoryForm(prev => ({ ...prev, cbd: event.target.value }))} placeholder="CBD" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input value={inventoryForm.lab} onChange={(event) => setInventoryForm(prev => ({ ...prev, lab: event.target.value }))} placeholder="Laboratorio / QC" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+                <input value={inventoryForm.origin} onChange={(event) => setInventoryForm(prev => ({ ...prev, origin: event.target.value }))} placeholder="Origen" className="rounded-xl bg-brand-neutral px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
+              </div>
+              <button type="button" onClick={addInventoryProduct} className="mt-4 w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
+                Agregar al inventario
+              </button>
+            </div>
+            {dispensaryInventory.map((product) => (
+              <div key={product.id} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-bold text-brand-green-deep">{product.name}</p>
+                    <p className="mt-1 text-xs text-brand-green-mid/65">{product.batch} · {product.stockGrams}g · THC {product.thc} / CBD {product.cbd}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => updateInventoryStock(product.id, -1)} className="h-10 w-10 rounded-xl border border-brand-green-deep/10"><Minus size={14} className="mx-auto" /></button>
+                    <button type="button" onClick={() => updateInventoryStock(product.id, 1)} className="h-10 w-10 rounded-xl border border-brand-green-deep/10"><Plus size={14} className="mx-auto" /></button>
+                    <button type="button" onClick={() => {
+                      prepareInventoryDispense(product);
+                      setActiveDrawer('dispensary-dispense');
+                    }} className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory">
+                      Preparar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'dispensary-qr':
+        return (
+          <div className="space-y-5">
+            <button type="button" onClick={validatePrescriptionQrForDispensary} className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory">
+              Escanear / validar QR
+            </button>
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Receta detectada</p>
+              <p className="mt-2 text-2xl font-bold text-brand-green-deep">Receta #{resolvedPrescriptionId}</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-brand-neutral/60 p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Disponible</p><p className="mt-1 font-bold text-brand-green-deep">{prescriptionRemainingGrams}g</p></div>
+                <div className="rounded-2xl bg-brand-neutral/60 p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Formatos</p><p className="mt-1 font-bold text-brand-green-deep">Flores, aceites, extractos</p></div>
+              </div>
+              {dispensaryValidation && (
+                <button type="button" onClick={() => setSelectedQrPermission(dispensaryValidation)} className="mt-4 w-full rounded-xl border border-brand-green-deep/10 px-4 py-3 text-sm font-bold text-brand-green-deep">
+                  Ver permiso QR
+                </button>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'dispensary-dispense':
+        return (
+          <div className="space-y-5">
+            {cart.length ? (
+              cart.map((item) => (
+                <div key={item.strain.id} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-brand-green-deep">{item.strain.name}</p>
+                      <p className="text-xs text-brand-green-mid/65">{item.strain.batch ?? item.strain.type}</p>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-xl bg-brand-neutral px-3 py-2">
+                      <button type="button" onClick={() => updateQuantity(item.strain.id, -1)}><Minus size={14} /></button>
+                      <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
+                      <button type="button" onClick={() => updateQuantity(item.strain.id, 1)}><Plus size={14} /></button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/30 p-5 text-sm text-brand-green-mid/65">
+                Selecciona un producto desde inventario para preparar la entrega.
+              </div>
+            )}
+            <div className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-5">
+              <div className="flex justify-between border-b border-brand-green-deep/10 pb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-brand-green-mid/60">Este retiro</span>
+                <span className="font-bold text-brand-green-deep">{cartGrams}g</span>
+              </div>
+              <div className="mt-3 flex justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-brand-green-mid/60">Disponible antes de retirar</span>
+                <span className="font-bold text-brand-green-deep">{prescriptionRemainingGrams}g</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCompleteOnchainDispense}
+                disabled={dispenseBusy || cartExceedsPrescriptionLimit || !cart.length || !Number.isFinite(resolvedPrescriptionId)}
+                className="mt-5 w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory disabled:opacity-45"
+              >
+                {dispenseBusy ? 'Registrando...' : 'Validar cupo y registrar retiro'}
+              </button>
+              {dispenseError && <div className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">{dispenseError}</div>}
+              {dispenseSuccess && <div className="mt-3 rounded-xl border border-green-100 bg-green-50 p-3 text-xs text-green-700">{dispenseSuccess}</div>}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -3022,21 +3743,21 @@ export default function MockupPortal({
                           <div className="mt-5 grid grid-cols-1 gap-3">
                             <button
                               type="button"
-                              onClick={() => switchView('history')}
+                              onClick={() => openDrawer('patient-permissions')}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
                             >
                               Ver permisos activos
                             </button>
                             <button
                               type="button"
-                              onClick={() => switchView('prescriptions')}
+                              onClick={() => openDrawer('patient-prescription')}
                               className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep"
                             >
                               Ver recetas verificables
                             </button>
                             <button
                               type="button"
-                              onClick={() => switchView('pickups')}
+                              onClick={() => openDrawer('patient-traceability')}
                               className="rounded-2xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-3 text-sm font-bold text-brand-green-deep"
                             >
                               Ver retiros y trazabilidad
@@ -3080,6 +3801,48 @@ export default function MockupPortal({
                       )}
 
                       {isDoctorPortal && (
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                          <ActionCard
+                            icon={<Stethoscope size={20} />}
+                            eyebrow="Agenda"
+                            title="Horarios"
+                            description="Crear disponibilidad, reservar o abrir una consulta desde una hora tomada."
+                            status={`${reservedAgendaBlocks.length} reservas`}
+                            onClick={() => openDrawer('doctor-agenda')}
+                            tone="cream"
+                          />
+                          <ActionCard
+                            icon={<ShieldCheck size={20} />}
+                            eyebrow="Llegada"
+                            title="Validar QR"
+                            description="Confirmar identidad y permiso temporal antes de iniciar la consulta."
+                            status={selectedConsultationStatus === 'checked_in' ? 'Validado' : 'Pendiente'}
+                            onClick={() => openDrawer('doctor-consultation')}
+                            disabled={!selectedConsultationBlock}
+                          />
+                          <ActionCard
+                            icon={<FileText size={20} />}
+                            eyebrow="Ficha"
+                            title="Resumen clínico"
+                            description="Revisar evidencia autorizada y guardar la nota de consulta."
+                            status={`${consultationClinicalRecords.length} notas`}
+                            onClick={() => openDrawer('doctor-clinical-summary')}
+                            disabled={!selectedConsultationBlock}
+                          />
+                          <ActionCard
+                            icon={<Database size={20} />}
+                            eyebrow="Receta"
+                            title="Emitir receta"
+                            description="Preparar tratamiento, dosis, vigencia y saldo autorizado."
+                            status="Testnet"
+                            onClick={() => openDrawer('doctor-prescription')}
+                            tone="green"
+                            disabled={!prescriptionPatientAddress}
+                          />
+                        </div>
+                      )}
+
+                      {isDoctorPortal && (
                         <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.78fr_1.22fr]">
                           <div className="rounded-3xl border border-brand-gold/25 bg-[#fbf7ef] p-5 text-brand-green-deep shadow-sm">
                             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Workspace medico</p>
@@ -3116,10 +3879,10 @@ export default function MockupPortal({
                               </div>
                               <button
                                 type="button"
-                                onClick={() => setShowAgendaForm((current) => !current)}
+                                onClick={() => openDrawer('doctor-agenda')}
                                 className="rounded-xl border border-brand-green-deep/15 bg-white px-4 py-2 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral/60"
                               >
-                                {showAgendaForm ? 'Cerrar' : 'Agregar bloque'}
+                                Gestionar agenda
                               </button>
                             </div>
                             <div className="mt-4 rounded-2xl border border-brand-gold/20 bg-white/70 px-4 py-3">
@@ -3129,7 +3892,7 @@ export default function MockupPortal({
                                 <span className="block text-xs font-semibold text-brand-green-mid/60">Actualizado {formatLiveTime(currentNow)}</span>
                               </p>
                             </div>
-                            {showAgendaForm && (
+                            {false && showAgendaForm && (
                               <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white p-4">
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                   <label className="space-y-1">
@@ -3178,7 +3941,7 @@ export default function MockupPortal({
                               </div>
                             )}
                             <div className="mt-4 grid grid-cols-1 gap-2">
-                              {doctorAgendaBlocks.map((block) => (
+                              {doctorAgendaBlocks.slice(0, 3).map((block) => (
                                 <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green-deep/5 bg-white/70 px-4 py-3">
                                   <div>
                                     <p className="text-sm font-bold text-brand-green-deep">{block.date} · {block.time}</p>
@@ -3215,6 +3978,13 @@ export default function MockupPortal({
                                 </div>
                               ))}
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => openDrawer('doctor-agenda')}
+                              className="mt-4 w-full rounded-xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                            >
+                              Ver agenda completa
+                            </button>
                           </div>
                         </div>
                       )}
@@ -3261,7 +4031,7 @@ export default function MockupPortal({
                               </p>
                             </div>
                           </div>
-                          {selectedConsultationBlock && (
+                          {false && selectedConsultationBlock && (
                             <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white/80 p-4">
                               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
@@ -3305,7 +4075,7 @@ export default function MockupPortal({
                               </div>
                             </div>
                           )}
-                          {selectedConsultationBlock && (
+                          {false && selectedConsultationBlock && (
                             <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white/75 p-4">
                               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                 <div className="max-w-xl">
@@ -3355,30 +4125,27 @@ export default function MockupPortal({
                           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <button
                               type="button"
-                              onClick={() => setSelectedClinicalRecord(portableClinicalDossier[0])}
+                              onClick={() => openDrawer('doctor-clinical-summary')}
                               disabled={!selectedConsultationBlock}
                               className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep"
                             >
-                              Ver ficha privada
+                              Ficha y resumen
                             </button>
                             <button
                               type="button"
-                              onClick={() => setConsultationStatus('active')}
+                              onClick={() => openDrawer('doctor-consultation')}
                               disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'checked_in'}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory disabled:opacity-45"
                             >
-                              Iniciar consulta
+                              Abrir consulta
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                setConsultationStatus('completed');
-                                setPrescriptionToolOpen(true);
-                              }}
+                              onClick={() => openDrawer('doctor-prescription')}
                               disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'active'}
                               className="rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep disabled:opacity-45"
                             >
-                              Finalizar y recetar
+                              Preparar receta
                             </button>
                           </div>
                         </div>
@@ -3444,7 +4211,7 @@ export default function MockupPortal({
                         <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-4">
                           <button
                             type="button"
-                            onClick={validatePatientQrForDoctor}
+                            onClick={() => openDrawer('doctor-consultation')}
                             className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
                           >
                             <ShieldCheck size={18} className="mb-3 text-blue-700" />
@@ -3453,7 +4220,7 @@ export default function MockupPortal({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedClinicalRecord(portableClinicalDossier[0])}
+                            onClick={() => openDrawer('doctor-clinical-summary')}
                             disabled={!selectedConsultationBlock}
                             className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4 text-left transition-colors hover:bg-brand-neutral disabled:opacity-45"
                           >
@@ -3463,7 +4230,7 @@ export default function MockupPortal({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setPrescriptionToolOpen(true)}
+                            onClick={() => openDrawer('doctor-prescription')}
                             disabled={!prescriptionPatientAddress}
                             className="rounded-2xl bg-brand-green-deep p-4 text-left text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:opacity-45"
                           >
@@ -3702,24 +4469,21 @@ export default function MockupPortal({
                           <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
                             <button
                               type="button"
-                              onClick={validatePrescriptionQrForDispensary}
+                              onClick={() => openDrawer('dispensary-qr')}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
                             >
                               Escanear QR / validar receta
                             </button>
                             <button
                               type="button"
-                              onClick={() => setManualPrescriptionEntry((current) => !current)}
+                              onClick={() => openDrawer('dispensary-qr')}
                               className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
                             >
                               Ingresar numero de receta
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                setSelectedDispensary(buildOperatorDispensary());
-                                setDispensaryStep('inventory');
-                              }}
+                              onClick={() => openDrawer('dispensary-inventory')}
                               className="rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
                             >
                               Preparar desde inventario
@@ -3727,7 +4491,7 @@ export default function MockupPortal({
                           </div>
                         </div>
 
-                        {dispensaryValidation && (
+                        {false && dispensaryValidation && (
                           <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-5 md:p-6">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div>
@@ -3810,7 +4574,7 @@ export default function MockupPortal({
                           </div>
                         </div>
 
-                        <div className="bg-white border border-brand-green-deep/10 rounded-[28px] p-5 md:p-6">
+                        <div className="hidden bg-white border border-brand-green-deep/10 rounded-[28px] p-5 md:p-6">
                           <div className="flex items-start justify-between gap-4 mb-5">
                             <div>
                               <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Inventario dispensario</p>
@@ -3887,15 +4651,22 @@ export default function MockupPortal({
                         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                           <div>
                             <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">Inventario disponible</p>
-                            <h3 className="text-2xl md:text-3xl font-serif text-brand-green-deep">Productos cargados para dispensar</h3>
+                              <h3 className="text-2xl md:text-3xl font-serif text-brand-green-deep">Productos listos para dispensar</h3>
                             <p className="text-sm text-brand-green-mid/60 mt-2 max-w-2xl">
                               Cada tarjeta representa un producto/lote del dispensario. Ajusta stock si entra o sale mercadería, o prepara una dispensa para validar la receta del paciente.
                             </p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => openDrawer('dispensary-inventory')}
+                            className="rounded-2xl border border-brand-green-deep/10 bg-white px-5 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                          >
+                            Gestionar inventario
+                          </button>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {dispensaryInventory.map((product) => {
+                          {dispensaryInventory.slice(0, 2).map((product) => {
                             const stock = Number(product.stockGrams ?? 0);
                             const isLowStock = stock <= 10;
 
@@ -5239,6 +6010,18 @@ export default function MockupPortal({
 
       {/* Booking Flow Overlay */}
       <AnimatePresence mode="wait" key="modal-booking-flow">
+        {activeDrawer && (
+          <ActionDrawer
+            open={Boolean(activeDrawer)}
+            eyebrow={drawerMeta[activeDrawer].eyebrow}
+            title={drawerMeta[activeDrawer].title}
+            description={drawerMeta[activeDrawer].description}
+            onClose={() => setActiveDrawer(null)}
+          >
+            {renderDrawerContent()}
+          </ActionDrawer>
+        )}
+
         {bookingDoctor && (
           <motion.div
             key="booking-overlay"
@@ -5767,7 +6550,7 @@ export default function MockupPortal({
                             }`}>
                               {dispensarySignerReady
                                 ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
-                                : 'Modo demo activo. Puedes registrar retiros fraccionados para grabación; la firma real requiere STELLAR_DISPENSARY_SECRET en Vercel.'}
+                                : 'Firma testnet pendiente. Puedes registrar retiros fraccionados con credencial gestionada mientras se conecta el signer operativo.'}
                             </div>
                             <div className="flex justify-end">
                               <button
@@ -5788,7 +6571,7 @@ export default function MockupPortal({
                               Agente 402: confirma que la receta pertenece al paciente y mantiene cupo disponible, sin revelar diagnóstico. Cada entrega registra solo prueba, lote y cantidad.
                             </div>
                             <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
-                              Nota MVP: el contrato actual marca algunas recetas como usadas en una sola transacción. La versión de grant debe guardar cupos semanales o gramos restantes para permitir retiros parciales globales.
+                              Próxima versión: los contratos guardarán gramos restantes por periodo para permitir retiros parciales en distintos dispensarios.
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
@@ -5801,7 +6584,7 @@ export default function MockupPortal({
                                     <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/55">
                                       {activePrescription
                                         ? 'Detectada automáticamente desde la wallet del paciente.'
-                                        : 'Modo demo: usamos la última receta emitida o la receta activa de testnet.'}
+                                        : 'Usamos la última receta emitida o la receta activa de testnet.'}
                                     </p>
                                   </div>
                                   <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
@@ -5935,7 +6718,7 @@ export default function MockupPortal({
                 }`}>
                   {doctorSignerReady
                     ? `Signer médico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
-                    : 'Modo demo activo. Puedes grabar el flujo completo; la firma real requiere STELLAR_DOCTOR_SECRET en Vercel.'}
+                    : 'Firma testnet pendiente. Puedes completar el flujo con credencial gestionada mientras se conecta el signer médico.'}
                 </div>
 
                 <div className="flex justify-end">
@@ -6476,7 +7259,7 @@ export default function MockupPortal({
               <div className="border-t border-brand-green-deep/5 bg-brand-neutral/30 p-6">
                 {cannabisMarketInterest && (
                   <div className="mb-3 rounded-2xl border border-green-100 bg-green-50 p-3 text-xs text-green-700">
-                    Interés registrado. En el MVP real esto abriría el directorio de marcas y solicitudes para nuevos negocios del ecosistema.
+                    Interés registrado. Esta sección abrirá el directorio de marcas y solicitudes para nuevos negocios del ecosistema.
                   </div>
                 )}
                 <button
