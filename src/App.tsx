@@ -823,9 +823,6 @@ function AuthGate({
             </button>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-brand-gold/20 bg-brand-gold/10 p-4 text-xs leading-relaxed text-brand-green-mid/75">
-            MVP: el usuario no necesita saldo. Trust Leaf patrocina fees de Stellar; la wallet funciona como identidad, credencial y prueba verificable.
-          </div>
         </section>
       </main>
     </div>
