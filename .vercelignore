@@ -3,9 +3,7 @@
 .env.*
 node_modules
 dist
-soroban/target/**
-soroban/targetRNEc1d
-soroban/targetXrcgf0
+soroban/target*/**
 !soroban/target/
 !soroban/target/wasm32v1-none/
 !soroban/target/wasm32v1-none/release/
