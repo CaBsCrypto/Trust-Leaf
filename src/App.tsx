@@ -157,6 +157,12 @@ function AppContent() {
 
   useEffect(() => listenAdminAuth(setAdminAuth), []);
 
+  useEffect(() => {
+    if (session?.role === 'patient' && session.mode === 'demo') {
+      seedDemoPatientState();
+    }
+  }, [session?.mode, session?.role]);
+
   const refreshActorRegistrations = async () => {
     const [doctorResult, dispensaryResult] = await Promise.all([
       trustDataStore.loadDoctorApplications(),
@@ -307,10 +313,6 @@ function AppContent() {
           onStart={startSession}
         />
       );
-    }
-
-    if (session?.mode === 'demo') {
-      seedDemoPatientState();
     }
 
     return (

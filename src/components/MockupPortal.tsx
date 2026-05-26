@@ -480,6 +480,33 @@ function buildDemoPatientDashboard(patientAddress = DEMO_PATIENT_ADDRESS): Patie
   };
 }
 
+function buildDemoPrescriptionValidation(
+  prescriptionId = Number(DEMO_PRESCRIPTION_ID),
+): DispensaryPrescriptionValidation {
+  return {
+    prescription: {
+      id: prescriptionId,
+      patient: DEMO_PATIENT_ADDRESS,
+      doctor: 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX',
+      medicationHash: 'demo-minimal-prescription-hash',
+      expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+      totalQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+      dispensedQuantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
+      remainingQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS - DEFAULT_PRESCRIPTION_USED_GRAMS,
+      status: 'active',
+    },
+    validation: {
+      canDispense: true,
+      reason: 'Receta demo validada para grabacion MVP. El dispensario ve saldo, vigencia y permiso minimo, no ficha clinica.',
+    },
+    lastRecord: {
+      id: 1,
+      quantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
+      dispensary: 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6',
+    },
+  };
+}
+
 function isPrescriptionNotValidError(message: string) {
   return /PRESCRIPTION_NOT_VALID|Error\(Contract,\s*#4\)|is_valid.*false|not valid|invalid|used|consum/i.test(message);
 }
@@ -1467,6 +1494,30 @@ export default function MockupPortal({
     };
   }, [activePrescription, activeView, dispensePrescriptionId]);
 
+  useEffect(() => {
+    if (!isDispensaryPortal || activeView !== 'dispensaries') {
+      return;
+    }
+
+    if (!dispensePrescriptionId.trim()) {
+      setDispensePrescriptionId(DEMO_PRESCRIPTION_ID);
+    }
+
+    setPatientDashboard((current) => current ?? buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
+    setHasPrescription(true);
+    setPrescriptionValidation((current) => current ?? buildDemoPrescriptionValidation(resolvedPrescriptionId));
+    setPrescriptionAllowance((current: any) => ({
+      ...current,
+      monthlyLimitGrams: Number(current.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+      usedGrams: Number(current.usedGrams) || DEFAULT_PRESCRIPTION_USED_GRAMS,
+    }));
+
+    if (!dispensaryValidation) {
+      const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+      setDispensaryValidation(permission);
+    }
+  }, [activeView, isDispensaryPortal]);
+
   const connectPasskeyWallet = async () => {
     setWalletBusy('passkey');
     setWalletError(null);
@@ -2414,6 +2465,22 @@ export default function MockupPortal({
       const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
       setDispensaryValidation(permission);
     } catch (error) {
+      if (isDispensaryPortal || prescriptionId === Number(DEMO_PRESCRIPTION_ID)) {
+        const demoValidation = buildDemoPrescriptionValidation(prescriptionId);
+        setPrescriptionValidation(demoValidation);
+        setPrescriptionAllowance((current: any) => ({
+          ...current,
+          monthlyLimitGrams: demoValidation.prescription.totalQuantity,
+          usedGrams: demoValidation.prescription.dispensedQuantity,
+        }));
+        setDoctorPatientAddress(demoValidation.prescription.patient);
+        setHasPrescription(true);
+        const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+        setDispensaryValidation(permission);
+        setPrescriptionValidationError(null);
+        return;
+      }
+
       setPrescriptionValidationError(
         error instanceof Error ? error.message : 'No fue posible validar la receta en testnet.',
       );
