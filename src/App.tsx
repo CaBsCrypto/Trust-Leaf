@@ -351,6 +351,7 @@ function AppContent() {
         onBack={() => navigate('/')}
         onNavigate={navigate}
         doctorRegistrations={doctorRegistrations}
+        registrationSource={registrationSource}
         canOperate={doctorCanOperate}
         onSubmitDoctorRegistration={submitDoctorRegistration}
       />
@@ -423,6 +424,7 @@ function AppContent() {
         onBack={() => navigate('/')}
         onNavigate={navigate}
         dispensaryRegistrations={dispensaryRegistrations}
+        registrationSource={registrationSource}
         canOperate={dispensaryCanOperate}
         onSubmitDispensaryRegistration={submitDispensaryRegistration}
       />
@@ -806,6 +808,7 @@ function MvpStatusRoute({
   const checks = [
     ['Contratos', Boolean(readiness?.capabilities?.readContracts), 'Lectura de contratos activa.'],
     ['Firebase admin', firebaseStatus.configured, `Proyecto ${firebaseStatus.projectId || 'pendiente'} detectado para Auth + Firestore.`],
+    ['Solicitudes reales', firebaseStatus.configured, 'Requiere Anonymous Auth activo para que medico/dispensario puedan crear solicitudes en Firestore.'],
     ['Admin signer', Boolean(readiness?.signers?.admin?.configured), 'Puede registrar actores en Testnet.'],
     ['Medico signer', Boolean(readiness?.capabilities?.issuePrescriptions), 'Puede emitir recetas demo Testnet.'],
     ['Dispensario signer', Boolean(readiness?.capabilities?.dispensePrescriptions), 'Puede registrar retiros parciales.'],
@@ -946,6 +949,7 @@ function MvpStatusRoute({
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               {[
                 ['Firebase', firebaseStatus.configured ? 'Configurado' : 'Pendiente'],
+                ['Anonymous Auth', firebaseStatus.configured ? 'Activar en Firebase Console' : 'Pendiente'],
                 ['Admin real', firebaseStatus.configured ? 'Requiere appAdministrators/{uid}' : 'Configurar Firebase'],
                 ['Passkey relayer', passkeyHealth?.configured ? 'Configurado' : 'Pendiente'],
               ].map(([label, value]) => (
@@ -2087,16 +2091,24 @@ function AdminRoute({
   );
 }
 
+function getRegistrationSourceLabel(source: PersistenceSource) {
+  if (source === 'firebase') return 'Firebase / Firestore';
+  if (source === 'supabase') return 'Supabase fallback';
+  return 'Fallback local de grabacion';
+}
+
 function DispensaryRegistrationRoute({
   onBack,
   onNavigate,
   dispensaryRegistrations,
+  registrationSource,
   canOperate,
   onSubmitDispensaryRegistration,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
   dispensaryRegistrations: DispensaryRegistration[];
+  registrationSource: PersistenceSource;
   canOperate: boolean;
   onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
 }) {
@@ -2109,6 +2121,7 @@ function DispensaryRegistrationRoute({
   });
   const latestRegistration = dispensaryRegistrations[0];
   const approved = dispensaryRegistrations.filter((request) => request.status === 'approved');
+  const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
   const submitRegistration = () => {
     if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact) {
@@ -2196,6 +2209,9 @@ function DispensaryRegistrationRoute({
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Solicitud</p>
                 <h2 className="mt-2 text-2xl font-serif">Datos para revisión admin</h2>
+                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/60">
+                  Persistencia actual: <strong>{sourceLabel}</strong>. Si ves fallback local, activa Anonymous Auth para guardar solicitudes reales en Firestore.
+                </p>
               </div>
               {latestRegistration && (
                 <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
@@ -2292,12 +2308,14 @@ function DoctorRegistrationRoute({
   onBack,
   onNavigate,
   doctorRegistrations,
+  registrationSource,
   canOperate,
   onSubmitDoctorRegistration,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
   doctorRegistrations: DoctorRegistration[];
+  registrationSource: PersistenceSource;
   canOperate: boolean;
   onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
 }) {
@@ -2310,6 +2328,7 @@ function DoctorRegistrationRoute({
   });
   const latestRegistration = doctorRegistrations[0];
   const approved = doctorRegistrations.filter((request) => request.status === 'approved');
+  const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
   const submitRegistration = () => {
     if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact) {
@@ -2397,6 +2416,9 @@ function DoctorRegistrationRoute({
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Solicitud</p>
                 <h2 className="mt-2 text-2xl font-serif">Datos para revisión admin</h2>
+                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/60">
+                  Persistencia actual: <strong>{sourceLabel}</strong>. Si ves fallback local, activa Anonymous Auth para guardar solicitudes reales en Firestore.
+                </p>
               </div>
               {latestRegistration && (
                 <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
