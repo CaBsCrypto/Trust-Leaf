@@ -559,6 +559,82 @@ export async function dispensePrescriptionForPatient(input: {
   };
 }
 
+export async function validatePrescriptionForDispensary(input: {
+  prescriptionId: number;
+}) {
+  const prescriptionId = Math.floor(input.prescriptionId);
+
+  if (!Number.isFinite(prescriptionId) || prescriptionId < 0) {
+    throw new Error('prescriptionId debe ser un numero valido.');
+  }
+
+  const server = getSorobanServer();
+  const latestLedger = await server.getLatestLedger();
+  const prescription = await invokeReadonlyContract(
+    server,
+    getPrescriptionContractId(),
+    'get_prescription',
+    { id: BigInt(prescriptionId) },
+  );
+  const normalized = normalizePrescriptionSnapshot(prescription);
+
+  let lastRecord = null;
+  try {
+    const record = await invokeReadonlyContractWithSpec(
+      server,
+      getDispenseRecordContractId(),
+      'get_last_record_for_prescription',
+      { prescription_id: BigInt(prescriptionId) },
+    );
+
+    if (record) {
+      lastRecord = {
+        id: Number(record.id),
+        prescriptionId: Number(record.prescription_id),
+        patient: String(record.patient),
+        doctor: String(record.doctor),
+        dispensary: String(record.dispensary),
+        quantity: Number(record.quantity),
+        productHash: bufferLikeToHex(record.product_hash),
+        batchHash: bufferLikeToHex(record.batch_hash),
+        dispensedAt: Number(record.dispensed_at),
+      };
+    }
+  } catch {
+    lastRecord = null;
+  }
+
+  return {
+    network: 'Stellar Testnet',
+    latestLedger: latestLedger.sequence,
+    prescriptionContractId: getPrescriptionContractId(),
+    dispenseRecordContractId: getDispenseRecordContractId(),
+    prescription: normalized,
+    validation: {
+      canDispense: normalized.status === 'active',
+      reason:
+        normalized.status === 'active'
+          ? 'Receta vigente con saldo disponible.'
+          : normalized.status === 'expired'
+            ? 'La receta expiro y requiere nueva evaluacion medica.'
+            : 'La receta ya no tiene saldo disponible.',
+      visibleToDispensary: [
+        'estado',
+        'vigencia',
+        'saldo',
+        'formatos autorizados',
+        'hash clinico',
+      ],
+      hiddenFromDispensary: [
+        'diagnostico',
+        'notas clinicas completas',
+        'expediente privado',
+      ],
+    },
+    lastRecord,
+  };
+}
+
 async function getPatientPrescriptions(
   server: InstanceType<typeof StellarSdk.rpc.Server>,
   contractId: string,
@@ -749,6 +825,31 @@ function normalizePrescriptionRecord(
     issuedAt: event.ledgerClosedAt,
     issuedLedger: event.ledger,
     txHash: event.txHash,
+  };
+}
+
+function normalizePrescriptionSnapshot(onchain: any) {
+  const expiresAt = Number(onchain.expires_at);
+  const totalQuantity = Number(onchain.total_quantity ?? 1);
+  const dispensedQuantity = Number(
+    onchain.dispensed_quantity ?? (onchain.is_used ? totalQuantity : 0),
+  );
+  const remainingQuantity = Math.max(totalQuantity - dispensedQuantity, 0);
+  const isUsed = Boolean(onchain.is_used) || remainingQuantity <= 0;
+  const now = Math.floor(Date.now() / 1000);
+  const status = isUsed ? 'used' : expiresAt <= now ? 'expired' : 'active';
+
+  return {
+    id: Number(onchain.id),
+    patient: String(onchain.patient),
+    doctor: String(onchain.doctor),
+    medicationHash: bufferLikeToHex(onchain.medication_hash),
+    expiresAt,
+    totalQuantity,
+    dispensedQuantity,
+    remainingQuantity,
+    isUsed,
+    status,
   };
 }
 

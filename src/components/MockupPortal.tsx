@@ -96,6 +96,29 @@ interface RuntimeReadiness {
   missing: string[];
 }
 
+interface DispensaryPrescriptionValidation {
+  prescription: {
+    id: number;
+    patient: string;
+    doctor: string;
+    medicationHash: string;
+    expiresAt: number;
+    totalQuantity: number;
+    dispensedQuantity: number;
+    remainingQuantity: number;
+    status: 'active' | 'used' | 'expired';
+  };
+  validation: {
+    canDispense: boolean;
+    reason: string;
+  };
+  lastRecord?: {
+    id: number;
+    quantity: number;
+    dispensary: string;
+  } | null;
+}
+
 interface DoctorAgendaBlock {
   id: string;
   date: string;
@@ -933,6 +956,9 @@ export default function MockupPortal({
   const [dispenseBusy, setDispenseBusy] = useState(false);
   const [dispenseError, setDispenseError] = useState<string | null>(null);
   const [dispenseSuccess, setDispenseSuccess] = useState<string | null>(null);
+  const [prescriptionValidation, setPrescriptionValidation] = useState<DispensaryPrescriptionValidation | null>(null);
+  const [prescriptionValidationBusy, setPrescriptionValidationBusy] = useState(false);
+  const [prescriptionValidationError, setPrescriptionValidationError] = useState<string | null>(null);
   const [faucetBusy, setFaucetBusy] = useState<'doctor' | 'dispensary' | 'patient' | null>(null);
   const [faucetNotice, setFaucetNotice] = useState<string | null>(null);
   const [manualPrescriptionEntry, setManualPrescriptionEntry] = useState(false);
@@ -1072,6 +1098,8 @@ export default function MockupPortal({
 
   useEffect(() => {
     localStorage.setItem('trust_dispense_prescription_id', dispensePrescriptionId);
+    setPrescriptionValidation(null);
+    setPrescriptionValidationError(null);
   }, [dispensePrescriptionId]);
 
   useEffect(() => {
@@ -2032,6 +2060,11 @@ export default function MockupPortal({
       return;
     }
 
+    if (prescriptionValidation && !prescriptionValidation.validation.canDispense) {
+      setDispenseError(prescriptionValidation.validation.reason);
+      return;
+    }
+
     setDispenseBusy(true);
     setDispenseError(null);
     setDispenseSuccess(null);
@@ -2260,6 +2293,50 @@ export default function MockupPortal({
     const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
     setDispensaryValidation(permission);
     setSelectedQrPermission(permission);
+  };
+
+  const validatePrescriptionOnTestnet = async () => {
+    const prescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
+
+    if (!Number.isFinite(prescriptionId)) {
+      setPrescriptionValidationError('Ingresa un numero de receta valido.');
+      setPrescriptionValidation(null);
+      return;
+    }
+
+    setPrescriptionValidationBusy(true);
+    setPrescriptionValidationError(null);
+    setPrescriptionValidation(null);
+
+    try {
+      const response = await fetch('/api/stellar/dispensary/validate-prescription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prescriptionId }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible validar la receta en testnet.');
+      }
+
+      setPrescriptionValidation(payload);
+      setPrescriptionAllowance((current: any) => ({
+        ...current,
+        monthlyLimitGrams: payload.prescription.totalQuantity || current.monthlyLimitGrams,
+        usedGrams: payload.prescription.dispensedQuantity ?? current.usedGrams,
+      }));
+      setDoctorPatientAddress(payload.prescription.patient);
+      setHasPrescription(payload.validation.canDispense);
+      const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+      setDispensaryValidation(permission);
+    } catch (error) {
+      setPrescriptionValidationError(
+        error instanceof Error ? error.message : 'No fue posible validar la receta en testnet.',
+      );
+    } finally {
+      setPrescriptionValidationBusy(false);
+    }
   };
 
   const buildOperatorDispensary = () => ({
@@ -2884,16 +2961,35 @@ export default function MockupPortal({
       case 'dispensary-qr':
         return (
           <div className="space-y-5">
-            <button type="button" onClick={validatePrescriptionQrForDispensary} className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory">
-              Escanear / validar QR
+            <button
+              type="button"
+              onClick={validatePrescriptionOnTestnet}
+              disabled={prescriptionValidationBusy}
+              className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory disabled:opacity-50"
+            >
+              {prescriptionValidationBusy ? 'Validando receta...' : 'Validar receta en Testnet'}
             </button>
             <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Receta detectada</p>
               <p className="mt-2 text-2xl font-bold text-brand-green-deep">Receta #{resolvedPrescriptionId}</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-brand-neutral/60 p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Disponible</p><p className="mt-1 font-bold text-brand-green-deep">{prescriptionRemainingGrams}g</p></div>
+                <div className="rounded-2xl bg-brand-neutral/60 p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Disponible</p><p className="mt-1 font-bold text-brand-green-deep">{prescriptionValidation?.prescription.remainingQuantity ?? prescriptionRemainingGrams}g</p></div>
                 <div className="rounded-2xl bg-brand-neutral/60 p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Formatos</p><p className="mt-1 font-bold text-brand-green-deep">Flores, aceites, extractos</p></div>
               </div>
+              {prescriptionValidation && (
+                <div className={`mt-4 rounded-2xl border p-3 text-xs ${
+                  prescriptionValidation.validation.canDispense
+                    ? 'border-green-100 bg-green-50 text-green-700'
+                    : 'border-amber-100 bg-amber-50 text-amber-800'
+                }`}>
+                  {prescriptionValidation.validation.reason}
+                </div>
+              )}
+              {prescriptionValidationError && (
+                <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
+                  {prescriptionValidationError}
+                </div>
+              )}
               {dispensaryValidation && (
                 <button type="button" onClick={() => setSelectedQrPermission(dispensaryValidation)} className="mt-4 w-full rounded-xl border border-brand-green-deep/10 px-4 py-3 text-sm font-bold text-brand-green-deep">
                   Ver permiso QR
@@ -4659,17 +4755,42 @@ export default function MockupPortal({
                               </label>
                               <button
                                 type="button"
-                                onClick={validatePrescriptionQrForDispensary}
+                                onClick={validatePrescriptionOnTestnet}
+                                disabled={prescriptionValidationBusy}
                                 className="self-end rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
                               >
-                                Validar QR
+                                {prescriptionValidationBusy ? 'Validando...' : 'Validar Testnet'}
                               </button>
                             </div>
+
+                            {(prescriptionValidation || prescriptionValidationError) && (
+                              <div className={`mt-4 rounded-2xl border p-4 text-sm ${
+                                prescriptionValidation?.validation.canDispense
+                                  ? 'border-green-100 bg-green-50 text-green-800'
+                                  : 'border-amber-100 bg-amber-50 text-amber-800'
+                              }`}>
+                                {prescriptionValidation ? (
+                                  <>
+                                    <p className="font-bold">
+                                      {prescriptionValidation.validation.canDispense
+                                        ? 'Receta vigente y dispensable'
+                                        : 'Receta no dispensable'}
+                                    </p>
+                                    <p className="mt-1 leading-relaxed">{prescriptionValidation.validation.reason}</p>
+                                    <p className="mt-2 font-mono text-xs">
+                                      Paciente {shortenAddress(prescriptionValidation.prescription.patient, 8)} · Doctor {shortenAddress(prescriptionValidation.prescription.doctor, 8)}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p>{prescriptionValidationError}</p>
+                                )}
+                              </div>
+                            )}
 
                             <div className="mt-5 grid grid-cols-2 gap-3">
                               {[
                                 ['Receta', `#${resolvedPrescriptionId}`],
-                                ['Disponible', `${prescriptionRemainingGrams}g`],
+                                ['Disponible', `${prescriptionValidation?.prescription.remainingQuantity ?? prescriptionRemainingGrams}g`],
                                 ['Este retiro', `${cartGrams}g`],
                                 ['Red', 'Testnet'],
                               ].map(([label, value]) => (
