@@ -32,6 +32,14 @@
     {
       "source": "/admin",
       "destination": "/index.html"
+    },
+    {
+      "source": "/mvp",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mvp/:path*",
+      "destination": "/index.html"
     }
   ]
 }
