@@ -47,6 +47,15 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
+    if (/Error\(Contract,\s*#8\)|QuantityExceeded|exceed|cupo|saldo/i.test(message)) {
+      res.status(409).json({
+        code: 'QUANTITY_EXCEEDS_ALLOWANCE',
+        message:
+          'La cantidad solicitada supera el saldo disponible de la receta. Reduce gramos o solicita una nueva evaluacion medica.',
+      });
+      return;
+    }
+
     res.status(500).json({
       message,
     });
