@@ -10,6 +10,7 @@ import {
   fundTestnetAccount,
   getRuntimeReadiness,
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
+  validatePrescriptionForDispensary,
 } from "./api/_lib/stellar";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -191,6 +192,41 @@ async function startServer() {
         error instanceof Error
           ? error.message
           : "No fue posible dispensar la receta en testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/validate-prescription", async (req, res) => {
+    try {
+      const { prescriptionId } = req.body ?? {};
+      const normalizedPrescriptionId = Number(prescriptionId);
+
+      if (!Number.isFinite(normalizedPrescriptionId)) {
+        res.status(400).json({
+          message: "Falta prescriptionId para validar la receta.",
+        });
+        return;
+      }
+
+      const result = await validatePrescriptionForDispensary({
+        prescriptionId: normalizedPrescriptionId,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible validar la receta en testnet.";
+
+      if (/missing|not found|PrescriptionMissing|#4/i.test(message)) {
+        res.status(404).json({
+          code: "PRESCRIPTION_NOT_FOUND",
+          message: "No encontramos esa receta en el contrato Prescription de Testnet.",
+        });
+        return;
+      }
+
       res.status(500).json({ message });
     }
   });
