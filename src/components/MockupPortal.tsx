@@ -4491,6 +4491,108 @@ export default function MockupPortal({
                           </div>
                         </div>
 
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                          <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Mesa de validacion</p>
+                                <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Recibir paciente con receta</h3>
+                                <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                                  El operador puede escanear QR o ingresar el numero de receta. Trust Leaf muestra vigencia, saldo y permiso minimo antes de preparar el retiro.
+                                </p>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                                dispensaryValidation
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {dispensaryValidation ? 'QR valido' : 'Sin QR'}
+                              </span>
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+                              <label className="block">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Numero de receta</span>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={dispensePrescriptionId}
+                                  onChange={(event) => setDispensePrescriptionId(event.target.value.replace(/[^\d]/g, ''))}
+                                  placeholder={`Ej: ${DEMO_PRESCRIPTION_ID}`}
+                                  className="mt-2 w-full rounded-xl border border-brand-green-deep/10 bg-brand-neutral px-4 py-3 text-sm font-mono text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={validatePrescriptionQrForDispensary}
+                                className="self-end rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+                              >
+                                Validar QR
+                              </button>
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-2 gap-3">
+                              {[
+                                ['Receta', `#${resolvedPrescriptionId}`],
+                                ['Disponible', `${prescriptionRemainingGrams}g`],
+                                ['Este retiro', `${cartGrams}g`],
+                                ['Red', 'Testnet'],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-2xl bg-brand-neutral/70 p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                                  <p className="mt-1 text-sm font-bold text-brand-green-deep">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDispensary(buildOperatorDispensary());
+                                  setDispensaryStep('inventory');
+                                }}
+                                className="flex-1 rounded-2xl bg-brand-gold px-5 py-3 text-sm font-bold text-brand-green-deep transition-transform active:scale-95"
+                              >
+                                Elegir producto y lote
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openDrawer('dispensary-dispense')}
+                                className="flex-1 rounded-2xl border border-brand-green-deep/10 bg-white px-5 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                              >
+                                Registrar retiro
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-5 md:p-6">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-700/70">Privacidad del paciente</p>
+                            <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Solo lo necesario para dispensar</h3>
+                            <div className="mt-5 space-y-3">
+                              {[
+                                ['Visible', 'Receta, vigencia, formatos autorizados y saldo.'],
+                                ['Oculto', 'Diagnostico, notas clinicas y expediente completo.'],
+                                ['Auditable', 'Lote, cantidad, dispensario y prueba de retiro.'],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-2xl border border-blue-100 bg-white p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600/55">{label}</p>
+                                  <p className="mt-1 text-sm leading-relaxed text-brand-green-mid/70">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                            {dispensaryValidation && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedQrPermission(dispensaryValidation)}
+                                className="mt-4 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-700"
+                              >
+                                Ver permiso QR temporal
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
                         {false && dispensaryValidation && (
                           <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-5 md:p-6">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
