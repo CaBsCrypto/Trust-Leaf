@@ -4197,6 +4197,56 @@ export default function MockupPortal({
                                 Abrir editor completo
                               </button>
                             </div>
+
+                            {(doctorIssueError || doctorIssueSuccess) && (
+                              <div className={`mt-4 rounded-2xl border p-4 text-sm ${
+                                doctorIssueError
+                                  ? 'border-red-100 bg-red-50 text-red-700'
+                                  : 'border-green-100 bg-green-50 text-green-800'
+                              }`}>
+                                {doctorIssueError ? (
+                                  <p>{doctorIssueError}</p>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-700/70">Receta lista</p>
+                                        <p className="mt-1 font-bold text-brand-green-deep">{doctorIssueSuccess}</p>
+                                        <p className="mt-2 text-xs leading-relaxed text-green-800/75">
+                                          Paciente {shortenAddress(prescriptionPatientAddress, 8)} - cupo {doctorIssueForm.monthlyLimitGrams}g - vigencia {doctorIssueForm.durationDays} dias.
+                                        </p>
+                                      </div>
+                                      <span className="w-fit rounded-full bg-white px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-green-700">
+                                        QR listo
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => createPrivacyPermission('dispensary-prescription')}
+                                        className="rounded-xl border border-green-100 bg-white px-3 py-2 text-xs font-bold text-green-700"
+                                      >
+                                        Mostrar QR
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => window.location.assign('/paciente/recetas')}
+                                        className="rounded-xl border border-green-100 bg-white px-3 py-2 text-xs font-bold text-green-700"
+                                      >
+                                        Ver paciente
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => window.location.assign('/dispensario/operacion')}
+                                        className="rounded-xl bg-green-700 px-3 py-2 text-xs font-bold text-white"
+                                      >
+                                        Probar dispensario
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-5 md:p-6">
