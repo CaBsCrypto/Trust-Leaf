@@ -182,3 +182,94 @@ fn dispensary_can_record_dispense_for_valid_prescription() {
     assert_eq!(client.get_prescription_contract(), prescription_contract_id);
     assert_eq!(client.get_dispensary_registry(), dispensary_registry_id);
 }
+
+#[test]
+#[should_panic]
+fn unauthorized_dispensary_cannot_record_dispense() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+
+    let prescription_contract_id = env.register(prescription_contract::PrescriptionContract, ());
+    let prescription_client =
+        prescription_contract::PrescriptionContractClient::new(&env, &prescription_contract_id);
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    prescription_client.seed_prescription(
+        &prescription_contract::Prescription {
+            id: 0,
+            patient,
+            doctor,
+            medication_hash,
+            issued_at: 100,
+            expires_at: 3_700,
+            total_quantity: 30,
+            dispensed_quantity: 0,
+            is_used: false,
+        },
+        &true,
+    );
+
+    let contract_id = env.register(DispenseRecordContract, ());
+    let client = DispenseRecordContractClient::new(&env, &contract_id);
+    client.init(&admin, &prescription_contract_id, &dispensary_registry_id);
+
+    let product_hash = BytesN::from_array(&env, &[9; 32]);
+    let batch_hash = BytesN::from_array(&env, &[3; 32]);
+    client.record_dispense(&dispensary, &0_u64, &product_hash, &batch_hash, &2_u64);
+}
+
+#[test]
+#[should_panic]
+fn invalid_prescription_cannot_be_recorded() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+
+    let prescription_contract_id = env.register(prescription_contract::PrescriptionContract, ());
+    let prescription_client =
+        prescription_contract::PrescriptionContractClient::new(&env, &prescription_contract_id);
+
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+    let dispensary_registry_client =
+        dispensary_registry_contract::DispensaryRegistryContractClient::new(
+            &env,
+            &dispensary_registry_id,
+        );
+    dispensary_registry_client.set_authorized(&dispensary, &true);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    prescription_client.seed_prescription(
+        &prescription_contract::Prescription {
+            id: 0,
+            patient,
+            doctor,
+            medication_hash,
+            issued_at: 100,
+            expires_at: 3_700,
+            total_quantity: 30,
+            dispensed_quantity: 0,
+            is_used: false,
+        },
+        &false,
+    );
+
+    let contract_id = env.register(DispenseRecordContract, ());
+    let client = DispenseRecordContractClient::new(&env, &contract_id);
+    client.init(&admin, &prescription_contract_id, &dispensary_registry_id);
+
+    let product_hash = BytesN::from_array(&env, &[9; 32]);
+    let batch_hash = BytesN::from_array(&env, &[3; 32]);
+    client.record_dispense(&dispensary, &0_u64, &product_hash, &batch_hash, &2_u64);
+}

@@ -10,6 +10,7 @@ coverage/
 soroban/targetR*/
 soroban/targetX*/
 soroban/target_*/
+soroban/target-test*/
 soroban/target/**
 !soroban/target/wasm32v1-none/
 !soroban/target/wasm32v1-none/release/
