@@ -41,7 +41,7 @@ Readiness tecnico:
 
 ## Sprint Actual
 
-Foco: demo MVP rapido, sprint semanal.
+Foco: transicion de demo MVP a piloto real en Testnet.
 
 Entregables cerrados o avanzados:
 - contratos Soroban con eventos tipados;
@@ -52,7 +52,9 @@ Entregables cerrados o avanzados:
 - agenda y consulta medica ligera;
 - checklist operativo visible en portal paciente;
 - admin real preparado con Firebase Auth + `appAdministrators/{uid}` y fallback
-  demo explicito.
+  demo explicito;
+- `/mvp` muestra readiness de contratos, signers, Firebase y passkeys;
+- persistencia de solicitudes prioriza Firebase cuando hay sesion real.
 
 Pendientes priorizados:
 - crear usuario admin real en Firebase y documento allowlist;
@@ -60,6 +62,16 @@ Pendientes priorizados:
 - configurar passkeys/Mercury/relayer para salir de modo demo;
 - reemplazar firma server-side por firma wallet/passkey en version piloto;
 - agregar QA manual grabado de los cuatro roles.
+
+## Camino A Piloto Real
+
+1. Crear admin real en Firebase Auth y `appAdministrators/{uid}`.
+2. Probar que solicitudes de medicos y dispensarios persisten en Firestore.
+3. Mantener aprobacion separada de registro on-chain.
+4. Configurar `STELLAR_RELAYER_URL`, `STELLAR_RELAYER_API_KEY`,
+   `STELLAR_MERCURY_URL` y credenciales Mercury.
+5. Configurar `VITE_STELLAR_WALLET_WASM_HASH` para passkeys paciente.
+6. Mantener Freighter y demo como fallback mientras passkeys se valida.
 
 ## Definicion De Hecho Para La Demo
 

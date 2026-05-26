@@ -264,6 +264,17 @@ async function loadApplications<T extends ActorApplication>(kind: ApplicationKin
   records: T[];
   source: PersistenceSource;
 }> {
+  if (canUseFirebase()) {
+    try {
+      const snapshot = await getDocs(query(collection(db, COLLECTIONS[kind]), orderBy('submittedAt', 'desc')));
+      const records = snapshot.docs.map((item) => normalizeApplication({ id: item.id, ...item.data() })) as T[];
+      writeLocal(kind, records);
+      return { records, source: 'firebase' };
+    } catch {
+      // Keep the demo usable if Firestore rules/env are not ready yet.
+    }
+  }
+
   if (canUseSupabase()) {
     try {
       return {
@@ -271,27 +282,25 @@ async function loadApplications<T extends ActorApplication>(kind: ApplicationKin
         source: 'supabase',
       };
     } catch {
-      // Keep the demo usable if RLS/env is not ready yet.
+      // Supabase remains a documented fallback, not the primary pilot path.
     }
   }
 
-  if (!canUseFirebase()) {
-    return { records: readLocal<T>(kind), source: 'local-demo' };
-  }
-
-  try {
-    const snapshot = await getDocs(query(collection(db, COLLECTIONS[kind]), orderBy('submittedAt', 'desc')));
-    const records = snapshot.docs.map((item) => normalizeApplication({ id: item.id, ...item.data() })) as T[];
-    writeLocal(kind, records);
-    return { records, source: 'firebase' };
-  } catch {
-    return { records: readLocal<T>(kind), source: 'local-demo' };
-  }
+  return { records: readLocal<T>(kind), source: 'local-demo' };
 }
 
 async function createApplication<T extends ActorApplication>(kind: ApplicationKind, record: T): Promise<PersistenceSource> {
   const localRecords = [record, ...readLocal<T>(kind).filter((item) => item.id !== record.id)];
   writeLocal(kind, localRecords);
+
+  if (canUseFirebase()) {
+    try {
+      await setDoc(doc(db, COLLECTIONS[kind], record.id), record);
+      return 'firebase';
+    } catch {
+      return 'local-demo';
+    }
+  }
 
   if (canUseSupabase()) {
     try {
@@ -302,14 +311,7 @@ async function createApplication<T extends ActorApplication>(kind: ApplicationKi
     }
   }
 
-  if (!canUseFirebase()) return 'local-demo';
-
-  try {
-    await setDoc(doc(db, COLLECTIONS[kind], record.id), record);
-    return 'firebase';
-  } catch {
-    return 'local-demo';
-  }
+  return 'local-demo';
 }
 
 async function updateApplication<T extends ActorApplication>(
@@ -322,6 +324,15 @@ async function updateApplication<T extends ActorApplication>(
   );
   writeLocal(kind, localRecords);
 
+  if (canUseFirebase()) {
+    try {
+      await updateDoc(doc(db, COLLECTIONS[kind], id), updates as Record<string, unknown>);
+      return 'firebase';
+    } catch {
+      return 'local-demo';
+    }
+  }
+
   if (canUseSupabase()) {
     try {
       await updateApplicationInSupabase(kind, id, updates);
@@ -331,14 +342,7 @@ async function updateApplication<T extends ActorApplication>(
     }
   }
 
-  if (!canUseFirebase()) return 'local-demo';
-
-  try {
-    await updateDoc(doc(db, COLLECTIONS[kind], id), updates as Record<string, unknown>);
-    return 'firebase';
-  } catch {
-    return 'local-demo';
-  }
+  return 'local-demo';
 }
 
 export const trustDataStore = {

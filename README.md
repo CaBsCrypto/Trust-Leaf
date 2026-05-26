@@ -20,6 +20,8 @@ MVP status route:
 - API runtime: Vercel Functions under `api/`.
 - Admin auth: Firebase Auth + Firestore allowlist, with explicit demo fallback.
 - Patient wallet UX: Passkey, Freighter or demo Testnet identity.
+- Pilot persistence: Firebase first for actor applications; local demo fallback
+  remains available when no Firebase admin session exists.
 
 ## Run Locally
 
@@ -49,6 +51,15 @@ cargo test
 - `docs/SCRUM_PLAN_MAIN.md`: product roadmap and actor flows.
 - `docs/soroban-mvp.md`: contracts, Testnet deployment and web3 architecture.
 - `docs/firebase-admin-setup.md`: admin allowlist setup.
+
+## Pilot Readiness
+
+The `/mvp` route is the operational checklist. It should show:
+
+- Stellar Testnet contracts and signers.
+- Firebase config detected for real admin auth.
+- Passkey relayer/Mercury status.
+- Missing variables that block pilot mode but not the demo fallback.
 
 ## Testnet Notes
 

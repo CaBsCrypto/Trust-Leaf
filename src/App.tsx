@@ -760,20 +760,27 @@ function MvpStatusRoute({
   onNavigate: (path: string) => void;
 }) {
   const [readiness, setReadiness] = useState<any | null>(null);
+  const [passkeyHealth, setPasskeyHealth] = useState<any | null>(null);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const firebaseStatus = getFirebaseRuntimeStatus();
 
   useEffect(() => {
     let cancelled = false;
 
     const loadReadiness = async () => {
       try {
-        const response = await fetch('/api/stellar/readiness');
-        const payload = await response.json();
-        if (!response.ok) {
+        const [stellarResponse, passkeyResponse] = await Promise.all([
+          fetch('/api/stellar/readiness'),
+          fetch('/api/passkeys/health'),
+        ]);
+        const payload = await stellarResponse.json();
+        const passkeyPayload = await passkeyResponse.json().catch(() => null);
+        if (!stellarResponse.ok) {
           throw new Error(payload.message || 'No fue posible leer readiness.');
         }
         if (!cancelled) {
           setReadiness(payload);
+          setPasskeyHealth(passkeyResponse.ok ? passkeyPayload : null);
         }
       } catch (error) {
         if (!cancelled) {
@@ -797,10 +804,17 @@ function MvpStatusRoute({
   ];
   const checks = [
     ['Contratos', Boolean(readiness?.capabilities?.readContracts), 'Lectura de contratos activa.'],
+    ['Firebase admin', firebaseStatus.configured, `Proyecto ${firebaseStatus.projectId || 'pendiente'} detectado para Auth + Firestore.`],
     ['Admin signer', Boolean(readiness?.signers?.admin?.configured), 'Puede registrar actores en Testnet.'],
     ['Medico signer', Boolean(readiness?.capabilities?.issuePrescriptions), 'Puede emitir recetas demo Testnet.'],
     ['Dispensario signer', Boolean(readiness?.capabilities?.dispensePrescriptions), 'Puede registrar retiros parciales.'],
-    ['Passkeys', Boolean(readiness?.capabilities?.passkeyRelay && readiness?.capabilities?.passkeyDiscovery), 'Pendiente para wallet paciente real.'],
+    [
+      'Passkeys',
+      Boolean(readiness?.capabilities?.passkeyRelay && readiness?.capabilities?.passkeyDiscovery && passkeyHealth?.configured),
+      passkeyHealth?.configured
+        ? 'Relayer passkey disponible para wallet paciente real.'
+        : 'Pendiente relayer/Mercury para wallet paciente real.',
+    ],
   ];
 
   return (
@@ -827,16 +841,16 @@ function MvpStatusRoute({
           <div className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">SCRUM status</p>
             <h1 className="mt-5 max-w-3xl text-4xl font-serif leading-tight md:text-6xl">
-              MVP demo rapido listo para revisar por roles.
+              MVP listo para evolucionar a piloto real.
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-              Esta vista resume el estado operativo, las rutas de prueba y los pendientes que no bloquean la demo pero si importan antes de piloto.
+              Esta vista resume contratos, Firebase, passkeys y rutas por actor. La demo sigue disponible, pero el foco ahora es cerrar readiness de piloto en Testnet.
             </p>
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
                 ['Produccion', 'www.trustleaf.org'],
                 ['Red', readiness?.network ?? 'Stellar Testnet'],
-                ['Sprint', 'Demo MVP semanal'],
+                ['Sprint', 'Piloto real Testnet'],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
@@ -928,6 +942,18 @@ function MvpStatusRoute({
                 Pendiente para piloto: {readiness.missing.join(', ')}.
               </div>
             ) : null}
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {[
+                ['Firebase', firebaseStatus.configured ? 'Configurado' : 'Pendiente'],
+                ['Admin real', firebaseStatus.configured ? 'Requiere appAdministrators/{uid}' : 'Configurar Firebase'],
+                ['Passkey relayer', passkeyHealth?.configured ? 'Configurado' : 'Pendiente'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                  <p className="mt-2 text-sm font-bold text-brand-green-deep">{value}</p>
+                </div>
+              ))}
+            </div>
           </section>
         )}
       </main>
