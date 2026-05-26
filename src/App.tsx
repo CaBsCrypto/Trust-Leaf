@@ -23,6 +23,7 @@ import {
   signOutAdmin,
   type AdminAuthState,
 } from './lib/trustAuth';
+import { getFirebaseRuntimeStatus } from './lib/firebase';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
@@ -1219,6 +1220,19 @@ function AdminAuthGate({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const firebaseStatus = getFirebaseRuntimeStatus();
+  const authStatusText =
+    authState.mode === 'checking'
+      ? 'Verificando sesion'
+      : firebaseStatus.configured
+        ? 'Firebase Auth configurado'
+        : 'Firebase no configurado';
+  const allowlistStatusText =
+    authState.mode === 'authorized'
+      ? 'Allowlist validada'
+      : authState.mode === 'not-admin'
+        ? 'Cuenta sin allowlist'
+        : 'Documento appAdministrators/{uid}';
 
   const submit = async () => {
     if (!form.email.trim() || !form.password.trim()) {
@@ -1266,8 +1280,8 @@ function AdminAuthGate({
           </p>
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
-              ['Auth', authState.mode === 'checking' ? 'Verificando sesion' : 'Firebase email/password'],
-              ['Allowlist', 'Documento appAdministrators/{uid}'],
+              ['Auth', authStatusText],
+              ['Allowlist', allowlistStatusText],
               ['On-chain', 'Registro manual y auditable en Stellar Testnet'],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1284,6 +1298,21 @@ function AdminAuthGate({
           <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
             Si aun no existe el usuario admin o su documento allowlist, usa demo para revisar el flujo sin hacer pasar demo por produccion.
           </p>
+          <div className={`mt-4 rounded-2xl border p-4 text-xs leading-relaxed ${
+            firebaseStatus.configured
+              ? 'border-green-100 bg-green-50 text-green-800'
+              : 'border-amber-100 bg-amber-50 text-amber-800'
+          }`}>
+            <p className="font-bold uppercase tracking-widest">
+              {firebaseStatus.configured ? 'Firebase detectado' : 'Firebase pendiente'}
+            </p>
+            <p className="mt-1">
+              Proyecto: {firebaseStatus.projectId || 'sin projectId'} · Auth domain: {firebaseStatus.authDomain || 'sin authDomain'}.
+            </p>
+            <p className="mt-1">
+              Para admin real, crea el usuario en Firebase Auth y agrega `appAdministrators/{'{uid}'}` en Firestore.
+            </p>
+          </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3">
             <label>
