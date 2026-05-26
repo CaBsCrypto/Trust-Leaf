@@ -1,6 +1,9 @@
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env};
+use soroban_sdk::{
+    contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error, Address,
+    Env,
+};
 
 const INSTANCE_BUMP_AMOUNT: u32 = 30 * 17280;
 const INSTANCE_LIFETIME_THRESHOLD: u32 = INSTANCE_BUMP_AMOUNT - 100;
@@ -23,6 +26,16 @@ pub enum RegistryError {
     Unauthorized = 2,
 }
 
+#[contractevent(topics = ["doctor_added"], data_format = "vec")]
+pub struct DoctorAdded {
+    pub doctor: Address,
+}
+
+#[contractevent(topics = ["doctor_removed"], data_format = "vec")]
+pub struct DoctorRemoved {
+    pub doctor: Address,
+}
+
 #[contractimpl]
 impl RegistryContract {
     pub fn init(env: Env, admin: Address) {
@@ -37,18 +50,20 @@ impl RegistryContract {
 
     pub fn add_doctor(env: Env, admin: Address, doctor: Address) {
         require_admin(&env, &admin);
-        env.storage().persistent().set(&DataKey::Doctor(doctor.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Doctor(doctor.clone()), &true);
         extend_instance_ttl(&env);
-        env.events()
-            .publish(("doctor_added",), (doctor,));
+        DoctorAdded { doctor }.publish(&env);
     }
 
     pub fn remove_doctor(env: Env, admin: Address, doctor: Address) {
         require_admin(&env, &admin);
-        env.storage().persistent().set(&DataKey::Doctor(doctor.clone()), &false);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Doctor(doctor.clone()), &false);
         extend_instance_ttl(&env);
-        env.events()
-            .publish(("doctor_removed",), (doctor,));
+        DoctorRemoved { doctor }.publish(&env);
     }
 
     pub fn is_authorized(env: Env, doctor: Address) -> bool {
@@ -61,10 +76,7 @@ impl RegistryContract {
 
     pub fn get_admin(env: Env) -> Address {
         extend_instance_ttl(&env);
-        env.storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .unwrap()
+        env.storage().instance().get(&DataKey::Admin).unwrap()
     }
 }
 

@@ -5,7 +5,9 @@ use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{Address, BytesN, Env};
 
 mod registry_contract {
-    use soroban_sdk::{contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env};
+    use soroban_sdk::{
+        contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env,
+    };
 
     #[contract]
     pub struct RegistryContract;
@@ -42,7 +44,9 @@ mod registry_contract {
             if stored_admin != admin {
                 panic_with_error!(&env, RegistryError::Unauthorized);
             }
-            env.storage().persistent().set(&DataKey::Doctor(doctor), &true);
+            env.storage()
+                .persistent()
+                .set(&DataKey::Doctor(doctor), &true);
         }
 
         pub fn is_authorized(env: Env, doctor: Address) -> bool {
@@ -55,7 +59,9 @@ mod registry_contract {
 }
 
 mod dispensary_registry_contract {
-    use soroban_sdk::{contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env};
+    use soroban_sdk::{
+        contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env,
+    };
 
     #[contract]
     pub struct DispensaryRegistryContract;
@@ -156,7 +162,10 @@ fn doctor_can_issue_and_dispensary_can_consume() {
     assert_eq!(prescription_client.get_remaining_quantity(&issued_id), 30);
     assert!(!issued.is_used);
     assert!(prescription_client.is_valid(&issued_id));
-    assert_eq!(prescription_client.get_doctor_registry(), doctor_registry_id);
+    assert_eq!(
+        prescription_client.get_doctor_registry(),
+        doctor_registry_id
+    );
     assert_eq!(
         prescription_client.get_dispensary_registry(),
         dispensary_registry_id
@@ -208,13 +217,7 @@ fn unauthorized_doctor_cannot_issue_prescription() {
     prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
 
     let medication_hash = BytesN::from_array(&env, &[7; 32]);
-    prescription_client.issue_prescription(
-        &doctor,
-        &patient,
-        &medication_hash,
-        &3600_u64,
-        &30_u64,
-    );
+    prescription_client.issue_prescription(&doctor, &patient, &medication_hash, &3600_u64, &30_u64);
 }
 
 #[test]

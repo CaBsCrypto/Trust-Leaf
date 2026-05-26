@@ -1,6 +1,9 @@
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env};
+use soroban_sdk::{
+    contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error, Address,
+    Env,
+};
 
 const INSTANCE_BUMP_AMOUNT: u32 = 30 * 17280;
 const INSTANCE_LIFETIME_THRESHOLD: u32 = INSTANCE_BUMP_AMOUNT - 100;
@@ -23,6 +26,16 @@ pub enum DispensaryRegistryError {
     Unauthorized = 2,
 }
 
+#[contractevent(topics = ["dispensary_added"], data_format = "vec")]
+pub struct DispensaryAdded {
+    pub dispensary: Address,
+}
+
+#[contractevent(topics = ["dispensary_removed"], data_format = "vec")]
+pub struct DispensaryRemoved {
+    pub dispensary: Address,
+}
+
 #[contractimpl]
 impl DispensaryRegistryContract {
     pub fn init(env: Env, admin: Address) {
@@ -41,8 +54,7 @@ impl DispensaryRegistryContract {
             .persistent()
             .set(&DataKey::Dispensary(dispensary.clone()), &true);
         extend_instance_ttl(&env);
-        env.events()
-            .publish(("dispensary_added",), (dispensary,));
+        DispensaryAdded { dispensary }.publish(&env);
     }
 
     pub fn remove_dispensary(env: Env, admin: Address, dispensary: Address) {
@@ -51,8 +63,7 @@ impl DispensaryRegistryContract {
             .persistent()
             .set(&DataKey::Dispensary(dispensary.clone()), &false);
         extend_instance_ttl(&env);
-        env.events()
-            .publish(("dispensary_removed",), (dispensary,));
+        DispensaryRemoved { dispensary }.publish(&env);
     }
 
     pub fn is_authorized(env: Env, dispensary: Address) -> bool {

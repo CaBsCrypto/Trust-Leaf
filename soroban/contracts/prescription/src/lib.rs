@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, Address, BytesN, Env,
-    IntoVal, Symbol,
+    contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error, Address,
+    BytesN, Env, IntoVal, Symbol,
 };
 
 const INSTANCE_BUMP_AMOUNT: u32 = 30 * 17280;
@@ -46,6 +46,21 @@ pub enum PrescriptionError {
     PrescriptionExpired = 6,
     InvalidQuantity = 7,
     QuantityExceeded = 8,
+}
+
+#[contractevent(topics = ["PrescriptionIssued"], data_format = "vec")]
+pub struct PrescriptionIssued {
+    pub id: u64,
+    pub patient: Address,
+    pub doctor: Address,
+}
+
+#[contractevent(topics = ["PrescriptionPartiallyDispensed"], data_format = "vec")]
+pub struct PrescriptionPartiallyDispensed {
+    pub prescription_id: u64,
+    pub dispensary: Address,
+    pub quantity: u64,
+    pub remaining_after: u64,
 }
 
 #[contractimpl]
@@ -103,8 +118,12 @@ impl PrescriptionContract {
         env.storage().instance().set(&DataKey::NextId, &(id + 1));
         extend_instance_ttl(&env);
 
-        env.events()
-            .publish(("PrescriptionIssued",), (id, patient, doctor));
+        PrescriptionIssued {
+            id,
+            patient,
+            doctor,
+        }
+        .publish(&env);
 
         id
     }
@@ -157,10 +176,13 @@ impl PrescriptionContract {
             .set(&DataKey::Prescription(prescription_id), &prescription);
         extend_instance_ttl(&env);
 
-        env.events().publish(
-            ("PrescriptionPartiallyDispensed",),
-            (prescription_id, dispensary, quantity, remaining_after),
-        );
+        PrescriptionPartiallyDispensed {
+            prescription_id,
+            dispensary,
+            quantity,
+            remaining_after,
+        }
+        .publish(&env);
 
         remaining_after
     }
@@ -185,7 +207,10 @@ impl PrescriptionContract {
 
     pub fn get_doctor_registry(env: Env) -> Address {
         extend_instance_ttl(&env);
-        env.storage().instance().get(&DataKey::DoctorRegistry).unwrap()
+        env.storage()
+            .instance()
+            .get(&DataKey::DoctorRegistry)
+            .unwrap()
     }
 
     pub fn get_dispensary_registry(env: Env) -> Address {
@@ -198,7 +223,10 @@ impl PrescriptionContract {
 }
 
 fn next_id(env: &Env) -> u64 {
-    env.storage().instance().get(&DataKey::NextId).unwrap_or(0_u64)
+    env.storage()
+        .instance()
+        .get(&DataKey::NextId)
+        .unwrap_or(0_u64)
 }
 
 fn get_prescription_internal(env: &Env, id: u64) -> Prescription {

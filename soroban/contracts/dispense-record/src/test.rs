@@ -34,9 +34,10 @@ mod prescription_contract {
     #[contractimpl]
     impl PrescriptionContract {
         pub fn seed_prescription(env: Env, prescription: Prescription, valid: bool) {
-            env.storage()
-                .persistent()
-                .set(&DataKey::Prescription(prescription.id), &prescription.clone());
+            env.storage().persistent().set(
+                &DataKey::Prescription(prescription.id),
+                &prescription.clone(),
+            );
             env.storage()
                 .persistent()
                 .set(&DataKey::Valid(prescription.id), &valid);
@@ -154,8 +155,7 @@ fn dispensary_can_record_dispense_for_valid_prescription() {
 
     let product_hash = BytesN::from_array(&env, &[9; 32]);
     let batch_hash = BytesN::from_array(&env, &[3; 32]);
-    let record_id =
-        client.record_dispense(&dispensary, &0_u64, &product_hash, &batch_hash, &2_u64);
+    let record_id = client.record_dispense(&dispensary, &0_u64, &product_hash, &batch_hash, &2_u64);
 
     let record = client.get_record(&record_id);
     assert_eq!(record.id, 0);
