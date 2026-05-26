@@ -2547,6 +2547,11 @@ export default function MockupPortal({
     Math.round((prescriptionProjectedGrams / prescriptionMonthlyLimitGrams) * 100),
   );
   const cartExceedsPrescriptionLimit = cartGrams > prescriptionRemainingGrams;
+  const previousPrescriptionPickups = activePickups.filter((pickup) => {
+    const token = String(pickup.token ?? '');
+    return token.includes(`RX-${resolvedPrescriptionId}`) || token.includes(String(resolvedPrescriptionId));
+  });
+  const patientTraceablePickups = activePickups.filter((pickup) => pickup.status !== 'cancelled');
 
   const handleStartPickup = (pickup: any) => {
     setProcessingPickup(pickup);
@@ -5053,7 +5058,9 @@ export default function MockupPortal({
                                 ['Receta', `#${resolvedPrescriptionId}`],
                                 ['Disponible', `${prescriptionValidation?.prescription.remainingQuantity ?? prescriptionRemainingGrams}g`],
                                 ['Este retiro', `${cartGrams}g`],
-                                ['Red', 'Testnet'],
+                                ['Retiros previos', String(previousPrescriptionPickups.length)],
+                                ['Saldo post retiro', `${Math.max(0, prescriptionRemainingGrams - cartGrams)}g`],
+                                ['Red', dispensarySignerReady ? 'Testnet' : 'Privado'],
                               ].map(([label, value]) => (
                                 <div key={label} className="rounded-2xl bg-brand-neutral/70 p-4">
                                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
@@ -6275,8 +6282,63 @@ export default function MockupPortal({
                       </div>
                     )}
 
+                    {dispenseRecords.length === 0 && patientTraceablePickups.length > 0 && (
+                      <div className="space-y-4">
+                        {patientTraceablePickups.map((pickup, idx) => (
+                          <motion.div
+                            key={`local-dispense-record-${pickup.id}`}
+                            onClick={() => openPickupTraceability(pickup)}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.08 }}
+                            className="bg-white border border-brand-green-deep/5 rounded-3xl p-6 hover:shadow-md transition-shadow group cursor-pointer"
+                          >
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="w-12 h-12 bg-brand-neutral rounded-2xl flex items-center justify-center text-brand-green-deep group-hover:bg-brand-green-deep group-hover:text-brand-ivory transition-all shrink-0">
+                                  <ShoppingBag size={20} />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-bold text-brand-green-mid/40 uppercase tracking-widest leading-none">
+                                      Retiro parcial
+                                    </span>
+                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[9px] font-bold rounded-full border border-amber-100">
+                                      PERMISO PRIVADO
+                                    </span>
+                                  </div>
+                                  <h4 className="font-bold text-brand-green-deep text-base sm:text-lg leading-none mb-1">
+                                    {pickup.strain?.name ?? 'Producto medicinal'}
+                                  </h4>
+                                  <p className="text-[11px] text-brand-green-mid/70 truncate">
+                                    {pickup.dispensary?.name ?? 'Dispensario autorizado'} - receta {pickup.token ?? `#${resolvedPrescriptionId}`}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:items-end w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-brand-green-deep/5 gap-2">
+                                <div className="flex justify-between sm:block text-right">
+                                  <p className="sm:text-lg font-bold text-brand-green-deep">{pickup.quantity}g</p>
+                                  <p className="text-[10px] text-brand-green-mid/40 font-bold uppercase tracking-tighter sm:mt-0.5">
+                                    Entrega fraccionada
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 bg-brand-neutral/50 px-3 py-1.5 rounded-lg border border-brand-green-deep/5">
+                                  <Database size={10} className="text-brand-gold" />
+                                  <span className="font-mono text-[9px] text-brand-green-mid/60 truncate max-w-[90px]">
+                                    {shortenHash(pickup.token ?? pickup.id, 8)}
+                                  </span>
+                                  <ArrowRight size={10} className="text-brand-gold" />
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="space-y-4">
-                      {dispenseRecords.length === 0 && MOCK_ORDERS.map((order, idx) => (
+                      {dispenseRecords.length === 0 && patientTraceablePickups.length === 0 && MOCK_ORDERS.map((order, idx) => (
                         <motion.div 
                           key={order.id}
                           onClick={() => setSelectedTraceRecord({
