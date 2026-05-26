@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -37,6 +37,12 @@ export function listenAdminAuth(callback: (state: AdminAuthState) => void) {
 
 export async function signInAdmin(email: string, password: string) {
   await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function ensureActorAuthSession() {
+  if (!auth.currentUser) {
+    await signInAnonymously(auth);
+  }
 }
 
 export async function signOutAdmin() {

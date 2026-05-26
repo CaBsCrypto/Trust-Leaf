@@ -18,6 +18,7 @@ import {
   type PersistenceSource,
 } from './lib/trustData';
 import {
+  ensureActorAuthSession,
   listenAdminAuth,
   signInAdmin,
   signOutAdmin,
@@ -307,9 +308,9 @@ function AppContent() {
           title="Entra como paciente"
           description="Tu cuenta Trust Leaf sera el punto de control para ficha clinica, recetas, permisos y trazabilidad. Las fees de red quedan patrocinadas por Trust Leaf."
           primaryAction="Entrar al portal"
-          demoAction="Entrar con paciente demo"
+          demoAction="Entrar con paciente de prueba"
           defaultEmail="paciente@trustleaf.test"
-          defaultName="Paciente demo"
+          defaultName="Paciente de prueba"
           onBack={() => navigate('/')}
           onStart={startSession}
         />
@@ -336,7 +337,7 @@ function AppContent() {
           title="Cuenta profesional"
           description="Primero el medico crea su cuenta y solicita alta. La wallet puede conectarse ahora o quedar como credencial gestionada por Trust Leaf al aprobar."
           primaryAction="Crear cuenta y solicitar alta"
-          demoAction="Entrar como medico demo"
+          demoAction="Entrar como medico de prueba"
           defaultEmail="medico@trustleaf.test"
           defaultName="Dra. Sofia Lagos"
           onBack={() => navigate('/')}
@@ -362,9 +363,9 @@ function AppContent() {
         <AuthGate
           role="doctor"
           title="Acceso medico aprobado"
-          description="El panel profesional queda disponible cuando admin aprueba la cuenta y registra la credencial medica. En demo puedes entrar como medico ya aprobado."
+          description="El panel profesional queda disponible cuando admin aprueba la cuenta y registra la credencial medica. Para grabacion controlada puedes entrar con un medico ya aprobado."
           primaryAction="Entrar al panel"
-          demoAction="Entrar como medico demo aprobado"
+          demoAction="Entrar como medico aprobado"
           defaultEmail="medico@trustleaf.test"
           defaultName="Dra. Sofia Lagos"
           onBack={() => navigate('/medico')}
@@ -380,7 +381,7 @@ function AppContent() {
           title="Tu panel medico espera aprobacion"
           description="Primero completa la solicitud profesional. Luego admin aprueba la licencia y registra la credencial medica en Testnet para emitir recetas verificables."
           primaryAction="Volver a mi solicitud"
-          secondaryAction="Ir a admin demo"
+          secondaryAction="Ir a admin"
           onPrimary={() => navigate('/medico')}
           onSecondary={() => navigate('/admin')}
           onBack={() => navigate('/')}
@@ -408,7 +409,7 @@ function AppContent() {
           title="Cuenta de dispensario"
           description="El dispensario crea cuenta, solicita alta y luego admin habilita la credencial operativa. La wallet puede conectarse o ser gestionada por Trust Leaf."
           primaryAction="Crear cuenta y solicitar alta"
-          demoAction="Entrar como dispensario demo"
+          demoAction="Entrar como dispensario de prueba"
           defaultEmail="dispensario@trustleaf.test"
           defaultName="Green Leaf Center"
           onBack={() => navigate('/')}
@@ -434,9 +435,9 @@ function AppContent() {
         <AuthGate
           role="dispensary"
           title="Acceso operativo"
-          description="El panel de inventario y entregas queda disponible para dispensarios aprobados. En demo puedes entrar como operador ya validado."
+          description="El panel de inventario y entregas queda disponible para dispensarios aprobados. Para grabacion controlada puedes entrar con un operador ya validado."
           primaryAction="Entrar al panel"
-          demoAction="Entrar como dispensario demo aprobado"
+          demoAction="Entrar como dispensario aprobado"
           defaultEmail="dispensario@trustleaf.test"
           defaultName="Green Leaf Center"
           onBack={() => navigate('/dispensario')}
@@ -452,7 +453,7 @@ function AppContent() {
           title="Operacion bloqueada hasta quedar live"
           description="El dispensario puede solicitar alta, pero no deberia validar recetas ni registrar retiros hasta que admin lo apruebe y deje su credencial lista en Testnet."
           primaryAction="Volver a mi solicitud"
-          secondaryAction="Ir a admin demo"
+          secondaryAction="Ir a admin"
           onPrimary={() => navigate('/dispensario')}
           onSecondary={() => navigate('/admin')}
           onBack={() => navigate('/')}
@@ -831,7 +832,7 @@ function MvpStatusRoute({
             onClick={() => onNavigate('/paciente')}
             className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory"
           >
-            Abrir demo
+            Abrir portal
           </button>
         </div>
       </header>
@@ -987,12 +988,6 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
       desc: 'Revisar solicitudes y estado operacional.',
       icon: <ShieldCheck size={18} />,
     },
-    {
-      path: '/mvp',
-      label: 'MVP',
-      desc: 'Checklist SCRUM, readiness y ruta de demo.',
-      icon: <Database size={18} />,
-    },
   ];
 
   return (
@@ -1006,7 +1001,7 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
               Cada actor entra por su propio flujo y ve solo sus herramientas.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {entries.map((entry) => (
               <button
                 key={entry.path}
@@ -1058,6 +1053,8 @@ function AuthGate({
     email: defaultEmail,
     name: defaultName,
   });
+  const [busy, setBusy] = useState<TrustSession['mode'] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const roleLabel = {
     patient: 'Paciente',
@@ -1073,13 +1070,28 @@ function AuthGate({
     admin: 'Admin usa una cuenta separada. La wallet pagadora y las secrets viven en backend, no en el navegador.',
   }[role];
 
-  const submit = (mode: TrustSession['mode']) => {
+  const submit = async (mode: TrustSession['mode']) => {
     if (!form.email.trim() || !form.name.trim()) return;
-    onStart(role, {
-      email: form.email.trim(),
-      name: form.name.trim(),
-      mode,
-    });
+    setBusy(mode);
+    setError(null);
+    try {
+      if (mode === 'email') {
+        await ensureActorAuthSession();
+      }
+      onStart(role, {
+        email: form.email.trim(),
+        name: form.name.trim(),
+        mode,
+      });
+    } catch (authError) {
+      setError(
+        authError instanceof Error
+          ? authError.message
+          : 'No fue posible abrir sesion segura. Puedes usar el acceso de prueba para continuar.',
+      );
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -1113,7 +1125,7 @@ function AuthGate({
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso privado</p>
           <h2 className="mt-2 text-2xl font-serif">Sesion de trabajo</h2>
           <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-            Cada actor entra a su propio panel. La siguiente iteracion conecta este acceso con Auth y politicas por rol.
+            Cada actor entra a su propio panel. Las solicitudes reales abren una sesion Firebase anonima para poder guardarse en Firestore.
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-3">
@@ -1136,20 +1148,28 @@ function AuthGate({
             </label>
           </div>
 
+          {error && (
+            <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
+              {error}
+            </div>
+          )}
+
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => submit('email')}
-              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+              disabled={Boolean(busy)}
+              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60"
             >
-              {primaryAction}
+              {busy === 'email' ? 'Abriendo sesion...' : primaryAction}
             </button>
             <button
               type="button"
               onClick={() => submit('demo')}
-              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
+              disabled={Boolean(busy)}
+              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:cursor-wait disabled:opacity-60"
             >
-              {demoAction}
+              {busy === 'demo' ? 'Entrando...' : demoAction}
             </button>
           </div>
 
@@ -1302,7 +1322,7 @@ function AdminAuthGate({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso protegido</p>
           <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">Admin aprueba actores antes de tocar Testnet.</h1>
           <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">
-            El panel admin real usa Firebase Auth y allowlist en `appAdministrators`. El modo demo queda disponible solo para grabaciones controladas.
+            El panel admin real usa Firebase Auth y allowlist en `appAdministrators`. El acceso de grabacion queda disponible solo para revisar el flujo completo.
           </p>
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
@@ -1322,7 +1342,7 @@ function AdminAuthGate({
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Sesion admin</p>
           <h2 className="mt-2 text-2xl font-serif">Entrar con cuenta allowlist</h2>
           <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-            Si aun no existe el usuario admin o su documento allowlist, usa demo para revisar el flujo sin hacer pasar demo por produccion.
+            Si aun no existe el usuario admin o su documento allowlist, usa el acceso de grabacion para revisar el flujo sin presentarlo como produccion.
           </p>
           <div className={`mt-4 rounded-2xl border p-4 text-xs leading-relaxed ${
             firebaseStatus.configured
@@ -1381,7 +1401,7 @@ function AdminAuthGate({
               onClick={onDemo}
               className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
             >
-              Entrar admin demo
+              Entrar modo grabacion
             </button>
           </div>
         </section>
@@ -1522,7 +1542,7 @@ function AdminRoute({
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Trust Leaf</p>
             <h1 className="text-2xl md:text-3xl font-serif">Admin Operacional</h1>
             <p className="mt-1 text-xs text-brand-green-mid/60">
-              Persistencia: {registrationSource === 'supabase' ? 'Supabase' : registrationSource === 'firebase' ? 'Firebase' : 'Demo local'}
+              Persistencia: {registrationSource === 'supabase' ? 'Supabase' : registrationSource === 'firebase' ? 'Firebase' : 'Local / grabacion'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1552,7 +1572,7 @@ function AdminRoute({
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Centro de control</p>
-              <h2 className="mt-2 text-3xl font-serif">Preparar red para demo</h2>
+              <h2 className="mt-2 text-3xl font-serif">Preparar red Testnet</h2>
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
                 Admin puede aprobar solicitudes reales o crear actores verificados manualmente. Para grabar, deja al menos un medico y un dispensario live antes de mostrar el flujo paciente.
               </p>
@@ -1562,7 +1582,7 @@ function AdminRoute({
               onClick={prepareAdminDemo}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all hover:bg-brand-green-mid active:scale-95"
             >
-              Preparar demo admin
+              Preparar flujo de grabacion
               <ArrowRight size={16} />
             </button>
           </div>
@@ -1604,7 +1624,7 @@ function AdminRoute({
           {(approvedDoctorsPendingOnchain.length > 0 || approvedDispensariesPendingOnchain.length > 0) && (
             <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
               Hay actores aprobados pendientes de registro Testnet: {approvedDoctorsPendingOnchain.length} medicos y {approvedDispensariesPendingOnchain.length} dispensarios.
-              La aprobacion habilita el POV demo; el boton "Registrar Testnet" deja la credencial anclada on-chain.
+              La aprobacion habilita el panel operativo; el boton "Registrar Testnet" deja la credencial anclada on-chain.
             </div>
           )}
           {onchainNotice && (
@@ -1634,7 +1654,7 @@ function AdminRoute({
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Solicitudes</p>
                 <h2 className="text-2xl font-serif mb-2">Registro de médicos</h2>
                 <p className="text-sm text-brand-green-mid/70 max-w-2xl">
-                  Revisa licencias, aprueba médicos y habilita el POV profesional para emitir recetas.
+                  Revisa licencias, aprueba médicos y habilita el panel profesional para emitir recetas.
                   En el siguiente paso esta aprobación se conectará con DoctorRegistry.
                 </p>
               </div>
@@ -1773,7 +1793,7 @@ function AdminRoute({
                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Solicitudes</p>
                 <h2 className="text-2xl font-serif mb-2">Registro de dispensarios</h2>
                 <p className="text-sm text-brand-green-mid/70 max-w-2xl">
-                  Revisa la solicitud, aprueba el ingreso y el dispensario queda visible como autorizado en esta demo.
+                  Revisa la solicitud, aprueba el ingreso y el dispensario queda visible como autorizado en la red.
                   El siguiente paso sera ejecutar `add_dispensary` on-chain con la cuenta admin.
                 </p>
               </div>
@@ -1961,7 +1981,7 @@ function AdminRoute({
                   <div className="space-y-3">
                     {approvedDoctors.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-5 text-sm text-brand-green-mid/70">
-                        Aún no hay médicos live. Agrega uno manualmente para preparar el demo.
+                        Aún no hay médicos live. Agrega uno manualmente para preparar la grabacion.
                       </div>
                     ) : (
                       approvedDoctors.map((doctor) => (
@@ -2012,7 +2032,7 @@ function AdminRoute({
                   <div className="space-y-3">
                     {approved.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-5 text-sm text-brand-green-mid/70">
-                        Aún no hay dispensarios live. Agrega uno manualmente para preparar el demo.
+                        Aún no hay dispensarios live. Agrega uno manualmente para preparar la grabacion.
                       </div>
                     ) : (
                       approved.map((dispensary) => (

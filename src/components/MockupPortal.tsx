@@ -497,7 +497,7 @@ function buildDemoPrescriptionValidation(
     },
     validation: {
       canDispense: true,
-      reason: 'Receta demo validada para grabacion MVP. El dispensario ve saldo, vigencia y permiso minimo, no ficha clinica.',
+      reason: 'Receta de prueba validada para grabacion. El dispensario ve saldo, vigencia y permiso minimo, no ficha clinica.',
     },
     lastRecord: {
       id: 1,
@@ -1311,19 +1311,19 @@ export default function MockupPortal({
     ['Retiros trazables', String(activePickups.length + dispenseRecords.length)],
   ] as const;
   const doctorCredentialMetrics = [
-    ['Estado', doctorSignerReady ? 'Autorizado' : 'Demo'],
+    ['Estado', doctorSignerReady ? 'Autorizado' : 'Signer pendiente'],
     ['Recetas emitidas', String(patientDashboard?.summary.total ?? 1)],
     ['Pacientes con permiso', String(activePrivacyPermissions.filter((permission) => permission.role === 'Medico').length || 1)],
   ] as const;
   const dispensaryCredentialMetrics = [
-    ['Estado', dispensarySignerReady ? 'Autorizado' : 'Demo'],
+    ['Estado', dispensarySignerReady ? 'Autorizado' : 'Signer pendiente'],
     ['Entregas registradas', String(activePickups.length + dispenseRecords.length)],
     ['Lotes activos', String(dispensaryInventory.length)],
   ] as const;
   const latestMedicalPermission = activePrivacyPermissions.find((permission) => permission.kind === 'medical-consultation') ?? null;
   const latestDispensaryPermission = activePrivacyPermissions.find((permission) => permission.kind === 'dispensary-prescription') ?? null;
   const recordingFlowSteps = [
-    ['Identidad', walletConnected, 'Paciente entra con wallet demo, passkey o Freighter.'],
+    ['Identidad', walletConnected, 'Paciente entra con cuenta de prueba, passkey o Freighter.'],
     ['Consulta', Boolean(patientUpcomingConsultation || selectedConsultationBlock), 'El paciente agenda y el medico valida llegada.'],
     ['Permiso medico', Boolean(latestMedicalPermission), 'El paciente comparte ficha privada por ventana temporal.'],
     ['Receta', Boolean(hasPrescription || primaryPrescription), 'El medico emite receta verificable para el paciente.'],
@@ -1332,9 +1332,9 @@ export default function MockupPortal({
   ] as const;
   const mvpOperationalChecks = [
     ['Contratos Testnet', Boolean(runtimeReadiness?.capabilities.readContracts), 'DoctorRegistry, DispensaryRegistry, Prescription y DispenseRecord activos.'],
-    ['Signers demo', Boolean(doctorSignerReady && dispensarySignerReady), 'Medico y dispensario pueden firmar acciones MVP desde backend Testnet.'],
+    ['Signers Testnet', Boolean(doctorSignerReady && dispensarySignerReady), 'Medico y dispensario pueden firmar acciones desde backend Testnet.'],
     ['Passkeys', Boolean(runtimeReadiness?.capabilities.passkeyRelay && runtimeReadiness.capabilities.passkeyDiscovery), 'Relayer y Mercury listos para smart wallets reales.'],
-    ['Paciente demo', walletConnected, 'Wallet demo, Passkey o Freighter define la direccion del dashboard.'],
+    ['Paciente Testnet', walletConnected, 'Cuenta de prueba, Passkey o Freighter define la direccion del dashboard.'],
     ['Receta activa', Boolean(hasPrescription || primaryPrescription), 'La receta existe y mantiene saldo verificable.'],
     ['Dispensacion', activePickups.length + dispenseRecords.length > 0, 'Existe al menos un retiro parcial o registro on-chain.'],
   ] as const;
@@ -1581,13 +1581,13 @@ export default function MockupPortal({
       ...current,
       primaryMethod: 'demo',
       hasFreighterBackup: false,
-      walletLabel: 'Paciente demo testnet',
+      walletLabel: 'Paciente de prueba Testnet',
       contractAccount: DEMO_PATIENT_ADDRESS,
       freighterAddress: DEMO_PATIENT_ADDRESS,
       networkLabel: stellarConfig.networkLabel,
     }));
     setWalletError(null);
-    setWalletHint('Paciente demo conectado. Esta identidad ya tiene historial real en Stellar Testnet.');
+    setWalletHint('Paciente de prueba conectado. Esta identidad ya tiene historial real en Stellar Testnet.');
     setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
     setPatientDashboard((current) => current ?? buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
     setHasPrescription(true);
@@ -1626,8 +1626,8 @@ export default function MockupPortal({
     });
     setDispensePrescriptionId(DEMO_PRESCRIPTION_ID);
     setRecentActivity([
-      { id: 'act-reset-1', action: 'Demo reiniciado para grabacion', date: 'ReciÃ©n', icon: 'Activity' },
-      { id: 'act-init-1', action: 'Consulta medico especialista pendiente', date: 'Demo limpio', icon: 'Stethoscope' },
+      { id: 'act-reset-1', action: 'Flujo reiniciado para grabacion', date: 'Recién', icon: 'Activity' },
+      { id: 'act-init-1', action: 'Consulta medico especialista pendiente', date: 'Flujo limpio', icon: 'Stethoscope' },
     ]);
     setSelectedConsultationId(null);
     setConsultationStatusById({});
@@ -2030,14 +2030,14 @@ export default function MockupPortal({
     localStorage.setItem('trust_latest_prescription_id', String(issuedId));
     setDispensePrescriptionId(String(issuedId));
     setDoctorIssueSuccess(
-      `Receta demo generada para grabación. Número ${issuedId} - Hash ${shortenHash(txHash)}. Pendiente de firma real en Stellar Testnet.`,
+      `Receta de prueba generada para grabación. Número ${issuedId} - Hash ${shortenHash(txHash)}. Pendiente de firma real en Stellar Testnet.`,
     );
     const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
     setDispensaryValidation(dispensaryPermission);
     setRecentActivity((prev: any[]) => [
       {
         id: `act-demo-issue-${Date.now()}`,
-        action: `Receta demo creada para ${shortenAddress(targetPatientAddress, 5)}`,
+        action: `Receta de prueba creada para ${shortenAddress(targetPatientAddress, 5)}`,
         date: 'Recién',
         icon: 'FileText',
       },
@@ -2174,7 +2174,7 @@ export default function MockupPortal({
     ]);
     setDispenseSuccess(
       mode === 'demo'
-        ? `Retiro demo registrado. Record ${recordId}. La receta mantiene saldo para futuras entregas.`
+        ? `Retiro de prueba registrado. Record ${recordId}. La receta mantiene saldo para futuras entregas.`
         : 'El contrato testnet marcó esta receta sin cupo activo. Trust Leaf conserva un retiro fraccionado privado mientras la siguiente versión de contratos maneja gramos restantes por periodo.',
     );
     setDispensaryStep('success');
@@ -2388,7 +2388,7 @@ export default function MockupPortal({
         action: isMedical
           ? `Permiso privado creado para ${actor}`
           : `QR de receta compartible creado para ${actor}`,
-        date: 'ReciÃ©n',
+        date: 'Recién',
         icon: 'ShieldCheck',
       },
       ...prev,
@@ -3428,7 +3428,7 @@ export default function MockupPortal({
                             onClick={resetDemoState}
                             className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral"
                           >
-                            Reiniciar demo
+                            Reiniciar flujo
                           </button>
                         )}
                       </div>
@@ -3440,7 +3440,7 @@ export default function MockupPortal({
                               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de grabacion</p>
                               <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Flujo paciente - medico - dispensario</h4>
                               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
-                                Primero entra como paciente demo. Luego agenda, comparte permiso, recibe receta, genera QR y valida retiro parcial en dispensario.
+                                Primero entra como paciente de prueba. Luego agenda, comparte permiso, recibe receta, genera QR y valida retiro parcial en dispensario.
                               </p>
                             </div>
                             <button
@@ -3448,7 +3448,7 @@ export default function MockupPortal({
                               onClick={connectDemoPatientWallet}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
                             >
-                              Activar demo paciente
+                              Activar paciente de prueba
                             </button>
                           </div>
                           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -3483,7 +3483,7 @@ export default function MockupPortal({
                         <div className="space-y-3">
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                           {[
-                            ['1', 'Crear identidad', 'Passkey, Freighter o demo testnet.'],
+                            ['1', 'Crear identidad', 'Passkey, Freighter o acceso Testnet de prueba.'],
                             ['2', 'Recibir receta', 'El médico emite una receta on-chain a tu wallet.'],
                             ['3', 'Retirar medicina', 'El dispensario valida la receta desde su propia URL.'],
                           ].map(([step, title, desc]) => (
@@ -3510,9 +3510,9 @@ export default function MockupPortal({
                           freighterTitle={t.portal.onboarding.freighterTitle}
                           freighterDescription={t.portal.onboarding.freighterDesc}
                           freighterAction={t.portal.onboarding.freighterAction}
-                          demoTitle="Entrar en modo demo"
-                          demoDescription="Usa una identidad testnet preconfigurada para probar el flujo completo aunque Passkey o Freighter fallen."
-                          demoAction="Usar demo testnet"
+                          demoTitle="Entrar con cuenta de prueba"
+                          demoDescription="Usa una identidad Testnet preconfigurada para probar el flujo completo aunque Passkey o Freighter fallen."
+                          demoAction="Usar cuenta Testnet"
                           linkedLabel={t.portal.onboarding.linked}
                           backupTitle={t.portal.onboarding.backupTitle}
                           backupDescription={t.portal.onboarding.backupDesc}
@@ -3525,7 +3525,7 @@ export default function MockupPortal({
                           networkValue={walletSetup.networkLabel ?? stellarConfig.networkLabel}
                           primaryPasskeyValue={t.portal.onboarding.primaryPasskeyValue}
                           primaryFreighterValue={t.portal.onboarding.primaryFreighterValue}
-                          primaryDemoValue="Demo testnet"
+                          primaryDemoValue="Cuenta Testnet"
                           primaryEmptyValue={t.portal.onboarding.primaryEmptyValue}
                           backupConnectedValue={t.portal.onboarding.backupConnectedValue}
                           backupEmptyValue={t.portal.onboarding.backupEmptyValue}
@@ -3589,7 +3589,7 @@ export default function MockupPortal({
                             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de grabacion</p>
                             <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Flujo paciente - medico - dispensario</h4>
                             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
-                              Usa esta barra como checklist del demo. Cada paso se activa con datos locales y deja claro que el paciente controla permisos y QR.
+                              Usa esta barra como checklist de grabacion. Cada paso se activa con datos locales y deja claro que el paciente controla permisos y QR.
                             </p>
                           </div>
                           <button
@@ -3630,10 +3630,10 @@ export default function MockupPortal({
                       <div className="rounded-[32px] border border-brand-green-deep/10 bg-white p-5 shadow-sm md:p-6">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Checklist MVP</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Estado Testnet</p>
                             <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Estado operativo para SCRUM</h4>
                             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
-                              Este bloque lee `/api/stellar/readiness` y separa lo listo para demo de lo pendiente para piloto.
+                              Este bloque lee `/api/stellar/readiness` y separa lo listo para grabacion de lo pendiente para piloto.
                             </p>
                           </div>
                           <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
@@ -3683,7 +3683,7 @@ export default function MockupPortal({
 
                         {runtimeReadiness?.missing.length ? (
                           <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800">
-                            Pendiente no bloqueante para demo: {runtimeReadiness.missing.join(', ')}.
+                            Pendiente no bloqueante para grabacion: {runtimeReadiness.missing.join(', ')}.
                           </div>
                         ) : null}
                       </div>
@@ -4005,7 +4005,7 @@ export default function MockupPortal({
                                 <ShieldCheck size={22} />
                               </div>
                               <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
-                                {walletConnected ? 'Activa' : 'Demo lista'}
+                                {walletConnected ? 'Activa' : 'Lista'}
                               </span>
                             </div>
                             <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Cuenta Stellar del paciente</p>
@@ -4098,7 +4098,7 @@ export default function MockupPortal({
                               <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
                                 doctorSignerReady ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                               }`}>
-                                {doctorSignerReady ? 'Testnet listo' : 'Demo signer'}
+                                {doctorSignerReady ? 'Testnet listo' : 'Signer pendiente'}
                               </span>
                             </div>
 
@@ -4187,7 +4187,7 @@ export default function MockupPortal({
                                 disabled={doctorIssueBusy || !prescriptionPatientAddress}
                                 className="flex-1 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                {doctorIssueBusy ? 'Emitiendo...' : doctorSignerReady ? 'Emitir receta Testnet' : 'Generar receta demo'}
+                                {doctorIssueBusy ? 'Emitiendo...' : doctorSignerReady ? 'Emitir receta Testnet' : 'Generar receta de prueba'}
                               </button>
                               <button
                                 type="button"
@@ -5388,7 +5388,7 @@ export default function MockupPortal({
                               <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Entregas recientes</h3>
                             </div>
                             <span className="rounded-full bg-brand-neutral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
-                              Local demo
+                              Registro local
                             </span>
                           </div>
                           <div className="mt-5 space-y-3">
@@ -7251,7 +7251,7 @@ export default function MockupPortal({
                               disabled={dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId)}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
-                               {dispenseBusy ? 'Registrando...' : dispensarySignerReady ? 'Validar cupo y registrar retiro' : 'Registrar retiro demo'} <CheckCircle size={20} />
+                               {dispenseBusy ? 'Registrando...' : dispensarySignerReady ? 'Validar cupo y registrar retiro' : 'Registrar retiro de prueba'} <CheckCircle size={20} />
                             </button>
                             {dispenseError && (
                               <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
@@ -7475,7 +7475,7 @@ export default function MockupPortal({
                   ) : (
                     <>
                       <FileText size={16} />
-                      {doctorSignerReady ? 'Emitir en testnet' : 'Generar receta demo'}
+                      {doctorSignerReady ? 'Emitir en testnet' : 'Generar receta de prueba'}
                     </>
                   )}
                 </button>

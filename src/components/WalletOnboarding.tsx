@@ -241,10 +241,10 @@ export default function WalletOnboarding({
               </p>
               <p className="mt-2 text-sm leading-relaxed text-brand-ivory/65">
                 {primaryMethod === 'demo'
-                  ? 'Modo demo testnet activo: ideal para revisar el flujo completo mientras se habilitan passkeys y wallet real.'
+                  ? 'Acceso de prueba Testnet activo: ideal para revisar el flujo completo mientras se habilitan passkeys y wallet real.'
                   : onboardingComplete
                     ? 'Tu acceso diario queda optimizado para passkey y puedes sumar Freighter como respaldo cuando quieras.'
-                    : 'Elige Passkey, Freighter o modo demo para continuar. Demo permite probar el flujo sin bloquear el registro.'}
+                    : 'Elige Passkey, Freighter o acceso de prueba para continuar sin bloquear el registro.'}
               </p>
             </div>
 
