@@ -1372,17 +1372,46 @@ function AdminRoute({
     licenseId: 'MED-CL-20441',
     specialty: 'Medicina cannábica',
     contact: 'sofia@trustleaf.org',
-    wallet: 'GDOCMANUALTRUSTLEAFTESTNET000000000000000000000',
+    wallet: DEFAULT_DOCTOR_WALLET,
   });
   const [manualDispensary, setManualDispensary] = useState({
     name: 'Green Leaf Center',
     legalId: 'DSP-CL-8821',
     address: 'Av. Principal 123',
     contact: 'operaciones@greenleaf.test',
-    wallet: 'GDISPMANUALTRUSTLEAFTESTNET00000000000000000000',
+    wallet: DEFAULT_DISPENSARY_WALLET,
   });
   const [onchainAction, setOnchainAction] = useState<string | null>(null);
   const [onchainNotice, setOnchainNotice] = useState<string | null>(null);
+  const approvedDoctorsPendingOnchain = approvedDoctors.filter((request) => request.onchainStatus !== 'registered');
+  const approvedDispensariesPendingOnchain = approved.filter((request) => request.onchainStatus !== 'registered');
+  const networkReady =
+    approvedDoctors.length > 0
+    && approved.length > 0
+    && approvedDoctorsPendingOnchain.length === 0
+    && approvedDispensariesPendingOnchain.length === 0;
+  const adminSteps = [
+    ['Solicitudes recibidas', doctorRegistrations.length + registrations.length > 0, 'Medicos y dispensarios pueden postular o admin puede cargarlos manualmente.'],
+    ['Actores aprobados', approvedDoctors.length > 0 && approved.length > 0, 'Debe existir al menos un medico y un dispensario live.'],
+    ['Registro Testnet', networkReady, 'Actores aprobados registrados en DoctorRegistry y DispensaryRegistry.'],
+    ['Demo grabable', networkReady, 'Medico emite, paciente ve QR y dispensario registra retiro parcial.'],
+  ] as const;
+  const statusLabel = {
+    pending: 'Pendiente',
+    needs_review: 'Revisar',
+    approved: 'Aprobado',
+    rejected: 'Rechazado',
+  } satisfies Record<ActorRegistrationStatus, string>;
+  const onchainLabel = {
+    pending: 'Pendiente Testnet',
+    registered: 'Registrado Testnet',
+    failed: 'Fallo Testnet',
+  } satisfies Record<DoctorRegistration['onchainStatus'], string>;
+  const onchainClass = {
+    pending: 'bg-amber-100 text-amber-700',
+    registered: 'bg-green-100 text-green-700',
+    failed: 'bg-red-100 text-red-700',
+  } satisfies Record<DoctorRegistration['onchainStatus'], string>;
 
   const runOnchainAction = async (
     key: string,
@@ -1495,6 +1524,34 @@ function AdminRoute({
               </div>
             ))}
           </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-4">
+            {adminSteps.map(([label, done, detail]) => (
+              <div
+                key={label}
+                className={`rounded-2xl border p-4 ${
+                  done
+                    ? 'border-green-100 bg-green-50 text-green-800'
+                    : 'border-amber-100 bg-white text-brand-green-mid'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest">{label}</p>
+                  <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                    done ? 'bg-white text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {done ? 'Listo' : 'Pendiente'}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed opacity-75">{detail}</p>
+              </div>
+            ))}
+          </div>
+          {(approvedDoctorsPendingOnchain.length > 0 || approvedDispensariesPendingOnchain.length > 0) && (
+            <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+              Hay actores aprobados pendientes de registro Testnet: {approvedDoctorsPendingOnchain.length} medicos y {approvedDispensariesPendingOnchain.length} dispensarios.
+              La aprobacion habilita el POV demo; el boton "Registrar Testnet" deja la credencial anclada on-chain.
+            </div>
+          )}
           {onchainNotice && (
             <div className="mt-5 rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm text-brand-green-mid">
               {onchainNotice}
@@ -1557,7 +1614,7 @@ function AdminRoute({
                               ? 'bg-red-100 text-red-700'
                               : 'bg-amber-100 text-amber-700'
                         }`}>
-                          {request.status}
+                          {statusLabel[request.status]}
                         </span>
                       </div>
                       <p className="text-xs text-brand-green-mid/70">{request.specialty}</p>
@@ -1591,9 +1648,19 @@ function AdminRoute({
                     )}
                     {request.status === 'approved' && (
                       <div className="flex flex-col items-start gap-2 md:items-end">
-                        <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
-                          On-chain: {request.onchainStatus}
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${onchainClass[request.onchainStatus]}`}>
+                          {onchainLabel[request.onchainStatus]}
                         </span>
+                        {request.reviewerNote && (
+                          <p className="max-w-[240px] rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-xs leading-relaxed text-brand-green-mid/70">
+                            {request.reviewerNote}
+                          </p>
+                        )}
+                        {request.metadataHash && (
+                          <p className="max-w-[240px] break-all font-mono text-[10px] text-brand-green-mid/50">
+                            {request.metadataHash}
+                          </p>
+                        )}
                         {request.onchainStatus !== 'registered' && (
                           <button
                             onClick={() =>
@@ -1686,7 +1753,7 @@ function AdminRoute({
                               ? 'bg-red-100 text-red-700'
                               : 'bg-amber-100 text-amber-700'
                         }`}>
-                          {request.status}
+                          {statusLabel[request.status]}
                         </span>
                       </div>
                       <p className="text-xs text-brand-green-mid/70">{request.address}</p>
@@ -1720,9 +1787,19 @@ function AdminRoute({
                     )}
                     {request.status === 'approved' && (
                       <div className="flex flex-col items-start gap-2 md:items-end">
-                        <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
-                          On-chain: {request.onchainStatus}
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${onchainClass[request.onchainStatus]}`}>
+                          {onchainLabel[request.onchainStatus]}
                         </span>
+                        {request.reviewerNote && (
+                          <p className="max-w-[240px] rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-xs leading-relaxed text-brand-green-mid/70">
+                            {request.reviewerNote}
+                          </p>
+                        )}
+                        {request.metadataHash && (
+                          <p className="max-w-[240px] break-all font-mono text-[10px] text-brand-green-mid/50">
+                            {request.metadataHash}
+                          </p>
+                        )}
                         {request.onchainStatus !== 'registered' && (
                           <button
                             onClick={() =>
