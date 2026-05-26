@@ -350,6 +350,7 @@ function AppContent() {
       <DoctorRegistrationRoute
         onBack={() => navigate('/')}
         onNavigate={navigate}
+        session={session}
         doctorRegistrations={doctorRegistrations}
         registrationSource={registrationSource}
         canOperate={doctorCanOperate}
@@ -423,6 +424,7 @@ function AppContent() {
       <DispensaryRegistrationRoute
         onBack={() => navigate('/')}
         onNavigate={navigate}
+        session={session}
         dispensaryRegistrations={dispensaryRegistrations}
         registrationSource={registrationSource}
         canOperate={dispensaryCanOperate}
@@ -2097,9 +2099,23 @@ function getRegistrationSourceLabel(source: PersistenceSource) {
   return 'Fallback local de grabacion';
 }
 
+function actorMatchesSession(
+  request: { contact: string; name: string },
+  currentSession: TrustSession | null,
+) {
+  if (!currentSession) return false;
+  const sessionEmail = currentSession.email.trim().toLowerCase();
+  const sessionName = currentSession.name.trim().toLowerCase();
+  return (
+    request.contact.trim().toLowerCase() === sessionEmail
+    || request.name.trim().toLowerCase() === sessionName
+  );
+}
+
 function DispensaryRegistrationRoute({
   onBack,
   onNavigate,
+  session,
   dispensaryRegistrations,
   registrationSource,
   canOperate,
@@ -2107,6 +2123,7 @@ function DispensaryRegistrationRoute({
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
+  session: TrustSession | null;
   dispensaryRegistrations: DispensaryRegistration[];
   registrationSource: PersistenceSource;
   canOperate: boolean;
@@ -2119,7 +2136,8 @@ function DispensaryRegistrationRoute({
     contact: '',
     wallet: '',
   });
-  const latestRegistration = dispensaryRegistrations[0];
+  const ownRegistrations = dispensaryRegistrations.filter((request) => actorMatchesSession(request, session));
+  const latestRegistration = ownRegistrations[0] ?? null;
   const approved = dispensaryRegistrations.filter((request) => request.status === 'approved');
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
@@ -2282,6 +2300,18 @@ function DispensaryRegistrationRoute({
             </p>
           </div>
 
+          {latestRegistration && (
+            <div className="rounded-[24px] border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Mi solicitud</p>
+              <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-brand-green-mid/70 sm:grid-cols-2">
+                <span>Estado admin: <strong className="text-brand-green-deep">{latestRegistration.status}</strong></span>
+                <span>Registro Testnet: <strong className="text-brand-green-deep">{latestRegistration.onchainStatus}</strong></span>
+                <span>Contacto: <strong className="text-brand-green-deep">{latestRegistration.contact}</strong></span>
+                <span className="break-all">Wallet: <strong className="font-mono text-brand-green-deep">{latestRegistration.wallet}</strong></span>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <button
               onClick={() => onNavigate('/dispensario/operacion')}
@@ -2307,6 +2337,7 @@ function DispensaryRegistrationRoute({
 function DoctorRegistrationRoute({
   onBack,
   onNavigate,
+  session,
   doctorRegistrations,
   registrationSource,
   canOperate,
@@ -2314,6 +2345,7 @@ function DoctorRegistrationRoute({
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
+  session: TrustSession | null;
   doctorRegistrations: DoctorRegistration[];
   registrationSource: PersistenceSource;
   canOperate: boolean;
@@ -2326,7 +2358,8 @@ function DoctorRegistrationRoute({
     contact: '',
     wallet: '',
   });
-  const latestRegistration = doctorRegistrations[0];
+  const ownRegistrations = doctorRegistrations.filter((request) => actorMatchesSession(request, session));
+  const latestRegistration = ownRegistrations[0] ?? null;
   const approved = doctorRegistrations.filter((request) => request.status === 'approved');
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
@@ -2488,6 +2521,18 @@ function DoctorRegistrationRoute({
                 : 'La solicitud puede enviarse ahora, pero la emision de recetas queda bloqueada hasta que admin apruebe la credencial.'}
             </p>
           </div>
+
+          {latestRegistration && (
+            <div className="rounded-[24px] border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Mi solicitud</p>
+              <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-brand-green-mid/70 sm:grid-cols-2">
+                <span>Estado admin: <strong className="text-brand-green-deep">{latestRegistration.status}</strong></span>
+                <span>Registro Testnet: <strong className="text-brand-green-deep">{latestRegistration.onchainStatus}</strong></span>
+                <span>Contacto: <strong className="text-brand-green-deep">{latestRegistration.contact}</strong></span>
+                <span className="break-all">Wallet: <strong className="font-mono text-brand-green-deep">{latestRegistration.wallet}</strong></span>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={() => onNavigate('/medico/operacion')}
