@@ -122,6 +122,9 @@ function AppContent() {
         }),
       );
       localStorage.setItem('trust_doctor_patient_address', DEFAULT_PATIENT_WALLET);
+      localStorage.setItem('trust_has_rx', 'true');
+      localStorage.setItem('trust_latest_prescription_id', '1');
+      localStorage.setItem('trust_dispense_prescription_id', '1');
     }
     localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
     setSession(nextSession);

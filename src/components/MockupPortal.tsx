@@ -424,6 +424,62 @@ const DEMO_PRESCRIPTION_ID = '1';
 const DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS = 30;
 const DEFAULT_PRESCRIPTION_USED_GRAMS = 9;
 
+function buildDemoPatientDashboard(patientAddress = DEMO_PATIENT_ADDRESS): PatientDashboardData {
+  const now = new Date();
+  const issuedAt = new Date(now);
+  issuedAt.setHours(now.getHours() - 2);
+  const expiresAt = Math.floor(now.getTime() / 1000) + 30 * 24 * 60 * 60;
+
+  return {
+    patientAddress,
+    network: stellarConfig.networkLabel,
+    rpcUrl: stellarConfig.rpcUrl,
+    latestLedger: 2540000,
+    latestLedgerClosedAt: now.toISOString(),
+    registryContractId: 'DoctorRegistry Testnet',
+    prescriptionContractId: 'Prescription Testnet demo fallback',
+    summary: {
+      total: 1,
+      active: 1,
+      used: 0,
+      expired: 0,
+    },
+    prescriptions: [
+      {
+        id: Number(DEMO_PRESCRIPTION_ID),
+        patient: patientAddress,
+        doctor: 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX',
+        medicationHash: 'demo-minimal-prescription-hash',
+        expiresAt,
+        totalQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+        dispensedQuantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
+        remainingQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS - DEFAULT_PRESCRIPTION_USED_GRAMS,
+        isUsed: false,
+        status: 'active',
+        issuedAt: issuedAt.toISOString(),
+        issuedLedger: 2540000,
+        txHash: 'demo-testnet-prescription-fallback',
+      },
+    ],
+    dispenseRecords: [
+      {
+        id: 1,
+        prescriptionId: Number(DEMO_PRESCRIPTION_ID),
+        patient: patientAddress,
+        doctor: 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX',
+        dispensary: 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6',
+        productHash: 'demo-product-hash',
+        batchHash: 'demo-batch-hash',
+        quantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
+        dispensedAt: Math.floor(issuedAt.getTime() / 1000),
+        recordedAt: issuedAt.toISOString(),
+        recordedLedger: 2540001,
+        txHash: 'demo-testnet-dispense-fallback',
+      },
+    ],
+  };
+}
+
 function isPrescriptionNotValidError(message: string) {
   return /PRESCRIPTION_NOT_VALID|Error\(Contract,\s*#4\)|is_valid.*false|not valid|invalid|used|consum/i.test(message);
 }
@@ -1308,6 +1364,12 @@ export default function MockupPortal({
           return;
         }
 
+        if (walletSetup.primaryMethod === 'demo' && payload.summary.total === 0) {
+          setPatientDashboard(buildDemoPatientDashboard(patientIdentityAddress));
+          setHasPrescription(true);
+          return;
+        }
+
         setPatientDashboard(payload);
         setHasPrescription(payload.summary.total > 0);
       } catch (error) {
@@ -1476,6 +1538,11 @@ export default function MockupPortal({
     setWalletError(null);
     setWalletHint('Paciente demo conectado. Esta identidad ya tiene historial real en Stellar Testnet.');
     setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
+    setPatientDashboard((current) => current ?? buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
+    setHasPrescription(true);
+    localStorage.setItem('trust_has_rx', 'true');
+    localStorage.setItem('trust_latest_prescription_id', DEMO_PRESCRIPTION_ID);
+    localStorage.setItem('trust_dispense_prescription_id', DEMO_PRESCRIPTION_ID);
   };
 
   const resetDemoState = () => {
