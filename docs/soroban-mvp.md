@@ -14,18 +14,27 @@ Construir una red medica donde:
 
 ## Deploy actual en Stellar Testnet
 
+Actualizado: 26 de mayo de 2026. Produccion Vercel apunta a estos contratos
+desde `https://www.trustleaf.org`.
+
 Cuenta deploy/admin:
 - `trustleaf-admin`: `GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6`
 
 Contratos desplegados e inicializados:
-- `DoctorRegistry`: `CAM6BHCGMIJ6KTCDPT6E3MW263YZPFMYT5TWRQ4VKYFO7KOR27EVGF3V`
-- `DispensaryRegistry`: `CCYXOVG6YVU7QJRNPFEBLTAOLSYD7UZH7X5SEKKD7PNKT24IPH5SVA5C`
-- `Prescription`: `CBINKAIKPD7WMF4VF7L74HWVQJ5NBNYB3LG7VNB7VC7H4JZG65GMOJVE`
-- `DispenseRecord`: `CAKTCQO2BOBBCSMOL3Z7GKCIAM7DS3JFK6CA6LYVO32E6HWGOVISETGN`
+- `DoctorRegistry`: `CAQZWTOY5L7SN6IJIO5R23DAOIK7UQDM6YSRRXE3B5XQNXDM2Q4W4ICJ`
+- `DispensaryRegistry`: `CBC7OYPU5VXFPCSY6FV74Q6E6MY5NFJGFLKTXQFX7ASMNH4SSTHAW3L6`
+- `Prescription`: `CCACCU7JGNRL3RQGMNNM5LK27PQEDUOLJQ73QSQR5NTNJGYKOJSQFNIA`
+- `DispenseRecord`: `CAT756N5HQALOEISAEQSASHBK2N4XLUCDJNDEIW4DK6SJP4YNOAJRUPE`
 
 Actores demo autorizados:
 - `trustleaf-doctor`: `GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX`
 - `trustleaf-dispensary`: `GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6`
+
+Flujo real probado en Testnet:
+- receta `0` emitida por `trustleaf-doctor`;
+- retiro parcial `0` registrado por `trustleaf-dispensary`;
+- estado final probado: `30g` autorizados, `5g` dispensados y `25g`
+  restantes.
 
 ## Contratos objetivo
 

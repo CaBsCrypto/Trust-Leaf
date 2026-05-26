@@ -72,6 +72,14 @@ interface PatientDashboardData {
 }
 
 interface RuntimeReadiness {
+  network: string;
+  rpcUrl: string;
+  contracts: {
+    registryContractId: string;
+    dispensaryRegistryContractId: string;
+    prescriptionContractId: string;
+    dispenseRecordContractId: string;
+  };
   capabilities: {
     readContracts: boolean;
     issuePrescriptions: boolean;
@@ -1238,6 +1246,14 @@ export default function MockupPortal({
     ['Receta', Boolean(hasPrescription || primaryPrescription), 'El medico emite receta verificable para el paciente.'],
     ['QR dispensario', Boolean(latestDispensaryPermission), 'El paciente comparte solo receta, saldo y formatos autorizados.'],
     ['Retiro parcial', activePickups.length > 0, 'El dispensario registra lote, cantidad y trazabilidad.'],
+  ] as const;
+  const mvpOperationalChecks = [
+    ['Contratos Testnet', Boolean(runtimeReadiness?.capabilities.readContracts), 'DoctorRegistry, DispensaryRegistry, Prescription y DispenseRecord activos.'],
+    ['Signers demo', Boolean(doctorSignerReady && dispensarySignerReady), 'Medico y dispensario pueden firmar acciones MVP desde backend Testnet.'],
+    ['Passkeys', Boolean(runtimeReadiness?.capabilities.passkeyRelay && runtimeReadiness.capabilities.passkeyDiscovery), 'Relayer y Mercury listos para smart wallets reales.'],
+    ['Paciente demo', walletConnected, 'Wallet demo, Passkey o Freighter define la direccion del dashboard.'],
+    ['Receta activa', Boolean(hasPrescription || primaryPrescription), 'La receta existe y mantiene saldo verificable.'],
+    ['Dispensacion', activePickups.length + dispenseRecords.length > 0, 'Existe al menos un retiro parcial o registro on-chain.'],
   ] as const;
 
   const fundTestnetRole = async (role: 'doctor' | 'dispensary' | 'patient') => {
@@ -3475,6 +3491,67 @@ export default function MockupPortal({
                             </div>
                           ))}
                         </div>
+                      </div>
+
+                      <div className="rounded-[32px] border border-brand-green-deep/10 bg-white p-5 shadow-sm md:p-6">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Checklist MVP</p>
+                            <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Estado operativo para SCRUM</h4>
+                            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
+                              Este bloque lee `/api/stellar/readiness` y separa lo listo para demo de lo pendiente para piloto.
+                            </p>
+                          </div>
+                          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                            runtimeReadiness ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {runtimeReadiness ? runtimeReadiness.network : 'Readiness pendiente'}
+                          </span>
+                        </div>
+
+                        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          {mvpOperationalChecks.map(([label, done, description]) => (
+                            <div
+                              key={label}
+                              className={`rounded-2xl border p-4 ${
+                                done
+                                  ? 'border-green-100 bg-green-50'
+                                  : 'border-amber-100 bg-amber-50'
+                              }`}
+                            >
+                              <div className="mb-2 flex items-center justify-between gap-3">
+                                <p className="text-sm font-bold text-brand-green-deep">{label}</p>
+                                <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                                  done ? 'bg-white text-green-700' : 'bg-white text-amber-700'
+                                }`}>
+                                  {done ? 'Listo' : 'Pendiente'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] leading-relaxed text-brand-green-mid/65">{description}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {runtimeReadiness && (
+                          <div className="mt-5 grid grid-cols-1 gap-2 text-[10px] font-mono text-brand-green-mid/70 md:grid-cols-2">
+                            {[
+                              ['DoctorRegistry', runtimeReadiness.contracts.registryContractId],
+                              ['DispensaryRegistry', runtimeReadiness.contracts.dispensaryRegistryContractId],
+                              ['Prescription', runtimeReadiness.contracts.prescriptionContractId],
+                              ['DispenseRecord', runtimeReadiness.contracts.dispenseRecordContractId],
+                            ].map(([label, value]) => (
+                              <div key={label} className="rounded-xl border border-brand-green-deep/5 bg-brand-neutral/40 px-3 py-2">
+                                <span className="font-bold text-brand-green-deep">{label}: </span>{shortenAddress(value, 8)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {runtimeReadiness?.missing.length ? (
+                          <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800">
+                            Pendiente no bloqueante para demo: {runtimeReadiness.missing.join(', ')}.
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">

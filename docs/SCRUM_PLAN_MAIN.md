@@ -887,16 +887,32 @@ Cada sprint debe cumplir:
 
 ## Decision actual
 
-El foco inmediato es **Sprint 1: Medico + admin grabable**.
+El foco inmediato es **Demo MVP rapido con sprints de 1 semana**.
+
+Estado al 26 de mayo de 2026:
+
+1. contratos Soroban actualizados, desplegados e inicializados en Stellar
+   Testnet;
+2. produccion Vercel activa en `https://www.trustleaf.org`;
+3. flujo real probado: medico emite receta, dispensario registra retiro parcial
+   y paciente conserva saldo restante;
+4. admin real preparado con Firebase Auth + allowlist, manteniendo fallback demo
+   separado para grabaciones;
+5. passkeys/Mercury/relayer siguen pendientes y no bloquean la demo Testnet.
+
+Ver tambien:
+
+- [MVP update para SCRUM master](./scrum-master-mvp-update.md).
 
 La siguiente implementacion debe mejorar:
 
-1. estado de aprobacion medico;
-2. advertencia/bloqueo antes de operar;
-3. detalle admin de solicitud;
-4. diferencia visual entre DB privada y on-chain pendiente;
-5. panel medico como espacio de trabajo, no solo emision de receta.
+1. QA grabable de los 4 roles en produccion;
+2. persistencia Firestore real para solicitudes y allowlist admin;
+3. passkey/relayer/Mercury para wallet paciente no demo;
+4. firma wallet/passkey para medico y dispensario, reemplazando firma
+   server-side de Testnet;
+5. hardening de mensajes de error y monitoreo antes de piloto.
 
-Despues de Sprint 1, el foco cambia a **Sprint 2: Panel medico one-page +
-agenda**, porque ese es el primer paso real para pasar de prueba de concepto a
-MVP funcional.
+Despues de cerrar la demo grabable, el foco cambia a **persistencia y control
+de acceso minimo**, porque ese es el primer paso real para pasar de prueba de
+concepto a MVP funcional verificable.

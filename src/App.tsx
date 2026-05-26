@@ -17,6 +17,12 @@ import {
   type DoctorApplication,
   type PersistenceSource,
 } from './lib/trustData';
+import {
+  listenAdminAuth,
+  signInAdmin,
+  signOutAdmin,
+  type AdminAuthState,
+} from './lib/trustAuth';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
@@ -89,6 +95,10 @@ function AppContent() {
       return null;
     }
   });
+  const [adminAuth, setAdminAuth] = useState<AdminAuthState>({
+    mode: 'checking',
+    user: null,
+  });
 
   const startSession = (role: ActorRole, input: { email: string; name: string; mode?: TrustSession['mode'] }) => {
     const nextSession: TrustSession = {
@@ -105,6 +115,9 @@ function AppContent() {
   const endSession = () => {
     localStorage.removeItem(TRUST_SESSION_KEY);
     setSession(null);
+    if (adminAuth.user) {
+      void signOutAdmin();
+    }
   };
 
   const hasRoleSession = (role: ActorRole) => session?.role === role;
@@ -119,6 +132,8 @@ function AppContent() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => listenAdminAuth(setAdminAuth), []);
 
   const refreshActorRegistrations = async () => {
     const [doctorResult, dispensaryResult] = await Promise.all([
@@ -140,6 +155,12 @@ function AppContent() {
   useEffect(() => {
     void refreshActorRegistrations();
   }, []);
+
+  useEffect(() => {
+    if (adminAuth.mode === 'authorized') {
+      void refreshActorRegistrations();
+    }
+  }, [adminAuth.mode]);
 
   const submitDoctorRegistration = (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => {
     void trustDataStore.createDoctorApplication(input).then((source) => {
@@ -169,14 +190,14 @@ function AppContent() {
     });
   };
 
-  const reviewDispensaryRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
+  const reviewDispensaryRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected' | 'needs_review'>) => {
     void trustDataStore.reviewDispensaryApplication(id, status).then((source) => {
       setRegistrationSource(source);
       return refreshActorRegistrations();
     });
   };
 
-  const reviewDoctorRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => {
+  const reviewDoctorRegistration = (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected' | 'needs_review'>) => {
     void trustDataStore.reviewDoctorApplication(id, status).then((source) => {
       setRegistrationSource(source);
       return refreshActorRegistrations();
@@ -429,18 +450,30 @@ function AppContent() {
   }
 
   if (path === '/admin') {
-    if (!hasRoleSession('admin')) {
+    const hasDemoAdminSession = session?.role === 'admin' && session.mode === 'demo';
+    const hasRealAdminSession = adminAuth.mode === 'authorized';
+    const adminRouteSession: TrustSession | null = hasRealAdminSession
+      ? {
+          role: 'admin',
+          email: adminAuth.user?.email ?? 'admin@trustleaf.org',
+          name: adminAuth.user?.displayName ?? 'Admin Trust Leaf',
+          mode: 'email',
+          createdAt: new Date().toISOString(),
+        }
+      : session;
+
+    if (!hasDemoAdminSession && !hasRealAdminSession) {
       return (
-        <AuthGate
-          role="admin"
-          title="Acceso admin"
-          description="Admin revisa solicitudes, aprueba actores y registra credenciales on-chain. En produccion esto ira con allowlist, 2FA y permisos estrictos."
-          primaryAction="Entrar como admin"
-          demoAction="Entrar admin demo"
-          defaultEmail="admin@trustleaf.test"
-          defaultName="Admin Trust Leaf"
+        <AdminAuthGate
+          authState={adminAuth}
           onBack={() => navigate('/')}
-          onStart={startSession}
+          onDemo={() =>
+            startSession('admin', {
+              email: 'admin@trustleaf.test',
+              name: 'Admin Trust Leaf',
+              mode: 'demo',
+            })
+          }
         />
       );
     }
@@ -448,7 +481,7 @@ function AppContent() {
     return (
       <AdminRoute
         onBack={() => navigate('/')}
-        session={session}
+        session={adminRouteSession}
         onSignOut={endSession}
         doctorRegistrations={doctorRegistrations}
         registrations={dispensaryRegistrations}
@@ -950,6 +983,137 @@ function OperationalPendingRoute({
   );
 }
 
+function AdminAuthGate({
+  authState,
+  onBack,
+  onDemo,
+}: {
+  authState: AdminAuthState;
+  onBack: () => void;
+  onDemo: () => void;
+}) {
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!form.email.trim() || !form.password.trim()) {
+      setError('Ingresa email y password del admin allowlist.');
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await signInAdmin(form.email.trim(), form.password);
+    } catch (loginError) {
+      setError(
+        loginError instanceof Error
+          ? loginError.message
+          : 'No fue posible iniciar sesion admin.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <span className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
+            Admin
+          </span>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-[0.92fr_1.08fr]">
+        <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9">
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso protegido</p>
+          <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">Admin aprueba actores antes de tocar Testnet.</h1>
+          <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">
+            El panel admin real usa Firebase Auth y allowlist en `appAdministrators`. El modo demo queda disponible solo para grabaciones controladas.
+          </p>
+          <div className="mt-8 grid grid-cols-1 gap-3">
+            {[
+              ['Auth', authState.mode === 'checking' ? 'Verificando sesion' : 'Firebase email/password'],
+              ['Allowlist', 'Documento appAdministrators/{uid}'],
+              ['On-chain', 'Registro manual y auditable en Stellar Testnet'],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
+                <p className="mt-1 text-sm font-bold text-brand-ivory">{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Sesion admin</p>
+          <h2 className="mt-2 text-2xl font-serif">Entrar con cuenta allowlist</h2>
+          <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+            Si aun no existe el usuario admin o su documento allowlist, usa demo para revisar el flujo sin hacer pasar demo por produccion.
+          </p>
+
+          <div className="mt-5 grid grid-cols-1 gap-3">
+            <label>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Email admin</span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+              />
+            </label>
+            <label>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Password</span>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+              />
+            </label>
+          </div>
+
+          {(error || authState.error || authState.mode === 'not-admin') && (
+            <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+              {error || authState.error || 'La cuenta inicio sesion, pero no esta en appAdministrators.'}
+            </div>
+          )}
+
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={submit}
+              disabled={busy || authState.mode === 'checking'}
+              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60"
+            >
+              {busy || authState.mode === 'checking' ? 'Verificando...' : 'Entrar admin real'}
+            </button>
+            <button
+              type="button"
+              onClick={onDemo}
+              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
+            >
+              Entrar admin demo
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function AdminRoute({
   onBack,
   session,
@@ -970,8 +1134,8 @@ function AdminRoute({
   doctorRegistrations: DoctorRegistration[];
   registrations: DispensaryRegistration[];
   registrationSource: PersistenceSource;
-  onReviewDoctorRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
-  onReviewRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected'>) => void;
+  onReviewDoctorRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected' | 'needs_review'>) => void;
+  onReviewRegistration: (id: string, status: Extract<DispensaryRegistrationStatus, 'approved' | 'rejected' | 'needs_review'>) => void;
   onAddDoctorManually: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => void;
   onAddDispensaryManually: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => void;
   onRegisterDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
@@ -1183,7 +1347,7 @@ function AdminRoute({
                       </div>
                     </div>
                     {request.status === 'pending' && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => onReviewDoctorRegistration(request.id, 'approved')}
                           className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid"
@@ -1195,6 +1359,12 @@ function AdminRoute({
                           className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
                         >
                           Rechazar
+                        </button>
+                        <button
+                          onClick={() => onReviewDoctorRegistration(request.id, 'needs_review')}
+                          className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50"
+                        >
+                          Pedir revision
                         </button>
                       </div>
                     )}
@@ -1306,7 +1476,7 @@ function AdminRoute({
                       </div>
                     </div>
                     {request.status === 'pending' && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => onReviewRegistration(request.id, 'approved')}
                           className="rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid"
@@ -1318,6 +1488,12 @@ function AdminRoute({
                           className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
                         >
                           Rechazar
+                        </button>
+                        <button
+                          onClick={() => onReviewRegistration(request.id, 'needs_review')}
+                          className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50"
+                        >
+                          Pedir revision
                         </button>
                       </div>
                     )}
