@@ -2409,6 +2409,91 @@ export default function MockupPortal({
     )));
   };
 
+  const prepareRecordingDemo = () => {
+    const consultationBlock: DoctorAgendaBlock = {
+      id: `agenda-recording-${Date.now()}`,
+      date: formatRelativeAgendaDate(currentNow, 0),
+      time: '10:30',
+      status: 'Reservado',
+      patient: 'Paciente demo',
+      reason: 'Consulta de grabacion: revisar ficha privada y emitir receta verificable',
+    };
+    const prescriptionId = Number(DEMO_PRESCRIPTION_ID);
+    const medicalPermission = createPrivacyPermission('medical-consultation', false);
+    const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
+
+    connectDemoPatientWallet();
+    setDoctorAgendaBlocks((current) => [
+      consultationBlock,
+      ...current.filter((block) => block.id !== consultationBlock.id),
+    ]);
+    setSelectedConsultationId(consultationBlock.id);
+    setConsultationStatusById((current) => ({
+      ...current,
+      [consultationBlock.id]: 'checked_in',
+    }));
+    setConsultationSummaryDraft(
+      'Paciente llega a consulta, autoriza lectura temporal de ficha clinica, examenes y antecedentes relevantes. Se evalua tratamiento con cannabis medicinal y se prepara receta verificable.',
+    );
+    setDoctorIssueForm((current) => ({
+      ...current,
+      treatment: 'Cannabis medicinal para manejo de dolor cronico',
+      dosage: '0.5g por via vaporizada cada 12 horas',
+      notes: 'Consulta validada. Control clinico en 30 dias.',
+      durationDays: 30,
+      monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+    }));
+    setConsultationClinicalRecords((current) => [
+      {
+        id: `consultation-${consultationBlock.id}`,
+        title: 'Consulta Paciente demo',
+        status: 'Lista para receta',
+        summary: 'Ficha autorizada por el paciente para que el medico revise sintomas, examenes y antecedentes antes de emitir receta.',
+        details: [
+          `Atencion realizada por ${clinicalAccessDoctor}`,
+          `Fecha y hora: ${consultationBlock.date} - ${consultationBlock.time}`,
+          'Permiso medico activo por 24h',
+          'Diagnostico y documentos completos permanecen cifrados off-chain',
+        ],
+        proof: `hash:consult-demo-${makeDemoHash(consultationBlock.id).slice(0, 8)}`,
+      },
+      ...current.filter((record) => record.id !== `consultation-${consultationBlock.id}`),
+    ]);
+    setPatientDashboard(buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
+    setHasPrescription(true);
+    setPrescriptionAllowance({
+      monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+      usedGrams: DEFAULT_PRESCRIPTION_USED_GRAMS,
+    });
+    setDispensePrescriptionId(String(prescriptionId));
+    setPrescriptionValidation(buildDemoPrescriptionValidation(prescriptionId));
+    setSelectedDispensary(null);
+    setSelectedStrain(null);
+    setCart([]);
+    setDispensaryStep('inventory');
+    setDispensaryValidation(dispensaryPermission);
+    setSelectedQrPermission(null);
+    setRecentActivity((current: any[]) => [
+      {
+        id: `act-recording-ready-${Date.now()}`,
+        action: 'Flujo de grabacion preparado',
+        date: 'Recien',
+        icon: 'CheckCircle',
+      },
+      {
+        id: `act-recording-permissions-${Date.now()}`,
+        action: `Permisos listos: ${medicalPermission.actor} y ${dispensaryPermission.actor}`,
+        date: 'Ahora',
+        icon: 'ShieldCheck',
+      },
+      ...current,
+    ]);
+    localStorage.setItem('trust_latest_prescription_id', String(prescriptionId));
+    localStorage.setItem('trust_dispense_prescription_id', String(prescriptionId));
+    localStorage.setItem('trust_has_rx', 'true');
+    switchView('overview');
+  };
+
   const validatePatientQrForDoctor = () => {
     const consultationId = selectedConsultationId ?? reservedAgendaBlocks[0]?.id ?? null;
     if (consultationId && !selectedConsultationId) {
@@ -3428,13 +3513,22 @@ export default function MockupPortal({
                           <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">{t.portal.viewWelcome}</h3>
                         </div>
                         {!isDoctorPortal && !isDispensaryPortal && (
-                          <button
-                            type="button"
-                            onClick={resetDemoState}
-                            className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral"
-                          >
-                            Reiniciar flujo
-                          </button>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <button
+                              type="button"
+                              onClick={prepareRecordingDemo}
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory shadow-sm transition-colors hover:bg-brand-green-mid"
+                            >
+                              Preparar demo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={resetDemoState}
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral"
+                            >
+                              Reiniciar flujo
+                            </button>
+                          </div>
                         )}
                       </div>
 
@@ -3450,10 +3544,10 @@ export default function MockupPortal({
                             </div>
                             <button
                               type="button"
-                              onClick={connectDemoPatientWallet}
+                              onClick={prepareRecordingDemo}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
                             >
-                              Activar paciente de prueba
+                              Preparar demo completa
                             </button>
                           </div>
                           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
