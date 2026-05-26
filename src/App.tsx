@@ -51,6 +51,24 @@ const DEFAULT_PATIENT_WALLET = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI
 const DEFAULT_DOCTOR_WALLET = 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX';
 const DEFAULT_DISPENSARY_WALLET = 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
+function seedDemoPatientState() {
+  localStorage.setItem(
+    'trust_wallet_setup',
+    JSON.stringify({
+      primaryMethod: 'demo',
+      hasFreighterBackup: false,
+      walletLabel: 'Paciente demo testnet',
+      contractAccount: DEFAULT_PATIENT_WALLET,
+      freighterAddress: DEFAULT_PATIENT_WALLET,
+      networkLabel: 'Stellar Testnet',
+    }),
+  );
+  localStorage.setItem('trust_doctor_patient_address', DEFAULT_PATIENT_WALLET);
+  localStorage.setItem('trust_has_rx', 'true');
+  localStorage.setItem('trust_latest_prescription_id', '1');
+  localStorage.setItem('trust_dispense_prescription_id', '1');
+}
+
 const ROLE_ROUTES = [
   { path: '/paciente', label: 'Paciente' },
   { path: '/medico', label: 'Médico' },
@@ -110,21 +128,7 @@ function AppContent() {
       createdAt: new Date().toISOString(),
     };
     if (role === 'patient' && nextSession.mode === 'demo') {
-      localStorage.setItem(
-        'trust_wallet_setup',
-        JSON.stringify({
-          primaryMethod: 'demo',
-          hasFreighterBackup: false,
-          walletLabel: 'Paciente demo testnet',
-          contractAccount: DEFAULT_PATIENT_WALLET,
-          freighterAddress: DEFAULT_PATIENT_WALLET,
-          networkLabel: 'Stellar Testnet',
-        }),
-      );
-      localStorage.setItem('trust_doctor_patient_address', DEFAULT_PATIENT_WALLET);
-      localStorage.setItem('trust_has_rx', 'true');
-      localStorage.setItem('trust_latest_prescription_id', '1');
-      localStorage.setItem('trust_dispense_prescription_id', '1');
+      seedDemoPatientState();
     }
     localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
@@ -303,6 +307,10 @@ function AppContent() {
           onStart={startSession}
         />
       );
+    }
+
+    if (session?.mode === 'demo') {
+      seedDemoPatientState();
     }
 
     return (
