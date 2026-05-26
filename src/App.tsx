@@ -47,6 +47,7 @@ const PATIENT_VIEWS: PortalView[] = ['overview', 'profile', 'doctors', 'prescrip
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
 const TRUST_SESSION_KEY = 'trust_leaf_session';
+const DEFAULT_PATIENT_WALLET = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
 const DEFAULT_DOCTOR_WALLET = 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX';
 const DEFAULT_DISPENSARY_WALLET = 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
@@ -108,6 +109,20 @@ function AppContent() {
       mode: input.mode ?? 'email',
       createdAt: new Date().toISOString(),
     };
+    if (role === 'patient' && nextSession.mode === 'demo') {
+      localStorage.setItem(
+        'trust_wallet_setup',
+        JSON.stringify({
+          primaryMethod: 'demo',
+          hasFreighterBackup: false,
+          walletLabel: 'Paciente demo testnet',
+          contractAccount: DEFAULT_PATIENT_WALLET,
+          freighterAddress: DEFAULT_PATIENT_WALLET,
+          networkLabel: 'Stellar Testnet',
+        }),
+      );
+      localStorage.setItem('trust_doctor_patient_address', DEFAULT_PATIENT_WALLET);
+    }
     localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
   };
