@@ -3778,6 +3778,141 @@ export default function MockupPortal({
                     >
                     <div className="space-y-6">
                       {isDoctorPortal && (
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                          <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Mesa de emision</p>
+                                <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Receta soulbound para paciente</h3>
+                                <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+                                  Selecciona paciente, confirma wallet y define vigencia/cupo. La receta queda atada a la cuenta del paciente y el dispensario solo ve lo minimo para validar.
+                                </p>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                                doctorSignerReady ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {doctorSignerReady ? 'Testnet listo' : 'Demo signer'}
+                              </span>
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                              {DOCTOR_SESSION_PATIENTS.map((patient) => (
+                                <button
+                                  key={`quick-${patient.id}`}
+                                  type="button"
+                                  onClick={() => setDoctorPatientAddress(patient.wallet)}
+                                  className={`rounded-2xl border p-4 text-left transition-colors ${
+                                    doctorPatientAddress === patient.wallet
+                                      ? 'border-brand-gold bg-brand-gold/10'
+                                      : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:border-brand-gold/40'
+                                  }`}
+                                >
+                                  <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+                                  <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/60">{patient.reason}</p>
+                                  <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{patient.status}</p>
+                                </button>
+                              ))}
+                            </div>
+
+                            <label className="mt-5 block">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Wallet destino del paciente</span>
+                              <input
+                                type="text"
+                                value={prescriptionPatientAddress}
+                                onChange={(event) => {
+                                  if (!selectedConsultationBlock) {
+                                    setDoctorPatientAddress(event.target.value);
+                                  }
+                                }}
+                                disabled={Boolean(selectedConsultationBlock)}
+                                placeholder={DEMO_PATIENT_ADDRESS}
+                                className="mt-2 w-full rounded-xl border border-brand-green-deep/10 bg-brand-neutral px-4 py-3 font-mono text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40 disabled:opacity-70"
+                              />
+                            </label>
+
+                            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <label>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Tratamiento</span>
+                                <input
+                                  type="text"
+                                  value={doctorIssueForm.treatment}
+                                  onChange={(event) => setDoctorIssueForm((prev) => ({ ...prev, treatment: event.target.value }))}
+                                  className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                />
+                              </label>
+                              <label>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Dosis</span>
+                                <input
+                                  type="text"
+                                  value={doctorIssueForm.dosage}
+                                  onChange={(event) => setDoctorIssueForm((prev) => ({ ...prev, dosage: event.target.value }))}
+                                  className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                />
+                              </label>
+                              <label>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Vigencia dias</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={365}
+                                  value={doctorIssueForm.durationDays}
+                                  onChange={(event) => setDoctorIssueForm((prev) => ({ ...prev, durationDays: Number(event.target.value) }))}
+                                  className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                />
+                              </label>
+                              <label>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Cupo gramos</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={500}
+                                  value={doctorIssueForm.monthlyLimitGrams}
+                                  onChange={(event) => setDoctorIssueForm((prev) => ({ ...prev, monthlyLimitGrams: Number(event.target.value) }))}
+                                  className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                />
+                              </label>
+                            </div>
+
+                            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                              <button
+                                type="button"
+                                onClick={handleDoctorIssuePrescription}
+                                disabled={doctorIssueBusy || !prescriptionPatientAddress}
+                                className="flex-1 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {doctorIssueBusy ? 'Emitiendo...' : doctorSignerReady ? 'Emitir receta Testnet' : 'Generar receta demo'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPrescriptionToolOpen(true)}
+                                className="flex-1 rounded-2xl border border-brand-green-deep/10 bg-white px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                              >
+                                Abrir editor completo
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[28px] border border-blue-100 bg-blue-50 p-5 md:p-6">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-700/70">Privacidad y validez</p>
+                            <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Lo que viaja al dispensario</h3>
+                            <div className="mt-5 grid grid-cols-1 gap-3">
+                              {[
+                                ['Soulbound', 'La receta se emite para la cuenta del paciente, no para transferirse ni revenderse.'],
+                                ['Caducidad', `${doctorIssueForm.durationDays} dias de vigencia antes de requerir nueva evaluacion.`],
+                                ['Hash clinico', 'Diagnostico y notas quedan off-chain; Stellar recibe metadata verificable.'],
+                                ['Cupo', `${doctorIssueForm.monthlyLimitGrams}g autorizados para retiros controlados.`],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-2xl border border-blue-100 bg-white p-4">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600/55">{label}</p>
+                                  <p className="mt-1 text-sm leading-relaxed text-brand-green-mid/70">{value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {isDoctorPortal && (
                         <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 shadow-sm">
                           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                             <div className="max-w-2xl">
