@@ -232,6 +232,23 @@ function AppContent() {
   };
 
   const patientView = PATIENT_ROUTE_VIEWS[path];
+  const approvedDoctorRegistrations = doctorRegistrations.filter((request) => request.status === 'approved');
+  const approvedDispensaryRegistrations = dispensaryRegistrations.filter((request) => request.status === 'approved');
+  const currentDoctorRegistration =
+    approvedDoctorRegistrations.find((request) =>
+      session?.role === 'doctor'
+      && (request.contact === session.email || request.name === session.name),
+    ) ?? null;
+  const currentDispensaryRegistration =
+    approvedDispensaryRegistrations.find((request) =>
+      session?.role === 'dispensary'
+      && (request.contact === session.email || request.name === session.name),
+    ) ?? null;
+  const doctorCanOperate =
+    session?.role === 'doctor' && (session.mode === 'demo' || Boolean(currentDoctorRegistration));
+  const dispensaryCanOperate =
+    session?.role === 'dispensary' && (session.mode === 'demo' || Boolean(currentDispensaryRegistration));
+
   if (patientView) {
     if (!hasRoleSession('patient')) {
       return (
@@ -283,6 +300,7 @@ function AppContent() {
         onBack={() => navigate('/')}
         onNavigate={navigate}
         doctorRegistrations={doctorRegistrations}
+        canOperate={doctorCanOperate}
         onSubmitDoctorRegistration={submitDoctorRegistration}
       />
     );
@@ -301,6 +319,21 @@ function AppContent() {
           defaultName="Dra. Sofia Lagos"
           onBack={() => navigate('/medico')}
           onStart={startSession}
+        />
+      );
+    }
+
+    if (!doctorCanOperate) {
+      return (
+        <OperationalPendingRoute
+          roleLabel="Medico"
+          title="Tu panel medico espera aprobacion"
+          description="Primero completa la solicitud profesional. Luego admin aprueba la licencia y registra la credencial medica en Testnet para emitir recetas verificables."
+          primaryAction="Volver a mi solicitud"
+          secondaryAction="Ir a admin demo"
+          onPrimary={() => navigate('/medico')}
+          onSecondary={() => navigate('/admin')}
+          onBack={() => navigate('/')}
         />
       );
     }
@@ -339,6 +372,7 @@ function AppContent() {
         onBack={() => navigate('/')}
         onNavigate={navigate}
         dispensaryRegistrations={dispensaryRegistrations}
+        canOperate={dispensaryCanOperate}
         onSubmitDispensaryRegistration={submitDispensaryRegistration}
       />
     );
@@ -357,6 +391,21 @@ function AppContent() {
           defaultName="Green Leaf Center"
           onBack={() => navigate('/dispensario')}
           onStart={startSession}
+        />
+      );
+    }
+
+    if (!dispensaryCanOperate) {
+      return (
+        <OperationalPendingRoute
+          roleLabel="Dispensario"
+          title="Operacion bloqueada hasta quedar live"
+          description="El dispensario puede solicitar alta, pero no deberia validar recetas ni registrar retiros hasta que admin lo apruebe y deje su credencial lista en Testnet."
+          primaryAction="Volver a mi solicitud"
+          secondaryAction="Ir a admin demo"
+          onPrimary={() => navigate('/dispensario')}
+          onSecondary={() => navigate('/admin')}
+          onBack={() => navigate('/')}
         />
       );
     }
@@ -823,6 +872,78 @@ function AuthGate({
             </button>
           </div>
 
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function OperationalPendingRoute({
+  roleLabel,
+  title,
+  description,
+  primaryAction,
+  secondaryAction,
+  onPrimary,
+  onSecondary,
+  onBack,
+}: {
+  roleLabel: string;
+  title: string;
+  description: string;
+  primaryAction: string;
+  secondaryAction: string;
+  onPrimary: () => void;
+  onSecondary: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
+            Pendiente
+          </span>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
+        <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9">
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">{roleLabel}</p>
+          <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">{title}</h1>
+          <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">{description}</p>
+        </section>
+
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Control de acceso</p>
+          <h2 className="mt-2 text-2xl font-serif">Antes de operar</h2>
+          <div className="mt-5 space-y-3 text-sm text-brand-green-mid/70">
+            <div className="rounded-2xl bg-brand-neutral p-4">1. Solicitud enviada por el actor.</div>
+            <div className="rounded-2xl bg-brand-neutral p-4">2. Admin revisa datos, licencia o registro legal.</div>
+            <div className="rounded-2xl bg-brand-neutral p-4">3. Admin aprueba y registra la wallet en Stellar Testnet.</div>
+          </div>
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={onPrimary}
+              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+            >
+              {primaryAction}
+            </button>
+            <button
+              type="button"
+              onClick={onSecondary}
+              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
+            >
+              {secondaryAction}
+            </button>
+          </div>
         </section>
       </main>
     </div>
@@ -1421,11 +1542,13 @@ function DispensaryRegistrationRoute({
   onBack,
   onNavigate,
   dispensaryRegistrations,
+  canOperate,
   onSubmitDispensaryRegistration,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
   dispensaryRegistrations: DispensaryRegistration[];
+  canOperate: boolean;
   onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
 }) {
   const [registrationForm, setRegistrationForm] = useState({
@@ -1469,9 +1592,13 @@ function DispensaryRegistrationRoute({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onNavigate('/dispensario/operacion')}
-              className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory active:scale-95"
+              className={`rounded-full px-4 py-2 text-sm font-bold active:scale-95 ${
+                canOperate
+                  ? 'bg-brand-green-deep text-brand-ivory'
+                  : 'border border-brand-green-deep/10 bg-white text-brand-green-deep'
+              }`}
             >
-              Operar
+              {canOperate ? 'Operar' : 'Ver estado'}
             </button>
             <button
               onClick={() => onNavigate('/admin')}
@@ -1575,6 +1702,21 @@ function DispensaryRegistrationRoute({
             </button>
           </div>
 
+          <div className={`rounded-[24px] border p-5 ${
+            canOperate
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em]">
+              {canOperate ? 'Estado live' : 'Pendiente de aprobacion'}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed">
+              {canOperate
+                ? 'Este dispensario ya puede entrar al panel operativo, validar recetas y registrar retiros en Testnet.'
+                : 'La solicitud puede enviarse ahora, pero el panel operativo queda bloqueado hasta que admin apruebe el alta.'}
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <button
               onClick={() => onNavigate('/dispensario/operacion')}
@@ -1601,11 +1743,13 @@ function DoctorRegistrationRoute({
   onBack,
   onNavigate,
   doctorRegistrations,
+  canOperate,
   onSubmitDoctorRegistration,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
   doctorRegistrations: DoctorRegistration[];
+  canOperate: boolean;
   onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
 }) {
   const [registrationForm, setRegistrationForm] = useState({
@@ -1649,9 +1793,13 @@ function DoctorRegistrationRoute({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onNavigate('/medico/operacion')}
-              className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory active:scale-95"
+              className={`rounded-full px-4 py-2 text-sm font-bold active:scale-95 ${
+                canOperate
+                  ? 'bg-brand-green-deep text-brand-ivory'
+                  : 'border border-brand-green-deep/10 bg-white text-brand-green-deep'
+              }`}
             >
-              Emitir receta
+              {canOperate ? 'Emitir receta' : 'Ver estado'}
             </button>
             <button
               onClick={() => onNavigate('/admin')}
@@ -1753,6 +1901,21 @@ function DoctorRegistrationRoute({
             >
               Enviar solicitud al admin <ArrowRight size={16} />
             </button>
+          </div>
+
+          <div className={`rounded-[24px] border p-5 ${
+            canOperate
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em]">
+              {canOperate ? 'Credencial activa' : 'Pendiente de aprobacion'}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed">
+              {canOperate
+                ? 'Este medico ya puede entrar al panel profesional y emitir recetas verificables en Testnet.'
+                : 'La solicitud puede enviarse ahora, pero la emision de recetas queda bloqueada hasta que admin apruebe la credencial.'}
+            </p>
           </div>
 
           <button

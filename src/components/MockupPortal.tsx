@@ -3561,7 +3561,7 @@ export default function MockupPortal({
                         {/* Interactive Stat: Prescriptions */}
                         <motion.div 
                           whileHover={{ y: -5, backgroundColor: 'rgba(255, 255, 255, 1)' }}
-                          onClick={() => setActiveView('prescriptions')}
+                          onClick={() => switchView('prescriptions')}
                           className="p-6 bg-brand-neutral/50 rounded-3xl border border-brand-green-deep/5 cursor-pointer transition-all shadow-sm hover:shadow-xl hover:shadow-brand-green-deep/5 group"
                         >
                           <div className="flex justify-between items-start mb-4">
@@ -3590,9 +3590,9 @@ export default function MockupPortal({
                             if (hasPrescription) {
                               setSelectedDispensary(MOCK_DISPENSARIES[0]);
                               setDispensaryStep('inventory');
-                              setActiveView('dispensaries');
+                              switchView('dispensaries');
                             } else {
-                              setActiveView('dispensaries');
+                              switchView('dispensaries');
                             }
                           }}
                           className="p-6 bg-brand-neutral/50 rounded-3xl border border-brand-green-deep/5 cursor-pointer transition-all shadow-sm hover:shadow-xl hover:shadow-brand-green-deep/5 group"
@@ -3613,7 +3613,7 @@ export default function MockupPortal({
                         {/* Interactive Stat: Pickups */}
                         <motion.div 
                           whileHover={{ y: -5 }}
-                          onClick={() => setActiveView('pickups')}
+                          onClick={() => switchView('pickups')}
                           className="p-6 bg-brand-green-deep rounded-3xl cursor-pointer shadow-lg shadow-brand-green-deep/20 flex flex-col justify-between group overflow-hidden relative"
                         >
                           <div className="relative z-10">
@@ -4954,7 +4954,7 @@ export default function MockupPortal({
                                 Generar QR para dispensario
                               </button>
                               <button
-                                onClick={() => setActiveView('dispensaries')}
+                                onClick={() => switchView('dispensaries')}
                                 className="w-full rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory"
                               >
                                 Buscar dispensario
@@ -5056,7 +5056,7 @@ export default function MockupPortal({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setActiveView('dispensaries')}
+                              onClick={() => switchView('dispensaries')}
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-all hover:bg-brand-green-mid active:scale-95"
                             >
                               Buscar dispensario
@@ -5183,7 +5183,7 @@ export default function MockupPortal({
                              </div>
                              <h4 className="text-xl font-serif text-brand-green-deep mb-2">No hay retiros pendientes</h4>
                              <p className="text-brand-green-mid/60 text-sm max-w-xs mx-auto">Cuando adquieras una medicina en un dispensario, aquí aparecerá tu token de retiro.</p>
-                             <button onClick={() => setActiveView('dispensaries')} className="mt-8 text-sm font-bold text-brand-gold uppercase tracking-widest hover:underline">Ver dispensarios cercanos</button>
+                             <button onClick={() => switchView('dispensaries')} className="mt-8 text-sm font-bold text-brand-gold uppercase tracking-widest hover:underline">Ver dispensarios cercanos</button>
                           </div>
                         ) : (
                           <>
@@ -5395,7 +5395,7 @@ export default function MockupPortal({
                                 onClick={() => {
                                   setPickupStep('idle');
                                   setProcessingPickup(null);
-                                  setActiveView('overview');
+                                  switchView('overview');
                                 }}
                                 className="w-full py-4 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl"
                                >
@@ -5976,7 +5976,7 @@ export default function MockupPortal({
                                 <button 
                                   onClick={() => {
                                     setDispensaryStep('confirm');
-                                    setActiveView('dispensaries');
+                                    switchView('dispensaries');
                                   }}
                                   className="relative z-10 w-full md:w-auto px-10 py-5 bg-brand-gold text-brand-green-deep rounded-2xl font-extrabold text-base hover:scale-[1.03] transition-all flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(196,160,82,0.4)]"
                                 >
@@ -6663,7 +6663,7 @@ export default function MockupPortal({
                          <button 
                            onClick={() => {
                              resetDispensaryFlow();
-                             setActiveView('pickups');
+                             switchView('pickups');
                            }}
                            className="w-full py-4 bg-brand-green-deep text-brand-ivory rounded-full font-bold shadow-lg"
                          >
