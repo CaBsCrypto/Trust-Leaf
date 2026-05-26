@@ -11,6 +11,9 @@ y el flujo medico-dispensario fue probado con transacciones reales.
 URL de produccion:
 - https://www.trustleaf.org
 
+Tablero de estado MVP:
+- https://www.trustleaf.org/mvp
+
 Readiness tecnico:
 - `/api/stellar/readiness` debe mostrar red `Stellar Testnet`.
 - Signers demo de admin, medico y dispensario deben aparecer configurados.

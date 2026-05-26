@@ -496,6 +496,10 @@ function AppContent() {
     );
   }
 
+  if (path === '/mvp') {
+    return <MvpStatusRoute onBack={() => navigate('/')} onNavigate={navigate} />;
+  }
+
   return (
     <div className="min-h-screen selection:bg-brand-gold/30 selection:text-brand-green-deep relative overflow-hidden bg-brand-ivory">
       <Navbar onPortalClick={() => navigate('/paciente')} />
@@ -719,6 +723,189 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
   );
 }
 
+function MvpStatusRoute({
+  onBack,
+  onNavigate,
+}: {
+  onBack: () => void;
+  onNavigate: (path: string) => void;
+}) {
+  const [readiness, setReadiness] = useState<any | null>(null);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReadiness = async () => {
+      try {
+        const response = await fetch('/api/stellar/readiness');
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || 'No fue posible leer readiness.');
+        }
+        if (!cancelled) {
+          setReadiness(payload);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setReadinessError(error instanceof Error ? error.message : 'No fue posible leer readiness.');
+        }
+      }
+    };
+
+    void loadReadiness();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const demoSteps = [
+    ['1', 'Admin', '/admin', 'Aprobar medico/dispensario y registrar wallets en Testnet.'],
+    ['2', 'Medico', '/medico/operacion', 'Emitir receta con vigencia, cupo y hash clinico.'],
+    ['3', 'Paciente', '/paciente/recetas', 'Ver receta activa, saldo, vencimiento y QR conceptual.'],
+    ['4', 'Dispensario', '/dispensario/operacion', 'Validar receta, elegir lote y registrar retiro parcial.'],
+  ];
+  const checks = [
+    ['Contratos', Boolean(readiness?.capabilities?.readContracts), 'Lectura de contratos activa.'],
+    ['Admin signer', Boolean(readiness?.signers?.admin?.configured), 'Puede registrar actores en Testnet.'],
+    ['Medico signer', Boolean(readiness?.capabilities?.issuePrescriptions), 'Puede emitir recetas demo Testnet.'],
+    ['Dispensario signer', Boolean(readiness?.capabilities?.dispensePrescriptions), 'Puede registrar retiros parciales.'],
+    ['Passkeys', Boolean(readiness?.capabilities?.passkeyRelay && readiness?.capabilities?.passkeyDiscovery), 'Pendiente para wallet paciente real.'],
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+      <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
+          <button onClick={onBack} className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+              <Leaf size={20} />
+            </span>
+            <span className="text-lg font-bold">Trust Leaf</span>
+          </button>
+          <button
+            onClick={() => onNavigate('/paciente')}
+            className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory"
+          >
+            Abrir demo
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl space-y-6 px-5 py-8 md:px-8 md:py-12">
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_0.82fr]">
+          <div className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">SCRUM status</p>
+            <h1 className="mt-5 max-w-3xl text-4xl font-serif leading-tight md:text-6xl">
+              MVP demo rapido listo para revisar por roles.
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-brand-ivory/70 md:text-base">
+              Esta vista resume el estado operativo, las rutas de prueba y los pendientes que no bloquean la demo pero si importan antes de piloto.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {[
+                ['Produccion', 'www.trustleaf.org'],
+                ['Red', readiness?.network ?? 'Stellar Testnet'],
+                ['Sprint', 'Demo MVP semanal'],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
+                  <p className="mt-1 break-all text-sm font-bold text-brand-ivory">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Readiness</p>
+            <h2 className="mt-2 text-2xl font-serif">Estado tecnico</h2>
+            <div className="mt-5 space-y-3">
+              {checks.map(([label, done, desc]) => (
+                <div key={label as string} className={`rounded-2xl border p-4 ${done ? 'border-green-100 bg-green-50' : 'border-amber-100 bg-amber-50'}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-brand-green-deep">{label}</p>
+                    <span className={`rounded-full bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${done ? 'text-green-700' : 'text-amber-700'}`}>
+                      {done ? 'Listo' : 'Pendiente'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
+                </div>
+              ))}
+            </div>
+            {readinessError && (
+              <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+                {readinessError}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">QA grabable</p>
+              <h2 className="mt-2 text-2xl font-serif">Ruta recomendada de prueba</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
+                Usa estos accesos en orden. El objetivo es demostrar permisos, receta verificable y retiro parcial sin revelar ficha clinica completa.
+              </p>
+            </div>
+            <a
+              href="/api/stellar/readiness"
+              className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral px-4 py-3 text-xs font-bold text-brand-green-deep"
+            >
+              Ver JSON readiness
+            </a>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+            {demoSteps.map(([step, label, path, desc]) => (
+              <button
+                key={path}
+                onClick={() => onNavigate(path)}
+                className="group rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-green-deep text-sm font-bold text-brand-ivory">
+                  {step}
+                </span>
+                <p className="mt-4 text-base font-bold text-brand-green-deep">{label}</p>
+                <p className="mt-2 min-h-[54px] text-xs leading-relaxed text-brand-green-mid/65">{desc}</p>
+                <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-brand-green-deep group-hover:text-brand-gold">
+                  Abrir {label}
+                  <ArrowRight size={14} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {readiness && (
+          <section className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Contratos activos</p>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              {[
+                ['DoctorRegistry', readiness.contracts.registryContractId],
+                ['DispensaryRegistry', readiness.contracts.dispensaryRegistryContractId],
+                ['Prescription', readiness.contracts.prescriptionContractId],
+                ['DispenseRecord', readiness.contracts.dispenseRecordContractId],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
+                  <p className="mt-2 break-all font-mono text-xs text-brand-green-deep">{value}</p>
+                </div>
+              ))}
+            </div>
+            {readiness.missing?.length ? (
+              <div className="mt-4 rounded-2xl border border-amber-100 bg-white p-4 text-sm leading-relaxed text-amber-800">
+                Pendiente para piloto: {readiness.missing.join(', ')}.
+              </div>
+            ) : null}
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
 function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void }) {
   const entries = [
     {
@@ -745,6 +932,12 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
       desc: 'Revisar solicitudes y estado operacional.',
       icon: <ShieldCheck size={18} />,
     },
+    {
+      path: '/mvp',
+      label: 'MVP',
+      desc: 'Checklist SCRUM, readiness y ruta de demo.',
+      icon: <Database size={18} />,
+    },
   ];
 
   return (
@@ -758,7 +951,7 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
               Cada actor entra por su propio flujo y ve solo sus herramientas.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {entries.map((entry) => (
               <button
                 key={entry.path}

@@ -1,20 +1,58 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Trust Leaf
 
-# Run and deploy your AI Studio app
+Trust Leaf is a Stellar/Soroban MVP for medical cannabis prescriptions,
+dispensary validation and partial-dispense traceability. The app separates
+patient, doctor, dispensary and admin workflows so clinical data stays private
+while authorization, prescription status and dispense records remain verifiable
+on Stellar Testnet.
 
-This contains everything you need to run your app locally.
+Production:
+- https://www.trustleaf.org
 
-View your app in AI Studio: https://ai.studio/apps/a7bf0163-f9da-46ff-be59-ceefa5e57604
+MVP status route:
+- `/mvp`
+
+## Current MVP State
+
+- Network: Stellar Testnet.
+- Contracts: DoctorRegistry, DispensaryRegistry, Prescription and DispenseRecord.
+- Frontend: Vite + React.
+- API runtime: Vercel Functions under `api/`.
+- Admin auth: Firebase Auth + Firestore allowlist, with explicit demo fallback.
+- Patient wallet UX: Passkey, Freighter or demo Testnet identity.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+Prerequisites:
+- Node.js
+- Stellar CLI if working on Soroban contracts
 
+Commands:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm install
+npm run dev
+```
+
+Quality checks:
+
+```bash
+npm run lint
+npm run build
+cd soroban
+cargo test
+```
+
+## Important Docs
+
+- `docs/scrum-master-mvp-update.md`: current SCRUM-facing MVP status.
+- `docs/SCRUM_PLAN_MAIN.md`: product roadmap and actor flows.
+- `docs/soroban-mvp.md`: contracts, Testnet deployment and web3 architecture.
+- `docs/firebase-admin-setup.md`: admin allowlist setup.
+
+## Testnet Notes
+
+All web3 work must stay on Stellar Testnet until explicitly changed. Clinical
+documents, diagnoses, exams and full medical notes must never be written
+on-chain; Soroban stores authorization, hashes, status, expiration and dispense
+events only.
