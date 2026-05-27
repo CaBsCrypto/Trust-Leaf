@@ -515,7 +515,7 @@ function isPrescriptionNotValidError(message: string) {
 // (Supabase + encrypted storage) and publish only decisions, hashes and state
 // transitions to Stellar. The UI below keeps that privacy model visible in MVP.
 // Current MVP records each dispense as a partial allowance. Production should
-// enforce weekly limits/remaining grams in contract state, not burn the RX.
+// enforce weekly limits/remaining grams in contract state, not burn the prescription.
 
 const MOCK_DOCTORS = [
   { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
@@ -1675,7 +1675,7 @@ export default function MockupPortal({
 
   const openOnchainPrescription = (prescription: PatientPrescriptionRecord) => {
     setSelectedPrescription({
-      id: `RX-${prescription.id}`,
+      id: `Receta #${prescription.id}`,
       doctor: shortenAddress(prescription.doctor, 6),
       date: formatPortalDate(prescription.issuedAt),
       validUntil: formatExpiryDate(prescription.expiresAt),
@@ -2139,7 +2139,7 @@ export default function MockupPortal({
       quantity: item.quantity,
       dispensary: selectedDispensary,
       status: 'pending',
-      token: `RX-${prescriptionId}-${recordId}`,
+      token: `RECETA-${prescriptionId}-${recordId}`,
       expires: mode === 'demo' ? 'Retiro demo registrado' : 'Cupo privado registrado'
     }));
 
@@ -2254,7 +2254,7 @@ export default function MockupPortal({
         quantity: item.quantity,
         dispensary: selectedDispensary,
         status: 'pending',
-        token: `RX-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
+        token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
         expires: 'Retiro parcial registrado'
       }));
 
@@ -2377,7 +2377,7 @@ export default function MockupPortal({
       expiresAt: isMedical ? '24h desde autorizacion' : '30 min desde emision del QR',
       status: 'active',
       hash: `hash:permit-${makeDemoHash(`${kind}-${actor}`).slice(0, 10)}`,
-      qrToken: `TL-${kind === 'medical-consultation' ? 'MED' : 'RX'}-${makeDemoHash(`${actor}-${Date.now()}`).slice(0, 8).toUpperCase()}`,
+      qrToken: `TL-${kind === 'medical-consultation' ? 'MED' : 'RECETA'}-${makeDemoHash(`${actor}-${Date.now()}`).slice(0, 8).toUpperCase()}`,
       createdAt: 'Ahora',
     };
 
@@ -2634,7 +2634,7 @@ export default function MockupPortal({
   const cartExceedsPrescriptionLimit = cartGrams > prescriptionRemainingGrams;
   const previousPrescriptionPickups = activePickups.filter((pickup) => {
     const token = String(pickup.token ?? '');
-    return token.includes(`RX-${resolvedPrescriptionId}`) || token.includes(String(resolvedPrescriptionId));
+    return token.includes(`RECETA-${resolvedPrescriptionId}`) || token.includes(`RX-${resolvedPrescriptionId}`) || token.includes(String(resolvedPrescriptionId));
   });
   const patientTraceablePickups = activePickups.filter((pickup) => pickup.status !== 'cancelled');
 
