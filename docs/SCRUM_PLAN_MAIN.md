@@ -80,6 +80,8 @@ costa de publicar informacion clinica completa en Stellar/Soroban.
   solicitudes de medicos y dispensarios.
 - [Scrum Medico + Admin](./medical-admin-scrum-plan.md): plan detallado para el
   primer sprint critico.
+- [Roadmap de proximos sprints](./next-sprints-roadmap.md): orden actualizado
+  para pasar de demo a MVP funcional, Testnet y piloto.
 - [Flujo de demo grabable](./go-to-market/demo-recording-flow.md): orden de
   pantallas, clicks y mensajes para grabar el MVP.
 - [Go-to-market kit](./go-to-market/README.md): one-pager, deck, negocio,
@@ -903,6 +905,7 @@ Estado al 26 de mayo de 2026:
 Ver tambien:
 
 - [MVP update para SCRUM master](./scrum-master-mvp-update.md).
+- [Roadmap de proximos sprints](./next-sprints-roadmap.md).
 
 La siguiente implementacion debe mejorar:
 

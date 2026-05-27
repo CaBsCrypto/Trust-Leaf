@@ -73,6 +73,23 @@ Pendientes priorizados:
 5. Configurar `VITE_STELLAR_WALLET_WASM_HASH` para passkeys paciente.
 6. Mantener Freighter y demo como fallback mientras passkeys se valida.
 
+## Roadmap Operativo
+
+El orden de sprints actualizado vive en
+[`next-sprints-roadmap.md`](./next-sprints-roadmap.md). Ese documento define el
+camino desde limpieza de demo hasta pilot readiness:
+
+1. QA y limpieza de rutas por actor.
+2. Workspace medico real.
+3. Paciente dueno de ficha y permisos.
+4. Admin real con persistencia minima.
+5. Dispensario operativo.
+6. Flujo completo Stellar Testnet.
+7. Contratos con saldo parcial robusto.
+8. Wallets/firma por actor.
+9. Privacidad y seguridad MVP.
+10. Preparacion de piloto.
+
 ## Definicion De Hecho Para La Demo
 
 - `npm run lint` pasa.
