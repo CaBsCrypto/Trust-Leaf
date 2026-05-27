@@ -985,6 +985,8 @@ export default function MockupPortal({
   const [activeView, setActiveView] = useState<PortalView>(initialView);
   const isDoctorPortal = roleLabel === 'Portal Médico';
   const isDispensaryPortal = roleLabel === 'Portal Dispensario';
+  const isPatientPortal = roleLabel === 'Portal Paciente';
+  const showTechnicalDetails = false;
   const isViewAllowed = (view: PortalView) => !allowedViews || allowedViews.includes(view);
   const switchView = (view: PortalView) => {
     if (isViewAllowed(view)) {
@@ -1008,7 +1010,7 @@ export default function MockupPortal({
   const [walletBusy, setWalletBusy] = useState<'passkey' | 'freighter' | 'backup' | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [walletHint, setWalletHint] = useState<string | null>(
-    'Todos los accesos de esta versión operan exclusivamente sobre Stellar Testnet.',
+    'Tu cuenta queda lista para controlar recetas, permisos y trazabilidad.',
   );
   const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(() => {
     const saved = localStorage.getItem('trust_patient_dashboard');
@@ -1311,12 +1313,12 @@ export default function MockupPortal({
     ['Retiros trazables', String(activePickups.length + dispenseRecords.length)],
   ] as const;
   const doctorCredentialMetrics = [
-    ['Estado', doctorSignerReady ? 'Autorizado' : 'Signer pendiente'],
+    ['Estado', doctorSignerReady ? 'Autorizado' : 'En revisión'],
     ['Recetas emitidas', String(patientDashboard?.summary.total ?? 1)],
     ['Pacientes con permiso', String(activePrivacyPermissions.filter((permission) => permission.role === 'Medico').length || 1)],
   ] as const;
   const dispensaryCredentialMetrics = [
-    ['Estado', dispensarySignerReady ? 'Autorizado' : 'Signer pendiente'],
+    ['Estado', dispensarySignerReady ? 'Autorizado' : 'En revisión'],
     ['Entregas registradas', String(activePickups.length + dispenseRecords.length)],
     ['Lotes activos', String(dispensaryInventory.length)],
   ] as const;
@@ -1581,13 +1583,13 @@ export default function MockupPortal({
       ...current,
       primaryMethod: 'demo',
       hasFreighterBackup: false,
-      walletLabel: 'Paciente de prueba Testnet',
+      walletLabel: 'Paciente de prueba',
       contractAccount: DEMO_PATIENT_ADDRESS,
       freighterAddress: DEMO_PATIENT_ADDRESS,
       networkLabel: stellarConfig.networkLabel,
     }));
     setWalletError(null);
-    setWalletHint('Paciente de prueba conectado. Esta identidad ya tiene historial real en Stellar Testnet.');
+    setWalletHint('Paciente de prueba conectado. Esta identidad ya tiene historial, receta y permisos listos para revisar.');
     setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
     setPatientDashboard((current) => current ?? buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
     setHasPrescription(true);
@@ -3207,7 +3209,7 @@ export default function MockupPortal({
               disabled={prescriptionValidationBusy}
               className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory disabled:opacity-50"
             >
-              {prescriptionValidationBusy ? 'Validando receta...' : 'Validar receta en Testnet'}
+              {prescriptionValidationBusy ? 'Validando receta...' : 'Validar receta'}
             </button>
             <div className="rounded-3xl border border-brand-green-deep/10 bg-white p-5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">Receta detectada</p>
@@ -3512,7 +3514,7 @@ export default function MockupPortal({
                           <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">{t.portal.panelControl}</p>
                           <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">{t.portal.viewWelcome}</h3>
                         </div>
-                        {!isDoctorPortal && !isDispensaryPortal && (
+                        {showTechnicalDetails && isPatientPortal && (
                           <div className="flex flex-col gap-2 sm:flex-row">
                             <button
                               type="button"
@@ -3532,7 +3534,7 @@ export default function MockupPortal({
                         )}
                       </div>
 
-                      {!walletConnected && (
+                      {showTechnicalDetails && !walletConnected && (
                         <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
                           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                             <div>
@@ -3582,8 +3584,8 @@ export default function MockupPortal({
                         <div className="space-y-3">
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                           {[
-                            ['1', 'Crear identidad', 'Passkey, Freighter o acceso Testnet de prueba.'],
-                            ['2', 'Recibir receta', 'El médico emite una receta on-chain a tu wallet.'],
+                            ['1', 'Crear identidad', 'Passkey, Freighter o cuenta de prueba.'],
+                            ['2', 'Recibir receta', 'El médico emite una receta verificable para tu cuenta.'],
                             ['3', 'Retirar medicina', 'El dispensario valida la receta desde su propia URL.'],
                           ].map(([step, title, desc]) => (
                             <div key={step} className="rounded-2xl border border-brand-green-deep/10 bg-white p-4 shadow-sm">
@@ -3610,8 +3612,8 @@ export default function MockupPortal({
                           freighterDescription={t.portal.onboarding.freighterDesc}
                           freighterAction={t.portal.onboarding.freighterAction}
                           demoTitle="Entrar con cuenta de prueba"
-                          demoDescription="Usa una identidad Testnet preconfigurada para probar el flujo completo aunque Passkey o Freighter fallen."
-                          demoAction="Usar cuenta Testnet"
+                          demoDescription="Usa una identidad preconfigurada para revisar el flujo completo aunque Passkey o Freighter fallen."
+                          demoAction="Usar cuenta de prueba"
                           linkedLabel={t.portal.onboarding.linked}
                           backupTitle={t.portal.onboarding.backupTitle}
                           backupDescription={t.portal.onboarding.backupDesc}
@@ -3624,7 +3626,7 @@ export default function MockupPortal({
                           networkValue={walletSetup.networkLabel ?? stellarConfig.networkLabel}
                           primaryPasskeyValue={t.portal.onboarding.primaryPasskeyValue}
                           primaryFreighterValue={t.portal.onboarding.primaryFreighterValue}
-                          primaryDemoValue="Cuenta Testnet"
+                          primaryDemoValue="Cuenta de prueba"
                           primaryEmptyValue={t.portal.onboarding.primaryEmptyValue}
                           backupConnectedValue={t.portal.onboarding.backupConnectedValue}
                           backupEmptyValue={t.portal.onboarding.backupEmptyValue}
@@ -3682,6 +3684,7 @@ export default function MockupPortal({
                         </div>
                       </motion.div>
 
+                      {showTechnicalDetails && (
                       <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
                         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                           <div>
@@ -3755,7 +3758,9 @@ export default function MockupPortal({
                           ))}
                         </div>
                       </div>
+                      )}
 
+                      {showTechnicalDetails && (
                       <div className="rounded-[32px] border border-brand-green-deep/10 bg-white p-5 shadow-sm md:p-6">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div>
@@ -3816,16 +3821,17 @@ export default function MockupPortal({
                           </div>
                         ) : null}
                       </div>
+                      )}
 
                       <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
                         <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-6 shadow-sm">
                           <div className="flex items-center justify-between gap-4 mb-4">
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Estado On-Chain</p>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Cuenta del paciente</p>
                               <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Cuenta Trust Leaf</h5>
                             </div>
                             <div className="px-3 py-1 rounded-full bg-brand-neutral text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
-                              {stellarConfig.networkLabel}
+                              Activa
                             </div>
                           </div>
 
@@ -3854,15 +3860,17 @@ export default function MockupPortal({
 
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-green-deep/5 px-4 py-3">
-                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Identidad verificable</span>
+                              <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Identidad privada</span>
                               <span className="text-xs font-mono text-brand-green-deep">{shortenAddress(patientTrustAccountAddress, 8)}</span>
                             </div>
+                            {showTechnicalDetails && (
                             <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-green-deep/5 px-4 py-3">
                               <span className="text-[10px] uppercase tracking-widest text-brand-green-mid/50 font-bold">Contrato de receta</span>
                               <span className="text-xs font-mono text-brand-green-deep">
                                 {shortenAddress(patientDashboard?.prescriptionContractId ?? '', 8)}
                               </span>
                             </div>
+                            )}
                           </div>
 
                           {patientDashboardError && (
@@ -3873,13 +3881,13 @@ export default function MockupPortal({
                         </div>
 
                         <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-6 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Agente 402</p>
-                          <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Datos privados, prueba verificable</h5>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Privacidad</p>
+                          <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Tus datos bajo control</h5>
                           <div className="mt-5 space-y-3">
                             {[
-                              ['Identidad', 'Wallet paciente verificada sin exponer documentos personales.'],
-                              ['Receta', 'El dispensario solo recibe validez, vigencia y estado de consumo.'],
-                              ['Clinica', 'Diagnostico y notas quedan fuera de cadena; Stellar guarda hash y estado.'],
+                              ['Identidad', 'Tu cuenta permite acceder sin exponer documentos completos.'],
+                              ['Receta', 'El dispensario solo recibe vigencia, saldo y formatos autorizados.'],
+                              ['Clinica', 'La ficha se comparte solo con permiso temporal del paciente.'],
                             ].map(([label, desc]) => (
                               <div key={label} className="rounded-2xl border border-brand-green-deep/5 bg-brand-neutral/40 p-4">
                                 <p className="text-xs font-bold uppercase tracking-widest text-brand-green-deep">{label}</p>
@@ -3944,7 +3952,7 @@ export default function MockupPortal({
                           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold mb-2">Última receta</p>
                           {patientDashboardLoading ? (
                             <div className="rounded-3xl bg-white p-6 border border-brand-green-deep/5">
-                              <p className="text-sm text-brand-green-mid/60">Consultando testnet...</p>
+                              <p className="text-sm text-brand-green-mid/60">Consultando recetas...</p>
                             </div>
                           ) : primaryPrescription ? (
                             <button
@@ -3977,9 +3985,11 @@ export default function MockupPortal({
                                   {primaryPrescription.status}
                                 </span>
                               </div>
+                              {showTechnicalDetails && (
                               <p className="mt-4 text-xs font-mono text-brand-green-mid/60">
                                 Hash {shortenHash(primaryPrescription.medicationHash)}
                               </p>
+                              )}
                             </button>
                           ) : (
                             <div className="rounded-3xl bg-white p-6 border border-dashed border-brand-green-deep/10">
@@ -4213,7 +4223,7 @@ export default function MockupPortal({
                       className="space-y-6"
                     >
                     <div className="space-y-6">
-                      {isDoctorPortal && (
+                      {isDoctorPortal && showTechnicalDetails && (
                         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                           <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6">
                             <div className="flex items-start justify-between gap-4">
@@ -4227,7 +4237,7 @@ export default function MockupPortal({
                               <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
                                 doctorSignerReady ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                               }`}>
-                                {doctorSignerReady ? 'Testnet listo' : 'Signer pendiente'}
+                                {doctorSignerReady ? 'Listo' : 'En revision'}
                               </span>
                             </div>
 
@@ -4316,7 +4326,7 @@ export default function MockupPortal({
                                 disabled={doctorIssueBusy || !prescriptionPatientAddress}
                                 className="flex-1 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                {doctorIssueBusy ? 'Emitiendo...' : doctorSignerReady ? 'Emitir receta Testnet' : 'Generar receta de prueba'}
+                                {doctorIssueBusy ? 'Emitiendo...' : 'Emitir receta'}
                               </button>
                               <button
                                 type="button"
@@ -4364,13 +4374,15 @@ export default function MockupPortal({
                                       >
                                         Ver paciente
                                       </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => window.location.assign('/dispensario/operacion')}
-                                        className="rounded-xl bg-green-700 px-3 py-2 text-xs font-bold text-white"
-                                      >
-                                        Probar dispensario
-                                      </button>
+                                      {showTechnicalDetails && (
+                                        <button
+                                          type="button"
+                                          onClick={() => window.location.assign('/dispensario/operacion')}
+                                          className="rounded-xl bg-green-700 px-3 py-2 text-xs font-bold text-white"
+                                        >
+                                          Probar dispensario
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -4405,9 +4417,11 @@ export default function MockupPortal({
                               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial profesional</p>
                               <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Medico autorizado en Trust Leaf</h3>
                               <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
-                                La wallet profesional identifica al medico ante DoctorRegistry y deja auditoria de recetas, permisos revisados y consultas. Las fees quedan patrocinadas por Trust Leaf.
+                                Esta cuenta profesional esta habilitada para atender pacientes, revisar permisos clinicos y emitir recetas verificables.
                               </p>
-                              <p className="mt-3 break-all font-mono text-xs font-bold text-brand-green-deep">{doctorCredentialAddress}</p>
+                              {showTechnicalDetails && (
+                                <p className="mt-3 break-all font-mono text-xs font-bold text-brand-green-deep">{doctorCredentialAddress}</p>
+                              )}
                             </div>
                             <div className="grid min-w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[520px]">
                               {doctorCredentialMetrics.map(([label, value]) => (
@@ -4455,10 +4469,10 @@ export default function MockupPortal({
                             eyebrow="Receta"
                             title="Emitir receta"
                             description="Preparar tratamiento, dosis, vigencia y saldo autorizado."
-                            status="Testnet"
+                            status={doctorSignerReady ? 'Listo' : 'Revisión'}
                             onClick={() => openDrawer('doctor-prescription')}
                             tone="green"
-                            disabled={!prescriptionPatientAddress}
+                            disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'active'}
                           />
                         </div>
                       )}
@@ -4859,15 +4873,17 @@ export default function MockupPortal({
                             <p className="text-sm font-bold">Preparar receta</p>
                             <p className="mt-1 text-xs leading-relaxed text-brand-ivory/65">Tratamiento, dosis, vigencia y cupo autorizado.</p>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => window.location.assign('/dispensario/operacion')}
-                            className="rounded-2xl border border-brand-gold/20 bg-[#fbf7ef] p-4 text-left transition-colors hover:bg-brand-gold/10"
-                          >
-                            <ArrowRight size={18} className="mb-3 text-brand-gold" />
-                            <p className="text-sm font-bold text-brand-green-deep">Probar dispensario</p>
-                            <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">Validar receta y registrar retiro parcial.</p>
-                          </button>
+                          {showTechnicalDetails && (
+                            <button
+                              type="button"
+                              onClick={() => window.location.assign('/dispensario/operacion')}
+                              className="rounded-2xl border border-brand-gold/20 bg-[#fbf7ef] p-4 text-left transition-colors hover:bg-brand-gold/10"
+                            >
+                              <ArrowRight size={18} className="mb-3 text-brand-gold" />
+                              <p className="text-sm font-bold text-brand-green-deep">Probar dispensario</p>
+                              <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">Validar receta y registrar retiro parcial.</p>
+                            </button>
+                          )}
                         </div>
 
                         {(doctorIssueError || doctorIssueSuccess) && (
@@ -5005,7 +5021,7 @@ export default function MockupPortal({
                                     ID receta #{prescription.id}
                                   </p>
                                   <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
-                                    <Database size={10} /> ON-CHAIN
+                                    <Database size={10} /> VERIFICABLE
                                   </span>
                                 </div>
                                 <h4 className="font-bold text-brand-green-deep">
@@ -5047,9 +5063,11 @@ export default function MockupPortal({
                               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial operativa</p>
                               <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Dispensario autorizado en Trust Leaf</h3>
                               <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
-                                La wallet operativa registra entregas, lotes y actividad verificable ante DispensaryRegistry. El equipo no necesita saldo manual: Trust Leaf patrocina las fees del flujo.
+                                Cuenta operativa habilitada para validar recetas, gestionar inventario y registrar entregas parciales sin ver la ficha clinica completa del paciente.
                               </p>
-                              <p className="mt-3 break-all font-mono text-xs font-bold text-brand-green-deep">{dispensaryCredentialAddress}</p>
+                              {showTechnicalDetails && (
+                                <p className="mt-3 break-all font-mono text-xs font-bold text-brand-green-deep">{dispensaryCredentialAddress}</p>
+                              )}
                             </div>
                             <div className="grid min-w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:min-w-[520px]">
                               {dispensaryCredentialMetrics.map(([label, value]) => (
@@ -5149,7 +5167,7 @@ export default function MockupPortal({
                                 disabled={prescriptionValidationBusy}
                                 className="self-end rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
                               >
-                                {prescriptionValidationBusy ? 'Validando...' : 'Validar Testnet'}
+                                {prescriptionValidationBusy ? 'Validando...' : 'Validar receta'}
                               </button>
                             </div>
 
@@ -5184,7 +5202,7 @@ export default function MockupPortal({
                                 ['Este retiro', `${cartGrams}g`],
                                 ['Retiros previos', String(previousPrescriptionPickups.length)],
                                 ['Saldo post retiro', `${Math.max(0, prescriptionRemainingGrams - cartGrams)}g`],
-                                ['Red', dispensarySignerReady ? 'Testnet' : 'Privado'],
+                                ['Estado', dispensarySignerReady ? 'Operativo' : 'Validación interna'],
                               ].map(([label, value]) => (
                                 <div key={label} className="rounded-2xl bg-brand-neutral/70 p-4">
                                   <p className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</p>
@@ -5584,7 +5602,7 @@ export default function MockupPortal({
                                     ID receta #{prescription.id}
                                   </p>
                                   <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
-                                    <Database size={10} /> ON-CHAIN
+                                    <Database size={10} /> VERIFICABLE
                                   </span>
                                 </div>
                                 <h4 className="font-bold text-brand-green-deep">
@@ -5655,7 +5673,7 @@ export default function MockupPortal({
                                   <div className="mb-2 flex flex-wrap items-center gap-2">
                                     <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/45">Receta TL-8829-QX</p>
                                     <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-[9px] font-bold text-blue-600">
-                                      <Database size={10} /> ON-CHAIN
+                                      <Database size={10} /> VERIFICABLE
                                     </span>
                                     <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-600">Vigente</span>
                                   </div>
@@ -5840,7 +5858,7 @@ export default function MockupPortal({
                                       Receta #{prescription.id}
                                     </p>
                                     <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
-                                      <Database size={10} /> {doctorSignerReady ? 'ON-CHAIN' : 'HASH PRIVADO'}
+                                      <Database size={10} /> {doctorSignerReady ? 'VERIFICABLE' : 'PRIVADO'}
                                     </span>
                                   </div>
                                   <h4 className="font-bold text-brand-green-deep">
@@ -5890,7 +5908,7 @@ export default function MockupPortal({
                           <div className="flex items-center gap-2 mb-1">
                             <p className="text-xs font-bold text-brand-green-mid/40 uppercase tracking-widest">ID: TL-8829-QX</p>
                             <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-[9px] text-blue-600 font-bold border border-blue-100 rounded-md">
-                              <Database size={10} /> ON-CHAIN
+                              <Database size={10} /> VERIFICABLE
                             </span>
                           </div>
                           <h4 className="font-bold text-brand-green-deep">Tratamiento Dolor Crónico</h4>
@@ -6187,10 +6205,12 @@ export default function MockupPortal({
                             }}
                           />
                         </label>
+                        {showTechnicalDetails && (
                         <div className="bg-brand-neutral px-4 py-2 rounded-xl border border-brand-green-deep/5 flex items-center gap-2">
                           <Database size={16} className="text-brand-gold" />
                           <span className="text-xs font-bold text-brand-green-deep uppercase tracking-tighter">Blockchain Sync: OK</span>
                         </div>
+                        )}
                       </div>
                     </div>
 
@@ -6373,7 +6393,7 @@ export default function MockupPortal({
                                       Dispensa #{record.id}
                                     </span>
                                     <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded-full border border-blue-100">
-                                      ON-CHAIN
+                                      VERIFICABLE
                                     </span>
                                   </div>
                                   <h4 className="font-bold text-brand-green-deep text-base sm:text-lg leading-none mb-1">
@@ -6459,7 +6479,7 @@ export default function MockupPortal({
                           </motion.div>
                         ))}
                       </div>
-                    )}
+                      )}
 
                     <div className="space-y-4">
                       {dispenseRecords.length === 0 && patientTraceablePickups.length === 0 && MOCK_ORDERS.map((order, idx) => (
@@ -6995,7 +7015,7 @@ export default function MockupPortal({
               <div className="p-6 border-b border-brand-green-deep/5 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div>
                    <h4 className="text-xl font-serif text-brand-green-deep">
-                     {dispensaryStep === 'success' ? '¡Retiro Autorizado!' : isDispensaryPortal ? 'Registrar dispensa' : 'Adquirir Medicina'}
+                     {dispensaryStep === 'success' ? 'Retiro autorizado' : isDispensaryPortal ? 'Registrar dispensa' : 'Reservar retiro autorizado'}
                    </h4>
                    {dispensaryStep !== 'success' && (
                      <p className="text-[10px] font-bold text-brand-gold uppercase tracking-widest mt-1">En {selectedDispensary.name}</p>
@@ -7038,7 +7058,7 @@ export default function MockupPortal({
                               />
                             </div>
                             <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-brand-green-mid/60">
-                              <span>Carrito actual: {cartGrams}g</span>
+                              <span>Retiro preparado: {cartGrams}g</span>
                               <span>Proyectado post retiro: {prescriptionProjectedGrams}g / {prescriptionMonthlyLimitGrams}g</span>
                             </div>
                             {cartExceedsPrescriptionLimit && (
@@ -7116,7 +7136,7 @@ export default function MockupPortal({
                                        }`}
                                      >
                                         {cart.find(c => c.strain.id === strain.id) ? (
-                                          <>En Carrito ({cart.find(c => c.strain.id === strain.id).quantity}g)</>
+                                          <>Seleccionado ({cart.find(c => c.strain.id === strain.id).quantity}g)</>
                                         ) : (
                                           <><Plus size={14} /> Añadir</>
                                         )}
@@ -7141,7 +7161,7 @@ export default function MockupPortal({
                                        </span>
                                     </div>
                                     <div>
-                                       <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] leading-none mb-1">Monto Estimado</p>
+                                       <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] leading-none mb-1">Cantidad autorizada</p>
                                        <p className="text-brand-ivory font-bold text-lg leading-none">${cartTotal.toLocaleString()}</p>
                                     </div>
                                  </div>
@@ -7324,10 +7344,10 @@ export default function MockupPortal({
                                <span className="text-sm font-bold text-brand-green-deep">{selectedDispensary.name}</span>
                             </div>
                            <div className="flex justify-between border-brand-green-deep/5">
-                               <span className="text-xs text-brand-green-mid/60 uppercase font-bold tracking-wider">Monto Total</span>
+                               <span className="text-xs text-brand-green-mid/60 uppercase font-bold tracking-wider">Cantidad preparada</span>
                                <div className="text-right">
                                   <span className="text-xl font-bold text-brand-gold">${cartTotal.toLocaleString()}</span>
-                                  <p className="text-[9px] text-brand-green-mid/40 font-bold uppercase mt-0.5">ARS Estimado</p>
+                                  <p className="text-[9px] text-brand-green-mid/40 font-bold uppercase mt-0.5">Retiro parcial</p>
                                </div>
                             </div>
                             <div className="border-t border-brand-green-deep/5 pt-4">
@@ -7348,6 +7368,7 @@ export default function MockupPortal({
                          </div>
 
                          <div className="space-y-4">
+                            {showTechnicalDetails && (
                             <div className={`rounded-xl border p-3 text-xs ${
                               dispensarySignerReady
                                 ? 'border-green-100 bg-green-50 text-green-700'
@@ -7357,6 +7378,8 @@ export default function MockupPortal({
                                 ? `Signer dispensario listo${runtimeReadiness?.signers.dispensary.address ? `: ${shortenAddress(runtimeReadiness.signers.dispensary.address, 8)}` : ''}.`
                                 : 'Firma testnet pendiente. Puedes registrar retiros fraccionados con credencial gestionada mientras se conecta el signer operativo.'}
                             </div>
+                            )}
+                            {showTechnicalDetails && (
                             <div className="flex justify-end">
                               <button
                                 type="button"
@@ -7367,7 +7390,8 @@ export default function MockupPortal({
                                 {faucetBusy === 'dispensary' ? 'Fondeando...' : 'Faucet testnet'}
                               </button>
                             </div>
-                            {faucetNotice && (
+                            )}
+                            {showTechnicalDetails && faucetNotice && (
                               <div className="rounded-xl border border-brand-gold/20 bg-brand-gold/10 p-3 text-xs text-brand-green-deep">
                                 {faucetNotice}
                               </div>
@@ -7380,7 +7404,7 @@ export default function MockupPortal({
                             </div>
                             <label className="block space-y-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
-                                Receta on-chain detectada
+                                Receta validada
                               </span>
                               <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
                                 <div className="flex items-start justify-between gap-3">
@@ -7437,7 +7461,7 @@ export default function MockupPortal({
                               disabled={dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId)}
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                             >
-                               {dispenseBusy ? 'Registrando...' : dispensarySignerReady ? 'Validar cupo y registrar retiro' : 'Registrar retiro de prueba'} <CheckCircle size={20} />
+                               {dispenseBusy ? 'Registrando...' : 'Validar saldo y registrar retiro'} <CheckCircle size={20} />
                             </button>
                             {dispenseError && (
                               <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700">
@@ -7516,6 +7540,7 @@ export default function MockupPortal({
               </div>
 
               <div className="flex-1 space-y-5 overflow-y-auto p-6">
+                {showTechnicalDetails && (
                 <div className={`rounded-xl border p-3 text-xs ${
                   doctorSignerReady
                     ? 'border-green-100 bg-green-50 text-green-700'
@@ -7525,7 +7550,9 @@ export default function MockupPortal({
                     ? `Signer médico listo${runtimeReadiness?.signers.doctor.address ? `: ${shortenAddress(runtimeReadiness.signers.doctor.address, 8)}` : ''}.`
                     : 'Firma testnet pendiente. Puedes completar el flujo con credencial gestionada mientras se conecta el signer médico.'}
                 </div>
+                )}
 
+                {showTechnicalDetails && (
                 <div className="flex justify-end">
                   <button
                     type="button"
@@ -7536,7 +7563,8 @@ export default function MockupPortal({
                     {faucetBusy === 'doctor' ? 'Fondeando...' : 'Faucet testnet'}
                   </button>
                 </div>
-                {faucetNotice && (
+                )}
+                {showTechnicalDetails && faucetNotice && (
                   <div className="rounded-xl border border-brand-gold/20 bg-brand-gold/10 p-3 text-xs text-brand-green-deep">
                     {faucetNotice}
                   </div>
@@ -7661,7 +7689,7 @@ export default function MockupPortal({
                   ) : (
                     <>
                       <FileText size={16} />
-                      {doctorSignerReady ? 'Emitir en testnet' : 'Generar receta de prueba'}
+                      Emitir receta
                     </>
                   )}
                 </button>

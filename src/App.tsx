@@ -47,7 +47,7 @@ interface TrustSession {
 // with encrypted documents and an Agent 402 verification result. Admin approval
 // should then write only the actor wallet + metadata hash to the Stellar registry.
 
-const PATIENT_VIEWS: PortalView[] = ['overview', 'profile', 'doctors', 'prescriptions', 'dispensaries', 'pickups', 'history', 'traveler'];
+const PATIENT_VIEWS: PortalView[] = ['overview', 'doctors', 'prescriptions', 'dispensaries', 'history'];
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
 const TRUST_SESSION_KEY = 'trust_leaf_session';
@@ -82,12 +82,12 @@ const ROLE_ROUTES = [
 
 const PATIENT_ROUTE_VIEWS: Record<string, PortalView> = {
   '/paciente': 'overview',
-  '/paciente/cuenta': 'profile',
+  '/paciente/cuenta': 'overview',
   '/paciente/recetas': 'prescriptions',
   '/paciente/dispensarios': 'dispensaries',
-  '/paciente/retiros': 'pickups',
+  '/paciente/retiros': 'history',
   '/paciente/historial': 'history',
-  '/paciente/viajero': 'traveler',
+  '/paciente/viajero': 'history',
 };
 
 export default function App() {
