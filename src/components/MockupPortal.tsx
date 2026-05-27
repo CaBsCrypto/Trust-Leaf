@@ -497,7 +497,7 @@ function buildDemoPrescriptionValidation(
     },
     validation: {
       canDispense: true,
-      reason: 'Receta de prueba validada para grabacion. El dispensario ve saldo, vigencia y permiso minimo, no ficha clinica.',
+      reason: 'Receta preparada. El dispensario ve saldo, vigencia y permiso minimo, no ficha clinica.',
     },
     lastRecord: {
       id: 1,
@@ -1266,7 +1266,7 @@ export default function MockupPortal({
   const reservedAgendaBlocks = doctorAgendaBlocks.filter((block) => block.status === 'Reservado');
   const availableAgendaBlocks = doctorAgendaBlocks.filter((block) => block.status === 'Disponible');
   const patientUpcomingConsultation = reservedAgendaBlocks.find((block) =>
-    block.patient === 'Paciente demo' || block.reason?.includes('portal paciente'),
+    block.patient === 'Paciente de prueba' || block.patient === 'Paciente demo' || block.reason?.includes('portal paciente'),
   ) ?? null;
   const selectedConsultationBlock = reservedAgendaBlocks.find((block) => block.id === selectedConsultationId) ?? null;
   const prescriptionPatientAddress = selectedConsultationBlock
@@ -1626,7 +1626,7 @@ export default function MockupPortal({
     });
     setDispensePrescriptionId(DEMO_PRESCRIPTION_ID);
     setRecentActivity([
-      { id: 'act-reset-1', action: 'Flujo reiniciado para grabacion', date: 'Recién', icon: 'Activity' },
+      { id: 'act-reset-1', action: 'Flujo reiniciado para revision', date: 'Recién', icon: 'Activity' },
       { id: 'act-init-1', action: 'Consulta medico especialista pendiente', date: 'Flujo limpio', icon: 'Stethoscope' },
     ]);
     setSelectedConsultationId(null);
@@ -1787,7 +1787,7 @@ export default function MockupPortal({
         date: selectedDate,
         time: selectedTime,
         status: 'Reservado',
-        patient: 'Paciente demo',
+        patient: 'Paciente de prueba',
         reason: `Reserva desde portal paciente con ${bookingDoctor.name}`,
       };
       setDoctorAgendaBlocks((prev) => {
@@ -1854,7 +1854,7 @@ export default function MockupPortal({
       return {
         ...block,
         status: 'Reservado',
-        patient: 'Paciente demo',
+        patient: 'Paciente de prueba',
         reason: 'Reserva manual desde panel médico',
       };
     }));
@@ -2030,14 +2030,14 @@ export default function MockupPortal({
     localStorage.setItem('trust_latest_prescription_id', String(issuedId));
     setDispensePrescriptionId(String(issuedId));
     setDoctorIssueSuccess(
-      `Receta de prueba generada para grabación. Número ${issuedId} - Hash ${shortenHash(txHash)}. Pendiente de firma real en Stellar Testnet.`,
+      `Receta preparada. Numero ${issuedId} - Hash ${shortenHash(txHash)}. Pendiente de firma real en Stellar Testnet.`,
     );
     const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
     setDispensaryValidation(dispensaryPermission);
     setRecentActivity((prev: any[]) => [
       {
         id: `act-demo-issue-${Date.now()}`,
-        action: `Receta de prueba creada para ${shortenAddress(targetPatientAddress, 5)}`,
+        action: `Receta preparada para ${shortenAddress(targetPatientAddress, 5)}`,
         date: 'Recién',
         icon: 'FileText',
       },
@@ -2140,7 +2140,7 @@ export default function MockupPortal({
       dispensary: selectedDispensary,
       status: 'pending',
       token: `RECETA-${prescriptionId}-${recordId}`,
-      expires: mode === 'demo' ? 'Retiro demo registrado' : 'Cupo privado registrado'
+      expires: mode === 'demo' ? 'Retiro preparado' : 'Cupo privado registrado'
     }));
 
     setHasPrescription(true);
@@ -2415,8 +2415,8 @@ export default function MockupPortal({
       date: formatRelativeAgendaDate(currentNow, 0),
       time: '10:30',
       status: 'Reservado',
-      patient: 'Paciente demo',
-      reason: 'Consulta de grabacion: revisar ficha privada y emitir receta verificable',
+      patient: 'Paciente de prueba',
+      reason: 'Consulta preparada: revisar ficha privada y emitir receta verificable',
     };
     const prescriptionId = Number(DEMO_PRESCRIPTION_ID);
     const medicalPermission = createPrivacyPermission('medical-consultation', false);
@@ -2446,7 +2446,7 @@ export default function MockupPortal({
     setConsultationClinicalRecords((current) => [
       {
         id: `consultation-${consultationBlock.id}`,
-        title: 'Consulta Paciente demo',
+        title: 'Consulta paciente de prueba',
         status: 'Lista para receta',
         summary: 'Ficha autorizada por el paciente para que el medico revise sintomas, examenes y antecedentes antes de emitir receta.',
         details: [
@@ -2476,7 +2476,7 @@ export default function MockupPortal({
     setRecentActivity((current: any[]) => [
       {
         id: `act-recording-ready-${Date.now()}`,
-        action: 'Flujo de grabacion preparado',
+        action: 'Flujo de revision preparado',
         date: 'Recien',
         icon: 'CheckCircle',
       },
@@ -3519,7 +3519,7 @@ export default function MockupPortal({
                               onClick={prepareRecordingDemo}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory shadow-sm transition-colors hover:bg-brand-green-mid"
                             >
-                              Preparar demo
+                              Preparar flujo
                             </button>
                             <button
                               type="button"
@@ -3536,7 +3536,7 @@ export default function MockupPortal({
                         <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
                           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de grabacion</p>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de revision</p>
                               <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Flujo paciente - medico - dispensario</h4>
                               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
                                 Primero entra como paciente de prueba. Luego agenda, comparte permiso, recibe receta, genera QR y valida retiro parcial en dispensario.
@@ -3547,7 +3547,7 @@ export default function MockupPortal({
                               onClick={prepareRecordingDemo}
                               className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
                             >
-                              Preparar demo completa
+                              Preparar flujo completo
                             </button>
                           </div>
                           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -3685,10 +3685,10 @@ export default function MockupPortal({
                       <div className="rounded-[32px] border border-brand-green-deep/10 bg-[#fbf7ef] p-5 md:p-6">
                         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de grabacion</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Guia de revision</p>
                             <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Flujo paciente - medico - dispensario</h4>
                             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
-                              Usa esta barra como checklist de grabacion. Cada paso se activa con datos locales y deja claro que el paciente controla permisos y QR.
+                              Usa esta barra como checklist de revision. Cada paso activa el flujo y deja claro que el paciente controla permisos y QR.
                             </p>
                           </div>
                           <div className="flex flex-col gap-2 sm:flex-row">
@@ -3697,7 +3697,7 @@ export default function MockupPortal({
                               onClick={prepareRecordingDemo}
                               className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep"
                             >
-                              Preparar demo
+                              Preparar flujo
                             </button>
                             <button
                               type="button"
@@ -3762,7 +3762,7 @@ export default function MockupPortal({
                             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Estado Testnet</p>
                             <h4 className="mt-1 text-2xl font-serif text-brand-green-deep">Estado operativo para SCRUM</h4>
                             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-green-mid/65">
-                              Este bloque lee `/api/stellar/readiness` y separa lo listo para grabacion de lo pendiente para piloto.
+                              Este bloque lee `/api/stellar/readiness` y separa lo listo para revision de lo pendiente para piloto.
                             </p>
                           </div>
                           <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
@@ -3812,7 +3812,7 @@ export default function MockupPortal({
 
                         {runtimeReadiness?.missing.length ? (
                           <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800">
-                            Pendiente no bloqueante para grabacion: {runtimeReadiness.missing.join(', ')}.
+                            Pendiente no bloqueante para revision: {runtimeReadiness.missing.join(', ')}.
                           </div>
                         ) : null}
                       </div>
@@ -3895,7 +3895,7 @@ export default function MockupPortal({
                             <div className="rounded-3xl border border-brand-gold/20 bg-[#fbf7ef] p-5">
                               <div className="flex items-start justify-between gap-4">
                                 <div>
-                                  <h5 className="text-lg font-bold text-brand-green-deep">{patientUpcomingConsultation.patient ?? 'Paciente demo'}</h5>
+                                  <h5 className="text-lg font-bold text-brand-green-deep">{patientUpcomingConsultation.patient ?? 'Paciente de prueba'}</h5>
                                   <p className="mt-1 text-sm text-brand-green-mid/70">
                                     {patientUpcomingConsultation.date} · {patientUpcomingConsultation.time}
                                   </p>
@@ -5840,7 +5840,7 @@ export default function MockupPortal({
                                       Receta #{prescription.id}
                                     </p>
                                     <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
-                                      <Database size={10} /> {doctorSignerReady ? 'ON-CHAIN' : 'DEMO HASH'}
+                                      <Database size={10} /> {doctorSignerReady ? 'ON-CHAIN' : 'HASH PRIVADO'}
                                     </span>
                                   </div>
                                   <h4 className="font-bold text-brand-green-deep">
@@ -6473,7 +6473,7 @@ export default function MockupPortal({
                             quantity: order.amount,
                             dispensary: order.dispensary,
                             txHash: order.hash,
-                            ledger: 'Demo ledger',
+                            ledger: 'Registro privado',
                             date: order.date,
                           })}
                           initial={{ opacity: 0, x: -20 }}
