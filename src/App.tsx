@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
-import MockupPortal, { PortalView } from './components/MockupPortal';
+import type { PortalView } from './components/MockupPortal';
 import {
   trustDataStore,
   type ActorRegistrationStatus,
@@ -27,6 +27,8 @@ import {
 import { getFirebaseRuntimeStatus } from './lib/firebase';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+
+const MockupPortal = lazy(() => import('./components/MockupPortal'));
 
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
@@ -318,7 +320,7 @@ function AppContent() {
     }
 
     return (
-      <MockupPortal
+      <LazyPortal
         isOpen
         onClose={() => navigate('/')}
         initialView={patientView}
@@ -392,7 +394,7 @@ function AppContent() {
     }
 
     return (
-      <MockupPortal
+      <LazyPortal
         isOpen
         onClose={() => navigate('/medico')}
         initialView="doctors"
@@ -466,7 +468,7 @@ function AppContent() {
     }
 
     return (
-      <MockupPortal
+      <LazyPortal
         isOpen
         onClose={() => navigate('/dispensario')}
         initialView={
@@ -1031,6 +1033,28 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
         </div>
       </div>
     </section>
+  );
+}
+
+function PortalLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-brand-neutral px-6">
+      <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green-deep text-brand-ivory">
+          <Leaf size={22} />
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold">Trust Leaf</p>
+        <p className="mt-2 text-lg font-bold text-brand-green-deep">Cargando portal...</p>
+      </div>
+    </div>
+  );
+}
+
+function LazyPortal(props: ComponentProps<typeof MockupPortal>) {
+  return (
+    <Suspense fallback={<PortalLoading />}>
+      <MockupPortal {...props} />
+    </Suspense>
   );
 }
 
@@ -2769,7 +2793,7 @@ function RoleRoutePage({
         </motion.section>
       </main>
 
-      <MockupPortal
+      <LazyPortal
         isOpen={workspaceOpen}
         onClose={() => setWorkspaceOpen(false)}
         initialView={initialView}
