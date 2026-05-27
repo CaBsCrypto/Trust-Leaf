@@ -3691,13 +3691,22 @@ export default function MockupPortal({
                               Usa esta barra como checklist de grabacion. Cada paso se activa con datos locales y deja claro que el paciente controla permisos y QR.
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => switchView('history')}
-                            className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
-                          >
-                            Ver permisos
-                          </button>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <button
+                              type="button"
+                              onClick={prepareRecordingDemo}
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-xs font-bold text-brand-green-deep"
+                            >
+                              Preparar demo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => switchView('history')}
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
+                            >
+                              Ver historial
+                            </button>
+                          </div>
                         </div>
                         <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
                           {recordingFlowSteps.map(([label, done, description], index) => (
@@ -3722,6 +3731,27 @@ export default function MockupPortal({
                               <p className="text-sm font-bold text-brand-green-deep">{label}</p>
                               <p className="mt-2 text-[11px] leading-relaxed text-brand-green-mid/60">{description}</p>
                             </div>
+                          ))}
+                        </div>
+                        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+                          {[
+                            ['Médico', '/medico/operacion', 'Validar llegada, ficha y receta'],
+                            ['Dispensario', '/dispensario/operacion', 'Validar QR y retiro parcial'],
+                            ['Recetas', '/paciente/recetas', 'Ver saldo y compartir QR'],
+                            ['Trazabilidad', '/paciente/historial', 'Ver permisos y retiros'],
+                          ].map(([label, href, description]) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => window.location.assign(href)}
+                              className="group rounded-2xl border border-brand-green-deep/10 bg-white p-4 text-left transition-colors hover:border-brand-gold/40 hover:bg-brand-neutral/50"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-bold text-brand-green-deep">{label}</p>
+                                <ArrowRight size={16} className="text-brand-gold transition-transform group-hover:translate-x-1" />
+                              </div>
+                              <p className="mt-2 text-[11px] leading-relaxed text-brand-green-mid/60">{description}</p>
+                            </button>
                           ))}
                         </div>
                       </div>
