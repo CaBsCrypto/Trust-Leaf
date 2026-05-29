@@ -1524,13 +1524,17 @@ function AuthGate({
           )}
 
           <div className="grid grid-cols-1 gap-3">
-            {onPasskeySignIn && passkeyService.getRegisteredAccounts().length > 0 && (
+            {onPasskeySignIn && (
               <button
                 type="button"
                 onClick={async () => {
                   setBusy('email');
                   setError(null);
                   try {
+                    if (passkeyService.getRegisteredAccounts().length === 0) {
+                      setError('Para ingresar con Passkey en este dispositivo por primera vez, inicia sesión con Google y completa el onboarding biométrico. Si ya te registraste aquí, asegúrate de no haber limpiado el almacenamiento local.');
+                      return;
+                    }
                     await onPasskeySignIn();
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Error al conectar con Passkey.');
