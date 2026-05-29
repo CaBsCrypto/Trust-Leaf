@@ -29,9 +29,13 @@ export function getPasskeyRpId() {
     return undefined;
   }
 
-  const { hostname } = window.location;
+  let { hostname } = window.location;
   if (!hostname || hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
     return undefined;
+  }
+
+  if (hostname.startsWith('www.')) {
+    hostname = hostname.slice(4);
   }
 
   return hostname;
