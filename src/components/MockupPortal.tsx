@@ -3589,7 +3589,14 @@ export default function MockupPortal({
                   {activeView === 'traveler' && t.portal.viewTraveler}
                   {activeView === 'profile' && 'Mi Cuenta Trust Leaf'}
                 </h3>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {walletConnected && (
+                    <div className="flex items-center gap-2 rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-[10px] sm:text-xs text-brand-green-deep shadow-sm">
+                      <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="font-bold uppercase text-[8px] sm:text-[9px] tracking-wider text-brand-green-mid">Stellar:</span>
+                      <span className="font-mono font-semibold">{shortenAddress(patientTrustAccountAddress, 6)}</span>
+                    </div>
+                  )}
                   {onSignOut && (
                     <button
                       onClick={onSignOut}
