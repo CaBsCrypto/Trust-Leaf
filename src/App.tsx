@@ -268,24 +268,27 @@ function AppContent() {
     });
   };
 
-  const handlePasskeySignIn = async () => {
-    const userLabel = 'Paciente Passkey';
+  const handlePasskeySignIn = (role: ActorRole) => async () => {
+    const roleLabel = role === 'doctor' ? 'Médico' : role === 'dispensary' ? 'Dispensario' : 'Paciente';
+    const userLabel = `${roleLabel} Passkey`;
     const res = await connectOrCreatePasskeyWallet(userLabel);
     if (!res || !res.contractId) {
       throw new Error('Fallo al conectar con Passkey.');
     }
     
-    startSession('patient', {
-      email: 'passkey@trustleaf.stellar',
-      name: res.userLabel || 'Paciente Passkey',
+    startSession(role, {
+      email: `passkey@trustleaf.${role}`,
+      name: res.userLabel || `${roleLabel} Passkey`,
       mode: 'email',
     });
     
-    setPatientProfile({
-      uid: `passkey-${res.contractId}`,
-      name: res.userLabel || 'Paciente Passkey',
-      stellarPublicKey: res.contractId,
-    });
+    if (role === 'patient') {
+      setPatientProfile({
+        uid: `passkey-${res.contractId}`,
+        name: res.userLabel || 'Paciente Passkey',
+        stellarPublicKey: res.contractId,
+      });
+    }
 
     setWalletSetup({
       primaryMethod: 'passkey',
@@ -555,7 +558,7 @@ function AppContent() {
           defaultName="Paciente de prueba"
           onBack={() => navigate('/')}
           onStart={startSession}
-          onPasskeySignIn={handlePasskeySignIn}
+          onPasskeySignIn={handlePasskeySignIn('patient')}
         />
       );
     }
@@ -684,6 +687,7 @@ function AppContent() {
           defaultName="Dra. Sofia Lagos"
           onBack={() => navigate('/')}
           onStart={startSession}
+          onPasskeySignIn={handlePasskeySignIn('doctor')}
         />
       );
     }
@@ -714,6 +718,7 @@ function AppContent() {
           defaultName="Dra. Sofia Lagos"
           onBack={() => navigate('/medico')}
           onStart={startSession}
+          onPasskeySignIn={handlePasskeySignIn('doctor')}
         />
       );
     }
@@ -759,6 +764,7 @@ function AppContent() {
           defaultName="Green Leaf Center"
           onBack={() => navigate('/')}
           onStart={startSession}
+          onPasskeySignIn={handlePasskeySignIn('dispensary')}
         />
       );
     }
@@ -789,6 +795,7 @@ function AppContent() {
           defaultName="Green Leaf Center"
           onBack={() => navigate('/dispensario')}
           onStart={startSession}
+          onPasskeySignIn={handlePasskeySignIn('dispensary')}
         />
       );
     }
