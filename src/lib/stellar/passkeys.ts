@@ -94,13 +94,10 @@ export async function createPasskeyWallet(
   const kit = getKit();
   const result = await kit.createWallet(TRUST_LEAF_PASSKEY_APP, userLabel, {
     rpId: getPasskeyRpId(),
-    authenticatorSelection: options?.authenticatorAttachment ? {
-      authenticatorAttachment: options.authenticatorAttachment,
+    authenticatorSelection: {
+      authenticatorAttachment: options?.authenticatorAttachment || 'platform',
       residentKey: 'preferred',
-      userVerification: 'preferred',
-    } : {
-      residentKey: 'preferred',
-      userVerification: 'preferred',
+      userVerification: 'required',
     }
   });
 
