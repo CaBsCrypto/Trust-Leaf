@@ -164,14 +164,21 @@ class PasskeyService {
   /**
    * Login: Dispara validación biométrica para desbloquear y recuperar la cuenta.
    */
-  public async login(): Promise<PasskeyAccount> {
+  public async login(username?: string): Promise<PasskeyAccount> {
     if (!this.isSupported()) {
       throw new Error('WebAuthn/Passkeys no están soportadas en este navegador.');
     }
 
-    const accounts = this.getRegisteredAccounts();
+    let accounts = this.getRegisteredAccounts();
+    if (username) {
+      accounts = accounts.filter((acc) => acc.username === username);
+    }
+
     if (accounts.length === 0) {
-      throw new Error('No se encontraron cuentas de passkeys registradas en este dispositivo.');
+      throw new Error(username 
+        ? `No se encontraron cuentas de passkeys registradas para "${username}" en este dispositivo.`
+        : 'No se encontraron cuentas de passkeys registradas en este dispositivo.'
+      );
     }
 
     // 1. Preparar retos y configurar credenciales conocidas

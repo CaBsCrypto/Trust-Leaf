@@ -13,17 +13,22 @@ export interface PasskeyWalletResult {
   userLabel: string;
 }
 
-export function getStoredPasskeyWallet(): StoredPasskeyWallet | null {
+export function getStoredPasskeyWallet(username?: string): StoredPasskeyWallet | null {
   const accounts = passkeyService.getRegisteredAccounts();
   if (accounts.length === 0) return null;
   
-  // Return the first/active registered account
-  const active = accounts[0];
+  // Si se especifica un username, buscar coincidencia exacta, de lo contrario tomar el primero
+  const match = username
+    ? accounts.find((acc) => acc.username === username)
+    : accounts[0];
+    
+  if (!match) return null;
+  
   return {
-    contractId: active.publicKey,
-    keyId: active.credentialId,
-    userLabel: active.username,
-    createdAt: new Date(active.createdAt).toISOString(),
+    contractId: match.publicKey,
+    keyId: match.credentialId,
+    userLabel: match.username,
+    createdAt: new Date(match.createdAt).toISOString(),
   };
 }
 
@@ -49,9 +54,9 @@ export async function createPasskeyWallet(
   } satisfies PasskeyWalletResult;
 }
 
-export async function connectPasskeyWallet() {
+export async function connectPasskeyWallet(username?: string) {
   // Call the robust, platform-native passkeyService login logic
-  const acc = await passkeyService.login();
+  const acc = await passkeyService.login(username);
   
   return {
     contractId: acc.publicKey,
@@ -64,9 +69,9 @@ export async function connectOrCreatePasskeyWallet(
   userLabel: string,
   options?: { authenticatorAttachment?: 'platform' | 'cross-platform' }
 ) {
-  const storedWallet = getStoredPasskeyWallet();
+  const storedWallet = getStoredPasskeyWallet(userLabel);
   if (storedWallet) {
-    return connectPasskeyWallet();
+    return connectPasskeyWallet(userLabel);
   }
 
   return createPasskeyWallet(userLabel, options);
