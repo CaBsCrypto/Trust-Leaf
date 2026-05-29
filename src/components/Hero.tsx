@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Database, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Database, FileText, ShieldCheck, X } from 'lucide-react';
 
 interface HeroProps {
   onStartClick: () => void;
@@ -9,6 +10,40 @@ import { useLanguage } from '../context/LanguageContext';
 
 export default function Hero({ onStartClick }: HeroProps) {
   const { t } = useLanguage();
+  const [activeModal, setActiveModal] = useState<'flor' | 'dosis' | 'lote' | null>(null);
+
+  const modalData = {
+    flor: {
+      title: 'Formatos Clínicos: Flor y Aceite',
+      icon: <FileText className="h-10 w-10 text-brand-gold animate-pulse" />,
+      desc: 'La dApp de Trust Leaf admite la prescripción digital estandarizada tanto de flores de grado farmacéutico (cannabis seco) como de aceites purificados y extractos dosificados de espectro completo o aislados.',
+      bullets: [
+        'Estandarización química del perfil de fitofármacos con proporciones exactas de THC/CBD.',
+        'Soporte completo para vaporización clínica y dosificación sublingual controlada.',
+        'Bloqueo automático en blockchain ante intentos de entrega de formatos no autorizados por el médico.'
+      ]
+    },
+    dosis: {
+      title: 'Control Cuantitativo e Inmutabilidad de Dosis',
+      icon: <Database className="h-10 w-10 text-brand-gold animate-pulse" />,
+      desc: 'Evita cualquier sobredosificación o abuso de recetas mediante un control riguroso de miligramos activos y concentraciones específicas grabados en el contrato Soroban de manera inalterable.',
+      bullets: [
+        'Descuento automático de dosis por cada retiro parcial del paciente en el dispensario.',
+        'Bloqueo automático del Ledger cuando el saldo restante llega exactamente a 0.',
+        'Prevención criptográfica de duplicidad de recetas o "doble retiro" en múltiples farmacias.'
+      ]
+    },
+    lote: {
+      title: 'Lote Farmacéutico Verificable y Co-trazabilidad',
+      icon: <ShieldCheck className="h-10 w-10 text-brand-gold animate-pulse" />,
+      desc: 'Garantiza la legalidad del fitofármaco vinculando la prescripción médica con el código de lote y procedencia de cultivo autorizada a través de hashes SHA-256 en la blockchain de Stellar.',
+      bullets: [
+        'Validación instantánea en farmacia del origen legítimo del cannabis y fecha de cosecha.',
+        'Transparencia absoluta para inspectores sanitarios y entes gubernamentales reguladores.',
+        'Blindaje de la cadena de suministro medicinal contra el mercado gris y falsificaciones.'
+      ]
+    }
+  };
 
   return (
     <section className="relative min-h-[86vh] overflow-hidden bg-brand-green-deep text-brand-ivory">
@@ -55,7 +90,7 @@ export default function Hero({ onStartClick }: HeroProps) {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <button 
                 onClick={onStartClick}
-                className="px-10 py-5 text-base md:text-lg font-bold text-brand-green-deep bg-brand-gold rounded-2xl hover:bg-brand-ivory transition-all shadow-2xl shadow-brand-green-deep/30 flex items-center justify-center gap-3 group active:scale-95"
+                className="px-10 py-5 text-base md:text-lg font-bold text-brand-green-deep bg-brand-gold rounded-2xl hover:bg-brand-ivory transition-all shadow-2xl shadow-brand-green-deep/30 flex items-center justify-center gap-3 group active:scale-95 cursor-pointer"
               >
                 {t.hero.cta} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
@@ -63,19 +98,80 @@ export default function Hero({ onStartClick }: HeroProps) {
 
             <div className="mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                ['Flor y aceite', <FileText size={18} />],
-                ['Dosis autorizada', <Database size={18} />],
-                ['Lote verificable', <ShieldCheck size={18} />],
-              ].map(([label, icon]) => (
-                <div key={label as string} className="flex items-center gap-3 border border-white/15 bg-brand-green-deep/30 px-4 py-3 text-sm font-bold backdrop-blur-sm">
-                  <span className="text-brand-gold">{icon}</span>
+                { id: 'flor', label: 'Flor y aceite', icon: <FileText size={18} /> },
+                { id: 'dosis', label: 'Dosis autorizada', icon: <Database size={18} /> },
+                { id: 'lote', label: 'Lote verificable', icon: <ShieldCheck size={18} /> },
+              ].map(({ id, label, icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveModal(id as 'flor' | 'dosis' | 'lote')}
+                  className="flex items-center gap-3 border border-white/15 bg-brand-green-deep/30 px-4 py-3 text-sm font-bold backdrop-blur-sm text-left hover:bg-white/15 transition-all select-none hover:border-brand-gold/40 hover:-translate-y-0.5 duration-300 cursor-pointer w-full text-brand-ivory group"
+                >
+                  <span className="text-brand-gold group-hover:scale-110 transition-transform">{icon}</span>
                   <span>{label}</span>
-                </div>
+                </button>
               ))}
             </div>
           </motion.div>
         </div>
       </div>
+
+      {/* Modal Popup overlay */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-green-deep/60 backdrop-blur-md">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="relative w-full max-w-lg overflow-hidden border border-brand-gold/20 bg-brand-green-deep/95 p-8 shadow-2xl rounded-2xl"
+          >
+            {/* Background absolute accents */}
+            <div className="absolute top-0 right-0 h-40 w-40 bg-brand-gold/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 h-40 w-40 bg-brand-gold/5 rounded-full blur-3xl" />
+
+            <button 
+              onClick={() => setActiveModal(null)}
+              className="absolute top-4 right-4 p-2 text-brand-ivory/60 hover:text-brand-gold transition-colors cursor-pointer rounded-lg hover:bg-white/5"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-brand-gold/10 rounded-xl border border-brand-gold/20">
+                {modalData[activeModal].icon}
+              </div>
+              <h2 className="text-xl md:text-2xl font-serif text-brand-gold font-semibold leading-snug">
+                {modalData[activeModal].title}
+              </h2>
+            </div>
+
+            <p className="text-brand-ivory/85 text-sm md:text-base leading-relaxed mb-6">
+              {modalData[activeModal].desc}
+            </p>
+
+            <div className="border-t border-white/10 pt-5">
+              <h3 className="text-xs font-semibold text-brand-gold uppercase tracking-wider mb-3">
+                Características Clínicas
+              </h3>
+              <ul className="space-y-2.5">
+                {modalData[activeModal].bullets.map((bullet, idx) => (
+                  <li key={idx} className="flex items-start gap-2.5 text-xs md:text-sm text-brand-ivory/75 leading-relaxed">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand-gold mt-1.5 shrink-0" />
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <button 
+              onClick={() => setActiveModal(null)}
+              className="mt-8 w-full py-3.5 bg-brand-gold hover:bg-brand-ivory text-brand-green-deep font-bold transition-all rounded-xl cursor-pointer active:scale-[0.98] text-sm"
+            >
+              Entendido
+            </button>
+          </motion.div>
+        </div>
+      )}
     </section>
   );
 }

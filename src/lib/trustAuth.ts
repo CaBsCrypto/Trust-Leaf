@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -8,6 +8,12 @@ export interface AdminAuthState {
   mode: AdminAuthMode;
   user: User | null;
   error?: string;
+}
+
+export async function signInWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  return result.user;
 }
 
 export function listenAdminAuth(callback: (state: AdminAuthState) => void) {

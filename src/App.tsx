@@ -5,7 +5,7 @@
 
 import { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X } from 'lucide-react';
+import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
@@ -22,9 +22,15 @@ import {
   listenAdminAuth,
   signInAdmin,
   signOutAdmin,
+  signInWithGoogle,
   type AdminAuthState,
 } from './lib/trustAuth';
-import { getFirebaseRuntimeStatus } from './lib/firebase';
+import { getFirebaseRuntimeStatus, db } from './lib/firebase';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { shortenAddress, stellarConfig } from './lib/stellar/config';
+import { connectFreighterOnTestnet } from './lib/stellar/freighter';
+import { connectOrCreatePasskeyWallet, getPasskeyAvailability, connectPasskeyWallet as apiConnectPasskeyWallet } from './lib/stellar/passkeys';
+import WalletOnboarding, { type WalletSetupState } from './components/WalletOnboarding';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
@@ -122,6 +128,216 @@ function AppContent() {
     mode: 'checking',
     user: null,
   });
+
+  const [patientProfile, setPatientProfile] = useState<{
+    uid: string;
+    name: string;
+    stellarPublicKey: string;
+  } | null>(null);
+  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [walletSetup, setWalletSetup] = useState<WalletSetupState>({
+    primaryMethod: null,
+    hasFreighterBackup: false,
+    walletLabel: 'Trust Leaf Smart Wallet',
+    contractAccount: 'CAX7...LEAF',
+    networkLabel: stellarConfig.networkLabel,
+  });
+  const [walletBusy, setWalletBusy] = useState<'passkey' | 'freighter' | 'backup' | null>(null);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [walletHint, setWalletHint] = useState<string | null>(
+    'Tu cuenta queda lista para controlar recetas, permisos y trazabilidad.',
+  );
+  const [passkeyAvailability, setPasskeyAvailability] = useState({ available: false, reason: '' });
+
+  useEffect(() => {
+    const res = getPasskeyAvailability();
+    setPasskeyAvailability({
+      available: res.available,
+      reason: res.reason ?? '',
+    });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (session?.role === 'patient' && session.mode === 'email' && adminAuth.user) {
+      setCheckingProfile(true);
+      const userRef = doc(db, 'users', adminAuth.user.uid);
+      getDoc(userRef)
+        .then((snapshot) => {
+          if (cancelled) return;
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.stellarPublicKey) {
+              const profile = {
+                uid: adminAuth.user!.uid,
+                name: data.name || adminAuth.user!.displayName || 'Usuario de Google',
+                stellarPublicKey: data.stellarPublicKey,
+              };
+              setPatientProfile(profile);
+              const primaryMethod = data.primaryMethod || 'demo';
+              const walletLabel = data.walletLabel || (primaryMethod === 'passkey' ? 'Smart Passkey' : primaryMethod === 'freighter' ? 'Freighter Wallet' : 'Paciente Google Piloto');
+              const hasFreighterBackup = !!data.hasFreighterBackup;
+
+              setWalletSetup({
+                primaryMethod,
+                hasFreighterBackup,
+                walletLabel,
+                contractAccount: data.stellarPublicKey,
+                networkLabel: 'Stellar Testnet',
+              });
+              localStorage.setItem(
+                'trust_wallet_setup',
+                JSON.stringify({
+                  primaryMethod,
+                  hasFreighterBackup,
+                  walletLabel,
+                  contractAccount: data.stellarPublicKey,
+                  freighterAddress: data.stellarPublicKey,
+                  networkLabel: 'Stellar Testnet',
+                }),
+              );
+            } else {
+              setPatientProfile(null);
+            }
+          } else {
+            setPatientProfile(null);
+          }
+        })
+        .catch((err) => {
+          console.error('Error loading patient profile:', err);
+        })
+        .finally(() => {
+          if (!cancelled) setCheckingProfile(false);
+        });
+    } else {
+      setPatientProfile(null);
+      setCheckingProfile(false);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [session, adminAuth.user]);
+
+  const connectPasskeyWallet = async (attachment?: 'platform' | 'cross-platform') => {
+    setWalletBusy('passkey');
+    setWalletError(null);
+    try {
+      const userLabel = adminAuth.user?.displayName || adminAuth.user?.email || 'Paciente Piloto';
+      const res = await connectOrCreatePasskeyWallet(userLabel, { authenticatorAttachment: attachment });
+      setWalletSetup({
+        primaryMethod: 'passkey',
+        hasFreighterBackup: false,
+        walletLabel: 'Passkey Smart Wallet',
+        contractAccount: res.contractId,
+        networkLabel: 'Stellar Testnet',
+      });
+    } catch (err) {
+      setWalletError(err instanceof Error ? err.message : 'Error al conectar Passkey.');
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const connectFreighterWallet = async () => {
+    setWalletBusy('freighter');
+    setWalletError(null);
+    try {
+      const address = await connectFreighterOnTestnet();
+      setWalletSetup({
+        primaryMethod: 'freighter',
+        hasFreighterBackup: false,
+        walletLabel: 'Freighter Wallet',
+        contractAccount: address,
+        networkLabel: 'Stellar Testnet',
+      });
+    } catch (err) {
+      setWalletError(err instanceof Error ? err.message : 'Error al conectar Freighter.');
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const connectDemoPatientWallet = async () => {
+    setWalletSetup({
+      primaryMethod: 'demo',
+      hasFreighterBackup: false,
+      walletLabel: 'Paciente Demo Testnet',
+      contractAccount: DEFAULT_PATIENT_WALLET,
+      networkLabel: 'Stellar Testnet',
+    });
+  };
+
+  const handlePasskeySignIn = async () => {
+    const res = await apiConnectPasskeyWallet();
+    if (!res || !res.contractId) {
+      throw new Error('Fallo al conectar con Passkey.');
+    }
+    
+    startSession('patient', {
+      email: 'passkey@trustleaf.stellar',
+      name: res.userLabel || 'Paciente Passkey',
+      mode: 'email',
+    });
+    
+    setPatientProfile({
+      uid: `passkey-${res.contractId}`,
+      name: res.userLabel || 'Paciente Passkey',
+      stellarPublicKey: res.contractId,
+    });
+    
+    localStorage.setItem(
+      'trust_wallet_setup',
+      JSON.stringify({
+        primaryMethod: 'passkey',
+        hasFreighterBackup: false,
+        walletLabel: res.userLabel || 'Passkey Smart Wallet',
+        contractAccount: res.contractId,
+        freighterAddress: res.contractId,
+        networkLabel: 'Stellar Testnet',
+      }),
+    );
+  };
+
+  const linkFreighterBackup = async () => {
+    if (walletSetup.primaryMethod !== 'passkey') return;
+    setWalletBusy('backup');
+    setWalletError(null);
+    try {
+      setWalletSetup((curr) => ({
+        ...curr,
+        hasFreighterBackup: true,
+      }));
+    } catch (err) {
+      setWalletError(err instanceof Error ? err.message : 'Error al vincular Freighter.');
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const resetWalletSetup = async () => {
+    setWalletBusy('passkey');
+    setWalletError(null);
+    try {
+      setWalletSetup({
+        primaryMethod: null,
+        hasFreighterBackup: false,
+        walletLabel: 'Trust Leaf Smart Wallet',
+        contractAccount: 'CAX7...LEAF',
+        networkLabel: stellarConfig.networkLabel,
+      });
+      setPatientProfile(null);
+      localStorage.removeItem('trust_wallet_setup');
+      if (adminAuth.user) {
+        const userRef = doc(db, 'users', adminAuth.user.uid);
+        await deleteDoc(userRef);
+      }
+      setWalletHint('Billetera desvinculada. Configura una nueva identidad.');
+    } catch (err) {
+      setWalletError(err instanceof Error ? err.message : 'Error al desvincular billetera.');
+    } finally {
+      setWalletBusy(null);
+    }
+  };
 
   const startSession = (role: ActorRole, input: { email: string; name: string; mode?: TrustSession['mode'] }) => {
     const nextSession: TrustSession = {
@@ -315,7 +531,106 @@ function AppContent() {
           defaultName="Paciente de prueba"
           onBack={() => navigate('/')}
           onStart={startSession}
+          onPasskeySignIn={handlePasskeySignIn}
         />
+      );
+    }
+
+    if (session?.mode === 'email' && adminAuth.user && !patientProfile && !checkingProfile) {
+      const handleContinueOnboarding = async () => {
+        if (!walletSetup.contractAccount || walletSetup.primaryMethod === null) return;
+        try {
+          const userRef = doc(db, 'users', adminAuth.user!.uid);
+          const profileData = {
+            uid: adminAuth.user!.uid,
+            name: adminAuth.user!.displayName || 'Usuario de Google',
+            stellarPublicKey: walletSetup.contractAccount,
+            primaryMethod: walletSetup.primaryMethod,
+            hasFreighterBackup: walletSetup.hasFreighterBackup,
+            walletLabel: walletSetup.walletLabel,
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(userRef, profileData);
+          setPatientProfile(profileData);
+          localStorage.setItem(
+            'trust_wallet_setup',
+            JSON.stringify({
+              primaryMethod: walletSetup.primaryMethod,
+              hasFreighterBackup: walletSetup.hasFreighterBackup,
+              walletLabel: walletSetup.walletLabel,
+              contractAccount: walletSetup.contractAccount,
+              freighterAddress: walletSetup.contractAccount,
+              networkLabel: 'Stellar Testnet',
+            }),
+          );
+        } catch (err) {
+          console.error("Error writing user profile:", err);
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep p-6 flex flex-col justify-center items-center">
+          <div className="w-full max-w-4xl space-y-6">
+            <header className="flex justify-between items-center bg-white/75 backdrop-blur-xl px-6 py-4 rounded-2xl border border-brand-green-deep/10 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+                  <Leaf size={20} />
+                </span>
+                <span className="text-lg font-bold">Trust Leaf Piloto</span>
+              </div>
+              <button onClick={endSession} className="text-sm font-bold text-brand-green-deep/60 hover:text-brand-green-deep cursor-pointer">
+                Cerrar sesión
+              </button>
+            </header>
+
+            <WalletOnboarding
+              title="Configura tu acceso médico"
+              eyebrow="Onboarding mandatorio de piloto"
+              description="Conecta una billetera Stellar para crear tu expediente clínico privado. Las transacciones de la red testnet están 100% patrocinadas por Trust Leaf."
+              primaryMethod={walletSetup.primaryMethod}
+              hasFreighterBackup={walletSetup.hasFreighterBackup}
+              walletLabel={walletSetup.walletLabel}
+              contractAccount={shortenAddress(walletSetup.contractAccount, 6)}
+              passkeyTitle="Smart Passkey"
+              passkeyDescription="Usa tu huella o PIN facial para crear un acceso biométrico ultra seguro y sin contraseñas."
+              passkeyAction="Crear con Passkey"
+              freighterTitle="Billetera Freighter"
+              freighterDescription="Si eres un usuario avanzado de Stellar, conecta tu billetera Freighter directamente en Testnet."
+              freighterAction="Conectar Freighter"
+              demoTitle="Acceso de Prueba"
+              demoDescription="Identidad custodial demo preconfigurada para fines de revisión y grabación piloto."
+              demoAction="Usar Demo"
+              linkedLabel="Vinculado"
+              backupTitle="Clave de Respaldo"
+              backupDescription="Añade Freighter como respaldo a tus credenciales Passkeys para mayor redundancia de acceso."
+              backupAction="Vincular Respaldo"
+              statusTitle="Estado de Billetera"
+              statusPrimary="Método Primario"
+              statusBackup="Respaldo"
+              statusAccount="Dirección Stellar"
+              statusNetwork="Red"
+              networkValue={walletSetup.networkLabel}
+              primaryPasskeyValue="Passkey Biométrica Activa"
+              primaryFreighterValue="Freighter Conectado"
+              primaryDemoValue="Acceso Demo Testnet"
+              primaryEmptyValue="Sin Vincular"
+              backupConnectedValue="Freighter Vinculado"
+              backupEmptyValue="Sin Respaldo"
+              continueAction="Confirmar y Continuar al Portal"
+              statusHint={passkeyAvailability.available ? walletHint : passkeyAvailability.reason}
+              statusError={walletError}
+              passkeyBusy={walletBusy === 'passkey'}
+              freighterBusy={walletBusy === 'freighter'}
+              backupBusy={walletBusy === 'backup'}
+              onConnectPasskey={connectPasskeyWallet}
+              onConnectFreighter={connectFreighterWallet}
+              onConnectDemo={connectDemoPatientWallet}
+              onLinkFreighterBackup={linkFreighterBackup}
+              onContinue={handleContinueOnboarding}
+              onResetWallet={resetWalletSetup}
+            />
+          </div>
+        </div>
       );
     }
 
@@ -1068,6 +1383,7 @@ function AuthGate({
   defaultName,
   onBack,
   onStart,
+  onPasskeySignIn,
 }: {
   role: ActorRole;
   title: string;
@@ -1078,6 +1394,7 @@ function AuthGate({
   defaultName: string;
   onBack: () => void;
   onStart: (role: ActorRole, input: { email: string; name: string; mode?: TrustSession['mode'] }) => void;
+  onPasskeySignIn?: () => Promise<void>;
 }) {
   const [form, setForm] = useState({
     email: defaultEmail,
@@ -1124,6 +1441,30 @@ function AuthGate({
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setBusy('email');
+    setError(null);
+    try {
+      const user = await signInWithGoogle();
+      if (!user) {
+        throw new Error('El inicio de sesión con Google falló.');
+      }
+      onStart(role, {
+        email: user.email ?? '',
+        name: user.displayName ?? 'Usuario de Google',
+        mode: 'email',
+      });
+    } catch (authError) {
+      setError(
+        authError instanceof Error
+          ? authError.message
+          : 'No fue posible abrir sesion segura con Google. Puedes usar el acceso de prueba para continuar.',
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
       <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
@@ -1151,53 +1492,70 @@ function AuthGate({
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm flex flex-col justify-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso privado</p>
           <h2 className="mt-2 text-2xl font-serif">Sesion de trabajo</h2>
-          <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-            Cada actor entra a su propio panel. Las solicitudes reales abren una sesion Firebase anonima para poder guardarse en Firestore.
+          <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65 mb-6">
+            Cada actor entra a su propio panel de control verificado. Las conexiones del piloto real se realizan a través de credenciales autenticadas de Google.
           </p>
 
-          <div className="mt-5 grid grid-cols-1 gap-3">
-            <label>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Nombre</span>
-              <input
-                value={form.name}
-                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
-              />
-            </label>
-            <label>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
-              />
-            </label>
-          </div>
-
           {error && (
-            <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
+            <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
               {error}
             </div>
           )}
 
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3">
+            {onPasskeySignIn && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setBusy('email');
+                  setError(null);
+                  try {
+                    await onPasskeySignIn();
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Error al conectar con Passkey.');
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
+                disabled={Boolean(busy)}
+                className="flex items-center justify-center gap-3 rounded-2xl bg-brand-gold text-brand-green-deep border border-brand-gold px-5 py-4 text-sm font-bold transition-all disabled:cursor-wait disabled:opacity-60 shadow-md cursor-pointer hover:bg-brand-ivory hover:-translate-y-0.5 duration-300 group"
+              >
+                <Fingerprint className="h-5 w-5 text-brand-green-deep group-hover:scale-110 transition-transform" />
+                {busy === 'email' ? 'Verificando Passkey...' : 'Entrar con Smart Passkey (Biométrico)'}
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => submit('email')}
+              onClick={handleGoogleSignIn}
               disabled={Boolean(busy)}
-              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60"
+              className="flex items-center justify-center gap-3 rounded-2xl bg-white border border-brand-green-deep/10 px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60 shadow-sm cursor-pointer"
             >
-              {busy === 'email' ? 'Abriendo sesion...' : primaryAction}
+              <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                  <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.89 21.56,11.43 21.35,11.1z" fill="#4285F4" />
+                  <path d="M12,21c2.43,0 4.47,-0.8 5.96,-2.18l-2.58,-2c-0.73,0.49 -1.66,0.78 -2.63,0.78 -2.03,0 -3.75,-1.37 -4.36,-3.22H2.33v2.66C3.81,17.43 7.64,21 12,21z" fill="#34A853" />
+                  <path d="M7.64,14.38c-0.16,-0.49 -0.25,-1 -0.25,-1.53s0.09,-1.04 0.25,-1.53V8.66H2.33C1.79,9.73 1.48,10.93 1.48,12s0.31,2.27 0.85,3.34L7.64,14.38z" fill="#FBBC05" />
+                  <path d="M12,5.38c1.32,0 2.51,0.45 3.44,1.35l2.58,-2.58C16.46,2.69 14.43,2 12,2 7.64,2 3.81,5.57 2.33,9.34l3.05,2.38C5.99,6.75 7.71,5.38 12,5.38z" fill="#EA4335" />
+                </g>
+              </svg>
+              {busy === 'email' ? 'Autenticando...' : 'Iniciar sesión con Google'}
             </button>
+            
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-brand-green-deep/10"></div>
+              <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-brand-green-mid/45">o modo demo</span>
+              <div className="flex-grow border-t border-brand-green-deep/10"></div>
+            </div>
+
             <button
               type="button"
               onClick={() => submit('demo')}
               disabled={Boolean(busy)}
-              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:cursor-wait disabled:opacity-60"
+              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
             >
               {busy === 'demo' ? 'Entrando...' : demoAction}
             </button>

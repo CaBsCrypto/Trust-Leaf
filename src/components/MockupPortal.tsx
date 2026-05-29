@@ -11,6 +11,9 @@ import {
   getPasskeyAvailability,
 } from '../lib/stellar/passkeys';
 
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+
 export type PortalView = 'overview' | 'doctors' | 'dispensaries' | 'profile' | 'prescriptions' | 'pickups' | 'history' | 'traveler';
 
 interface MockupPortalProps {
@@ -1154,6 +1157,23 @@ export default function MockupPortal({
     ];
   });
 
+  useEffect(() => {
+    if (auth.currentUser) {
+      const pickupsRef = collection(db, 'pickups');
+      const q = query(pickupsRef, where('patientId', '==', auth.currentUser.uid));
+      getDocs(q)
+        .then((snapshot) => {
+          const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          if (items.length > 0) {
+            setActivePickups(items);
+          }
+        })
+        .catch((e) => {
+          console.error("Error loading pickups from Firestore:", e);
+        });
+    }
+  }, []);
+
   // Persist state
   useEffect(() => {
     localStorage.setItem('trust_pickups', JSON.stringify(activePickups));
@@ -1520,12 +1540,12 @@ export default function MockupPortal({
     }
   }, [activeView, isDispensaryPortal]);
 
-  const connectPasskeyWallet = async () => {
+  const connectPasskeyWallet = async (attachment?: 'platform' | 'cross-platform') => {
     setWalletBusy('passkey');
     setWalletError(null);
 
     try {
-      const result = await connectOrCreatePasskeyWallet('Paciente Trust Leaf');
+      const result = await connectOrCreatePasskeyWallet('Paciente Trust Leaf', { authenticatorAttachment: attachment });
       setWalletSetup((current) => ({
         ...current,
         primaryMethod: 'passkey',
@@ -1670,6 +1690,31 @@ export default function MockupPortal({
       setWalletError(
         error instanceof Error ? error.message : 'No se pudo vincular Freighter como respaldo.',
       );
+    } finally {
+      setWalletBusy(null);
+    }
+  };
+
+  const resetWalletSetup = async () => {
+    setWalletBusy('passkey');
+    setWalletError(null);
+    try {
+      setWalletSetup({
+        primaryMethod: null,
+        hasFreighterBackup: false,
+        walletLabel: 'Trust Leaf Smart Wallet',
+        contractAccount: 'CAX7...LEAF',
+        networkLabel: stellarConfig.networkLabel,
+      });
+      localStorage.removeItem('trust_wallet_setup');
+
+      if (auth.currentUser) {
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await deleteDoc(userRef);
+      }
+      setWalletHint('Billetera desvinculada. Configura una nueva identidad.');
+    } catch (err) {
+      setWalletError(err instanceof Error ? err.message : 'Error al desvincular billetera.');
     } finally {
       setWalletBusy(null);
     }
@@ -2164,6 +2209,23 @@ export default function MockupPortal({
         stockGrams: Math.max(0, Number(product.stockGrams ?? 0) - dispensed),
       };
     }));
+    if (auth.currentUser) {
+      newPickups.forEach(async (pickup) => {
+        try {
+          await addDoc(collection(db, 'pickups'), {
+            patientId: auth.currentUser!.uid,
+            dispensaryId: pickup.dispensary?.id || 'demo-dispensary',
+            token: pickup.token,
+            quantity: pickup.quantity,
+            strain: pickup.strain,
+            status: pickup.status,
+            createdAt: new Date().toISOString()
+          });
+        } catch (e) {
+          console.error("Error saving local pickup to Firestore:", e);
+        }
+      });
+    }
     setActivePickups(prev => [...newPickups, ...prev]);
     setRecentActivity(prev => [
       {
@@ -2260,6 +2322,23 @@ export default function MockupPortal({
         expires: 'Retiro parcial registrado'
       }));
 
+      if (auth.currentUser) {
+        newPickups.forEach(async (pickup) => {
+          try {
+            await addDoc(collection(db, 'pickups'), {
+              patientId: auth.currentUser!.uid,
+              dispensaryId: pickup.dispensary?.id || 'demo-dispensary',
+              token: pickup.token,
+              quantity: pickup.quantity,
+              strain: pickup.strain,
+              status: pickup.status,
+              createdAt: new Date().toISOString()
+            });
+          } catch (e) {
+            console.error("Error saving onchain pickup to Firestore:", e);
+          }
+        });
+      }
       setActivePickups(prev => [...newPickups, ...prev]);
       setRecentActivity(prev => [
         {
@@ -3639,8 +3718,9 @@ export default function MockupPortal({
                           onConnectPasskey={connectPasskeyWallet}
                           onConnectFreighter={connectFreighterWallet}
                           onConnectDemo={connectDemoPatientWallet}
-                          onLinkFreighterBackup={linkFreighterBackup}
+                           onLinkFreighterBackup={linkFreighterBackup}
                           onContinue={() => switchView('doctors')}
+                          onResetWallet={resetWalletSetup}
                         />
                         </div>
                       )}

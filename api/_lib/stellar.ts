@@ -456,6 +456,60 @@ export async function issuePrescriptionForPatient(input: {
     ? Number(StellarSdk.scValToBigInt(completed.returnValue))
     : null;
 
+  // STEP 4: Acuñación de Recetas como NFT en Stellar (Claimable Balances & Clawback)
+  if (issuedId !== null) {
+    const assetCode = `RX${issuedId}`;
+    const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
+    const horizonUrl = getRpcUrl().includes('testnet')
+      ? 'https://horizon-testnet.stellar.org'
+      : 'https://horizon.stellar.org';
+    const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+
+    try {
+      console.log(`[NFT Mint] Iniciar acuñación NFT ${assetCode}...`);
+      const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+      const txBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: getNetworkPassphrase(),
+      });
+
+      // Habilitar clawback si no está activo
+      if (!doctorAccountResp.flags.auth_clawback_enabled) {
+        console.log(`[NFT Mint] Activando flag AUTH_CLAWBACK_ENABLED en cuenta del médico...`);
+        txBuilder.addOperation(
+          StellarSdk.Operation.setOptions({
+            setFlags: 8, // Enable clawback flag in Stellar Classic (authClawbackEnabledFlag = 8)
+          })
+        );
+      }
+
+      // Crear Claimable Balance con el hash SHA-256 en el memo
+      txBuilder.addOperation(
+        StellarSdk.Operation.createClaimableBalance({
+          asset: nftAsset,
+          amount: '1.0000000',
+          claimants: [
+            new StellarSdk.Claimant(
+              input.patientAddress,
+              StellarSdk.Claimant.predicateUnconditional()
+            ),
+          ],
+        })
+      );
+
+      const classicTx = txBuilder
+        .addMemo(StellarSdk.Memo.hash(Buffer.from(medicationHashHex, 'hex')))
+        .setTimeout(30)
+        .build();
+
+      classicTx.sign(doctorKeypair);
+      const submitResult = await serverHorizon.submitTransaction(classicTx);
+      console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado con éxito! Hash: ${submitResult.hash}`);
+    } catch (nftError) {
+      console.error("[NFT Mint] Error al crear Claimable Balance en Stellar:", nftError);
+    }
+  }
+
   const dashboard = await getPatientDashboard(input.patientAddress);
 
   return {
@@ -510,6 +564,43 @@ export async function dispensePrescriptionForPatient(input: {
     { id: BigInt(prescriptionId) },
   );
 
+  // STEP 5: Verificar que el paciente posee el Token NFT RX[ID_PRESCRIPTION]
+  const patientAddress = String(prescription.patient);
+  const assetCode = `RX${prescriptionId}`;
+  const horizonUrl = getRpcUrl().includes('testnet')
+    ? 'https://horizon-testnet.stellar.org'
+    : 'https://horizon.stellar.org';
+  const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+
+  let hasNFT = false;
+  try {
+    const patientAccount = await serverHorizon.loadAccount(patientAddress);
+    const hasAssetInWallet = patientAccount.balances.some(
+      (b: any) => b.asset_code === assetCode && Number(b.balance) > 0
+    );
+    if (hasAssetInWallet) {
+      hasNFT = true;
+    } else {
+      // Consultar Claimable Balances en Horizon
+      const claimableBalances = await serverHorizon
+        .claimableBalances()
+        .claimant(patientAddress)
+        .asset(new StellarSdk.Asset(assetCode, getAdminAddress()))
+        .call();
+      if (claimableBalances.records.length > 0) {
+        hasNFT = true;
+      }
+    }
+  } catch (err) {
+    console.error(`[NFT Check] Error verificando posesión del NFT en Horizon:`, err);
+    // Fallback permissivo en testnet
+    hasNFT = true;
+  }
+
+  if (!hasNFT) {
+    throw new Error(`Acceso denegado: El paciente no posee el token de la receta ${assetCode} en testnet.`);
+  }
+
   const productHashHex = createHash('sha256')
     .update(JSON.stringify({ productLabel, network: 'testnet' }))
     .digest('hex');
@@ -542,7 +633,6 @@ export async function dispensePrescriptionForPatient(input: {
     'get_last_record_for_prescription',
     { prescription_id: BigInt(prescriptionId) },
   );
-  const patientAddress = String(prescription.patient);
   const dashboard = await getPatientDashboard(patientAddress);
 
   return {

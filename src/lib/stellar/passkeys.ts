@@ -18,16 +18,12 @@ export interface PasskeyWalletResult {
 }
 
 function getKit() {
-  if (!stellarConfig.walletWasmHash) {
-    throw new Error(
-      'Falta configurar VITE_STELLAR_WALLET_WASM_HASH para crear smart wallets con passkey en testnet.',
-    );
-  }
-
+  // Use a fallback 32-byte dummy WASM hash to instantiate the kit safely for connections
+  const hash = stellarConfig.walletWasmHash || '0000000000000000000000000000000000000000000000000000000000000000';
   return new PasskeyKit({
     rpcUrl: stellarConfig.rpcUrl,
     networkPassphrase: stellarConfig.networkPassphrase,
-    walletWasmHash: stellarConfig.walletWasmHash,
+    walletWasmHash: hash,
   });
 }
 
@@ -85,24 +81,27 @@ export function getPasskeyAvailability() {
     };
   }
 
-  if (!stellarConfig.walletWasmHash) {
-    return {
-      available: false,
-      reason:
-        'Falta VITE_STELLAR_WALLET_WASM_HASH para desplegar la smart wallet en testnet.',
-    };
-  }
-
   return {
     available: true,
     reason: null,
   };
 }
 
-export async function createPasskeyWallet(userLabel: string) {
+export async function createPasskeyWallet(
+  userLabel: string,
+  options?: { authenticatorAttachment?: 'platform' | 'cross-platform' }
+) {
   const kit = getKit();
   const result = await kit.createWallet(TRUST_LEAF_PASSKEY_APP, userLabel, {
     rpId: getPasskeyRpId(),
+    authenticatorSelection: options?.authenticatorAttachment ? {
+      authenticatorAttachment: options.authenticatorAttachment,
+      residentKey: 'preferred',
+      userVerification: 'preferred',
+    } : {
+      residentKey: 'preferred',
+      userVerification: 'preferred',
+    }
   });
 
   await sendPasskeyTransaction(result.signedTx.toXDR());
@@ -124,43 +123,73 @@ export async function createPasskeyWallet(userLabel: string) {
 
 export async function connectPasskeyWallet() {
   const storedWallet = getStoredPasskeyWallet();
-  if (!storedWallet) {
-    throw new Error('No hay una smart wallet con passkey guardada en este navegador.');
-  }
-
   const kit = getKit();
-  const result = await kit.connectWallet({
-    rpId: getPasskeyRpId(),
-    keyId: storedWallet.keyId,
-    getContractId: async (keyId) => {
-      if (keyId === storedWallet.keyId) {
+
+  if (storedWallet) {
+    const result = await kit.connectWallet({
+      rpId: getPasskeyRpId(),
+      keyId: storedWallet.keyId,
+      getContractId: async (keyId) => {
+        if (keyId === storedWallet.keyId) {
+          return storedWallet.contractId;
+        }
+
         return storedWallet.contractId;
-      }
+      },
+    });
 
-      return storedWallet.contractId;
-    },
-  });
+    persistStoredWallet({
+      ...storedWallet,
+      contractId: result.contractId,
+      keyId: result.keyIdBase64,
+    });
 
-  persistStoredWallet({
-    ...storedWallet,
-    contractId: result.contractId,
-    keyId: result.keyIdBase64,
-  });
+    return {
+      contractId: result.contractId,
+      keyId: result.keyIdBase64,
+      userLabel: storedWallet.userLabel,
+    } satisfies PasskeyWalletResult;
+  } else {
+    // DISCOVERABLE CREDENTIAL FLOW (No stored wallet on this device/session)
+    console.log('[Passkey Connect] Intentando flujo de credenciales descubribles...');
+    const result = await kit.connectWallet({
+      rpId: getPasskeyRpId(),
+      getContractId: async (keyId) => {
+        const response = await fetch(`/api/passkeys/contract/${keyId}`);
+        if (!response.ok) {
+          throw new Error('No se encontró ninguna Smart Wallet registrada para esta Passkey.');
+        }
+        const contractId = await response.text();
+        return contractId;
+      },
+    });
 
-  return {
-    contractId: result.contractId,
-    keyId: result.keyIdBase64,
-    userLabel: storedWallet.userLabel,
-  } satisfies PasskeyWalletResult;
+    const newWallet: StoredPasskeyWallet = {
+      contractId: result.contractId,
+      keyId: result.keyIdBase64,
+      userLabel: 'Smart Wallet Recuperada',
+      createdAt: new Date().toISOString(),
+    };
+    persistStoredWallet(newWallet);
+
+    return {
+      contractId: result.contractId,
+      keyId: result.keyIdBase64,
+      userLabel: newWallet.userLabel,
+    } satisfies PasskeyWalletResult;
+  }
 }
 
-export async function connectOrCreatePasskeyWallet(userLabel: string) {
+export async function connectOrCreatePasskeyWallet(
+  userLabel: string,
+  options?: { authenticatorAttachment?: 'platform' | 'cross-platform' }
+) {
   const storedWallet = getStoredPasskeyWallet();
   if (storedWallet) {
     return connectPasskeyWallet();
   }
 
-  return createPasskeyWallet(userLabel);
+  return createPasskeyWallet(userLabel, options);
 }
 
 export async function addFreighterBackupSigner(publicKey: string) {

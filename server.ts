@@ -11,6 +11,8 @@ import {
   getRuntimeReadiness,
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
   validatePrescriptionForDispensary,
+  registerDoctorOnTestnet,
+  registerDispensaryOnTestnet,
 } from "./api/_lib/stellar";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -227,6 +229,46 @@ async function startServer() {
         return;
       }
 
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/register-doctor", async (req, res) => {
+    try {
+      const { doctorAddress } = req.body ?? {};
+      if (!doctorAddress) {
+        res.status(400).json({ message: "Falta doctorAddress." });
+        return;
+      }
+      const result = await registerDoctorOnTestnet({
+        doctorAddress: String(doctorAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible registrar el medico en DoctorRegistry Testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/register-dispensary", async (req, res) => {
+    try {
+      const { dispensaryAddress } = req.body ?? {};
+      if (!dispensaryAddress) {
+        res.status(400).json({ message: "Falta dispensaryAddress." });
+        return;
+      }
+      const result = await registerDispensaryOnTestnet({
+        dispensaryAddress: String(dispensaryAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible registrar el dispensario en DispensaryRegistry Testnet.";
       res.status(500).json({ message });
     }
   });
