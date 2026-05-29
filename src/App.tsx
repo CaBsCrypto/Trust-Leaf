@@ -1524,7 +1524,7 @@ function AuthGate({
           )}
 
           <div className="grid grid-cols-1 gap-3">
-            {onPasskeySignIn && (
+            {onPasskeySignIn && passkeyService.getRegisteredAccounts().length > 0 && (
               <button
                 type="button"
                 onClick={async () => {
