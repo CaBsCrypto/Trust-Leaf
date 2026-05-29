@@ -23,6 +23,7 @@ interface MockupPortalProps {
   allowedViews?: PortalView[];
   pageMode?: boolean;
   roleLabel?: string;
+  onSignOut?: () => void;
 }
 
 interface PatientPrescriptionRecord {
@@ -983,6 +984,7 @@ export default function MockupPortal({
   allowedViews,
   pageMode = false,
   roleLabel = 'Trust Leaf Portal',
+  onSignOut,
 }: MockupPortalProps) {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PortalView>(initialView);
@@ -3573,9 +3575,19 @@ export default function MockupPortal({
                   {activeView === 'traveler' && t.portal.viewTraveler}
                   {activeView === 'profile' && 'Mi Cuenta Trust Leaf'}
                 </h3>
-                <button onClick={onClose} className="p-3 md:p-2 -mr-2 md:mr-0 hover:bg-brand-neutral rounded-full transition-colors">
-                  <X size={24} className="md:w-5 md:h-5 w-6 h-6" />
-                </button>
+                <div className="flex items-center gap-3">
+                  {onSignOut && (
+                    <button
+                      onClick={onSignOut}
+                      className="text-xs font-bold uppercase tracking-[0.12em] bg-red-500/5 hover:bg-red-500/10 text-red-600 hover:text-red-700 px-3 py-2 rounded-xl transition-all border border-red-500/10 active:scale-95 cursor-pointer"
+                    >
+                      Cerrar Sesión
+                    </button>
+                  )}
+                  <button onClick={onClose} className="p-3 md:p-2 -mr-2 md:mr-0 hover:bg-brand-neutral rounded-full transition-colors cursor-pointer">
+                    <X size={24} className="md:w-5 md:h-5 w-6 h-6" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-6 md:p-8">

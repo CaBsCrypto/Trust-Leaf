@@ -642,6 +642,7 @@ function AppContent() {
         allowedViews={PATIENT_VIEWS}
         pageMode
         roleLabel="Portal Paciente"
+        onSignOut={endSession}
       />
     );
   }
@@ -716,6 +717,7 @@ function AppContent() {
         allowedViews={DOCTOR_VIEWS}
         pageMode
         roleLabel="Portal Médico"
+        onSignOut={endSession}
       />
     );
   }
@@ -796,6 +798,7 @@ function AppContent() {
         allowedViews={DISPENSARY_VIEWS}
         pageMode
         roleLabel="Portal Dispensario"
+        onSignOut={endSession}
       />
     );
   }
