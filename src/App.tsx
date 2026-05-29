@@ -30,6 +30,7 @@ import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { shortenAddress, stellarConfig } from './lib/stellar/config';
 import { connectFreighterOnTestnet } from './lib/stellar/freighter';
 import { connectOrCreatePasskeyWallet, getPasskeyAvailability, connectPasskeyWallet as apiConnectPasskeyWallet } from './lib/stellar/passkeys';
+import { passkeyService } from './lib/stellar/passkeyService';
 import WalletOnboarding, { type WalletSetupState } from './components/WalletOnboarding';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -318,6 +319,19 @@ function AppContent() {
     setWalletBusy('passkey');
     setWalletError(null);
     try {
+      // 1. Limpiar base de datos híbrida local y credenciales
+      passkeyService.clearAll();
+      
+      // 2. Limpiar todo el estado de local storage relacionado con demos y pilotos
+      localStorage.removeItem('trust_wallet_setup');
+      localStorage.removeItem('trust_doctor_patient_address');
+      localStorage.removeItem('trust_has_rx');
+      localStorage.removeItem('trust_latest_prescription_id');
+      localStorage.removeItem('trust_dispense_prescription_id');
+      localStorage.removeItem('activePickups');
+      localStorage.removeItem('gp_passkey_accounts');
+
+      // 3. Reiniciar estado local
       setWalletSetup({
         primaryMethod: null,
         hasFreighterBackup: false,
@@ -326,7 +340,8 @@ function AppContent() {
         networkLabel: stellarConfig.networkLabel,
       });
       setPatientProfile(null);
-      localStorage.removeItem('trust_wallet_setup');
+      
+      // 4. Limpiar Firestore
       if (adminAuth.user) {
         const userRef = doc(db, 'users', adminAuth.user.uid);
         await deleteDoc(userRef);

@@ -14,6 +14,44 @@ class PasskeyService {
   };
 
   /**
+   * Extrae el RP ID óptimo y válido según el entorno de ejecución actual.
+   */
+  private getRpId(): string | undefined {
+    if (typeof window === 'undefined') return undefined;
+    const hostname = window.location.hostname;
+
+    // Si es una dirección IP (v4), evitamos fijar RP ID para prevenir
+    // que el navegador tire una excepción de dominio no válido.
+    const ipPattern = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ipPattern.test(hostname)) {
+      return undefined;
+    }
+
+    // Para localhost
+    if (hostname === 'localhost') {
+      return 'localhost';
+    }
+
+    // Limpieza estándar de prefijo 'www.' para compatibilidad cruzada de subdominios
+    if (hostname.startsWith('www.')) {
+      return hostname.substring(4);
+    }
+
+    // Mantener dominios de Vercel intactos
+    if (hostname.endsWith('.vercel.app')) {
+      return hostname;
+    }
+
+    // Devolver eTLD+1 para otros subdominios genéricos
+    const parts = hostname.split('.');
+    if (parts.length > 2) {
+      return parts.slice(-2).join('.');
+    }
+
+    return hostname;
+  }
+
+  /**
    * Verifica soporte de WebAuthn / Passkeys en el navegador actual.
    */
   public isSupported(): boolean {
@@ -26,7 +64,11 @@ class PasskeyService {
   /**
    * Registro: Genera credencial biométrica y crea un par de llaves blockchain mapeado.
    */
-  public async register(username: string, existingSecretKey?: string): Promise<PasskeyAccount> {
+  public async register(
+    username: string,
+    existingSecretKey?: string,
+    attachment?: 'platform' | 'cross-platform'
+  ): Promise<PasskeyAccount> {
     if (!this.isSupported()) {
       throw new Error('WebAuthn/Passkeys no están soportadas en este navegador.');
     }
@@ -38,11 +80,13 @@ class PasskeyService {
     const userId = new Uint8Array(16);
     window.crypto.getRandomValues(userId);
 
+    const rpId = this.getRpId();
+
     const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
       challenge,
       rp: {
         name: 'Trust Leaf Network',
-        id: window.location.hostname, // Amarrado al hostname actual
+        ...(rpId ? { id: rpId } : {}),
       },
       user: {
         id: userId,
@@ -54,10 +98,16 @@ class PasskeyService {
           type: 'public-key',
           alg: -7, // ES256 (secp256r1) - Algoritmo estándar para TouchID/FaceID
         },
+        {
+          type: 'public-key',
+          alg: -257, // RS256 - Soporte adicional para compatibilidad con Windows Hello
+        },
       ],
       authenticatorSelection: {
-        authenticatorAttachment: 'platform', // TouchID, FaceID, Windows Hello nativos
+        ...(attachment ? { authenticatorAttachment: attachment } : { authenticatorAttachment: 'platform' }),
         userVerification: 'required',
+        residentKey: 'required', // Esencial para Windows Hello/Passkeys nativas
+        requireResidentKey: true,
       },
       timeout: 60000,
     };
@@ -69,6 +119,7 @@ class PasskeyService {
         publicKey: publicKeyCredentialCreationOptions,
       })) as PublicKeyCredential;
     } catch (err) {
+      console.error('Error al registrar credencial:', err);
       throw new Error('El registro biométrico fue cancelado o expiró.');
     }
 
@@ -188,6 +239,15 @@ class PasskeyService {
     accounts = accounts.filter((acc) => acc.publicKey !== publicKey);
     localStorage.setItem(this.STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
     localStorage.removeItem(`${this.STORAGE_KEYS.SECRET_PREFIX}${publicKey}`);
+  }
+
+  public clearAll(): void {
+    if (typeof window === 'undefined') return;
+    const accounts = this.getRegisteredAccounts();
+    for (const acc of accounts) {
+      localStorage.removeItem(`${this.STORAGE_KEYS.SECRET_PREFIX}${acc.publicKey}`);
+    }
+    localStorage.removeItem(this.STORAGE_KEYS.ACCOUNTS);
   }
 
   public isPasskeyAccount(publicKey: string): boolean {

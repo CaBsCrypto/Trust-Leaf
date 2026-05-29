@@ -10,6 +10,7 @@ import {
   connectOrCreatePasskeyWallet,
   getPasskeyAvailability,
 } from '../lib/stellar/passkeys';
+import { passkeyService } from '../lib/stellar/passkeyService';
 
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
@@ -1701,6 +1702,19 @@ export default function MockupPortal({
     setWalletBusy('passkey');
     setWalletError(null);
     try {
+      // 1. Limpiar base de datos híbrida local y credenciales
+      passkeyService.clearAll();
+
+      // 2. Limpiar todo el estado de local storage relacionado con demos y pilotos
+      localStorage.removeItem('trust_wallet_setup');
+      localStorage.removeItem('trust_doctor_patient_address');
+      localStorage.removeItem('trust_has_rx');
+      localStorage.removeItem('trust_latest_prescription_id');
+      localStorage.removeItem('trust_dispense_prescription_id');
+      localStorage.removeItem('activePickups');
+      localStorage.removeItem('gp_passkey_accounts');
+
+      // 3. Reiniciar estado local
       setWalletSetup({
         primaryMethod: null,
         hasFreighterBackup: false,
@@ -1708,8 +1722,8 @@ export default function MockupPortal({
         contractAccount: 'CAX7...LEAF',
         networkLabel: stellarConfig.networkLabel,
       });
-      localStorage.removeItem('trust_wallet_setup');
 
+      // 4. Limpiar Firestore
       if (auth.currentUser) {
         const userRef = doc(db, 'users', auth.currentUser.uid);
         await deleteDoc(userRef);
