@@ -269,7 +269,8 @@ function AppContent() {
   };
 
   const handlePasskeySignIn = async () => {
-    const res = await apiConnectPasskeyWallet();
+    const userLabel = 'Paciente Passkey';
+    const res = await connectOrCreatePasskeyWallet(userLabel);
     if (!res || !res.contractId) {
       throw new Error('Fallo al conectar con Passkey.');
     }
@@ -284,6 +285,14 @@ function AppContent() {
       uid: `passkey-${res.contractId}`,
       name: res.userLabel || 'Paciente Passkey',
       stellarPublicKey: res.contractId,
+    });
+
+    setWalletSetup({
+      primaryMethod: 'passkey',
+      hasFreighterBackup: false,
+      walletLabel: res.userLabel || 'Passkey Smart Wallet',
+      contractAccount: res.contractId,
+      networkLabel: 'Stellar Testnet',
     });
     
     localStorage.setItem(
@@ -1531,10 +1540,6 @@ function AuthGate({
                   setBusy('email');
                   setError(null);
                   try {
-                    if (passkeyService.getRegisteredAccounts().length === 0) {
-                      setError('Para ingresar con Passkey en este dispositivo por primera vez, inicia sesión con Google y completa el onboarding biométrico. Si ya te registraste aquí, asegúrate de no haber limpiado el almacenamiento local.');
-                      return;
-                    }
                     await onPasskeySignIn();
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Error al conectar con Passkey.');
