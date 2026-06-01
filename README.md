@@ -67,7 +67,75 @@ Olvídate de las contraseñas débiles y de las complejas frases semilla de 12 p
 
 ---
 
-## 📂 5. Directorio de Documentación Clave
+## 🎭 5. Flujos Detallados por Actor (Actor Workflows)
+
+Para una comprensión profunda de la experiencia operativa, a continuación se detallan las secuencias de interacción para cada actor del ecosistema:
+
+### A. Flujo del Paciente (Patient Onboarding & Dispense UX)
+Muestra cómo el paciente crea su wallet con biometría sin contraseñas, asiste a consulta y realiza retiros seguros con códigos QR temporales:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Paciente as 👤 Paciente
+    participant App as 📱 Smart Wallet (Passkey UI)
+    participant Server as 🌐 API Backend
+    participant Blockchain as ⛓️ Stellar Soroban
+
+    Paciente->>App: 1. Desbloquea biometría (FaceID / TouchID)
+    App->>Blockchain: 2. Crea/Resuelve wallet no custodial en Testnet (Llave en Hardware)
+    Paciente->>App: 3. Genera y comparte QR de consulta temporal con el Médico
+    Paciente->>App: 4. Recibe la receta emitida como NFT en su wallet
+    App->>Blockchain: 5. Consulta saldo de gramos y vigencia on-chain
+    Paciente->>App: 6. Presenta QR temporal de receta en el Dispensario
+    App->>Blockchain: 7. Recibe confirmación de dispensado y nuevo saldo on-chain
+```
+
+### B. Flujo del Médico (Doctor Registration & Issue UX)
+Muestra cómo el profesional acredita su licencia ante la Superintendencia de Salud (SIS), accede de forma consentida a la ficha del paciente y firma digitalmente la receta:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Medico as 🩺 Médico Cirujano
+    participant Portal as 🖥️ Portal Clínico
+    participant Registry as 🛡️ DoctorRegistry (Soroban)
+    participant SC as ⛓️ PrescriptionContract (Soroban)
+
+    Medico->>Portal: 1. Registro con RUT y Registro SIS (Superintendencia)
+    Note over Portal: Admin valida credencial SIS<br/>en Superintendencia de Salud
+    Portal->>Registry: 2. Transacción add_doctor (Aprobado on-chain)
+    Medico->>Portal: 3. Escanea QR del Paciente (Acceso temporal consentido)
+    Medico->>Portal: 4. Formula tratamiento magistral y geolocaliza Autocultivo (Ley 21.575)
+    Note over Portal: Compila SHA-256 (Hash Clínico)
+    Portal->>SC: 5. Firma y acuña la receta (Transacción Soroban)
+    SC-->>Portal: 6. Emisión exitosa de Receta NFT en Stellar Testnet
+```
+
+### C. Flujo del Dispensario (Dispensary Validation & PoS UX)
+Muestra cómo el farmacéutico valida la receta contra el ledger descentralizado, dispensa las dosis y descuenta el saldo on-chain, ejecutando la quema física del NFT si el saldo llega a cero:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dispensario as 💊 Dispensario (Farmacia)
+    participant PoS as 🛒 Punto de Venta (PoS)
+    participant SC as ⛓️ PrescriptionContract (Soroban)
+    participant Record as 📜 DispenseRecord (Soroban)
+
+    Dispensario->>PoS: 1. Registro con Autorización Sanitaria ISP
+    Dispensario->>PoS: 2. Escanea QR de receta del Paciente
+    PoS->>SC: 3. Consulta vigencia y saldo disponible en gramos
+    SC-->>PoS: 4. Confirma receta aprobada y saldo vigente
+    Dispensario->>PoS: 5. Selecciona Lote de Laboratorio (QC) y cantidad a entregar
+    PoS->>Record: 6. Invoca dispense_prescription (Deducción on-chain)
+    Note over Record: Resta saldo en Soroban. Si llega a 0g, ejecuta Clawback y quema el NFT
+    Record-->>PoS: 7. Entrega autorizada y registrada en Libro digital de Estupefacientes
+```
+
+---
+
+## 📂 6. Directorio de Documentación Clave
 
 * 📂 **[docs/vc-executive-technical-whitepaper.md](docs/vc-executive-technical-whitepaper.md):** Dossier ejecutivo y técnico de alto nivel diseñado para Venture Capitalists (VCs) e inversionistas estratégicos.
 * 📂 **[docs/chile-legal-compliance.md](docs/chile-legal-compliance.md):** Análisis exhaustivo de acoplamiento legal chileno (Leyes 21.575, 20.000, 19.628, ISP, SIS).
@@ -76,7 +144,7 @@ Olvídate de las contraseñas débiles y de las complejas frases semilla de 12 p
 
 ---
 
-## 💻 6. Guía de Inicio Rápido para Desarrolladores
+## 💻 7. Guía de Inicio Rápido para Desarrolladores
 
 ### Prerrequisitos
 - Node.js v18+
