@@ -154,7 +154,30 @@ graph LR
 
 ---
 
-## 📂 7. Directorio de Documentación Clave
+## 🌱 7. Expansión del Ecosistema: Cannabis, Cáñamo & Comunidad B2B
+
+Trust Leaf aspira a convertirse en el tejido conectivo de la industria verde, habilitando canales de valor cruzado para el cannabis medicinal, el cáñamo industrial y la red de emprendedores asociados:
+
+```mermaid
+graph TD
+    classDef main fill:#1b4d3e,stroke:#c5a880,color:#fff,stroke-width:2px;
+    classDef sub fill:#fbf7ef,stroke:#1b4d3e,color:#1b4d3e,stroke-width:2px;
+
+    TL((🌿 Ecosistema Trust Leaf)):::main --> Med[🩺 Cannabis Hub: Salud & Clinicas]:::sub
+    TL --> Ind[🌾 Cáñamo Industrial: ESG Trazabilidad]:::sub
+    TL --> B2B[🤝 Comunidad de Emprendedores B2B]:::sub
+
+    Ind -->|Pruebas de Origen Verde on Stellar| Carbon[🌱 Créditos de Carbono & Bio-materiales]
+    B2B -->|Tokenización & Cashback Web3| Loyalty[💎 Red de Beneficios & Fidelidad]
+```
+
+* **🩺 Cannabis Hub (Salud & Bienestar):** Integración sin costuras con clínicas médicas de fitomedicina, growshops especializados con asesoría clínica, laboratorios de análisis y marcas formuladoras del recetario magistral.
+* **🌾 Cáñamo Industrial (Trazabilidad y ESG):** La industria del cáñamo (eco-materiales de construcción, celulosa, fibras textiles y bioplásticos) requiere certificar su origen verde. Trust Leaf adaptará su infraestructura para **emitir certificados criptográficos de origen y trazabilidad de huella de carbono** on-chain en Stellar, permitiendo a los productores validar su impacto ambiental (ESG) a nivel internacional.
+* **🤝 Comunidad de Emprendedores B2B:** Fomentamos un ecosistema de sinergia comercial entre startups y emprendedores mediante herramientas financieras Web3, programas de fidelidad cruzada y cashback con tokens basados en Stellar, facilitando la colaboración y el financiamiento de proyectos verdes de triple impacto.
+
+---
+
+## 📂 8. Directorio de Documentación Clave
 
 * 📂 **[docs/vc-executive-technical-whitepaper.md](docs/vc-executive-technical-whitepaper.md):** Dossier ejecutivo y técnico de alto nivel diseñado para Venture Capitalists (VCs) e inversionistas estratégicos.
 * 📂 **[docs/chile-legal-compliance.md](docs/chile-legal-compliance.md):** Análisis exhaustivo de acoplamiento legal chileno (Leyes 21.575, 20.000, 19.628, ISP, SIS).
@@ -163,7 +186,7 @@ graph LR
 
 ---
 
-## 💻 8. Guía de Inicio Rápido para Desarrolladores
+## 💻 9. Guía de Inicio Rápido para Desarrolladores
 
 ### Prerrequisitos
 - Node.js v18+
