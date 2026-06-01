@@ -149,26 +149,13 @@ graph LR
 * **🇨🇱 Sandbox de Validación (Chile):** Nuestro mercado inicial de prueba de concepto. Validamos el cumplimiento clínico estricto (SIS), el control de preparados magistrales del recetario farmacéutico y la inmutabilidad jurídica de autocultivo (Ley 21.575), operando bajo condiciones reales.
 * **🌎 Arquitectura Modular Multi-Jurisdicción:** La infraestructura de Trust Leaf en Stellar Soroban es agnóstica a la geografía. Los contratos inteligentes de emisión y trazabilidad de recetas se adaptan modularmente a los parámetros específicos de cualquier agencia de medicamentos a nivel global.
 * **🌐 Potencial de Escalamiento Global:** La industria de medicamentos regulados y el cannabis medicinal representa una oportunidad de miles de millones de dólares. Con esta visión global, **actualmente sostenemos conversaciones y pilotos preliminares** con clínicas médicas y redes de dispensarios internacionales interesados en implementar nuestra infraestructura descentralizada de Passkeys para eliminar el fraude de recetas y agilizar la trazabilidad del paciente.
-## 🌱 9. Expansión del Ecosistema: Cannabis, Cáñamo & Comunidad B2B
+## 🌱 9. Expansión del Ecosistema: Cannabis, Cáñamo & Comunidad
 
-Trust Leaf aspira a convertirse en el tejido conectivo de la industria verde, habilitando canales de valor cruzado para el cannabis medicinal, el cáñamo industrial y la red de emprendedores asociados:
+Más allá de la prescripción clínica, la arquitectura modular de Trust Leaf está diseñada para dar soporte e integrar a toda la cadena de valor de la industria verde en el futuro:
 
-```mermaid
-graph TD
-    classDef main fill:#1b4d3e,stroke:#c5a880,color:#fff,stroke-width:2px;
-    classDef sub fill:#fbf7ef,stroke:#1b4d3e,color:#1b4d3e,stroke-width:2px;
-
-    TL((🌿 Ecosistema Trust Leaf)):::main --> Med[🩺 Cannabis Hub: Salud & Clinicas]:::sub
-    TL --> Ind[🌾 Cáñamo Industrial: ESG Trazabilidad]:::sub
-    TL --> B2B[🤝 Comunidad de Emprendedores B2B]:::sub
-
-    Ind -->|Pruebas de Origen Verde on Stellar| Carbon[🌱 Créditos de Carbono & Bio-materiales]
-    B2B -->|Tokenización & Cashback Web3| Loyalty[💎 Red de Beneficios & Fidelidad]
-```
-
-* **🩺 Cannabis Hub (Salud & Bienestar):** Integración sin costuras con clínicas médicas de fitomedicina, growshops especializados con asesoría clínica, laboratorios de análisis y marcas formuladoras del recetario magistral.
-* **🌾 Cáñamo Industrial (Trazabilidad y ESG):** La industria del cáñamo (eco-materiales de construcción, celulosa, fibras textiles y bioplásticos) requiere certificar su origen verde. Trust Leaf adaptará su infraestructura para **emitir certificados criptográficos de origen y trazabilidad de huella de carbono** on-chain en Stellar, permitiendo a los productores validar su impacto ambiental (ESG) a nivel internacional.
-* **🤝 Comunidad de Emprendedores B2B:** Fomentamos un ecosistema de sinergia comercial entre startups y emprendedores mediante herramientas financieras Web3, programas de fidelidad cruzada y cashback con tokens basados en Stellar, facilitando la colaboración y el financiamiento de proyectos verdes de triple impacto.
+* **🩺 Cannabis Hub:** Conectividad con clínicas asociadas, laboratorios de análisis y marcas especializadas para consolidar una red de salud digital coordinada.
+* **🌾 Cáñamo Industrial:** Trazabilidad inmutable en Stellar para certificar el origen ecológico y la huella de sostenibilidad (ESG) de bioplásticos, eco-materiales y fibras textiles a base de cáñamo.
+* **🤝 Comunidad de Emprendedores:** Creación de una red de beneficios y fidelidad Web3 que potencie el crecimiento de startups, pymes y emprendimientos verdes asociados mediante programas colaborativos.
 
 ---
 
