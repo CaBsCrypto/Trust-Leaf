@@ -103,11 +103,14 @@ class PasskeyService {
           alg: -257, // RS256 - Soporte adicional para compatibilidad con Windows Hello
         },
       ],
-      authenticatorSelection: {
-        ...(attachment ? { authenticatorAttachment: attachment } : { authenticatorAttachment: 'platform' }),
+      authenticatorSelection: attachment ? {
+        authenticatorAttachment: attachment,
         userVerification: 'required',
-        residentKey: 'required', // Esencial para Windows Hello/Passkeys nativas
+        residentKey: 'required',
         requireResidentKey: true,
+      } : {
+        userVerification: 'preferred',
+        residentKey: 'preferred',
       },
       timeout: 60000,
     };

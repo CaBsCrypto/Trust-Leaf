@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -13,6 +14,11 @@ import {
   validatePrescriptionForDispensary,
   registerDoctorOnTestnet,
   registerDispensaryOnTestnet,
+  retainPrescriptionForDispensary,
+  releasePrescriptionToPatient,
+  buildIssuePrescriptionTx,
+  buildDispensePrescriptionTx,
+  submitSignedTransaction,
 } from "./api/_lib/stellar";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -194,6 +200,150 @@ async function startServer() {
         error instanceof Error
           ? error.message
           : "No fue posible dispensar la receta en testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/doctor/build-issue-prescription", async (req, res) => {
+    try {
+      const {
+        doctorAddress,
+        patientAddress,
+        treatment,
+        dosage,
+        notes,
+        durationDays,
+        totalQuantity,
+      } = req.body ?? {};
+
+      if (!doctorAddress || !patientAddress || !treatment || !dosage || !durationDays) {
+        res.status(400).json({
+          message: "Faltan datos para construir la receta: doctorAddress, patientAddress, treatment, dosage y durationDays.",
+        });
+        return;
+      }
+
+      const result = await buildIssuePrescriptionTx({
+        doctorAddress: String(doctorAddress),
+        patientAddress: String(patientAddress),
+        treatment: String(treatment),
+        dosage: String(dosage),
+        notes: notes ? String(notes) : "",
+        durationDays: Number(durationDays),
+        totalQuantity: totalQuantity ? Number(totalQuantity) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de emisión.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/build-dispense-prescription", async (req, res) => {
+    try {
+      const { dispensaryAddress, prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
+
+      if (!dispensaryAddress || !prescriptionId || !productLabel || !batchLabel || !quantity) {
+        res.status(400).json({
+          message: "Faltan datos para construir la dispensación: dispensaryAddress, prescriptionId, productLabel, batchLabel y quantity.",
+        });
+        return;
+      }
+
+      const result = await buildDispensePrescriptionTx({
+        dispensaryAddress: String(dispensaryAddress),
+        prescriptionId: Number(prescriptionId),
+        productLabel: String(productLabel),
+        batchLabel: String(batchLabel),
+        quantity: Number(quantity),
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de dispensación.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/submit", async (req, res) => {
+    try {
+      const { xdr, operationType, patientAddress, medicationHash, totalQuantity, prescriptionId, durationDays } = req.body ?? {};
+
+      if (!xdr || !operationType) {
+        res.status(400).json({
+          message: "Faltan parámetros obligatorios: xdr y operationType.",
+        });
+        return;
+      }
+
+      const result = await submitSignedTransaction({
+        xdr: String(xdr),
+        operationType: String(operationType) as "issue" | "dispense",
+        patientAddress: patientAddress ? String(patientAddress) : undefined,
+        medicationHash: medicationHash ? String(medicationHash) : undefined,
+        totalQuantity: totalQuantity ? Number(totalQuantity) : undefined,
+        prescriptionId: prescriptionId ? Number(prescriptionId) : undefined,
+        durationDays: durationDays ? Number(durationDays) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible transmitir la transacción firmada a testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/retain-prescription", async (req, res) => {
+    try {
+      const { prescriptionId, dispensaryAddress, lockPeriodDays } = req.body ?? {};
+      const normalizedPrescriptionId = Number(prescriptionId);
+
+      if (!Number.isFinite(normalizedPrescriptionId) || !dispensaryAddress) {
+        res.status(400).json({
+          message: "Faltan datos para retener la receta: prescriptionId y dispensaryAddress.",
+        });
+        return;
+      }
+
+      const result = await retainPrescriptionForDispensary({
+        prescriptionId: normalizedPrescriptionId,
+        dispensaryAddress: String(dispensaryAddress),
+        lockPeriodDays: lockPeriodDays ? Number(lockPeriodDays) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible retener la receta en testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/release-prescription", async (req, res) => {
+    try {
+      const { prescriptionId } = req.body ?? {};
+      const normalizedPrescriptionId = Number(prescriptionId);
+
+      if (!Number.isFinite(normalizedPrescriptionId)) {
+        res.status(400).json({
+          message: "Falta prescriptionId para liberar la receta.",
+        });
+        return;
+      }
+
+      const result = await releasePrescriptionToPatient({
+        prescriptionId: normalizedPrescriptionId,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible liberar la receta en testnet.";
       res.status(500).json({ message });
     }
   });

@@ -5,7 +5,7 @@
 
 import { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key } from 'lucide-react';
+import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
@@ -31,6 +31,7 @@ import { shortenAddress, stellarConfig } from './lib/stellar/config';
 import { connectFreighterOnTestnet } from './lib/stellar/freighter';
 import { connectOrCreatePasskeyWallet, getPasskeyAvailability, connectPasskeyWallet as apiConnectPasskeyWallet } from './lib/stellar/passkeys';
 import { passkeyService } from './lib/stellar/passkeyService';
+import { validateRut, formatRut } from './lib/stellar/chileHelpers';
 import WalletOnboarding, { type WalletSetupState } from './components/WalletOnboarding';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -160,11 +161,11 @@ function AppContent() {
 
   useEffect(() => {
     let cancelled = false;
-    if (session?.role === 'patient' && session.mode === 'email' && adminAuth.user) {
+    if (session && session.mode === 'email' && adminAuth.user) {
       setCheckingProfile(true);
       const userRef = doc(db, 'users', adminAuth.user.uid);
       getDoc(userRef)
-        .then((snapshot) => {
+        .then(async (snapshot) => {
           if (cancelled) return;
           if (snapshot.exists()) {
             const data = snapshot.data();
@@ -176,7 +177,7 @@ function AppContent() {
               };
               setPatientProfile(profile);
               const primaryMethod = data.primaryMethod || 'demo';
-              const walletLabel = data.walletLabel || (primaryMethod === 'passkey' ? 'Smart Passkey' : primaryMethod === 'freighter' ? 'Freighter Wallet' : 'Paciente Google Piloto');
+              const walletLabel = data.walletLabel || (primaryMethod === 'passkey' ? 'Smart Passkey' : primaryMethod === 'freighter' ? 'Freighter Wallet' : 'Usuario Google Piloto');
               const hasFreighterBackup = !!data.hasFreighterBackup;
 
               setWalletSetup({
@@ -201,7 +202,56 @@ function AppContent() {
               setPatientProfile(null);
             }
           } else {
-            setPatientProfile(null);
+            // Document does not exist yet. If Doctor or Dispensary is approved, auto-create its mapping in 'users'!
+            const approvedDocs = doctorRegistrations.filter((r) => r.status === 'approved');
+            const approvedDisps = dispensaryRegistrations.filter((r) => r.status === 'approved');
+            const currentReg = session.role === 'doctor'
+              ? approvedDocs.find((r) => r.contact === session.email || r.name === session.name)
+              : session.role === 'dispensary'
+                ? approvedDisps.find((r) => r.contact === session.email || r.name === session.name)
+                : null;
+
+            if (currentReg && currentReg.wallet) {
+              try {
+                const profileData = {
+                  uid: adminAuth.user!.uid,
+                  name: currentReg.name || adminAuth.user!.displayName || 'Usuario de Google',
+                  stellarPublicKey: currentReg.wallet,
+                  primaryMethod: 'demo',
+                  walletLabel: session.role === 'doctor' ? 'Credencial Profesional Médica' : 'Credencial Operativa Dispensario',
+                  createdAt: new Date().toISOString(),
+                };
+                await setDoc(userRef, profileData);
+                const profile = {
+                  uid: adminAuth.user!.uid,
+                  name: profileData.name,
+                  stellarPublicKey: profileData.stellarPublicKey,
+                };
+                setPatientProfile(profile);
+                setWalletSetup({
+                  primaryMethod: 'demo',
+                  hasFreighterBackup: false,
+                  walletLabel: profileData.walletLabel,
+                  contractAccount: profileData.stellarPublicKey,
+                  networkLabel: 'Stellar Testnet',
+                });
+                localStorage.setItem(
+                  'trust_wallet_setup',
+                  JSON.stringify({
+                    primaryMethod: 'demo',
+                    hasFreighterBackup: false,
+                    walletLabel: profileData.walletLabel,
+                    contractAccount: profileData.stellarPublicKey,
+                    freighterAddress: profileData.stellarPublicKey,
+                    networkLabel: 'Stellar Testnet',
+                  }),
+                );
+              } catch (err) {
+                console.error('Error auto-creating user mapping doc:', err);
+              }
+            } else {
+              setPatientProfile(null);
+            }
           }
         })
         .catch((err) => {
@@ -217,7 +267,7 @@ function AppContent() {
     return () => {
       cancelled = true;
     };
-  }, [session, adminAuth.user]);
+  }, [session, adminAuth.user, doctorRegistrations, dispensaryRegistrations]);
 
   const connectPasskeyWallet = async (attachment?: 'platform' | 'cross-platform') => {
     setWalletBusy('passkey');
@@ -701,6 +751,7 @@ function AppContent() {
         registrationSource={registrationSource}
         canOperate={doctorCanOperate}
         onSubmitDoctorRegistration={submitDoctorRegistration}
+        onSignOut={endSession}
       />
     );
   }
@@ -778,6 +829,7 @@ function AppContent() {
         registrationSource={registrationSource}
         canOperate={dispensaryCanOperate}
         onSubmitDispensaryRegistration={submitDispensaryRegistration}
+        onSignOut={endSession}
       />
     );
   }
@@ -1593,6 +1645,20 @@ function AuthGate({
             >
               {busy === 'demo' ? 'Entrando...' : demoAction}
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("¿Seguro que quieres restablecer los accesos de prueba? Esto limpiará la caché local del navegador para que puedas registrar nuevas llaves desde cero con Google Password Manager.")) {
+                  localStorage.clear();
+                  passkeyService.clearAll();
+                  window.location.reload();
+                }
+              }}
+              className="mt-3 text-center text-xs font-bold text-brand-green-mid/45 hover:text-red-600 transition-colors cursor-pointer"
+            >
+              Limpiar accesos locales y reiniciar llaves
+            </button>
           </div>
 
         </section>
@@ -1637,34 +1703,76 @@ function OperationalPendingRoute({
       </header>
 
       <main className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9">
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">{roleLabel}</p>
-          <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">{title}</h1>
-          <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">{description}</p>
+        <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9 shadow-xl flex flex-col justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">{roleLabel}</p>
+            <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">{title}</h1>
+            <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">{description}</p>
+          </div>
+          <div className="mt-8 border-t border-white/10 pt-6 hidden md:block">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/70">Seguridad criptográfica</p>
+            <p className="mt-2 text-xs leading-relaxed text-brand-ivory/55">
+              Tu identidad y firmas se validan mediante contratos Soroban inteligentes de forma descentralizada.
+            </p>
+          </div>
         </section>
 
-        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Control de acceso</p>
-          <h2 className="mt-2 text-2xl font-serif">Antes de operar</h2>
-          <div className="mt-5 space-y-3 text-sm text-brand-green-mid/70">
-            <div className="rounded-2xl bg-brand-neutral p-4">1. Solicitud enviada por el actor.</div>
-            <div className="rounded-2xl bg-brand-neutral p-4">2. Admin revisa datos, licencia o registro legal.</div>
-            <div className="rounded-2xl bg-brand-neutral p-4">3. Admin aprueba y registra la wallet en Stellar Testnet.</div>
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-8 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Control de acceso</p>
+            <h2 className="mt-2 text-2xl font-serif">Proceso de validación</h2>
+            
+            {/* Elegant Premium Stepper */}
+            <div className="mt-8 relative border-l-2 border-brand-green-deep/10 pl-6 ml-4 space-y-8">
+              {/* Step 1 - Completed */}
+              <div className="relative">
+                <span className="absolute -left-10 top-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-sm border border-emerald-200">
+                  <Check size={16} className="stroke-[3]" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-brand-green-deep text-sm">1. Solicitud enviada</h3>
+                  <p className="mt-1 text-xs text-brand-green-mid/70">
+                    Tus credenciales y datos de registro fueron registrados correctamente en la plataforma.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 - Active pending */}
+              <div className="relative animate-[pulse_2.5s_infinite]">
+                <span className="absolute -left-10 top-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 shadow-sm border border-amber-200">
+                  <Clock size={16} className="animate-[spin_12s_linear_infinite]" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-brand-green-deep text-sm">2. Revisión administrativa</h3>
+                  <p className="mt-1 text-xs text-brand-green-mid/70">
+                    El administrador está verificando tus registros oficiales y la validez de tu licencia médica.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 - Locked pending */}
+              <div className="relative opacity-65">
+                <span className="absolute -left-10 top-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand-neutral text-brand-green-mid/50 border border-brand-green-deep/10">
+                  <Lock size={14} />
+                </span>
+                <div>
+                  <h3 className="font-bold text-brand-green-deep/60 text-sm">3. Alta en Stellar Testnet</h3>
+                  <p className="mt-1 text-xs text-brand-green-mid/50">
+                    Tu wallet digital será vinculada on-chain para permitir la firma auditable de recetas médicas.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+          <div className="mt-10">
             <button
               type="button"
               onClick={onPrimary}
-              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all hover:bg-brand-green-mid hover:shadow-lg active:scale-[0.98] cursor-pointer"
             >
+              <ArrowRight size={16} className="rotate-180" />
               {primaryAction}
-            </button>
-            <button
-              type="button"
-              onClick={onSecondary}
-              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
-            >
-              {secondaryAction}
             </button>
           </div>
         </section>
@@ -1682,10 +1790,6 @@ function AdminAuthGate({
   onBack: () => void;
   onDemo: () => void;
 }) {
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firebaseStatus = getFirebaseRuntimeStatus();
@@ -1701,27 +1805,6 @@ function AdminAuthGate({
       : authState.mode === 'not-admin'
         ? 'Cuenta sin allowlist'
         : 'Documento appAdministrators/{uid}';
-
-  const submit = async () => {
-    if (!form.email.trim() || !form.password.trim()) {
-      setError('Ingresa email y password del admin allowlist.');
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    try {
-      await signInAdmin(form.email.trim(), form.password);
-    } catch (loginError) {
-      setError(
-        loginError instanceof Error
-          ? loginError.message
-          : 'No fue posible iniciar sesion admin.',
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
@@ -1760,70 +1843,87 @@ function AdminAuthGate({
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Sesion admin</p>
-          <h2 className="mt-2 text-2xl font-serif">Entrar con cuenta allowlist</h2>
-          <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-            Si aun no existe el usuario admin o su documento allowlist, usa el acceso de grabacion para revisar el flujo sin presentarlo como produccion.
-          </p>
-          <div className={`mt-4 rounded-2xl border p-4 text-xs leading-relaxed ${
-            firebaseStatus.configured
-              ? 'border-green-100 bg-green-50 text-green-800'
-              : 'border-amber-100 bg-amber-50 text-amber-800'
-          }`}>
-            <p className="font-bold uppercase tracking-widest">
-              {firebaseStatus.configured ? 'Firebase detectado' : 'Firebase pendiente'}
+        <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Sesión Protegida</p>
+            <h2 className="mt-2 text-2xl font-serif text-brand-green-deep">Administrador de Red</h2>
+            <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
+              Este portal requiere autenticación federada con Google. Solo la cuenta autorizada de administrador tiene privilegios de firma y aprobación.
             </p>
-            <p className="mt-1">
-              Proyecto: {firebaseStatus.projectId || 'sin projectId'} · Auth domain: {firebaseStatus.authDomain || 'sin authDomain'}.
-            </p>
-            <p className="mt-1">
-              Para admin real, crea el usuario en Firebase Auth y agrega `appAdministrators/{'{uid}'}` en Firestore.
-            </p>
-          </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3">
-            <label>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Email admin</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
-              />
-            </label>
-            <label>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Password</span>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
-              />
-            </label>
-          </div>
-
-          {(error || authState.error || authState.mode === 'not-admin') && (
-            <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-              {error || authState.error || 'La cuenta inicio sesion, pero no esta en appAdministrators.'}
+            <div className={`mt-5 rounded-2xl border p-4 text-xs leading-relaxed ${
+              firebaseStatus.configured
+                ? 'border-green-100 bg-green-50/80 text-green-800'
+                : 'border-amber-100 bg-amber-50/80 text-amber-800'
+            }`}>
+              <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                <span className={`inline-block h-2 w-2 rounded-full ${firebaseStatus.configured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                {firebaseStatus.configured ? 'Firebase Activo' : 'Firebase en Modo Local'}
+              </div>
+              <p className="mt-1.5 text-brand-green-deep/80">
+                Email con permisos: <strong className="text-brand-green-deep font-semibold">cabscryptocontacto@gmail.com</strong>
+              </p>
             </div>
-          )}
 
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={submit}
-              disabled={busy || authState.mode === 'checking'}
-              className="rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60"
-            >
-              {busy || authState.mode === 'checking' ? 'Verificando...' : 'Entrar admin real'}
-            </button>
+            <div className="mt-6 flex flex-col gap-4">
+              <button
+                type="button"
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    const user = await signInWithGoogle();
+                    if (!user) {
+                      throw new Error("Inicio de sesión cancelado o fallido.");
+                    }
+                    if (user.email?.toLowerCase() !== 'cabscryptocontacto@gmail.com') {
+                      throw new Error("Acceso denegado: Solo cabscryptocontacto@gmail.com está autorizado.");
+                    }
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Error al iniciar sesión con Google.");
+                    await signOutAdmin();
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                disabled={busy || authState.mode === 'checking'}
+                className="flex items-center justify-center gap-3 rounded-2xl bg-brand-gold text-brand-green-deep border border-brand-gold px-5 py-4 text-sm font-bold shadow-md hover:bg-brand-ivory hover:-translate-y-0.5 duration-300 disabled:cursor-wait disabled:opacity-60 cursor-pointer group w-full"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                    <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.89 21.56,11.43 21.35,11.1z" fill="#4285F4" />
+                    <path d="M12,21c2.43,0 4.47,-0.8 5.96,-2.18l-2.58,-2c-0.73,0.49 -1.66,0.78 -2.63,0.78 -2.03,0 -3.75,-1.37 -4.36,-3.22H2.33v2.66C3.81,17.43 7.64,21 12,21z" fill="#34A853" />
+                    <path d="M7.64,14.38c-0.16,-0.49 -0.25,-1 -0.25,-1.53s0.09,-1.04 0.25,-1.53V8.66H2.33C1.79,9.73 1.48,10.93 1.48,12s0.31,2.27 0.85,3.34L7.64,14.38z" fill="#FBBC05" />
+                    <path d="M12,5.38c1.32,0 2.51,0.45 3.44,1.35l2.58,-2.58C16.46,2.69 14.43,2 12,2 7.64,2 3.81,5.57 2.33,9.34l3.05,2.38C5.99,6.75 7.71,5.38 12,5.38z" fill="#EA4335" />
+                  </g>
+                </svg>
+                {busy ? 'Verificando...' : 'Iniciar Sesión con Google'}
+              </button>
+
+              {(error || authState.error || authState.mode === 'not-admin') && (
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-red-700 leading-relaxed">
+                  <p className="font-bold uppercase tracking-wider">Acceso denegado</p>
+                  <p className="mt-1">
+                    {error || authState.error || 'Esta cuenta de correo no está autorizada como administrador (cabscryptocontacto@gmail.com).'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <div className="relative flex py-3 items-center">
+              <div className="flex-grow border-t border-brand-green-deep/5"></div>
+              <span className="flex-shrink mx-4 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Desarrollo y Pruebas</span>
+              <div className="flex-grow border-t border-brand-green-deep/5"></div>
+            </div>
+
             <button
               type="button"
               onClick={onDemo}
-              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10"
+              className="w-full rounded-2xl border border-dashed border-brand-green-deep/15 bg-[#fbf7ef]/50 px-5 py-3.5 text-xs font-bold text-brand-green-mid transition-all hover:bg-brand-gold/10 hover:border-brand-gold/30 hover:text-brand-green-deep active:scale-[0.99] cursor-pointer"
             >
-              Entrar modo grabacion
+              Entrar en Modo Grabación (Demo Local)
             </button>
           </div>
         </section>
@@ -2516,9 +2616,17 @@ function getRegistrationSourceLabel(source: PersistenceSource) {
 }
 
 function actorMatchesSession(
-  request: { contact: string; name: string },
+  request: { id?: string; contact: string; name: string },
   currentSession: TrustSession | null,
 ) {
+  try {
+    const saved = localStorage.getItem('trust_submitted_ids');
+    const submittedIds = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(submittedIds) && request.id && submittedIds.includes(request.id)) {
+      return true;
+    }
+  } catch {}
+
   if (!currentSession) return false;
   const sessionEmail = currentSession.email.trim().toLowerCase();
   const sessionName = currentSession.name.trim().toLowerCase();
@@ -2536,6 +2644,7 @@ function DispensaryRegistrationRoute({
   registrationSource,
   canOperate,
   onSubmitDispensaryRegistration,
+  onSignOut,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
@@ -2544,12 +2653,13 @@ function DispensaryRegistrationRoute({
   registrationSource: PersistenceSource;
   canOperate: boolean;
   onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
+  onSignOut: () => void;
 }) {
   const [registrationForm, setRegistrationForm] = useState({
-    name: '',
+    name: session?.name ?? '',
     legalId: '',
     address: '',
-    contact: '',
+    contact: session?.email ?? '',
     wallet: '',
   });
   const ownRegistrations = dispensaryRegistrations.filter((request) => actorMatchesSession(request, session));
@@ -2586,6 +2696,14 @@ function DispensaryRegistrationRoute({
             <span className="text-lg font-bold">Trust Leaf</span>
           </button>
           <div className="flex items-center gap-2">
+            {session && (
+              <button
+                onClick={onSignOut}
+                className="text-sm font-bold text-brand-green-deep/60 hover:text-brand-green-deep px-3 py-2 transition-colors cursor-pointer mr-2"
+              >
+                Cerrar sesión
+              </button>
+            )}
             <button
               onClick={() => onNavigate('/dispensario/operacion')}
               className={`rounded-full px-4 py-2 text-sm font-bold active:scale-95 ${
@@ -2638,6 +2756,21 @@ function DispensaryRegistrationRoute({
           transition={{ delay: 0.08 }}
           className="space-y-4"
         >
+          <div className={`rounded-[24px] border p-5 ${
+            canOperate
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em]">
+              {canOperate ? 'Estado live' : 'Pendiente de aprobacion'}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed">
+              {canOperate
+                ? 'Este dispensario ya puede entrar al panel operativo, validar recetas y registrar retiros en Testnet.'
+                : 'La solicitud puede enviarse ahora, pero el panel operativo queda bloqueado hasta que admin apruebe el alta.'}
+            </p>
+          </div>
+
           <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2658,6 +2791,16 @@ function DispensaryRegistrationRoute({
                   {latestRegistration.status === 'approved' ? 'Live' : latestRegistration.status}
                 </span>
               )}
+            </div>
+
+            <div className="mt-4 rounded-2xl bg-[#edf2ee]/70 border border-brand-green-deep/5 p-4 flex gap-3 items-start text-brand-green-deep">
+              <span className="text-base select-none">💡</span>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-gold">Edición Manual Activa</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/80">
+                  ¿Los datos de tu cuenta de Google no coinciden? Puedes ajustar libremente tu <strong>nombre comercial</strong>, <strong>correo de contacto</strong> u otros campos antes de enviar tu solicitud para revisión.
+                </p>
+              </div>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -2699,21 +2842,6 @@ function DispensaryRegistrationRoute({
             >
               Enviar solicitud al admin <ArrowRight size={16} />
             </button>
-          </div>
-
-          <div className={`rounded-[24px] border p-5 ${
-            canOperate
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-amber-200 bg-amber-50 text-amber-800'
-          }`}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em]">
-              {canOperate ? 'Estado live' : 'Pendiente de aprobacion'}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed">
-              {canOperate
-                ? 'Este dispensario ya puede entrar al panel operativo, validar recetas y registrar retiros en Testnet.'
-                : 'La solicitud puede enviarse ahora, pero el panel operativo queda bloqueado hasta que admin apruebe el alta.'}
-            </p>
           </div>
 
           {latestRegistration && (
@@ -2758,6 +2886,7 @@ function DoctorRegistrationRoute({
   registrationSource,
   canOperate,
   onSubmitDoctorRegistration,
+  onSignOut,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
@@ -2766,13 +2895,17 @@ function DoctorRegistrationRoute({
   registrationSource: PersistenceSource;
   canOperate: boolean;
   onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
+  onSignOut: () => void;
 }) {
+  const [rutError, setRutError] = useState<string | null>(null);
   const [registrationForm, setRegistrationForm] = useState({
-    name: '',
+    name: session?.name ?? '',
     licenseId: '',
     specialty: '',
-    contact: '',
+    contact: session?.email ?? '',
     wallet: '',
+    rut: '',
+    sisRegistrationId: '',
   });
   const ownRegistrations = doctorRegistrations.filter((request) => actorMatchesSession(request, session));
   const latestRegistration = ownRegistrations[0] ?? null;
@@ -2780,10 +2913,17 @@ function DoctorRegistrationRoute({
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
   const submitRegistration = () => {
-    if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact) {
+    if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact || !registrationForm.rut || !registrationForm.sisRegistrationId) {
+      setRutError('Faltan campos obligatorios por completar.');
       return;
     }
 
+    if (!validateRut(registrationForm.rut)) {
+      setRutError('El RUT ingresado no es válido. Verifique el dígito verificador.');
+      return;
+    }
+
+    setRutError(null);
     onSubmitDoctorRegistration({
       ...registrationForm,
       wallet: registrationForm.wallet || DEFAULT_DOCTOR_WALLET,
@@ -2794,6 +2934,8 @@ function DoctorRegistrationRoute({
       specialty: '',
       contact: '',
       wallet: '',
+      rut: '',
+      sisRegistrationId: '',
     });
   };
 
@@ -2808,6 +2950,14 @@ function DoctorRegistrationRoute({
             <span className="text-lg font-bold">Trust Leaf</span>
           </button>
           <div className="flex items-center gap-2">
+            {session && (
+              <button
+                onClick={onSignOut}
+                className="text-sm font-bold text-brand-green-deep/60 hover:text-brand-green-deep px-3 py-2 transition-colors cursor-pointer mr-2"
+              >
+                Cerrar sesión
+              </button>
+            )}
             <button
               onClick={() => onNavigate('/medico/operacion')}
               className={`rounded-full px-4 py-2 text-sm font-bold active:scale-95 ${
@@ -2860,6 +3010,21 @@ function DoctorRegistrationRoute({
           transition={{ delay: 0.08 }}
           className="space-y-4"
         >
+          <div className={`rounded-[24px] border p-5 ${
+            canOperate
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em]">
+              {canOperate ? 'Credencial activa' : 'Pendiente de aprobacion'}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed">
+              {canOperate
+                ? 'Este medico ya puede entrar al panel profesional and emitir recetas verificables en Testnet.'
+                : 'La solicitud puede enviarse ahora, pero la emision de recetas queda bloqueada hasta que admin apruebe la credencial.'}
+            </p>
+          </div>
+
           <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2882,38 +3047,116 @@ function DoctorRegistrationRoute({
               )}
             </div>
 
+            <div className="mt-4 rounded-2xl bg-[#edf2ee]/70 border border-brand-green-deep/5 p-4 flex gap-3 items-start text-brand-green-deep">
+              <span className="text-base select-none">💡</span>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-gold">Edición Manual Activa</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/80">
+                  ¿Los datos de tu cuenta de Google no coinciden? Puedes ajustar libremente tu <strong>nombre profesional</strong>, <strong>correo de contacto</strong> u otros campos antes de enviar tu solicitud para revisión.
+                </p>
+              </div>
+            </div>
+
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
                 ['name', 'Nombre profesional'],
-                ['licenseId', 'Licencia / registro médico'],
+                ['rut', 'RUT Profesional (con DV)'],
+                ['sisRegistrationId', 'Nº Registro SIS (Superintendencia de Salud)'],
+                ['licenseId', 'Licencia / Registro Médico Nacional'],
                 ['specialty', 'Especialidad'],
-                ['contact', 'Contacto responsable'],
-                ['wallet', 'Wallet/Credencial Stellar del medico (opcional)'],
+                ['contact', 'Contacto responsable (Email/Teléfono)'],
+                ['wallet', 'Wallet/Credencial Stellar del médico (opcional)'],
               ].map(([key, label]) => (
                 <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
-                  <input
-                    value={registrationForm[key as keyof typeof registrationForm]}
-                    onChange={(event) =>
-                      setRegistrationForm((current) => ({
-                        ...current,
-                        [key]: event.target.value,
-                      }))
-                    }
-                    className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
-                  />
-                  {key === 'wallet' && (
-                    <button
-                      type="button"
-                      onClick={() => setRegistrationForm((current) => ({ ...current, wallet: DEFAULT_DOCTOR_WALLET }))}
-                      className="mt-2 rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-deep"
-                    >
-                      Usar credencial gestionada Trust Leaf
-                    </button>
+                  {key === 'wallet' ? (
+                    <div className="mt-2 rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/30 p-4">
+                      {registrationForm.wallet ? (
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold text-green-800">
+                              🟢 Billetera Criptográfica Vinculada
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setRegistrationForm((curr) => ({ ...curr, wallet: '' }))}
+                              className="text-xs text-red-600 font-bold hover:underline cursor-pointer"
+                            >
+                              Cambiar
+                            </button>
+                          </div>
+                          <p className="mt-2 font-mono text-xs text-brand-green-deep break-all">
+                            {registrationForm.wallet}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs text-brand-green-mid/70 mb-3">
+                            Genera una Passkey segura en tu dispositivo o conecta Freighter Wallet para tus firmas de recetas:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const userLabel = `Dr. ${registrationForm.name || 'Médico'}`;
+                                  const res = await connectOrCreatePasskeyWallet(userLabel);
+                                  setRegistrationForm((curr) => ({ ...curr, wallet: res.contractId }));
+                                } catch (e: any) {
+                                  alert(e.message || 'Error al conectar passkey.');
+                                }
+                              }}
+                              className="flex-1 rounded-xl bg-brand-gold px-3 py-2 text-xs font-bold text-brand-green-deep transition-transform active:scale-95 cursor-pointer text-center"
+                            >
+                              🔑 Crear Passkey
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const address = await connectFreighterOnTestnet();
+                                  setRegistrationForm((curr) => ({ ...curr, wallet: address }));
+                                } catch (e: any) {
+                                  alert(e.message || 'Error al conectar Freighter.');
+                                }
+                              }}
+                              className="flex-1 rounded-xl border border-brand-green-deep/15 bg-white px-3 py-2 text-xs font-bold text-brand-green-deep transition-transform active:scale-95 cursor-pointer text-center"
+                            >
+                              🦊 Conectar Freighter
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRegistrationForm((curr) => ({ ...curr, wallet: DEFAULT_DOCTOR_WALLET }))}
+                              className="flex-1 rounded-xl border border-brand-green-deep/15 bg-white px-3 py-2 text-xs font-bold text-brand-green-deep transition-transform active:scale-95 cursor-pointer text-center"
+                            >
+                              💡 Credencial Gestionada
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      value={registrationForm[key as keyof typeof registrationForm]}
+                      onChange={(event) => {
+                        const val = event.target.value;
+                        setRegistrationForm((current) => ({
+                          ...current,
+                          [key]: key === 'rut' ? formatRut(val) : val,
+                        }));
+                      }}
+                      className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                    />
                   )}
                 </label>
               ))}
             </div>
+
+            {rutError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700">
+                ⚠️ {rutError}
+              </div>
+            )}
 
             <button
               onClick={submitRegistration}
@@ -2921,21 +3164,6 @@ function DoctorRegistrationRoute({
             >
               Enviar solicitud al admin <ArrowRight size={16} />
             </button>
-          </div>
-
-          <div className={`rounded-[24px] border p-5 ${
-            canOperate
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-amber-200 bg-amber-50 text-amber-800'
-          }`}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em]">
-              {canOperate ? 'Credencial activa' : 'Pendiente de aprobacion'}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed">
-              {canOperate
-                ? 'Este medico ya puede entrar al panel profesional y emitir recetas verificables en Testnet.'
-                : 'La solicitud puede enviarse ahora, pero la emision de recetas queda bloqueada hasta que admin apruebe la credencial.'}
-            </p>
           </div>
 
           {latestRegistration && (
@@ -2996,8 +3224,11 @@ function RoleRoutePage({
 }) {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [initialView, setInitialView] = useState<PortalView>(defaultView);
+  const [rutError, setRutError] = useState<string | null>(null);
   const [registrationForm, setRegistrationForm] = useState({
     name: '',
+    rut: '',
+    ispResolutionNumber: '',
     legalId: '',
     address: '',
     contact: '',
@@ -3015,13 +3246,22 @@ function RoleRoutePage({
       return;
     }
 
-    if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact || !registrationForm.wallet) {
+    if (!registrationForm.name || !registrationForm.rut || !registrationForm.ispResolutionNumber || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact || !registrationForm.wallet) {
+      setRutError('Faltan campos obligatorios por completar.');
       return;
     }
 
+    if (!validateRut(registrationForm.rut)) {
+      setRutError('El RUT de la organización no es válido. Verifique el dígito verificador.');
+      return;
+    }
+
+    setRutError(null);
     onSubmitDispensaryRegistration(registrationForm);
     setRegistrationForm({
       name: '',
+      rut: '',
+      ispResolutionNumber: '',
       legalId: '',
       address: '',
       contact: '',
@@ -3148,27 +3388,104 @@ function RoleRoutePage({
 
               <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
-                  ['name', 'Nombre comercial'],
-                  ['legalId', 'Registro sanitario / legal'],
-                  ['address', 'Dirección operativa'],
-                  ['contact', 'Contacto responsable'],
+                  ['name', 'Nombre comercial / Razón Social'],
+                  ['rut', 'RUT de la Organización (con DV)'],
+                  ['ispResolutionNumber', 'Nº Resolución Sanitaria ISP'],
+                  ['legalId', 'Registro Sanitario / Legal'],
+                  ['address', 'Dirección operativa y Comuna'],
+                  ['contact', 'Contacto responsable (Email/Teléfono)'],
                   ['wallet', 'Wallet Stellar del dispensario'],
                 ].map(([key, label]) => (
                   <label key={key} className={key === 'wallet' ? 'sm:col-span-2' : ''}>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">{label}</span>
-                    <input
-                      value={registrationForm[key as keyof typeof registrationForm]}
-                      onChange={(event) =>
-                        setRegistrationForm((current) => ({
-                          ...current,
-                          [key]: event.target.value,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
-                    />
+                    {key === 'wallet' ? (
+                      <div className="mt-2 rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/30 p-4">
+                        {registrationForm.wallet ? (
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold text-green-800">
+                                🟢 Billetera Criptográfica Vinculada
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRegistrationForm((curr) => ({ ...curr, wallet: '' }))}
+                                className="text-xs text-red-600 font-bold hover:underline cursor-pointer"
+                              >
+                                Cambiar
+                              </button>
+                            </div>
+                            <p className="mt-2 font-mono text-xs text-brand-green-deep break-all">
+                              {registrationForm.wallet}
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-xs text-brand-green-mid/70 mb-3">
+                              Genera una Passkey segura en tu dispositivo o conecta Freighter Wallet para tu dispensario:
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const userLabel = `Disp. ${registrationForm.name || 'Dispensario'}`;
+                                    const res = await connectOrCreatePasskeyWallet(userLabel);
+                                    setRegistrationForm((curr) => ({ ...curr, wallet: res.contractId }));
+                                  } catch (e: any) {
+                                    alert(e.message || 'Error al conectar passkey.');
+                                  }
+                                }}
+                                className="flex-1 rounded-xl bg-brand-gold px-3 py-2 text-xs font-bold text-brand-green-deep transition-transform active:scale-95 cursor-pointer text-center"
+                              >
+                                🔑 Crear Passkey
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const address = await connectFreighterOnTestnet();
+                                    setRegistrationForm((curr) => ({ ...curr, wallet: address }));
+                                  } catch (e: any) {
+                                    alert(e.message || 'Error al conectar Freighter.');
+                                  }
+                                }}
+                                className="flex-1 rounded-xl border border-brand-green-deep/15 bg-white px-3 py-2 text-xs font-bold text-brand-green-deep transition-transform active:scale-95 cursor-pointer text-center"
+                              >
+                                🦊 Conectar Freighter
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRegistrationForm((curr) => ({ ...curr, wallet: DEFAULT_DISPENSARY_WALLET }))}
+                                className="flex-1 rounded-xl border border-brand-green-deep/15 bg-white px-3 py-2 text-xs font-bold text-brand-green-deep transition-transform active:scale-95 cursor-pointer text-center"
+                              >
+                                💡 Credencial Gestionada
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <input
+                        value={registrationForm[key as keyof typeof registrationForm]}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          setRegistrationForm((current) => ({
+                            ...current,
+                            [key]: key === 'rut' ? formatRut(val) : val,
+                          }));
+                        }}
+                        className="mt-2 w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                    )}
                   </label>
                 ))}
               </div>
+
+              {rutError && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700">
+                  ⚠️ {rutError}
+                </div>
+              )}
 
               <button
                 onClick={submitRegistration}

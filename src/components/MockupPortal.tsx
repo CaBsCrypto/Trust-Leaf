@@ -11,9 +11,11 @@ import {
   getPasskeyAvailability,
 } from '../lib/stellar/passkeys';
 import { passkeyService } from '../lib/stellar/passkeyService';
+import { validateRut, formatRut, CHILEAN_REGIONS } from '../lib/stellar/chileHelpers';
 
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { trustDataStore } from '../lib/trustData';
 
 export type PortalView = 'overview' | 'doctors' | 'dispensaries' | 'profile' | 'prescriptions' | 'pickups' | 'history' | 'traveler';
 
@@ -1031,6 +1033,20 @@ export default function MockupPortal({
     notes: 'Control clínico en 30 días.',
     durationDays: 30,
     monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+    // Chilean Compounding & Autocultivo fields
+    vehicle: 'oil', // 'oil' | 'flower' | 'cream' | 'capsule'
+    thcRatio: 10,   // % or mg/mL
+    cbdRatio: 20,   // % or mg/mL
+    enableAutocultivo: false,
+    autocultivoRegion: 'RM',
+    autocultivoComuna: 'Santiago',
+    autocultivoAddress: '',
+    autocultivoPlants: 6,
+    // Regulatory compliance fields
+    doctorRut: '',
+    doctorSisId: '',
+    patientRut: '',
+    patientDiagnosis: 'M79.7',
   });
   const [doctorPatientAddress, setDoctorPatientAddress] = useState(() =>
     localStorage.getItem('trust_doctor_patient_address') || DEMO_PATIENT_ADDRESS,
@@ -1058,6 +1074,10 @@ export default function MockupPortal({
   const [prescriptionValidation, setPrescriptionValidation] = useState<DispensaryPrescriptionValidation | null>(null);
   const [prescriptionValidationBusy, setPrescriptionValidationBusy] = useState(false);
   const [prescriptionValidationError, setPrescriptionValidationError] = useState<string | null>(null);
+  const [lockPeriodDays, setLockPeriodDays] = useState(180);
+  const [retainReleaseBusy, setRetainReleaseBusy] = useState(false);
+  const [retainReleaseError, setRetainReleaseError] = useState<string | null>(null);
+  const [retainReleaseSuccess, setRetainReleaseSuccess] = useState<string | null>(null);
   const [faucetBusy, setFaucetBusy] = useState<'doctor' | 'dispensary' | 'patient' | null>(null);
   const [faucetNotice, setFaucetNotice] = useState<string | null>(null);
   const [manualPrescriptionEntry, setManualPrescriptionEntry] = useState(false);
@@ -1424,6 +1444,15 @@ export default function MockupPortal({
 
         setPatientDashboard(payload);
         setHasPrescription(payload.summary.total > 0);
+
+        try {
+          const pickups = await trustDataStore.loadPickups(auth.currentUser?.uid || patientIdentityAddress);
+          if (!cancelled) {
+            setActivePickups(pickups);
+          }
+        } catch (pickError) {
+          console.error("Error fetching pickups:", pickError);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -1548,7 +1577,8 @@ export default function MockupPortal({
     setWalletError(null);
 
     try {
-      const result = await connectOrCreatePasskeyWallet('Paciente Trust Leaf', { authenticatorAttachment: attachment });
+      const passkeyLabel = auth.currentUser?.email || auth.currentUser?.displayName || 'Paciente Trust Leaf';
+      const result = await connectOrCreatePasskeyWallet(passkeyLabel, { authenticatorAttachment: attachment });
       setWalletSetup((current) => ({
         ...current,
         primaryMethod: 'passkey',
@@ -1774,6 +1804,20 @@ export default function MockupPortal({
         return;
       }
 
+      // Chilean Legal & Clinical compilation:
+      const vehicleLabels: Record<string, string> = {
+        oil: 'Aceite Sublingual (R. Magistral)',
+        flower: 'Flor Seca Vaporización',
+        cream: 'Crema Tópica Emoliente',
+        capsule: 'Cápsula Magistral',
+      };
+      const complianceDetail = `Médico RUT: ${doctorIssueForm.doctorRut || 'No especificado'} (SIS: ${doctorIssueForm.doctorSisId || 'No especificado'}) | Paciente RUT: ${doctorIssueForm.patientRut || 'No especificado'} (Diag: ${doctorIssueForm.patientDiagnosis || 'No especificado'})`;
+      const compoundingDetail = `Fórmula: ${vehicleLabels[doctorIssueForm.vehicle] || 'Preparado'} | THC ${doctorIssueForm.thcRatio}% / CBD ${doctorIssueForm.cbdRatio}%`;
+      const autocultivoDetail = doctorIssueForm.enableAutocultivo
+        ? ` | Ley 21.57 protection: Región ${doctorIssueForm.autocultivoRegion}, Comuna ${doctorIssueForm.autocultivoComuna}, Dirección ${doctorIssueForm.autocultivoAddress}, Límite ${doctorIssueForm.autocultivoPlants} macetas`
+        : '';
+      const fullTreatment = `${doctorIssueForm.treatment} [CIE-10: ${doctorIssueForm.patientDiagnosis || 'N/A'} | ${complianceDetail} | ${compoundingDetail}${autocultivoDetail}]`;
+
       const response = await fetch('/api/stellar/doctor/issue-prescription', {
         method: 'POST',
         headers: {
@@ -1781,7 +1825,7 @@ export default function MockupPortal({
         },
         body: JSON.stringify({
           patientAddress: targetPatientAddress,
-          treatment: doctorIssueForm.treatment,
+          treatment: fullTreatment,
           dosage: doctorIssueForm.dosage,
           notes: doctorIssueForm.notes,
           durationDays: doctorIssueForm.durationDays,
@@ -2053,7 +2097,22 @@ export default function MockupPortal({
     const issuedId = Number(localStorage.getItem('trust_latest_prescription_id') ?? DEMO_PRESCRIPTION_ID) + 1;
     const issuedAt = new Date();
     const expiresAt = Math.floor(issuedAt.getTime() / 1000) + (Number(doctorIssueForm.durationDays) || 30) * 24 * 60 * 60;
-    const medicationHash = makeDemoHash(`${targetPatientAddress}-${doctorIssueForm.treatment}-${doctorIssueForm.dosage}`);
+
+    // Chilean compilation:
+    const vehicleLabels: Record<string, string> = {
+      oil: 'Aceite Sublingual (R. Magistral)',
+      flower: 'Flor Seca Vaporización',
+      cream: 'Crema Tópica Emoliente',
+      capsule: 'Cápsula Magistral',
+    };
+    const complianceDetail = `Médico RUT: ${doctorIssueForm.doctorRut || 'No especificado'} (SIS: ${doctorIssueForm.doctorSisId || 'No especificado'}) | Paciente RUT: ${doctorIssueForm.patientRut || 'No especificado'} (Diag: ${doctorIssueForm.patientDiagnosis || 'No especificado'})`;
+    const compoundingDetail = `Fórmula: ${vehicleLabels[doctorIssueForm.vehicle] || 'Preparado'} | THC ${doctorIssueForm.thcRatio}% / CBD ${doctorIssueForm.cbdRatio}%`;
+    const autocultivoDetail = doctorIssueForm.enableAutocultivo
+      ? ` | Ley 21.57 protection: Región ${doctorIssueForm.autocultivoRegion}, Comuna ${doctorIssueForm.autocultivoComuna}, Dirección ${doctorIssueForm.autocultivoAddress}, Límite ${doctorIssueForm.autocultivoPlants} macetas`
+      : '';
+    const fullTreatment = `${doctorIssueForm.treatment} [CIE-10: ${doctorIssueForm.patientDiagnosis || 'N/A'} | ${complianceDetail} | ${compoundingDetail}${autocultivoDetail}]`;
+
+    const medicationHash = makeDemoHash(`${targetPatientAddress}-${fullTreatment}-${doctorIssueForm.dosage}`);
     const txHash = makeDemoHash(`demo-rx-${issuedId}`);
     const demoPrescription: PatientPrescriptionRecord = {
       id: issuedId,
@@ -2135,7 +2194,7 @@ export default function MockupPortal({
             details: [
               `Atención realizada por ${clinicalAccessDoctor}`,
               `Fecha y hora: ${selectedConsultationBlock.date} · ${selectedConsultationBlock.time}`,
-              `Tratamiento: ${doctorIssueForm.treatment}`,
+              `Tratamiento: ${fullTreatment}`,
               prescriptionDetail,
               'Diagnóstico y notas completas permanecen cifrados off-chain',
             ],
@@ -2168,15 +2227,21 @@ export default function MockupPortal({
   const handleCompleteAcquisition = () => {
     setDispensaryStep('success');
     
-    const newPickups = cart.map(item => ({
-      id: `pick-${Date.now()}-${item.strain.id}`,
-      strain: item.strain,
-      quantity: item.quantity,
-      dispensary: selectedDispensary,
-      status: 'pending',
-      token: `QR-${Math.random().toString(36).substring(7).toUpperCase()}`,
-      expires: 'Expira en 23:59h'
-    }));
+    const newPickups = cart.map(item => {
+      const p = {
+        id: `pick-${Date.now()}-${item.strain.id}`,
+        strain: item.strain,
+        quantity: item.quantity,
+        dispensary: selectedDispensary,
+        status: 'pending',
+        token: `QR-${Math.random().toString(36).substring(7).toUpperCase()}`,
+        expires: 'Expira en 23:59h',
+        patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
+        dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+      };
+      trustDataStore.createPickup(p);
+      return p;
+    });
     
     setTimeout(() => {
       setActivePickups(prev => [...newPickups, ...prev]);
@@ -2328,34 +2393,50 @@ export default function MockupPortal({
       }));
       setDispensaryStep('success');
 
-      const newPickups = cart.map(item => ({
-        id: `pick-${Date.now()}-${item.strain.id}`,
-        strain: item.strain,
-        quantity: item.quantity,
-        dispensary: selectedDispensary,
-        status: 'pending',
-        token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
-        expires: 'Retiro parcial registrado'
-      }));
+      // Update existing pending pickups to completed and persist to Firestore/localStorage
+      const updatedActivePickups = activePickups.map(pickup => {
+        const matchingCartItem = cart.find(item => item.strain.id === pickup.strain.id && pickup.status === 'pending');
+        if (matchingCartItem) {
+          const updatedPickup = {
+            ...pickup,
+            status: 'completed',
+            token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
+            expires: 'Retiro completado en dispensario',
+            patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
+            dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+          };
+          trustDataStore.createPickup(updatedPickup);
+          return updatedPickup;
+        }
+        return pickup;
+      });
 
-      if (auth.currentUser) {
-        newPickups.forEach(async (pickup) => {
-          try {
-            await addDoc(collection(db, 'pickups'), {
-              patientId: auth.currentUser!.uid,
-              dispensaryId: pickup.dispensary?.id || 'demo-dispensary',
-              token: pickup.token,
-              quantity: pickup.quantity,
-              strain: pickup.strain,
-              status: pickup.status,
-              createdAt: new Date().toISOString()
-            });
-          } catch (e) {
-            console.error("Error saving onchain pickup to Firestore:", e);
-          }
+      // If no matching pending pickup was found (direct dispensary sale/demo), create new completed ones
+      const hasPendingMatch = activePickups.some(pickup => 
+        cart.some(item => item.strain.id === pickup.strain.id && pickup.status === 'pending')
+      );
+
+      let finalPickups = updatedActivePickups;
+      if (!hasPendingMatch) {
+        const newCompletedPickups = cart.map(item => {
+          const p = {
+            id: `pick-${Date.now()}-${item.strain.id}`,
+            strain: item.strain,
+            quantity: item.quantity,
+            dispensary: selectedDispensary,
+            status: 'completed',
+            token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
+            expires: 'Retiro completado en dispensario',
+            patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
+            dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+          };
+          trustDataStore.createPickup(p);
+          return p;
         });
+        finalPickups = [...newCompletedPickups, ...activePickups];
       }
-      setActivePickups(prev => [...newPickups, ...prev]);
+
+      setActivePickups(finalPickups);
       setRecentActivity(prev => [
         {
           id: `act-disp-${Date.now()}`,
@@ -2668,6 +2749,76 @@ export default function MockupPortal({
       );
     } finally {
       setPrescriptionValidationBusy(false);
+    }
+  };
+
+  const handleRetainPrescription = async () => {
+    const prescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
+    if (!Number.isFinite(prescriptionId)) {
+      setRetainReleaseError('Número de receta no válido para retención.');
+      return;
+    }
+
+    setRetainReleaseBusy(true);
+    setRetainReleaseError(null);
+    setRetainReleaseSuccess(null);
+
+    try {
+      const response = await fetch('/api/stellar/dispensary/retain-prescription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prescriptionId,
+          dispensaryAddress: 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6',
+          lockPeriodDays,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible registrar la retención criptográfica.');
+      }
+
+      setRetainReleaseSuccess(
+        `Retención criptográfica exitosa en testnet. Receta bloqueada por ${lockPeriodDays} días. Tx: ${payload.txHash.slice(0, 8)}...`
+      );
+      // Actualizar la validación de la receta on-chain
+      await validatePrescriptionOnTestnet();
+    } catch (err: any) {
+      setRetainReleaseError(err.message || 'Error en la transacción de retención.');
+    } finally {
+      setRetainReleaseBusy(false);
+    }
+  };
+
+  const handleReleasePrescription = async () => {
+    const prescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
+    if (!Number.isFinite(prescriptionId)) {
+      setRetainReleaseError('Número de receta no válido para liberación.');
+      return;
+    }
+
+    setRetainReleaseBusy(true);
+    setRetainReleaseError(null);
+    setRetainReleaseSuccess(null);
+
+    try {
+      const response = await fetch('/api/stellar/dispensary/release-prescription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prescriptionId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible liberar la receta.');
+      }
+
+      setRetainReleaseSuccess(`Receta liberada con éxito en testnet. Devuelta al paciente. Tx: ${payload.txHash.slice(0, 8)}...`);
+      // Actualizar la validación de la receta on-chain
+      await validatePrescriptionOnTestnet();
+    } catch (err: any) {
+      setRetainReleaseError(err.message || 'Error en la transacción de liberación.');
+    } finally {
+      setRetainReleaseBusy(false);
     }
   };
 
@@ -5308,6 +5459,95 @@ export default function MockupPortal({
                               </div>
                             )}
 
+                            {prescriptionValidation && (
+                              <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/50 p-5">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/70">
+                                    Custodia Criptográfica de la Receta (Stellar Ledger)
+                                  </h4>
+                                  {prescriptionValidation.prescription.status === 'retained' ? (
+                                    <span className="rounded-full bg-brand-gold/15 px-2.5 py-1 text-[9px] font-bold text-brand-gold">
+                                      🔒 RETENIDA POR DISPENSARIO
+                                    </span>
+                                  ) : (
+                                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-[9px] font-bold text-green-800">
+                                      🟢 LIBRE EN WALLET PACIENTE
+                                    </span>
+                                  )}
+                                </div>
+
+                                {prescriptionValidation.prescription.status === 'retained' ? (
+                                  <div className="mt-3">
+                                    <p className="text-xs text-brand-green-mid/80">
+                                      Esta receta se encuentra bajo custodia de la farmacia:
+                                    </p>
+                                    <p className="mt-1 font-mono text-[10px] font-bold text-brand-green-deep break-all">
+                                      {prescriptionValidation.prescription.retainedBy || 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6'}
+                                    </p>
+                                    
+                                    {prescriptionValidation.prescription.retainedBy === 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6' ? (
+                                      <div className="mt-4">
+                                        <div className="flex items-center gap-2 rounded-xl bg-amber-50/70 p-3 text-xs text-amber-800 border border-amber-200/50">
+                                          <span>🔒</span>
+                                          <p>Bloqueo criptográfico activo por permanencia legal. El paciente no puede retirar el NFT antes del plazo.</p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={handleReleasePrescription}
+                                          disabled={retainReleaseBusy}
+                                          className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+                                        >
+                                          {retainReleaseBusy ? 'Liberando Receta...' : '🔓 Solicitar Liberación Administrativa'}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <p className="mt-3 text-xs text-red-700 font-bold">
+                                        ❌ No tienes permisos para dispensar ni liberar esta receta (retenida por otra entidad).
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="mt-3">
+                                    <p className="text-xs text-brand-green-mid/80">
+                                      El paciente puede comprometer su receta para iniciar preparados magistrales. Selecciona el período de permanencia mínima en Stellar:
+                                    </p>
+                                    
+                                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                      <select
+                                        value={lockPeriodDays}
+                                        onChange={(e) => setLockPeriodDays(Number(e.target.value))}
+                                        className="flex-1 rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-xs font-bold text-brand-green-deep outline-none focus:ring-2 focus:ring-brand-gold/40"
+                                      >
+                                        <option value={30}>30 días (Piloto Corto)</option>
+                                        <option value={90}>90 días (Mediano Plazo)</option>
+                                        <option value={180}>180 días (6 meses - Permanencia Recomendada)</option>
+                                      </select>
+                                      
+                                      <button
+                                        type="button"
+                                        onClick={handleRetainPrescription}
+                                        disabled={retainReleaseBusy}
+                                        className="rounded-xl bg-brand-green-deep px-5 py-2 text-xs font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:opacity-50"
+                                      >
+                                        {retainReleaseBusy ? 'Procesando...' : '🔒 Retener Receta'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {retainReleaseError && (
+                                  <div className="mt-3 rounded-xl bg-red-50 p-2 text-xs text-red-700 border border-red-100">
+                                    {retainReleaseError}
+                                  </div>
+                                )}
+                                {retainReleaseSuccess && (
+                                  <div className="mt-3 rounded-xl bg-green-50 p-2 text-xs text-green-700 border border-green-100">
+                                    {retainReleaseSuccess}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                             <div className="mt-5 grid grid-cols-2 gap-3">
                               {[
                                 ['Receta', `#${resolvedPrescriptionId}`],
@@ -7706,6 +7946,87 @@ export default function MockupPortal({
                     />
                   </label>
 
+                  {/* Chilean Regulatory Identifiers */}
+                  <div className="md:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2 rounded-2xl border border-brand-gold/15 bg-[#fbf7ef]/40 p-4">
+                    <div className="sm:col-span-2">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-brand-gold">Cumplimiento Minsal / Superintendencia de Salud (Chile)</p>
+                      <p className="mt-1 text-xs text-brand-green-mid/70">Identificación inequivoca requerida para la validez legal del autocultivo y la receta magistral.</p>
+                    </div>
+
+                    <label className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">RUT del Médico</span>
+                        {doctorIssueForm.doctorRut && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            validateRut(doctorIssueForm.doctorRut) ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {validateRut(doctorIssueForm.doctorRut) ? 'Válido' : 'Inválido'}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="12.345.678-9"
+                        value={doctorIssueForm.doctorRut}
+                        onChange={(e) => {
+                          const formatted = formatRut(e.target.value);
+                          setDoctorIssueForm(prev => ({ ...prev, doctorRut: formatted }));
+                        }}
+                        className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Nº Registro SIS (Superintendencia)</span>
+                      <input
+                        type="text"
+                        placeholder="Ej. 123456"
+                        value={doctorIssueForm.doctorSisId}
+                        onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, doctorSisId: e.target.value }))}
+                        className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">RUT del Paciente</span>
+                        {doctorIssueForm.patientRut && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            validateRut(doctorIssueForm.patientRut) ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {validateRut(doctorIssueForm.patientRut) ? 'Válido' : 'Inválido'}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="12.345.678-9"
+                        value={doctorIssueForm.patientRut}
+                        onChange={(e) => {
+                          const formatted = formatRut(e.target.value);
+                          setDoctorIssueForm(prev => ({ ...prev, patientRut: formatted }));
+                        }}
+                        className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Diagnóstico CIE-10</span>
+                      <select
+                        value={doctorIssueForm.patientDiagnosis}
+                        onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, patientDiagnosis: e.target.value }))}
+                        className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-3 py-2.5 text-xs text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                      >
+                        <option value="M79.7">CIE-10: M79.7 - Fibromialgia</option>
+                        <option value="G43.9">CIE-10: G43.9 - Migraña, no especificada</option>
+                        <option value="M25.5">CIE-10: M25.5 - Dolor en articulación</option>
+                        <option value="G80.9">CIE-10: G80.9 - Parálisis cerebral, no especificada</option>
+                        <option value="C61">CIE-10: C61 - Tumor maligno de la próstata (Paliativo)</option>
+                        <option value="G40.9">CIE-10: G40.9 - Epilepsia, no especificada</option>
+                      </select>
+                    </label>
+                  </div>
+
                   <label className="space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Tratamiento</span>
                     <input
@@ -7769,6 +8090,131 @@ export default function MockupPortal({
                       className="w-full rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
                     />
                   </label>
+
+                  {/* Chilean Recetario Magistral Selection */}
+                  <div className="md:col-span-2 rounded-2xl border border-brand-green-deep/10 bg-[#edf2ee]/40 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-brand-gold">Fórmula Recetario Magistral (Chile)</p>
+                    <p className="mt-1 text-xs text-brand-green-mid/70">Selecciona el formato farmacéutico y la concentración exacta de fitocannabinoides.</p>
+                    
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {[
+                        { id: 'oil', label: 'Aceite Sublingual', desc: 'Vehículo oleoso' },
+                        { id: 'flower', label: 'Flor Vaporizada', desc: 'Inhalación seca' },
+                        { id: 'cream', label: 'Crema Emoliente', desc: 'Uso dérmico' },
+                        { id: 'capsule', label: 'Cápsula Magistral', desc: 'Vía oral' },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setDoctorIssueForm(prev => ({ ...prev, vehicle: item.id }))}
+                          className={`rounded-xl border p-3 text-left transition-all ${
+                            doctorIssueForm.vehicle === item.id
+                              ? 'border-brand-gold bg-brand-gold/10 text-brand-green-deep ring-2 ring-brand-gold/40'
+                              : 'border-brand-green-deep/10 bg-white hover:border-brand-gold/30'
+                          }`}
+                        >
+                          <p className="text-xs font-bold">{item.label}</p>
+                          <p className="mt-0.5 text-[10px] text-brand-green-mid/60">{item.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <label className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Concentración THC (%)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={doctorIssueForm.thcRatio}
+                          onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, thcRatio: Math.max(0, Number(e.target.value)) }))}
+                          className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Concentración CBD (%)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={doctorIssueForm.cbdRatio}
+                          onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, cbdRatio: Math.max(0, Number(e.target.value)) }))}
+                          className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Ley 21.575 Protection Shield */}
+                  <div className="md:col-span-2 rounded-2xl border border-brand-green-deep/10 bg-[#edf2ee]/40 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-brand-gold">Protección de Autocultivo (Ley 21.575)</p>
+                        <p className="mt-1 text-xs text-brand-green-mid/70">Anclar en el Ledger el resguardo legal de autocultivo para el paciente.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={doctorIssueForm.enableAutocultivo}
+                          onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, enableAutocultivo: e.target.checked }))}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-brand-green-deep/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-gold"></div>
+                      </label>
+                    </div>
+
+                    {doctorIssueForm.enableAutocultivo && (
+                      <div className="mt-4 space-y-3 border-t border-brand-green-deep/5 pt-3 animate-fade-in">
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Región</span>
+                            <select
+                              value={doctorIssueForm.autocultivoRegion}
+                              onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, autocultivoRegion: e.target.value }))}
+                              className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-3 py-2.5 text-xs text-brand-green-deep focus:outline-none"
+                            >
+                              {CHILEAN_REGIONS.map((region) => (
+                                <option key={region.id} value={region.id}>{region.name}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Comuna</span>
+                            <input
+                              type="text"
+                              value={doctorIssueForm.autocultivoComuna}
+                              onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, autocultivoComuna: e.target.value }))}
+                              placeholder="Ej. Providencia"
+                              className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-xs text-brand-green-deep focus:outline-none"
+                            />
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <label className="sm:col-span-2 space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50 font-bold">Dirección de Cultivo Autorizada</span>
+                            <input
+                              type="text"
+                              value={doctorIssueForm.autocultivoAddress}
+                              onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, autocultivoAddress: e.target.value }))}
+                              placeholder="Ej. Av. Nueva Providencia 1881"
+                              className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-xs text-brand-green-deep focus:outline-none"
+                            />
+                          </label>
+                          <label className="space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50 font-bold">Nº de Macetas</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={doctorIssueForm.autocultivoPlants}
+                              onChange={(e) => setDoctorIssueForm(prev => ({ ...prev, autocultivoPlants: Math.max(1, Number(e.target.value)) }))}
+                              className="w-full rounded-xl bg-white border border-brand-green-deep/10 px-4 py-2.5 text-xs text-brand-green-deep focus:outline-none"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <label className="space-y-2 md:col-span-2">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Notas clínicas privadas</span>

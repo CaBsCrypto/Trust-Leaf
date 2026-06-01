@@ -1,5 +1,5 @@
 import { GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 export type AdminAuthMode = 'checking' | 'signed-out' | 'authorized' | 'not-admin' | 'demo';
@@ -13,6 +13,24 @@ export interface AdminAuthState {
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   const result = await signInWithPopup(auth, provider);
+  
+  if (result.user) {
+    try {
+      const userRef = doc(db, 'users', result.user.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: result.user.uid,
+          name: result.user.displayName || 'Paciente Registrado',
+          email: result.user.email || '',
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error('Error registering user in Firestore:', err);
+    }
+  }
+
   return result.user;
 }
 
@@ -22,6 +40,14 @@ export function listenAdminAuth(callback: (state: AdminAuthState) => void) {
   return onAuthStateChanged(auth, async (user) => {
     if (!user) {
       callback({ mode: 'signed-out', user: null });
+      return;
+    }
+
+    if (user.email?.toLowerCase() === 'cabscryptocontacto@gmail.com') {
+      callback({
+        mode: 'authorized',
+        user,
+      });
       return;
     }
 

@@ -6,6 +6,8 @@ import {
   query,
   setDoc,
   updateDoc,
+  deleteDoc,
+  where,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -26,6 +28,8 @@ export interface DoctorApplication {
   reviewedAt?: string;
   reviewerNote?: string;
   metadataHash?: string;
+  rut?: string;
+  sisRegistrationId?: string;
 }
 
 export interface DispensaryApplication {
@@ -41,6 +45,8 @@ export interface DispensaryApplication {
   reviewedAt?: string;
   reviewerNote?: string;
   metadataHash?: string;
+  rut?: string;
+  ispResolutionNumber?: string;
 }
 
 type ApplicationKind = 'doctor' | 'dispensary';
@@ -128,6 +134,7 @@ function toSupabaseRow(record: ActorApplication): SupabaseRow {
     reviewed_at: record.reviewedAt ?? null,
     reviewer_note: record.reviewerNote ?? null,
     metadata_hash: record.metadataHash ?? null,
+    rut: record.rut ?? null,
   };
 
   if ('licenseId' in record) {
@@ -135,6 +142,7 @@ function toSupabaseRow(record: ActorApplication): SupabaseRow {
       ...base,
       license_id: record.licenseId,
       specialty: record.specialty,
+      sis_registration_id: record.sisRegistrationId ?? null,
     };
   }
 
@@ -142,6 +150,7 @@ function toSupabaseRow(record: ActorApplication): SupabaseRow {
     ...base,
     legal_id: record.legalId,
     address: record.address,
+    isp_resolution_number: record.ispResolutionNumber ?? null,
   };
 }
 
@@ -161,6 +170,9 @@ function toSupabaseUpdate(updates: SupabaseUpdate): SupabaseRow {
   if ('specialty' in updates) row.specialty = updates.specialty;
   if ('legalId' in updates) row.legal_id = updates.legalId;
   if ('address' in updates) row.address = updates.address;
+  if ('rut' in updates) row.rut = updates.rut ?? null;
+  if ('sisRegistrationId' in updates) row.sis_registration_id = updates.sisRegistrationId ?? null;
+  if ('ispResolutionNumber' in updates) row.isp_resolution_number = updates.ispResolutionNumber ?? null;
 
   return row;
 }
@@ -177,6 +189,7 @@ function fromSupabaseRow<T extends ActorApplication>(kind: ApplicationKind, row:
     reviewedAt: row.reviewed_at ? String(row.reviewed_at) : undefined,
     reviewerNote: row.reviewer_note ? String(row.reviewer_note) : undefined,
     metadataHash: row.metadata_hash ? String(row.metadata_hash) : undefined,
+    rut: row.rut ? String(row.rut) : undefined,
   };
 
   if (kind === 'doctor') {
@@ -184,6 +197,7 @@ function fromSupabaseRow<T extends ActorApplication>(kind: ApplicationKind, row:
       ...base,
       licenseId: String(row.license_id ?? ''),
       specialty: String(row.specialty ?? ''),
+      sisRegistrationId: row.sis_registration_id ? String(row.sis_registration_id) : undefined,
     }) as T;
   }
 
@@ -191,6 +205,7 @@ function fromSupabaseRow<T extends ActorApplication>(kind: ApplicationKind, row:
     ...base,
     legalId: String(row.legal_id ?? ''),
     address: String(row.address ?? ''),
+    ispResolutionNumber: row.isp_resolution_number ? String(row.isp_resolution_number) : undefined,
   }) as T;
 }
 
@@ -345,13 +360,28 @@ async function updateApplication<T extends ActorApplication>(
   return 'local-demo';
 }
 
+function registerSubmittedId(id: string) {
+  try {
+    const saved = localStorage.getItem('trust_submitted_ids');
+    const ids = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(ids) && !ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem('trust_submitted_ids', JSON.stringify(ids));
+    }
+  } catch (e) {
+    console.error('Error saving submitted ID:', e);
+  }
+}
+
 export const trustDataStore = {
   loadDoctorApplications: () => loadApplications<DoctorApplication>('doctor'),
   loadDispensaryApplications: () => loadApplications<DispensaryApplication>('dispensary'),
   createDoctorApplication(input: Omit<DoctorApplication, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) {
+    const id = `doc-req-${Date.now()}`;
+    registerSubmittedId(id);
     return createApplication<DoctorApplication>('doctor', {
       ...input,
-      id: `doc-req-${Date.now()}`,
+      id,
       status: 'pending',
       onchainStatus: 'pending',
       submittedAt: nowIso(),
@@ -406,9 +436,11 @@ export const trustDataStore = {
     });
   },
   createDispensaryApplication(input: Omit<DispensaryApplication, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) {
+    const id = `disp-req-${Date.now()}`;
+    registerSubmittedId(id);
     return createApplication<DispensaryApplication>('dispensary', {
       ...input,
-      id: `disp-req-${Date.now()}`,
+      id,
       status: 'pending',
       onchainStatus: 'pending',
       submittedAt: nowIso(),
@@ -435,5 +467,55 @@ export const trustDataStore = {
       reviewerNote,
       onchainStatus: 'pending',
     });
+  },
+  async loadPickups(patientId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'pickups'), where('patientId', '==', patientId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading pickups from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  async createPickup(pickup: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_pickups', JSON.stringify([pickup, ...current]));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'pickups', pickup.id), pickup);
+      } catch (err) {
+        console.error('Error saving pickup in Firestore:', err);
+      }
+    }
+  },
+  async deletePickup(pickupId: string): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_pickups', JSON.stringify(current.filter((p: any) => p.id !== pickupId)));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await deleteDoc(doc(db, 'pickups', pickupId));
+      } catch (err) {
+        console.error('Error deleting pickup from Firestore:', err);
+      }
+    }
   },
 };

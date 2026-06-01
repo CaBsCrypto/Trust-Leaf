@@ -473,17 +473,18 @@ export async function issuePrescriptionForPatient(input: {
         networkPassphrase: getNetworkPassphrase(),
       });
 
-      // Habilitar clawback si no está activo
-      if (!doctorAccountResp.flags.auth_clawback_enabled) {
-        console.log(`[NFT Mint] Activando flag AUTH_CLAWBACK_ENABLED en cuenta del médico...`);
+      // Habilitar clawback y revocable si no están activos (Stellar requiere ambos para poder usar Clawback)
+      if (!doctorAccountResp.flags.auth_clawback_enabled || !(doctorAccountResp.flags as any).auth_revocable) {
+        console.log(`[NFT Mint] Activando flags AUTH_CLAWBACK_ENABLED y AUTH_REVOCABLE_ENABLED en cuenta del médico...`);
         txBuilder.addOperation(
           StellarSdk.Operation.setOptions({
-            setFlags: 8, // Enable clawback flag in Stellar Classic (authClawbackEnabledFlag = 8)
+            setFlags: (2 | 8) as any, // 2 = AuthRevocableFlag, 8 = AuthClawbackEnabledFlag
           })
         );
       }
 
-      // Crear Claimable Balance con el hash SHA-256 en el memo
+      // Crear Claimable Balance con el hash SHA-256 en el memo (con Expiración Absoluta y Doble Reclamante)
+      const expiresAtUnix = Math.floor(Date.now() / 1000) + Math.floor(input.durationDays) * 24 * 60 * 60;
       txBuilder.addOperation(
         StellarSdk.Operation.createClaimableBalance({
           asset: nftAsset,
@@ -491,7 +492,13 @@ export async function issuePrescriptionForPatient(input: {
           claimants: [
             new StellarSdk.Claimant(
               input.patientAddress,
-              StellarSdk.Claimant.predicateUnconditional()
+              StellarSdk.Claimant.predicateBeforeAbsoluteTime(String(expiresAtUnix))
+            ),
+            new StellarSdk.Claimant(
+              doctorAddress,
+              StellarSdk.Claimant.predicateNot(
+                StellarSdk.Claimant.predicateBeforeAbsoluteTime(String(expiresAtUnix))
+              )
             ),
           ],
         })
@@ -505,8 +512,11 @@ export async function issuePrescriptionForPatient(input: {
       classicTx.sign(doctorKeypair);
       const submitResult = await serverHorizon.submitTransaction(classicTx);
       console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado con éxito! Hash: ${submitResult.hash}`);
-    } catch (nftError) {
-      console.error("[NFT Mint] Error al crear Claimable Balance en Stellar:", nftError);
+    } catch (nftError: any) {
+      console.error("[NFT Mint] Error al crear Claimable Balance en Stellar:", nftError.message);
+      if (nftError.response && nftError.response.data) {
+        console.error("[NFT Mint] Detalle del error de Horizon:", JSON.stringify(nftError.response.data, null, 2));
+      }
     }
   }
 
@@ -519,6 +529,219 @@ export async function issuePrescriptionForPatient(input: {
     medicationHash: medicationHashHex,
     totalQuantity,
     dashboard,
+  };
+}
+
+export async function retainPrescriptionForDispensary(input: {
+  prescriptionId: number;
+  dispensaryAddress: string;
+  lockPeriodDays?: number;
+}) {
+  const prescriptionId = Math.floor(input.prescriptionId);
+  const dispensaryAddress = input.dispensaryAddress.trim();
+  const lockPeriodDays = input.lockPeriodDays || 180;
+
+  if (!Number.isFinite(prescriptionId) || prescriptionId < 0) {
+    throw new Error('prescriptionId debe ser un numero valido.');
+  }
+
+  const server = getSorobanServer();
+  const prescription = await invokeReadonlyContract(
+    server,
+    getPrescriptionContractId(),
+    'get_prescription',
+    { id: BigInt(prescriptionId) },
+  );
+
+  const patientAddress = String(prescription.patient);
+  const doctorAddress = String(prescription.doctor);
+  const assetCode = `RX${prescriptionId}`;
+  
+  const horizonUrl = getRpcUrl().includes('testnet')
+    ? 'https://horizon-testnet.stellar.org'
+    : 'https://horizon.stellar.org';
+  const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+
+  const doctorSecret = getDoctorSecret();
+  if (!doctorSecret) {
+    throw new Error('Falta STELLAR_DOCTOR_SECRET para reasignar la custodia del NFT.');
+  }
+
+  const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
+  const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+  const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
+
+  let claimableBalanceId = '';
+  try {
+    const claimableBalances = await serverHorizon
+      .claimableBalances()
+      .claimant(patientAddress)
+      .asset(nftAsset)
+      .call();
+    if (claimableBalances.records.length > 0) {
+      claimableBalanceId = claimableBalances.records[0].id;
+    }
+  } catch (err) {
+    console.error(`[NFT Retain] Error buscando balance en Horizon:`, err);
+  }
+
+  console.log(`[NFT Retain] Iniciando clawback del asset ${assetCode} para retencion...`);
+  const txBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: getNetworkPassphrase(),
+  });
+
+  if (claimableBalanceId) {
+    txBuilder.addOperation(
+      StellarSdk.Operation.clawbackClaimableBalance({
+        balanceId: claimableBalanceId,
+      })
+    );
+  } else {
+    txBuilder.addOperation(
+      StellarSdk.Operation.clawback({
+        from: patientAddress,
+        asset: nftAsset,
+        amount: '1.0000000',
+      })
+    );
+  }
+
+  const lockUntilUnix = Math.floor(Date.now() / 1000) + lockPeriodDays * 24 * 60 * 60;
+  txBuilder.addOperation(
+    StellarSdk.Operation.createClaimableBalance({
+      asset: nftAsset,
+      amount: '1.0000000',
+      claimants: [
+        new StellarSdk.Claimant(
+          dispensaryAddress,
+          StellarSdk.Claimant.predicateUnconditional()
+        ),
+        new StellarSdk.Claimant(
+          patientAddress,
+          StellarSdk.Claimant.predicateNot(
+            StellarSdk.Claimant.predicateBeforeAbsoluteTime(String(lockUntilUnix))
+          )
+        ),
+      ],
+    })
+  );
+
+  const clawbackTx = txBuilder.setTimeout(30).build();
+  clawbackTx.sign(doctorKeypair);
+  const submitResult = await serverHorizon.submitTransaction(clawbackTx);
+  const txHash = submitResult.hash;
+  console.log(`[NFT Retain] Custodia digital reasignada con exito! Tx: ${txHash}`);
+
+  return {
+    txHash,
+    prescriptionId,
+    patientAddress,
+    dispensaryAddress,
+    assetCode,
+    status: 'retained',
+  };
+}
+
+export async function releasePrescriptionToPatient(input: {
+  prescriptionId: number;
+}) {
+  const prescriptionId = Math.floor(input.prescriptionId);
+
+  if (!Number.isFinite(prescriptionId) || prescriptionId < 0) {
+    throw new Error('prescriptionId debe ser un numero valido.');
+  }
+
+  const server = getSorobanServer();
+  const prescription = await invokeReadonlyContract(
+    server,
+    getPrescriptionContractId(),
+    'get_prescription',
+    { id: BigInt(prescriptionId) },
+  );
+
+  const patientAddress = String(prescription.patient);
+  const doctorAddress = String(prescription.doctor);
+  const assetCode = `RX${prescriptionId}`;
+  
+  const horizonUrl = getRpcUrl().includes('testnet')
+    ? 'https://horizon-testnet.stellar.org'
+    : 'https://horizon.stellar.org';
+  const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+
+  const doctorSecret = getDoctorSecret();
+  if (!doctorSecret) {
+    throw new Error('Falta STELLAR_DOCTOR_SECRET para reasignar la custodia del NFT de vuelta al paciente.');
+  }
+
+  const dispensaryAddress = getDispensaryAddress();
+
+  const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
+  const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+  const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
+
+  let claimableBalanceId = '';
+  try {
+    const claimableBalances = await serverHorizon
+      .claimableBalances()
+      .claimant(dispensaryAddress)
+      .asset(nftAsset)
+      .call();
+    if (claimableBalances.records.length > 0) {
+      claimableBalanceId = claimableBalances.records[0].id;
+    }
+  } catch (err) {
+    console.error(`[NFT Release] Error buscando balance en Horizon:`, err);
+  }
+
+  console.log(`[NFT Release] Iniciando clawback del asset ${assetCode} para devolucion al paciente...`);
+  const txBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: getNetworkPassphrase(),
+  });
+
+  if (claimableBalanceId) {
+    txBuilder.addOperation(
+      StellarSdk.Operation.clawbackClaimableBalance({
+        balanceId: claimableBalanceId,
+      })
+    );
+  } else {
+    txBuilder.addOperation(
+      StellarSdk.Operation.clawback({
+        from: dispensaryAddress,
+        asset: nftAsset,
+        amount: '1.0000000',
+      })
+    );
+  }
+
+  txBuilder.addOperation(
+    StellarSdk.Operation.createClaimableBalance({
+      asset: nftAsset,
+      amount: '1.0000000',
+      claimants: [
+        new StellarSdk.Claimant(
+          patientAddress,
+          StellarSdk.Claimant.predicateUnconditional()
+        ),
+      ],
+    })
+  );
+
+  const clawbackTx = txBuilder.setTimeout(30).build();
+  clawbackTx.sign(doctorKeypair);
+  const submitResult = await serverHorizon.submitTransaction(clawbackTx);
+  const txHash = submitResult.hash;
+  console.log(`[NFT Release] NFT devuelto al paciente con exito! Tx: ${txHash}`);
+
+  return {
+    txHash,
+    prescriptionId,
+    patientAddress,
+    dispensaryAddress,
+    assetCode,
+    status: 'released',
   };
 }
 
@@ -564,7 +787,7 @@ export async function dispensePrescriptionForPatient(input: {
     { id: BigInt(prescriptionId) },
   );
 
-  // STEP 5: Verificar que el paciente posee el Token NFT RX[ID_PRESCRIPTION]
+  // STEP 5: Verificar que el paciente (o el dispensario en caso de retencion) posee el Token NFT RX[ID_PRESCRIPTION]
   const patientAddress = String(prescription.patient);
   const assetCode = `RX${prescriptionId}`;
   const horizonUrl = getRpcUrl().includes('testnet')
@@ -573,7 +796,9 @@ export async function dispensePrescriptionForPatient(input: {
   const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
 
   let hasNFT = false;
+  let claimableBalanceId = '';
   try {
+    // 1. Verificacion estandar (Paciente)
     const patientAccount = await serverHorizon.loadAccount(patientAddress);
     const hasAssetInWallet = patientAccount.balances.some(
       (b: any) => b.asset_code === assetCode && Number(b.balance) > 0
@@ -581,19 +806,42 @@ export async function dispensePrescriptionForPatient(input: {
     if (hasAssetInWallet) {
       hasNFT = true;
     } else {
-      // Consultar Claimable Balances en Horizon
       const claimableBalances = await serverHorizon
         .claimableBalances()
         .claimant(patientAddress)
-        .asset(new StellarSdk.Asset(assetCode, getAdminAddress()))
+        .asset(new StellarSdk.Asset(assetCode, String(prescription.doctor)))
         .call();
       if (claimableBalances.records.length > 0) {
         hasNFT = true;
+        claimableBalanceId = claimableBalances.records[0].id;
+      }
+    }
+
+    // 2. Verificacion alternativa (Retenido por el Dispensario)
+    if (!hasNFT) {
+      const dispensaryAccount = await serverHorizon.loadAccount(dispensaryAddress);
+      const hasAssetInDispensaryWallet = dispensaryAccount.balances.some(
+        (b: any) => b.asset_code === assetCode && Number(b.balance) > 0
+      );
+      if (hasAssetInDispensaryWallet) {
+        hasNFT = true;
+        console.log(`[NFT Check] Posesion confirmada: El dispensario posee el NFT de forma directa.`);
+      } else {
+        const claimableBalancesDisp = await serverHorizon
+          .claimableBalances()
+          .claimant(dispensaryAddress)
+          .asset(new StellarSdk.Asset(assetCode, String(prescription.doctor)))
+          .call();
+        if (claimableBalancesDisp.records.length > 0) {
+          hasNFT = true;
+          claimableBalanceId = claimableBalancesDisp.records[0].id;
+          console.log(`[NFT Check] Posesion confirmada: El dispensario posee el NFT como Claimable Balance.`);
+        }
       }
     }
   } catch (err) {
     console.error(`[NFT Check] Error verificando posesión del NFT en Horizon:`, err);
-    // Fallback permissivo en testnet
+    // Fallback permisivo en testnet
     hasNFT = true;
   }
 
@@ -635,6 +883,73 @@ export async function dispensePrescriptionForPatient(input: {
   );
   const dashboard = await getPatientDashboard(patientAddress);
 
+  // STEP 6: Quema del NFT (Clawback) de forma dual en Horizon - SOLO SI SE AGOTÓ LA RECETA
+  let clawbackTxHash: string | undefined = undefined;
+  let isFullyUsed = true;
+  let remainingQuantity = 0;
+  let totalQuantity = 0;
+  try {
+    const updatedPrescription = await invokeReadonlyContract(
+      server,
+      getPrescriptionContractId(),
+      'get_prescription',
+      { id: BigInt(prescriptionId) },
+    );
+    isFullyUsed = Boolean(updatedPrescription.is_used);
+    totalQuantity = Number(updatedPrescription.total_quantity);
+    remainingQuantity = totalQuantity - Number(updatedPrescription.dispensed_quantity);
+  } catch (err) {
+    console.error(`[NFT Burn] Error al leer receta actualizada de Soroban:`, err);
+  }
+
+  if (isFullyUsed) {
+    try {
+      const doctorSecret = getDoctorSecret();
+      if (doctorSecret) {
+        console.log(`[NFT Burn] Receta completamente consumida. Preparando transacción clásica de quema para el asset ${assetCode}...`);
+        const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
+        const doctorAddress = doctorKeypair.publicKey();
+        const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+        
+        const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
+        const clawbackBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: getNetworkPassphrase(),
+        });
+
+        if (claimableBalanceId) {
+          console.log(`[NFT Burn] Ejecutando clawbackClaimableBalance para el balance ${claimableBalanceId}...`);
+          clawbackBuilder.addOperation(
+            StellarSdk.Operation.clawbackClaimableBalance({
+              balanceId: claimableBalanceId,
+            })
+          );
+        } else {
+          console.log(`[NFT Burn] Ejecutando clawback de balance en la wallet del paciente ${patientAddress}...`);
+          clawbackBuilder.addOperation(
+            StellarSdk.Operation.clawback({
+              from: patientAddress,
+              asset: nftAsset,
+              amount: '1.0000000',
+            })
+          );
+        }
+
+        const clawbackTx = clawbackBuilder.setTimeout(30).build();
+        clawbackTx.sign(doctorKeypair);
+        const clawbackResult = await serverHorizon.submitTransaction(clawbackTx);
+        clawbackTxHash = clawbackResult.hash;
+        console.log(`[NFT Burn] Receta NFT ${assetCode} quemada (Clawback exitoso): ${clawbackTxHash}`);
+      } else {
+        console.warn(`[NFT Burn] No se configuró STELLAR_DOCTOR_SECRET. Se omite quema física en testnet.`);
+      }
+    } catch (burnErr) {
+      console.error(`[NFT Burn] Error al ejecutar Clawback del NFT de receta:`, burnErr);
+    }
+  } else {
+    console.log(`[NFT Burn] Receta parcialmente consumida (restante: ${remainingQuantity}/${totalQuantity}). El paciente conserva su NFT para futuros retiros.`);
+  }
+
   return {
     txHash: recordResult.txHash,
     recordTxHash: recordResult.txHash,
@@ -646,6 +961,7 @@ export async function dispensePrescriptionForPatient(input: {
     batchHash: batchHashHex,
     dispenseMode: 'partial_allowance',
     dashboard,
+    clawbackTxHash,
   };
 }
 
@@ -694,20 +1010,53 @@ export async function validatePrescriptionForDispensary(input: {
     lastRecord = null;
   }
 
+  let retainedBy: string | null = null;
+  let status = normalized.status;
+  try {
+    const assetCode = `RX${prescriptionId}`;
+    const horizonUrl = getRpcUrl().includes('testnet')
+      ? 'https://horizon-testnet.stellar.org'
+      : 'https://horizon.stellar.org';
+    const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+    const claimableBalances = await serverHorizon
+      .claimableBalances()
+      .asset(new StellarSdk.Asset(assetCode, normalized.doctor))
+      .call();
+    if (claimableBalances.records.length > 0) {
+      const claimant = claimableBalances.records[0].claimants[0].destination;
+      if (claimant !== normalized.patient) {
+        retainedBy = claimant;
+        if (status === 'active') {
+          status = 'retained' as any;
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`[NFT Check] Error al verificar estado de retencion del NFT RX${prescriptionId}:`, e);
+  }
+
+  const updatedPrescription = {
+    ...normalized,
+    status,
+    retainedBy,
+  };
+
   return {
     network: 'Stellar Testnet',
     latestLedger: latestLedger.sequence,
     prescriptionContractId: getPrescriptionContractId(),
     dispenseRecordContractId: getDispenseRecordContractId(),
-    prescription: normalized,
+    prescription: updatedPrescription,
     validation: {
-      canDispense: normalized.status === 'active',
+      canDispense: updatedPrescription.status === 'active' || updatedPrescription.status === 'retained',
       reason:
-        normalized.status === 'active'
+        updatedPrescription.status === 'active'
           ? 'Receta vigente con saldo disponible.'
-          : normalized.status === 'expired'
-            ? 'La receta expiro y requiere nueva evaluacion medica.'
-            : 'La receta ya no tiene saldo disponible.',
+          : updatedPrescription.status === 'retained'
+            ? `Receta retenida en custodia digital por el dispensario: ${retainedBy}`
+            : updatedPrescription.status === 'expired'
+              ? 'La receta expiro y requiere nueva evaluacion medica.'
+              : 'La receta ya no tiene saldo disponible.',
       visibleToDispensary: [
         'estado',
         'vigencia',
@@ -761,7 +1110,38 @@ async function getPatientPrescriptions(
         { id: BigInt(event.id) },
       );
 
-      return normalizePrescriptionRecord(onchain, event);
+      const record = normalizePrescriptionRecord(onchain, event);
+      
+      let retainedBy: string | null = null;
+      let status = record.status;
+      try {
+        const assetCode = `RX${event.id}`;
+        const horizonUrl = getRpcUrl().includes('testnet')
+          ? 'https://horizon-testnet.stellar.org'
+          : 'https://horizon.stellar.org';
+        const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+        const claimableBalances = await serverHorizon
+          .claimableBalances()
+          .asset(new StellarSdk.Asset(assetCode, event.doctor))
+          .call();
+        if (claimableBalances.records.length > 0) {
+          const claimant = claimableBalances.records[0].claimants[0].destination;
+          if (claimant !== event.patient) {
+            retainedBy = claimant;
+            if (status === 'active') {
+              status = 'retained' as any;
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`Error al verificar estado de retencion del NFT RX${event.id}:`, e);
+      }
+
+      return {
+        ...record,
+        status,
+        retainedBy,
+      };
     }),
   );
 
@@ -1080,3 +1460,346 @@ async function waitForTransaction(
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export async function buildIssuePrescriptionTx(input: {
+  doctorAddress: string;
+  patientAddress: string;
+  treatment: string;
+  dosage: string;
+  notes?: string;
+  durationDays: number;
+  totalQuantity?: number;
+}) {
+  const doctorAddress = input.doctorAddress.trim();
+  const patientAddress = input.patientAddress.trim();
+  const treatment = input.treatment.trim();
+  const dosage = input.dosage.trim();
+  const notes = (input.notes ?? '').trim();
+
+  if (!doctorAddress || !patientAddress || !treatment || !dosage) {
+    throw new Error('Faltan datos clínicos para emitir la receta.');
+  }
+
+  if (!Number.isFinite(input.durationDays) || input.durationDays < 1) {
+    throw new Error('La vigencia de la receta debe ser de al menos 1 día.');
+  }
+  const totalQuantity = Math.floor(input.totalQuantity ?? 30);
+  if (!Number.isFinite(totalQuantity) || totalQuantity < 1) {
+    throw new Error('La cantidad total autorizada debe ser mayor o igual a 1.');
+  }
+
+  const server = getSorobanServer();
+  const sourceAccount = await server.getAccount(doctorAddress);
+  const contract = new StellarSdk.Contract(getPrescriptionContractId());
+
+  const payload = {
+    patient: patientAddress,
+    treatment,
+    dosage,
+    notes,
+    durationDays: input.durationDays,
+    totalQuantity,
+    network: 'testnet',
+  };
+  const medicationHashHex = createHash('sha256')
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  const medicationHashBytes = Buffer.from(medicationHashHex, 'hex');
+
+  const scArgs = [
+    addressToScVal(doctorAddress),
+    addressToScVal(patientAddress),
+    bytes32ToScVal(medicationHashBytes),
+    u64ToScVal(BigInt(Math.floor(input.durationDays)) * 24n * 60n * 60n),
+    u64ToScVal(BigInt(totalQuantity)),
+  ];
+
+  let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: getNetworkPassphrase(),
+  })
+    .addOperation(contract.call('issue_prescription', ...scArgs))
+    .setTimeout(30)
+    .build();
+
+  transaction = await server.prepareTransaction(transaction);
+  const xdr = transaction.toXDR();
+
+  return {
+    xdr,
+    medicationHash: medicationHashHex,
+    totalQuantity,
+  };
+}
+
+export async function buildDispensePrescriptionTx(input: {
+  dispensaryAddress: string;
+  prescriptionId: number;
+  productLabel: string;
+  batchLabel: string;
+  quantity: number;
+}) {
+  const dispensaryAddress = input.dispensaryAddress.trim();
+  const productLabel = input.productLabel.trim();
+  const batchLabel = input.batchLabel.trim();
+  const quantity = Math.floor(input.quantity);
+  const prescriptionId = Math.floor(input.prescriptionId);
+
+  if (!dispensaryAddress || !productLabel || !batchLabel) {
+    throw new Error('Faltan datos de producto, lote o dispensario.');
+  }
+
+  if (!Number.isFinite(prescriptionId) || prescriptionId < 0) {
+    throw new Error('prescriptionId debe ser un número válido.');
+  }
+
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    throw new Error('quantity debe ser un número mayor o igual a 1.');
+  }
+
+  const server = getSorobanServer();
+  const sourceAccount = await server.getAccount(dispensaryAddress);
+  const dispenseRecordContract = new StellarSdk.Contract(getDispenseRecordContractId());
+
+  const productHashHex = createHash('sha256')
+    .update(JSON.stringify({ productLabel, network: 'testnet' }))
+    .digest('hex');
+  const batchHashHex = createHash('sha256')
+    .update(JSON.stringify({ batchLabel, prescriptionId, network: 'testnet' }))
+    .digest('hex');
+
+  const recordArgs = [
+    addressToScVal(dispensaryAddress),
+    u64ToScVal(BigInt(prescriptionId)),
+    bytes32ToScVal(Buffer.from(productHashHex, 'hex')),
+    bytes32ToScVal(Buffer.from(batchHashHex, 'hex')),
+    u64ToScVal(BigInt(quantity)),
+  ];
+
+  let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: getNetworkPassphrase(),
+  })
+    .addOperation(dispenseRecordContract.call('record_dispense', ...recordArgs))
+    .setTimeout(30)
+    .build();
+
+  transaction = await server.prepareTransaction(transaction);
+  const xdr = transaction.toXDR();
+
+  return {
+    xdr,
+  };
+}
+
+export async function submitSignedTransaction(input: {
+  xdr: string;
+  operationType: 'issue' | 'dispense';
+  patientAddress?: string;
+  medicationHash?: string;
+  totalQuantity?: number;
+  prescriptionId?: number;
+  durationDays?: number;
+}) {
+  const server = getSorobanServer();
+  const tx = StellarSdk.TransactionBuilder.fromXDR(input.xdr, getNetworkPassphrase());
+  
+  const sendResult = await server.sendTransaction(tx);
+  const txHash = sendResult.hash;
+  if (!txHash) {
+    throw new Error('La red no devolvió hash para la transacción firmada.');
+  }
+
+  const completed = await waitForTransaction(server, txHash);
+  if (completed.status !== StellarSdk.rpc.Api.GetTransactionStatus.SUCCESS) {
+    throw new Error('La transacción no llegó a estado SUCCESS en testnet.');
+  }
+
+  const returnValue = completed.returnValue;
+
+  let issuedId: number | null = null;
+  let recordId: number | null = null;
+  let clawbackTxHash: string | undefined = undefined;
+
+  if (input.operationType === 'issue' && input.patientAddress && input.medicationHash) {
+    issuedId = returnValue ? Number(StellarSdk.scValToBigInt(returnValue)) : null;
+    if (issuedId !== null) {
+      const assetCode = `RX${issuedId}`;
+      const doctorSecret = getDoctorSecret();
+      const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
+      const doctorAddress = doctorKeypair.publicKey();
+      const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
+      const horizonUrl = getRpcUrl().includes('testnet')
+        ? 'https://horizon-testnet.stellar.org'
+        : 'https://horizon.stellar.org';
+      const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
+
+      try {
+        console.log(`[NFT Mint] Iniciar acuñación NFT ${assetCode}...`);
+        const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+        const txBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: getNetworkPassphrase(),
+        });
+
+        if (!doctorAccountResp.flags.auth_clawback_enabled || !(doctorAccountResp.flags as any).auth_revocable) {
+          console.log(`[NFT Mint] Activando flags en cuenta médico...`);
+          txBuilder.addOperation(
+            StellarSdk.Operation.setOptions({
+              setFlags: (2 | 8) as any,
+            })
+          );
+        }
+
+        const durationDays = input.durationDays || 30;
+        const expiresAtUnix = Math.floor(Date.now() / 1000) + durationDays * 24 * 60 * 60;
+        txBuilder.addOperation(
+          StellarSdk.Operation.createClaimableBalance({
+            asset: nftAsset,
+            amount: '1.0000000',
+            claimants: [
+              new StellarSdk.Claimant(
+                input.patientAddress,
+                StellarSdk.Claimant.predicateBeforeAbsoluteTime(String(expiresAtUnix))
+              ),
+              new StellarSdk.Claimant(
+                doctorAddress,
+                StellarSdk.Claimant.predicateNot(
+                  StellarSdk.Claimant.predicateBeforeAbsoluteTime(String(expiresAtUnix))
+                )
+              ),
+            ],
+          })
+        );
+
+        const classicTx = txBuilder
+          .addMemo(StellarSdk.Memo.hash(Buffer.from(input.medicationHash, 'hex')))
+          .setTimeout(30)
+          .build();
+
+        classicTx.sign(doctorKeypair);
+        const submitResult = await serverHorizon.submitTransaction(classicTx);
+        console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado! Hash: ${submitResult.hash}`);
+      } catch (nftError: any) {
+        console.error("[NFT Mint] Error al crear Claimable Balance en Stellar:", nftError.message);
+      }
+    }
+  } else if (input.operationType === 'dispense' && input.prescriptionId !== undefined) {
+    recordId = returnValue ? Number(StellarSdk.scValToBigInt(returnValue)) : null;
+    const prescriptionId = input.prescriptionId;
+    const assetCode = `RX${prescriptionId}`;
+    
+    let isFullyUsed = false;
+    let patientAddress = '';
+    let doctorAddress = '';
+    try {
+      const updatedPrescription = await invokeReadonlyContract(
+        server,
+        getPrescriptionContractId(),
+        'get_prescription',
+        { id: BigInt(prescriptionId) },
+      );
+      isFullyUsed = Boolean(updatedPrescription.is_used);
+      patientAddress = String(updatedPrescription.patient);
+      doctorAddress = String(updatedPrescription.doctor);
+    } catch (err) {
+      console.error(`[NFT Burn] Error al leer receta de Soroban para quema:`, err);
+    }
+
+    if (isFullyUsed && doctorAddress && patientAddress) {
+      try {
+        const doctorSecret = getDoctorSecret();
+        if (doctorSecret) {
+          console.log(`[NFT Burn] Receta completamente consumida. Preparando clawback de quema para el asset ${assetCode}...`);
+          const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
+          const serverHorizon = new StellarSdk.Horizon.Server(
+            getRpcUrl().includes('testnet')
+              ? 'https://horizon-testnet.stellar.org'
+              : 'https://horizon.stellar.org'
+          );
+          const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+          const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
+          const clawbackBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {
+            fee: StellarSdk.BASE_FEE,
+            networkPassphrase: getNetworkPassphrase(),
+          });
+
+          let claimableBalanceId = '';
+          try {
+            const claimableBalances = await serverHorizon
+              .claimableBalances()
+              .claimant(patientAddress)
+              .asset(nftAsset)
+              .call();
+            if (claimableBalances.records.length > 0) {
+              claimableBalanceId = claimableBalances.records[0].id;
+            } else {
+              const dispensaryAddress = getDispensaryAddress();
+              const claimableBalancesDisp = await serverHorizon
+                .claimableBalances()
+                .claimant(dispensaryAddress)
+                .asset(nftAsset)
+                .call();
+              if (claimableBalancesDisp.records.length > 0) {
+                claimableBalanceId = claimableBalancesDisp.records[0].id;
+              }
+            }
+          } catch (err) {
+            console.error(`[NFT Burn] Error buscando balance para quema:`, err);
+          }
+
+          if (claimableBalanceId) {
+            clawbackBuilder.addOperation(
+              StellarSdk.Operation.clawbackClaimableBalance({
+                balanceId: claimableBalanceId,
+              })
+            );
+          } else {
+            clawbackBuilder.addOperation(
+              StellarSdk.Operation.clawback({
+                from: patientAddress,
+                asset: nftAsset,
+                amount: '1.0000000',
+              })
+            );
+          }
+
+          const clawbackTx = clawbackBuilder.setTimeout(30).build();
+          clawbackTx.sign(doctorKeypair);
+          const clawbackResult = await serverHorizon.submitTransaction(clawbackTx);
+          clawbackTxHash = clawbackResult.hash;
+          console.log(`[NFT Burn] Receta NFT ${assetCode} quemada: ${clawbackTxHash}`);
+        }
+      } catch (burnErr) {
+        console.error(`[NFT Burn] Error al ejecutar quema del NFT:`, burnErr);
+      }
+    }
+  }
+
+  const targetPatient = input.patientAddress || (input.prescriptionId ? await getPatientAddressForPrescription(input.prescriptionId!) : '');
+  const dashboard = targetPatient ? await getPatientDashboard(targetPatient) : null;
+
+  return {
+    txHash,
+    issuedId,
+    recordId,
+    clawbackTxHash,
+    dashboard,
+  };
+}
+
+async function getPatientAddressForPrescription(prescriptionId: number): Promise<string> {
+  try {
+    const server = getSorobanServer();
+    const prescription = await invokeReadonlyContract(
+      server,
+      getPrescriptionContractId(),
+      'get_prescription',
+      { id: BigInt(prescriptionId) },
+    );
+    return String(prescription.patient);
+  } catch {
+    return '';
+  }
+}
+
