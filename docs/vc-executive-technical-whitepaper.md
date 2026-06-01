@@ -133,24 +133,22 @@ Trust Leaf opera bajo un modelo de negocio B2B SaaS altamente escalable y de baj
 2. **Dispensary Transactional Fees (Farmacias y Tiendas):** Cobro de una comisión fija por cada transacción de retiro (dispensación) validada criptográficamente en el punto de venta de la farmacia.
 3. **Traceability Enterprise API (Laboratorios y Productores):** API de integración premium para laboratorios autorizados que deseen trazar sus lotes desde el cultivo y la cosecha hasta el consumidor final en farmacias, garantizando estándares de calidad (GMP/GACP).
 
-## 🚀 8. Estrategia de Expansión & Pipeline Comercial
+## 🚀 8. Visión de Mercado & Escabilidad Global
 
-Trust Leaf está diseñado como una infraestructura de trazabilidad modular y multi-jurisdicción. Nuestra hoja de ruta comercial y de mercado se expande activamente hacia mercados regulados clave de Latinoamérica:
+Trust Leaf está diseñado como una infraestructura de trazabilidad y cumplimiento modular concebida para el mercado regulado global. Chile es nuestro punto de inicio y sandbox de validación, con una arquitectura lista para escalar a nivel mundial:
 
 ```mermaid
 graph LR
     classDef active fill:#1b4d3e,stroke:#c5a880,color:#fff,stroke-width:2px;
     classDef pipeline fill:#fbf7ef,stroke:#1b4d3e,color:#1b4d3e,stroke-width:2px;
     
-    F1[🇨🇱 Chile: Fase 1 MVP Activo]:::active --> F2[🇨🇴 Colombia: Fase 2 Clínicas & FNE]:::pipeline
-    F2 --> F3[🇦🇷 BR / AR: Fase 3 Red de Dispensarios]:::pipeline
+    F1[🇨🇱 Sandbox de Validación: Chile]:::active --> F2[🌎 Adaptabilidad Modular de Jurisdicción]:::pipeline
+    F2 --> F3[🌐 Escalamiento a Mercados Globales Regulados]:::pipeline
 ```
 
-* **🇨🇱 Chile (MVP Piloto en Operación):** Validación técnica de recetario magistral chileno, protección de autocultivo Ley 21.575 y onboarding clínico con validación del Registro de Prestadores de la Superintendencia de Salud (SIS).
-* **🇨🇴 Colombia (Fase 2 - Pipeline Clínico):** Adaptación del Smart Contract para el control de cupos y recetarios oficiales del Fondo Nacional de Estupefacientes (FNE). **Conversaciones comerciales y operativas en curso** con clínicas cannábicas autorizadas en Bogotá y Medellín para integrar nuestra verificación en sus sistemas de prescripción.
-* **🇧🇷 / 🇦🇷 Cono Sur (Fase 3 - Conversaciones de Expansión):**
-  - **Argentina (REPROCANN):** Integración piloto en desarrollo para anclar credenciales de autocultivo REPROCANN en Stellar.
-  - **Brasil (ANVISA):** Conversaciones preliminares con asociaciones de pacientes y redes de dispensarios/farmacias autorizadas por la ANVISA en São Paulo para la trazabilidad transfronteriza y entrega directa de fitomedicamentos validados mediante Stellar Passkeys.
+* **🇨🇱 Sandbox de Validación (Chile):** Nuestro mercado inicial de prueba de concepto. Validamos el cumplimiento clínico estricto (SIS), el control de preparados magistrales del recetario farmacéutico y la inmutabilidad jurídica de autocultivo (Ley 21.575), operando bajo condiciones reales.
+* **🌎 Arquitectura Modular Multi-Jurisdicción:** La infraestructura de Trust Leaf en Stellar Soroban es agnóstica a la geografía. Los contratos inteligentes de emisión y trazabilidad de recetas se adaptan modularmente a los parámetros específicos de cualquier agencia de medicamentos a nivel global.
+* **🌐 Potencial de Escalamiento Global:** La industria de medicamentos regulados y el cannabis medicinal representa una oportunidad de miles de millones de dólares. Con esta visión global, **actualmente sostenemos conversaciones y pilotos preliminares** con clínicas médicas y redes de dispensarios internacionales interesados en implementar nuestra infraestructura descentralizada de Passkeys para eliminar el fraude de recetas y agilizar la trazabilidad del paciente.
 
 ---
 
