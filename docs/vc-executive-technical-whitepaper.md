@@ -149,13 +149,13 @@ graph LR
 * **🇨🇱 Sandbox de Validación (Chile):** Nuestro mercado inicial de prueba de concepto. Validamos el cumplimiento clínico estricto (SIS), el control de preparados magistrales del recetario farmacéutico y la inmutabilidad jurídica de autocultivo (Ley 21.575), operando bajo condiciones reales.
 * **🌎 Arquitectura Modular Multi-Jurisdicción:** La infraestructura de Trust Leaf en Stellar Soroban es agnóstica a la geografía. Los contratos inteligentes de emisión y trazabilidad de recetas se adaptan modularmente a los parámetros específicos de cualquier agencia de medicamentos a nivel global.
 * **🌐 Potencial de Escalamiento Global:** La industria de medicamentos regulados y el cannabis medicinal representa una oportunidad de miles de millones de dólares. Con esta visión global, **actualmente sostenemos conversaciones y pilotos preliminares** con clínicas médicas y redes de dispensarios internacionales interesados en implementar nuestra infraestructura descentralizada de Passkeys para eliminar el fraude de recetas y agilizar la trazabilidad del paciente.
-## 🌱 9. Expansión del Ecosistema: Cannabis, Cáñamo & Comunidad
+## 🌱 9. Próximos Pasos & Ecosistema de Negocios (Futuro)
 
-Más allá de la prescripción clínica, la arquitectura modular de Trust Leaf está diseñada para dar soporte e integrar a toda la cadena de valor de la industria verde en el futuro:
+Trust Leaf está diseñado para convertirse en el punto de encuentro de toda la cadena de valor de la industria verde, conectando no solo la salud regulada, sino también a la vibrante comunidad de emprendimientos del cannabis y el cáñamo:
 
-* **🩺 Cannabis Hub:** Conectividad con clínicas asociadas, laboratorios de análisis y marcas especializadas para consolidar una red de salud digital coordinada.
-* **🌾 Cáñamo Industrial:** Trazabilidad inmutable en Stellar para certificar el origen ecológico y la huella de sostenibilidad (ESG) de bioplásticos, eco-materiales y fibras textiles a base de cáñamo.
-* **🤝 Comunidad de Emprendedores:** Creación de una red de beneficios y fidelidad Web3 que potencie el crecimiento de startups, pymes y emprendimientos verdes asociados mediante programas colaborativos.
+* **🟢 Hub de Cannabis & Salud:** Integrar en el futuro a clínicas médicas alternativas, marcas especializadas y laboratorios independientes para crear una red de bienestar donde el paciente tenga el control de su salud.
+* **🌾 Cáñamo Industrial & Triple Impacto:** Utilizar la trazabilidad inmutable de Stellar para certificar el origen ecológico de productos derivados del cáñamo (como textiles, eco-materiales y empaques sustentables), facilitando certificaciones verdes y comercio transparente.
+* **🤝 Comunidad & Red de Emprendedores:** Habilitar un canal digital que conecte a startups, pymes y creadores locales mediante herramientas Web3 de fidelidad, programas de beneficios cruzados y financiamiento comunitario para potenciar los negocios de impacto de la red.
 
 ---
 
