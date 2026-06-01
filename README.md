@@ -1,11 +1,11 @@
 # 🌿 Trust Leaf
-**The First DeCentrally Compliant Medical Cannabis & Controlled Substance Infrastructure Built on Stellar**
+**Secure & Private Infrastructure for Regulated Prescriptions & Medical Cannabis**
 
 [![Stellar Network](https://img.shields.io/badge/Blockchain-Stellar%20Soroban-1b4d3e?style=flat-square&logo=stellar&logoColor=fff)](https://stellar.org) [![Vite React](https://img.shields.io/badge/Frontend-Vite%20%2B%20React%2018-c5a880?style=flat-square&logo=vite&logoColor=fff)](https://vitejs.dev) [![Firebase](https://img.shields.io/badge/Backend-Firebase-1b4d3e?style=flat-square&logo=firebase&logoColor=fff)](https://firebase.google.com) [![WebAuthn Passkeys](https://img.shields.io/badge/Security-Passkeys-c5a880?style=flat-square&logo=webauthn&logoColor=fff)](https://webauthn.guide)
 
 ![Trust Leaf Banner](docs/images/trust_leaf_banner.png)
 
-> **🚀 Live in Production:** El portal operacional y el MVP piloto interactivo se encuentran desplegados y disponibles en el dominio oficial: **[https://www.trustleaf.org](https://www.trustleaf.org)**. Ruta de diagnóstico: **[/mvp](https://www.trustleaf.org/mvp)**.
+> 🛠️ **En Construcción Activa (WIP):** El portal operacional y el piloto interactivo se encuentran desplegados en el dominio oficial **[https://www.trustleaf.org](https://www.trustleaf.org)** como prototipo técnico y MVP en desarrollo. Puedes auditar el estado del entorno y la preparación de los contratos en tiempo real en la ruta de diagnóstico: **[/mvp](https://www.trustleaf.org/mvp)**.
 
 ---
 

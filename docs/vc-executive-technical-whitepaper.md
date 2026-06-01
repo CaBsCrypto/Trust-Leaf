@@ -1,5 +1,5 @@
 # Trust Leaf: Executive & Technical Whitepaper
-**The First DeCentrally Compliant Medical Cannabis & Controlled Substance Infrastructure Built on Stellar**
+**Secure & Private Infrastructure for Regulated Prescriptions & Medical Cannabis**
 
 ![Trust Leaf Banner](images/trust_leaf_banner.png)
 
