@@ -135,7 +135,28 @@ sequenceDiagram
 
 ---
 
-## 📂 6. Directorio de Documentación Clave
+## 🚀 6. Estrategia de Expansión & Pipeline Comercial
+
+Trust Leaf está diseñado como una infraestructura de trazabilidad modular y multi-jurisdicción. Nuestra hoja de ruta comercial y de mercado se expande activamente hacia mercados regulados clave de Latinoamérica:
+
+```mermaid
+graph LR
+    classDef active fill:#1b4d3e,stroke:#c5a880,color:#fff,stroke-width:2px;
+    classDef pipeline fill:#fbf7ef,stroke:#1b4d3e,color:#1b4d3e,stroke-width:2px;
+    
+    F1[🇨🇱 Chile: Fase 1 MVP Activo]:::active --> F2[🇨🇴 Colombia: Fase 2 Clínicas & FNE]:::pipeline
+    F2 --> F3[🇦🇷 BR / AR: Fase 3 Red de Dispensarios]:::pipeline
+```
+
+* **🇨🇱 Chile (MVP Piloto en Operación):** Validación técnica de recetario magistral chileno, protección de autocultivo Ley 21.575 y onboarding clínico con validación del Registro de Prestadores de la Superintendencia de Salud (SIS).
+* **🇨🇴 Colombia (Fase 2 - Pipeline Clínico):** Adaptación del Smart Contract para el control de cupos y recetarios oficiales del Fondo Nacional de Estupefacientes (FNE). **Conversaciones comerciales y operativas en curso** con clínicas cannábicas autorizadas en Bogotá y Medellín para integrar nuestra verificación en sus sistemas de prescripción.
+* **🇧🇷 / 🇦🇷 Cono Sur (Fase 3 - Conversaciones de Expansión):**
+  - **Argentina (REPROCANN):** Integración piloto en desarrollo para anclar credenciales de autocultivo REPROCANN en Stellar.
+  - **Brasil (ANVISA):** Conversaciones preliminares con asociaciones de pacientes y redes de dispensarios/farmacias autorizadas por la ANVISA en São Paulo para la trazabilidad transfronteriza y entrega directa de fitomedicamentos validados mediante Stellar Passkeys.
+
+---
+
+## 📂 7. Directorio de Documentación Clave
 
 * 📂 **[docs/vc-executive-technical-whitepaper.md](docs/vc-executive-technical-whitepaper.md):** Dossier ejecutivo y técnico de alto nivel diseñado para Venture Capitalists (VCs) e inversionistas estratégicos.
 * 📂 **[docs/chile-legal-compliance.md](docs/chile-legal-compliance.md):** Análisis exhaustivo de acoplamiento legal chileno (Leyes 21.575, 20.000, 19.628, ISP, SIS).
@@ -144,7 +165,7 @@ sequenceDiagram
 
 ---
 
-## 💻 7. Guía de Inicio Rápido para Desarrolladores
+## 💻 8. Guía de Inicio Rápido para Desarrolladores
 
 ### Prerrequisitos
 - Node.js v18+
