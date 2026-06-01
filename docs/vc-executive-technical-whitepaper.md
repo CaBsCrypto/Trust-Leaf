@@ -1,12 +1,9 @@
 # Trust Leaf: Executive & Technical Whitepaper
-### *The First DeCentrally Compliant Medical Cannabis & Controlled Substance Infrastructure Built on Stellar*
+**The First DeCentrally Compliant Medical Cannabis & Controlled Substance Infrastructure Built on Stellar**
 
 ![Trust Leaf Banner](images/trust_leaf_banner.png)
 
----
-
-> [!NOTE]
-> **Propósito del Documento:** Este documento sirve como dossier ejecutivo y técnico de alto nivel para Venture Capitalists (VCs) e inversionistas estratégicos. Detalla la propuesta de valor, la arquitectura híbrida Web3/Web2 y cómo resolvemos la fricción regulatoria en América Latina utilizando la red Stellar.
+> 💡 **Propósito del Documento:** Este documento sirve como dossier ejecutivo y técnico de alto nivel para Venture Capitalists (VCs) e inversionistas estratégicos. Detalla la propuesta de valor, la arquitectura híbrida Web3/Web2 y cómo resolvemos la fricción regulatoria en América Latina utilizando la red Stellar.
 
 ---
 
