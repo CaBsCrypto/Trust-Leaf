@@ -1,6 +1,7 @@
 import { GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { createPasskeyWallet } from './stellar/passkeys';
 
 export type AdminAuthMode = 'checking' | 'signed-out' | 'authorized' | 'not-admin' | 'demo';
 
@@ -18,16 +19,51 @@ export async function signInWithGoogle() {
     try {
       const userRef = doc(db, 'users', result.user.uid);
       const userSnap = await getDoc(userRef);
+      
       if (!userSnap.exists()) {
+        console.log('[Auth Real] Nuevo usuario detectado. Acuñando Smart Wallet biométrico con Passkeys...');
+        
+        // 1. Generar la llave biométrica de Stellar (Passkey)
+        const userLabel = result.user.email || result.user.uid;
+        const passkeyWallet = await createPasskeyWallet(userLabel);
+        
+        console.log(`[Auth Real] Smart Wallet acuñado con éxito: ${passkeyWallet.contractId}`);
+
+        // 2. Fondeo automático de la cuenta en Stellar Testnet llamando a la API
+        try {
+          console.log('[Auth Real] Fondeando cuenta en Stellar Testnet...');
+          const faucetResponse = await fetch('/api/stellar/faucet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              role: 'patient',
+              address: passkeyWallet.contractId
+            })
+          });
+          const faucetResult = await faucetResponse.json();
+          if (faucetResponse.ok) {
+            console.log('[Auth Real] Cuenta fondeada de forma exitosa en Testnet.', faucetResult);
+          } else {
+            console.warn('[Auth Real] Advertencia al fondear cuenta (Faucet):', faucetResult.message);
+          }
+        } catch (faucetErr) {
+          console.error('[Auth Real] Error al intentar invocar faucet:', faucetErr);
+        }
+
+        // 3. Registrar el documento users/{uid} en Firestore mapeando la cuenta de Stellar
         await setDoc(userRef, {
           uid: result.user.uid,
           name: result.user.displayName || 'Paciente Registrado',
           email: result.user.email || '',
+          stellarPublicKey: passkeyWallet.contractId,
           createdAt: new Date().toISOString()
         });
+      } else {
+        const userData = userSnap.data();
+        console.log('[Auth Real] Usuario existente de Google detectado. Wallet vinculada:', userData.stellarPublicKey);
       }
     } catch (err) {
-      console.error('Error registering user in Firestore:', err);
+      console.error('Error registering user in Firestore / creating Passkey:', err);
     }
   }
 

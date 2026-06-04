@@ -43,6 +43,34 @@ const PRESCRIPTION_WASM_PATH = path.join(
 );
 const prescriptionSpec = loadContractSpec(PRESCRIPTION_WASM_PATH);
 
+interface RateLimitInfo {
+  count: number;
+  resetAt: number;
+}
+const rateLimitStore = new Map<string, RateLimitInfo>();
+
+function createRateLimiter(limit: number, windowMs: number, message: string) {
+  return (req: any, res: any, next: any) => {
+    const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+    const now = Date.now();
+    let record = rateLimitStore.get(ip);
+
+    if (!record || now > record.resetAt) {
+      record = { count: 0, resetAt: now + windowMs };
+    }
+
+    record.count++;
+    rateLimitStore.set(ip, record);
+
+    if (record.count > limit) {
+      res.status(429).json({ message });
+      return;
+    }
+
+    next();
+  };
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -50,6 +78,22 @@ async function startServer() {
 
   // Middlewares
   app.use(express.json());
+
+  // HTTP Security Headers (XSS, Clickjacking, MIME Sniffing & HSTS Defense)
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (process.env.NODE_ENV === "production") {
+      res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    }
+    next();
+  });
+
+  // API Rate Limiters for DDoS & Spam Protection
+  const faucetLimiter = createRateLimiter(5, 15 * 60 * 1000, "Has superado el límite de fondeos. Inténtalo de nuevo en 15 minutos.");
+  const writeLimiter = createRateLimiter(10, 60 * 1000, "Has superado el límite de operaciones por minuto. Por favor, espera.");
 
   // API Routes
   // Stellar Network Config
@@ -93,7 +137,7 @@ async function startServer() {
     res.json(getRuntimeReadiness());
   });
 
-  app.post("/api/stellar/faucet", async (req, res) => {
+  app.post("/api/stellar/faucet", faucetLimiter, async (req, res) => {
     try {
       const { role, address } = req.body ?? {};
       const result = await fundTestnetAccount({
@@ -124,7 +168,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/stellar/doctor/issue-prescription", async (req, res) => {
+  app.post("/api/stellar/doctor/issue-prescription", writeLimiter, async (req, res) => {
     try {
       const {
         patientAddress,
@@ -168,7 +212,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/stellar/dispensary/dispense-prescription", async (req, res) => {
+  app.post("/api/stellar/dispensary/dispense-prescription", writeLimiter, async (req, res) => {
     try {
       const { prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
@@ -484,35 +528,66 @@ async function startServer() {
     }
   });
 
-  // Example: Verify a Trust ID (Patient Passport) on chain
+  // Verify a Patient Passport and active Prescription NFTs on chain
   app.get("/api/stellar/verify-passport/:accountId", async (req, res) => {
     const { accountId } = req.params;
     try {
       const server = new LegacyStellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
       const account = await server.loadAccount(accountId);
       
-      /**
-       * RECETA MÉDICA COMO NFT TEMPORAL EN STELLAR
-       * 
-       * Para implementar recetas como NFTs con temporalidad en Stellar:
-       * 1. Minting: Emitir un asset (NFT) a la cuenta del paciente.
-       * 2. Temporalidad: Usar 'TimeBounds' en las transacciones para asegurar que el asset
-       *    solo sea válido en un rango de tiempo, o usar 'Clawback' para que el emisor
-       *    pueda recuperar/invalidar el token si expira.
-       * 3. Metadata: Guardar el hash de IPFS de la receta completa en un memo o como
-       *    data attribute en el ledger.
-       */
-      
-      // Look for a specific data attribute 'MedicalTrustID' or similar
+      // 1. Look for a specific data attribute 'MedicalTrustID' or similar
       const trustID = account.data && account.data["MedicalTrustID"];
+      const trustIDDecoded = trustID ? Buffer.from(trustID, 'base64').toString() : null;
+
+      // 2. Scan standard balances for active prescription NFTs (Asset code starting with 'RX')
+      const activePrescriptionNFTs = account.balances
+        .filter((b: any) => b.asset_code && b.asset_code.startsWith("RX") && Number(b.balance) > 0)
+        .map((b: any) => ({
+          assetCode: b.asset_code,
+          issuer: b.asset_issuer,
+          balance: b.balance
+        }));
+
+      // 3. Scan claimable balances where patient is claimant for prescription NFTs
+      let activeClaimableNFTs: any[] = [];
+      try {
+        const claimables = await server
+          .claimableBalances()
+          .claimant(accountId)
+          .call();
+        activeClaimableNFTs = claimables.records
+          .filter((record: any) => {
+            const assetStr = record.asset || "";
+            return assetStr.includes("RX");
+          })
+          .map((record: any) => {
+            const [assetCode, issuer] = record.asset.split(":");
+            return {
+              balanceId: record.id,
+              assetCode,
+              issuer,
+              amount: record.amount,
+              claimants: record.claimants
+            };
+          });
+      } catch (err) {
+        console.error("Error querying claimable balances for verify-passport:", err);
+      }
       
       res.json({
-        verified: !!trustID,
+        verified: !!trustID || activePrescriptionNFTs.length > 0 || activeClaimableNFTs.length > 0,
         accountId,
-        trustID: trustID ? Buffer.from(trustID, 'base64').toString() : null
+        trustID: trustIDDecoded,
+        activePrescriptionNFTs,
+        activeClaimableNFTs,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(404).json({ verified: false, message: "Account not found" });
+      res.status(404).json({ 
+        verified: false, 
+        message: "La cuenta del paciente no existe en Stellar Testnet o no se pudo cargar.",
+        accountId
+      });
     }
   });
 
