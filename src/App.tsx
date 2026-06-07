@@ -2820,8 +2820,18 @@ function AdminRoute({
         </section>
       </main>
       {registryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-md">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
+        <div
+          onClick={() => {
+            setRegistryModal(null);
+            setSelectedDoctorId(null);
+            setSelectedDispensaryId(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-md cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-[28px] bg-white shadow-2xl cursor-default"
+          >
             <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/10 p-6">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">
