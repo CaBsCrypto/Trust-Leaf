@@ -291,6 +291,72 @@ export async function registerDispensaryOnTestnet(input: { dispensaryAddress: st
   };
 }
 
+export async function revokeDoctorOnTestnet(input: { doctorAddress: string }) {
+  const doctorAddress = input.doctorAddress.trim();
+  if (!doctorAddress) {
+    throw new Error('Falta la wallet Stellar del medico.');
+  }
+
+  const adminSecret = getAdminSecret();
+  if (!adminSecret) {
+    throw new Error('Falta STELLAR_ADMIN_SECRET para revocar medicos en DoctorRegistry Testnet.');
+  }
+
+  const server = getSorobanServer();
+  const adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+  const adminAddress = adminKeypair.publicKey();
+  const contract = new StellarSdk.Contract(getRegistryContractId());
+
+  const result = await submitSingleContractCall(
+    server,
+    adminKeypair,
+    contract,
+    'remove_doctor',
+    [addressToScVal(adminAddress), addressToScVal(doctorAddress)],
+  );
+
+  return {
+    txHash: result.txHash,
+    adminAddress,
+    doctorAddress,
+    registryContractId: getRegistryContractId(),
+    network: 'Stellar Testnet',
+  };
+}
+
+export async function revokeDispensaryOnTestnet(input: { dispensaryAddress: string }) {
+  const dispensaryAddress = input.dispensaryAddress.trim();
+  if (!dispensaryAddress) {
+    throw new Error('Falta la wallet Stellar del dispensario.');
+  }
+
+  const adminSecret = getAdminSecret();
+  if (!adminSecret) {
+    throw new Error('Falta STELLAR_ADMIN_SECRET para revocar dispensarios en DispensaryRegistry Testnet.');
+  }
+
+  const server = getSorobanServer();
+  const adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+  const adminAddress = adminKeypair.publicKey();
+  const contract = new StellarSdk.Contract(getDispensaryRegistryContractId());
+
+  const result = await submitSingleContractCall(
+    server,
+    adminKeypair,
+    contract,
+    'remove_dispensary',
+    [addressToScVal(adminAddress), addressToScVal(dispensaryAddress)],
+  );
+
+  return {
+    txHash: result.txHash,
+    adminAddress,
+    dispensaryAddress,
+    dispensaryRegistryContractId: getDispensaryRegistryContractId(),
+    network: 'Stellar Testnet',
+  };
+}
+
 export function getSorobanServer() {
   return new StellarSdk.rpc.Server(getRpcUrl());
 }
@@ -441,7 +507,8 @@ export async function issuePrescriptionForPatient(input: {
   transaction = await server.prepareTransaction(transaction);
   transaction.sign(doctorKeypair);
 
-  const sendResult = await server.sendTransaction(transaction);
+  const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
     throw new Error('La red no devolvió hash para la emisión de la receta.');
@@ -510,7 +577,8 @@ export async function issuePrescriptionForPatient(input: {
         .build();
 
       classicTx.sign(doctorKeypair);
-      const submitResult = await serverHorizon.submitTransaction(classicTx);
+      const txToSubmit = sponsorTransactionIfNeeded(classicTx);
+      const submitResult = await serverHorizon.submitTransaction(txToSubmit);
       console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado con éxito! Hash: ${submitResult.hash}`);
     } catch (nftError: any) {
       console.error("[NFT Mint] Error al crear Claimable Balance en Stellar:", nftError.message);
@@ -629,7 +697,8 @@ export async function retainPrescriptionForDispensary(input: {
 
   const clawbackTx = txBuilder.setTimeout(30).build();
   clawbackTx.sign(doctorKeypair);
-  const submitResult = await serverHorizon.submitTransaction(clawbackTx);
+  const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+  const submitResult = await serverHorizon.submitTransaction(txToSubmit);
   const txHash = submitResult.hash;
   console.log(`[NFT Retain] Custodia digital reasignada con exito! Tx: ${txHash}`);
 
@@ -731,7 +800,8 @@ export async function releasePrescriptionToPatient(input: {
 
   const clawbackTx = txBuilder.setTimeout(30).build();
   clawbackTx.sign(doctorKeypair);
-  const submitResult = await serverHorizon.submitTransaction(clawbackTx);
+  const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+  const submitResult = await serverHorizon.submitTransaction(txToSubmit);
   const txHash = submitResult.hash;
   console.log(`[NFT Release] NFT devuelto al paciente con exito! Tx: ${txHash}`);
 
@@ -937,7 +1007,8 @@ export async function dispensePrescriptionForPatient(input: {
 
         const clawbackTx = clawbackBuilder.setTimeout(30).build();
         clawbackTx.sign(doctorKeypair);
-        const clawbackResult = await serverHorizon.submitTransaction(clawbackTx);
+        const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+        const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
         clawbackTxHash = clawbackResult.hash;
         console.log(`[NFT Burn] Receta NFT ${assetCode} quemada (Clawback exitoso): ${clawbackTxHash}`);
       } else {
@@ -1405,6 +1476,36 @@ function bytes32ToScVal(value: Buffer) {
   return StellarSdk.nativeToScVal(value, { type: 'bytes' });
 }
 
+function sponsorTransactionIfNeeded(
+  transaction: StellarSdk.Transaction
+): StellarSdk.Transaction | StellarSdk.FeeBumpTransaction {
+  const adminSecret = getAdminSecret();
+  if (!adminSecret) {
+    return transaction;
+  }
+
+  const sponsorKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+  const sponsorPublicKey = sponsorKeypair.publicKey();
+
+  if (transaction.source === sponsorPublicKey) {
+    return transaction;
+  }
+
+  console.log(
+    `[Fee Sponsor] Patrocinando transacción de forma nativa desde la cuenta: ${sponsorPublicKey}`
+  );
+
+  const feeBumpTx = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
+    sponsorPublicKey,
+    StellarSdk.BASE_FEE,
+    transaction,
+    getNetworkPassphrase()
+  );
+
+  feeBumpTx.sign(sponsorKeypair);
+  return feeBumpTx;
+}
+
 async function submitSingleContractCall(
   server: InstanceType<typeof StellarSdk.rpc.Server>,
   signer: StellarSdk.Keypair,
@@ -1424,7 +1525,8 @@ async function submitSingleContractCall(
   transaction = await server.prepareTransaction(transaction);
   transaction.sign(signer);
 
-  const sendResult = await server.sendTransaction(transaction);
+  const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
     throw new Error(`La red no devolvio hash para ${method}.`);
@@ -1602,9 +1704,14 @@ export async function submitSignedTransaction(input: {
   durationDays?: number;
 }) {
   const server = getSorobanServer();
-  const tx = StellarSdk.TransactionBuilder.fromXDR(input.xdr, getNetworkPassphrase());
-  
-  const sendResult = await server.sendTransaction(tx);
+  const parsedTx = StellarSdk.TransactionBuilder.fromXDR(input.xdr, getNetworkPassphrase());
+  let txToSubmit = parsedTx;
+
+  if (parsedTx instanceof StellarSdk.Transaction) {
+    txToSubmit = sponsorTransactionIfNeeded(parsedTx);
+  }
+
+  const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
     throw new Error('La red no devolvió hash para la transacción firmada.');
@@ -1678,7 +1785,8 @@ export async function submitSignedTransaction(input: {
           .build();
 
         classicTx.sign(doctorKeypair);
-        const submitResult = await serverHorizon.submitTransaction(classicTx);
+        const txToSubmit = sponsorTransactionIfNeeded(classicTx);
+        const submitResult = await serverHorizon.submitTransaction(txToSubmit);
         console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado! Hash: ${submitResult.hash}`);
       } catch (nftError: any) {
         console.error("[NFT Mint] Error al crear Claimable Balance en Stellar:", nftError.message);
@@ -1766,7 +1874,8 @@ export async function submitSignedTransaction(input: {
 
           const clawbackTx = clawbackBuilder.setTimeout(30).build();
           clawbackTx.sign(doctorKeypair);
-          const clawbackResult = await serverHorizon.submitTransaction(clawbackTx);
+          const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+          const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
           clawbackTxHash = clawbackResult.hash;
           console.log(`[NFT Burn] Receta NFT ${assetCode} quemada: ${clawbackTxHash}`);
         }

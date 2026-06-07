@@ -5,7 +5,7 @@
 
 import { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock } from 'lucide-react';
+import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock, Copy, ExternalLink, FileText } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
@@ -479,6 +479,13 @@ function AppContent() {
 
   useEffect(() => {
     void refreshActorRegistrations();
+
+    // Refrescar automáticamente cada 5 segundos para que la interfaz se actualice al ser aprobada por el admin
+    const interval = setInterval(() => {
+      void refreshActorRegistrations();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -575,6 +582,52 @@ function AppContent() {
     setRegistrationSource(source);
     await refreshActorRegistrations();
     return payload;
+  };
+
+  const revokeDoctorOnchain = async (request: DoctorRegistration) => {
+    if (request.onchainStatus === 'registered') {
+      const response = await fetch('/api/stellar/admin/revoke-doctor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorAddress: request.wallet }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible revocar el médico en Testnet.');
+      }
+      await trustDataStore.updateDoctorOnchainStatus(
+        request.id,
+        'pending',
+        undefined,
+        `Revocado on-chain. Tx: ${payload.txHash}`
+      );
+    }
+    const source = await trustDataStore.reviewDoctorApplication(request.id, 'rejected', 'Aprobación revocada por el administrador.');
+    setRegistrationSource(source);
+    await refreshActorRegistrations();
+  };
+
+  const revokeDispensaryOnchain = async (request: DispensaryRegistration) => {
+    if (request.onchainStatus === 'registered') {
+      const response = await fetch('/api/stellar/admin/revoke-dispensary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dispensaryAddress: request.wallet }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'No fue posible revocar el dispensario en Testnet.');
+      }
+      await trustDataStore.updateDispensaryOnchainStatus(
+        request.id,
+        'pending',
+        undefined,
+        `Revocado on-chain. Tx: ${payload.txHash}`
+      );
+    }
+    const source = await trustDataStore.reviewDispensaryApplication(request.id, 'rejected', 'Aprobación revocada por el administrador.');
+    setRegistrationSource(source);
+    await refreshActorRegistrations();
   };
 
   const patientView = PATIENT_ROUTE_VIEWS[path];
@@ -929,6 +982,8 @@ function AppContent() {
         onAddDispensaryManually={addDispensaryManually}
         onRegisterDoctorOnchain={registerDoctorOnchain}
         onRegisterDispensaryOnchain={registerDispensaryOnchain}
+        onRevokeDoctorOnchain={revokeDoctorOnchain}
+        onRevokeDispensaryOnchain={revokeDispensaryOnchain}
       />
     );
   }
@@ -1510,6 +1565,12 @@ function AuthGate({
     try {
       if (mode === 'email') {
         await ensureActorAuthSession();
+      } else {
+        // En modo demo, intentamos autenticar de forma silenciosa para usar Firestore,
+        // pero si falla (ej. sin internet o no configurado), continuamos localmente sin bloquear el login.
+        await ensureActorAuthSession().catch((err) => {
+          console.warn('Silent anonymous auth failed for demo mode:', err);
+        });
       }
       onStart(role, {
         email: form.email.trim(),
@@ -1945,6 +2006,8 @@ function AdminRoute({
   onAddDispensaryManually,
   onRegisterDoctorOnchain,
   onRegisterDispensaryOnchain,
+  onRevokeDoctorOnchain,
+  onRevokeDispensaryOnchain,
 }: {
   onBack: () => void;
   session: TrustSession | null;
@@ -1958,12 +2021,48 @@ function AdminRoute({
   onAddDispensaryManually: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) => void;
   onRegisterDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
   onRegisterDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
+  onRevokeDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
+  onRevokeDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
   const pendingDoctors = doctorRegistrations.filter((request) => request.status === 'pending');
   const approvedDoctors = doctorRegistrations.filter((request) => request.status === 'approved');
+
+  const activeDoctors = doctorRegistrations.filter(
+    (req) => req.status === 'pending'
+  );
+  const activeDispensaries = registrations.filter(
+    (req) => req.status === 'pending'
+  );
+
+  const resolvedDoctors = doctorRegistrations.filter(
+    (req) => req.status === 'approved' || req.status === 'rejected' || req.status === 'needs_review'
+  );
+  const resolvedDispensaries = registrations.filter(
+    (req) => req.status === 'approved' || req.status === 'rejected' || req.status === 'needs_review'
+  );
+
   const [registryModal, setRegistryModal] = useState<'doctors' | 'dispensaries' | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [selectedDispensaryId, setSelectedDispensaryId] = useState<string | null>(null);
+
+  const selectedDoctor = approvedDoctors.find((d) => d.id === selectedDoctorId) ?? null;
+  const selectedDispensary = approved.find((d) => d.id === selectedDispensaryId) ?? null;
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const clean = name.replace(/^(dr\.|dra\.|mr\.|mrs\.)\s+/i, '');
+    return clean
+      .split(' ')
+      .filter(Boolean)
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
   const [manualDoctor, setManualDoctor] = useState({
     name: 'Dra. Sofia Lagos',
     licenseId: 'MED-CL-20441',
@@ -2186,9 +2285,9 @@ function AdminRoute({
             </div>
 
             <div className="mt-6 space-y-3">
-              {doctorRegistrations.length === 0 && (
+              {activeDoctors.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
-                  <p>Aún no hay solicitudes. Los médicos pueden entrar a `/medico`, pero admin también puede cargar uno manualmente.</p>
+                  <p>Aún no hay solicitudes activas de médicos. Los médicos pueden entrar a `/medico`, pero admin también puede cargar uno manualmente.</p>
                   <button
                     onClick={() => setRegistryModal('doctors')}
                     className="mt-4 rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory"
@@ -2198,7 +2297,7 @@ function AdminRoute({
                 </div>
               )}
 
-              {doctorRegistrations.map((request) => (
+              {activeDoctors.map((request) => (
                 <div key={request.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
@@ -2215,7 +2314,22 @@ function AdminRoute({
                         </span>
                       </div>
                       <p className="text-xs text-brand-green-mid/70">{request.specialty}</p>
-                      <p className="mt-2 text-xs font-mono text-brand-green-mid/60 break-all">{request.wallet}</p>
+                      <div className="mt-2.5 flex items-center gap-1.5 font-mono text-[11px] text-brand-green-deep/80 select-all">
+                        <span className="bg-brand-neutral/50 px-2 py-0.5 rounded border border-brand-green-deep/5 flex items-center gap-1.5 hover:bg-brand-neutral transition-all font-mono">
+                          {request.wallet.slice(0, 8)}...{request.wallet.slice(-8)}
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(request.wallet);
+                              setCopiedId(request.id);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            className="p-0.5 rounded hover:bg-brand-neutral text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer"
+                            title="Copiar wallet"
+                          >
+                            {copiedId === request.id ? <Check size={10} className="text-emerald-600" /> : <Copy size={10} />}
+                          </button>
+                        </span>
+                      </div>
                       <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70 sm:grid-cols-2">
                         <span>Licencia: <strong>{request.licenseId}</strong></span>
                         <span>Contacto: <strong>{request.contact}</strong></span>
@@ -2234,12 +2348,6 @@ function AdminRoute({
                           className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
                         >
                           Rechazar
-                        </button>
-                        <button
-                          onClick={() => onReviewDoctorRegistration(request.id, 'needs_review')}
-                          className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50"
-                        >
-                          Pedir revision
                         </button>
                       </div>
                     )}
@@ -2325,9 +2433,9 @@ function AdminRoute({
             </div>
 
             <div className="mt-6 space-y-3">
-              {registrations.length === 0 && (
+              {activeDispensaries.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-brand-green-deep/15 bg-brand-neutral/40 p-6 text-sm text-brand-green-mid/70">
-                  <p>Aún no hay solicitudes. Los dispensarios pueden entrar a `/dispensario`, pero admin también puede cargar uno manualmente.</p>
+                  <p>Aún no hay solicitudes activas de dispensarios. Los dispensarios pueden entrar a `/dispensario`, pero admin también puede cargar uno manualmente.</p>
                   <button
                     onClick={() => setRegistryModal('dispensaries')}
                     className="mt-4 rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-brand-ivory"
@@ -2337,7 +2445,7 @@ function AdminRoute({
                 </div>
               )}
 
-              {registrations.map((request) => (
+              {activeDispensaries.map((request) => (
                 <div key={request.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/60 p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
@@ -2354,7 +2462,22 @@ function AdminRoute({
                         </span>
                       </div>
                       <p className="text-xs text-brand-green-mid/70">{request.address}</p>
-                      <p className="mt-2 text-xs font-mono text-brand-green-mid/60 break-all">{request.wallet}</p>
+                      <div className="mt-2.5 flex items-center gap-1.5 font-mono text-[11px] text-brand-green-deep/80 select-all">
+                        <span className="bg-brand-neutral/50 px-2 py-0.5 rounded border border-brand-green-deep/5 flex items-center gap-1.5 hover:bg-brand-neutral transition-all font-mono">
+                          {request.wallet.slice(0, 8)}...{request.wallet.slice(-8)}
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(request.wallet);
+                              setCopiedId(request.id);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            className="p-0.5 rounded hover:bg-brand-neutral text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer"
+                            title="Copiar wallet"
+                          >
+                            {copiedId === request.id ? <Check size={10} className="text-emerald-600" /> : <Copy size={10} />}
+                          </button>
+                        </span>
+                      </div>
                       <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70 sm:grid-cols-2">
                         <span>Registro legal: <strong>{request.legalId}</strong></span>
                         <span>Contacto: <strong>{request.contact}</strong></span>
@@ -2373,12 +2496,6 @@ function AdminRoute({
                           className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
                         >
                           Rechazar
-                        </button>
-                        <button
-                          onClick={() => onReviewRegistration(request.id, 'needs_review')}
-                          className="rounded-xl border border-amber-200 bg-white px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50"
-                        >
-                          Pedir revision
                         </button>
                       </div>
                     )}
@@ -2476,6 +2593,231 @@ function AdminRoute({
             ))}
           </div>
         </section>
+
+        <section className="rounded-3xl border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold mb-2">Auditoría</p>
+              <h2 className="text-2xl font-serif mb-2">Historial de Solicitudes</h2>
+              <p className="max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
+                Registro histórico de solicitudes procesadas (Aprobadas on-chain, Rechazadas o devueltas para revisión).
+              </p>
+            </div>
+            <span className="rounded-full bg-brand-neutral px-3 py-1 text-xs font-bold text-brand-green-mid">
+              {resolvedDoctors.length + resolvedDispensaries.length} registros
+            </span>
+          </div>
+
+          <div className="mt-6 overflow-hidden rounded-[24px] border border-brand-green-deep/10 bg-white shadow-md">
+            {resolvedDoctors.length === 0 && resolvedDispensaries.length === 0 ? (
+              <div className="border-t border-brand-green-deep/10 bg-brand-neutral/20 p-8 text-sm text-brand-green-mid/70 text-center">
+                Aún no hay registros en el historial.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-brand-green-deep/10 bg-brand-neutral/30 text-brand-green-deep/60 font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
+                      <th className="py-3.5 px-5 text-left font-semibold">Actor</th>
+                      <th className="py-3.5 px-5 text-left font-semibold">Nombre / Contacto</th>
+                      <th className="py-3.5 px-5 text-left font-semibold">Wallet</th>
+                      <th className="py-3.5 px-5 text-left font-semibold">Licencia / Registro Legal</th>
+                      <th className="py-3.5 px-5 text-left font-semibold">Estado Admin</th>
+                      <th className="py-3.5 px-5 text-left font-semibold">Estado Stellar</th>
+                      <th className="py-3.5 px-5 text-center font-semibold">Acciones</th>
+                      <th className="py-3.5 px-5 text-left font-semibold">Detalle / Notas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-neutral/50">
+                    {[
+                      ...resolvedDoctors.map(req => ({ ...req, type: 'Médico' })),
+                      ...resolvedDispensaries.map(req => ({ ...req, type: 'Dispensario' }))
+                    ]
+                      .sort((a, b) => new Date(b.reviewedAt || b.submittedAt).getTime() - new Date(a.reviewedAt || a.submittedAt).getTime())
+                      .map((item) => (
+                        <tr key={item.id} className="text-brand-green-deep hover:bg-brand-neutral/20 transition-colors border-b border-brand-neutral/30 last:border-b-0">
+                          <td className="py-4 px-5 align-middle">
+                            <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm whitespace-nowrap ${
+                              item.type === 'Médico'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                : 'bg-purple-50 text-purple-700 border border-purple-100'
+                            }`}>
+                              {item.type === 'Médico' ? <Stethoscope size={11} /> : <ShoppingBag size={11} />}
+                              {item.type}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 align-middle">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold bg-brand-green-deep/5 text-brand-green-deep border border-brand-green-deep/10 mr-3 shrink-0 select-none">
+                                {getInitials(item.name)}
+                              </div>
+                              <div>
+                                <div className="font-bold text-sm text-brand-green-deep leading-tight">{item.name}</div>
+                                <div className="text-xs text-brand-green-mid/60 mt-0.5 font-medium leading-none">{item.contact}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-5 align-middle font-mono text-xs whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <span className="bg-brand-neutral/50 px-2 py-1 rounded-lg text-brand-green-deep/80 select-all border border-brand-green-deep/5 flex items-center gap-1.5 hover:bg-brand-neutral transition-all font-mono text-[11px]" title={item.wallet}>
+                                {item.wallet.slice(0, 8)}...{item.wallet.slice(-8)}
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(item.wallet);
+                                    setCopiedId(item.id);
+                                    setTimeout(() => setCopiedId(null), 2000);
+                                  }}
+                                  className="p-0.5 rounded hover:bg-brand-neutral text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer animate-none"
+                                  title="Copiar dirección completa"
+                                >
+                                  {copiedId === item.id ? <Check size={12} className="text-emerald-600 animate-none" /> : <Copy size={12} />}
+                                </button>
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-5 align-middle">
+                            {'licenseId' in item ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-green-deep bg-brand-neutral/35 px-1.5 py-0.5 rounded border border-brand-green-deep/5 w-fit">
+                                  <FileText size={10} className="text-brand-gold" />
+                                  Licencia: <strong className="text-brand-green-deep">{item.licenseId}</strong>
+                                </span>
+                                <span className="text-[11px] text-brand-green-mid/70 pl-0.5 font-medium">{item.specialty}</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-green-deep bg-brand-neutral/35 px-1.5 py-0.5 rounded border border-brand-green-deep/5 w-fit">
+                                  <FileText size={10} className="text-brand-gold" />
+                                  Registro: <strong className="text-brand-green-deep">{item.legalId}</strong>
+                                </span>
+                                <span className="text-[11px] text-brand-green-mid/70 pl-0.5 max-w-[160px] truncate block font-medium" title={item.address}>{item.address}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-4 px-5 align-middle whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                              item.status === 'approved'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : item.status === 'rejected'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${
+                                item.status === 'approved' ? 'bg-emerald-500 animate-pulse' : item.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                              }`}></span>
+                              {statusLabel[item.status]}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 align-middle whitespace-nowrap">
+                            {item.status === 'approved' ? (
+                              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                                item.onchainStatus === 'registered'
+                                  ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                                  : item.onchainStatus === 'failed'
+                                    ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${
+                                  item.onchainStatus === 'registered' ? 'bg-teal-500' : item.onchainStatus === 'failed' ? 'bg-rose-500' : 'bg-amber-500'
+                                }`}></span>
+                                {onchainLabel[item.onchainStatus]}
+                              </span>
+                            ) : (
+                              <span className="text-brand-green-mid/40 pl-3 font-medium select-none">-</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-5 align-middle text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-2">
+                              {item.status === 'approved' && (
+                                <>
+                                  {item.onchainStatus !== 'registered' && (
+                                    <button
+                                      onClick={() =>
+                                        runOnchainAction(
+                                          `register-${item.type === 'Médico' ? 'doctor' : 'dispensary'}-${item.id}`,
+                                          () => item.type === 'Médico' 
+                                            ? onRegisterDoctorOnchain(item as any) 
+                                            : onRegisterDispensaryOnchain(item as any),
+                                          `${item.type} registrado en Testnet.`,
+                                        )
+                                      }
+                                      disabled={onchainAction === `register-${item.type === 'Médico' ? 'doctor' : 'dispensary'}-${item.id}`}
+                                      className="inline-flex items-center justify-center rounded-xl bg-brand-green-deep px-3 py-1.5 text-[11px] font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 transition-all shadow-sm cursor-pointer disabled:cursor-wait disabled:opacity-60"
+                                    >
+                                      {onchainAction === `register-${item.type === 'Médico' ? 'doctor' : 'dispensary'}-${item.id}` ? (
+                                        <span className="flex items-center gap-1">
+                                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-ivory border-t-transparent"></span>
+                                          Registrando...
+                                        </span>
+                                      ) : 'Registrar Testnet'}
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() =>
+                                      runOnchainAction(
+                                        `revoke-${item.type === 'Médico' ? 'doctor' : 'dispensary'}-${item.id}`,
+                                        () => item.type === 'Médico'
+                                          ? onRevokeDoctorOnchain(item as any)
+                                          : onRevokeDispensaryOnchain(item as any),
+                                        `${item.type} revocado con éxito.`,
+                                      )
+                                    }
+                                    disabled={onchainAction === `revoke-${item.type === 'Médico' ? 'doctor' : 'dispensary'}-${item.id}`}
+                                    className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 hover:border-rose-300 active:scale-95 transition-all cursor-pointer disabled:cursor-wait disabled:opacity-60 shadow-sm"
+                                  >
+                                    {onchainAction === `revoke-${item.type === 'Médico' ? 'doctor' : 'dispensary'}-${item.id}` ? (
+                                      <span className="flex items-center gap-1">
+                                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-rose-600 border-t-transparent"></span>
+                                        Revocando...
+                                      </span>
+                                    ) : 'Revocar'}
+                                  </button>
+                                </>
+                              )}
+                              {(item.status === 'rejected' || item.status === 'needs_review') && (
+                                <button
+                                  onClick={() =>
+                                    item.type === 'Médico'
+                                      ? onReviewDoctorRegistration(item.id, 'approved')
+                                      : onReviewRegistration(item.id, 'approved')
+                                  }
+                                  className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer shadow-sm"
+                                >
+                                  Aprobar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-5 align-middle">
+                            {item.metadataHash ? (
+                              <div className="flex flex-col gap-0.5">
+                                <a
+                                  href={`https://stellar.expert/explorer/testnet/tx/${item.metadataHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 font-semibold text-[11px] text-brand-gold hover:text-brand-gold/80 transition-colors w-fit"
+                                >
+                                  Ver en Explorer
+                                  <ExternalLink size={10} className="stroke-[2.5]" />
+                                </a>
+                                <span className="text-[10px] text-brand-green-mid/45 font-mono truncate max-w-[120px] block" title={item.metadataHash}>
+                                  {item.metadataHash.slice(0, 8)}...{item.metadataHash.slice(-8)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-brand-green-mid/60 max-w-[150px] truncate font-medium" title={item.reviewerNote}>
+                                {item.reviewerNote || (item.reviewedAt ? `Procesado el ${new Date(item.reviewedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : '')}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
       </main>
       {registryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-md">
@@ -2489,14 +2831,21 @@ function AdminRoute({
                   {registryModal === 'doctors' ? 'Médicos autorizados' : 'Dispensarios autorizados'}
                 </h2>
                 <p className="mt-2 max-w-xl text-sm text-brand-green-mid/65">
-                  Revisa actores ya aprobados o agrega manualmente un actor validado por admin.
+                  Selecciona un actor de la lista para ver su información completa, o usa el panel lateral para agregar un nuevo registro manual.
                 </p>
               </div>
-              <button onClick={() => setRegistryModal(null)} className="rounded-full p-2 hover:bg-brand-neutral">
+              <button
+                onClick={() => {
+                  setRegistryModal(null);
+                  setSelectedDoctorId(null);
+                  setSelectedDispensaryId(null);
+                }}
+                className="rounded-full p-2 hover:bg-brand-neutral"
+              >
                 <X size={20} />
               </button>
             </div>
-
+ 
             <div className="max-h-[70vh] overflow-y-auto p-6">
               {registryModal === 'doctors' ? (
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_0.9fr]">
@@ -2507,7 +2856,15 @@ function AdminRoute({
                       </div>
                     ) : (
                       approvedDoctors.map((doctor) => (
-                        <div key={doctor.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                        <div
+                          key={doctor.id}
+                          onClick={() => setSelectedDoctorId(doctor.id)}
+                          className={`rounded-2xl border p-4 cursor-pointer transition-all hover:-translate-y-0.5 duration-200 ${
+                            selectedDoctorId === doctor.id
+                              ? 'border-brand-gold bg-brand-gold/5 shadow-sm'
+                              : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:bg-brand-neutral/60'
+                          }`}
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="font-bold text-brand-green-deep">{doctor.name}</p>
@@ -2518,35 +2875,142 @@ function AdminRoute({
                           <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70">
                             <span>Licencia: <strong>{doctor.licenseId}</strong></span>
                             <span>Contacto: <strong>{doctor.contact}</strong></span>
-                            <span className="break-all font-mono">{doctor.wallet}</span>
+                            <div className="flex items-center gap-1.5 font-mono text-[11px] text-brand-green-deep/80 select-all mt-1">
+                              <span className="bg-white/60 px-2 py-0.5 rounded border border-brand-green-deep/5 flex items-center gap-1.5 hover:bg-white transition-all font-mono">
+                                {doctor.wallet.slice(0, 8)}...{doctor.wallet.slice(-8)}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(doctor.wallet);
+                                    setCopiedId(doctor.id);
+                                    setTimeout(() => setCopiedId(null), 2000);
+                                  }}
+                                  className="p-0.5 rounded hover:bg-white text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer"
+                                  title="Copiar wallet"
+                                >
+                                  {copiedId === doctor.id ? <Check size={10} className="text-emerald-600" /> : <Copy size={10} />}
+                                </button>
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ))
                     )}
                   </div>
                   <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
-                    <div className="mt-4 space-y-3">
-                      {[
-                        ['name', 'Nombre médico'],
-                        ['licenseId', 'Licencia'],
-                        ['specialty', 'Especialidad'],
-                        ['contact', 'Contacto'],
-                        ['wallet', 'Wallet Stellar'],
-                      ].map(([key, label]) => (
-                        <label key={key} className="block">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</span>
-                          <input
-                            value={manualDoctor[key as keyof typeof manualDoctor]}
-                            onChange={(event) => setManualDoctor((current) => ({ ...current, [key]: event.target.value }))}
-                            className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
-                          />
-                        </label>
-                      ))}
-                      <button onClick={addManualDoctor} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
-                        Agregar médico autorizado
-                      </button>
-                    </div>
+                    {selectedDoctor ? (
+                      <div>
+                        <div className="flex items-center justify-between border-b border-brand-green-deep/10 pb-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Detalle del médico</p>
+                          <button
+                            onClick={() => setSelectedDoctorId(null)}
+                            className="text-xs font-bold text-brand-green-deep hover:underline cursor-pointer"
+                          >
+                            + Alta manual
+                          </button>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Nombre médico</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDoctor.name}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Licencia</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDoctor.licenseId}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Especialidad</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDoctor.specialty}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Contacto</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDoctor.contact}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Wallet Stellar</span>
+                            <div className="mt-1 flex items-start gap-2 bg-white/70 p-3 rounded-xl border border-brand-green-deep/5 select-all">
+                              <p className="font-mono text-xs text-brand-green-deep break-all flex-grow select-all">
+                                {selectedDoctor.wallet}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedDoctor.wallet);
+                                  setCopiedId(`detail-${selectedDoctor.id}`);
+                                  setTimeout(() => setCopiedId(null), 2000);
+                                }}
+                                className="p-1 rounded bg-white hover:bg-brand-neutral text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer flex-shrink-0"
+                                title="Copiar wallet completo"
+                              >
+                                {copiedId === `detail-${selectedDoctor.id}` ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-brand-green-deep/5 flex flex-col gap-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-brand-green-mid/65">Registro Testnet:</span>
+                              <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${onchainClass[selectedDoctor.onchainStatus]}`}>
+                                {onchainLabel[selectedDoctor.onchainStatus]}
+                              </span>
+                            </div>
+                            {selectedDoctor.onchainStatus !== 'registered' && (
+                              <button
+                                onClick={() =>
+                                  runOnchainAction(
+                                    `doctor-${selectedDoctor.id}`,
+                                    () => onRegisterDoctorOnchain(selectedDoctor),
+                                    'Medico registrado en DoctorRegistry Testnet.',
+                                  )
+                                }
+                                disabled={onchainAction === `doctor-${selectedDoctor.id}`}
+                                className="w-full mt-2 rounded-xl bg-brand-green-deep px-4 py-2.5 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                              >
+                                {onchainAction === `doctor-${selectedDoctor.id}` ? 'Registrando en Stellar...' : 'Registrar on-chain'}
+                              </button>
+                            )}
+                            {selectedDoctor.onchainStatus === 'registered' && (
+                              <button
+                                onClick={() =>
+                                  runOnchainAction(
+                                    `revoke-doctor-${selectedDoctor.id}`,
+                                    () => onRevokeDoctorOnchain(selectedDoctor),
+                                    'Medico revocado en Testnet.',
+                                  )
+                                }
+                                disabled={onchainAction === `revoke-doctor-${selectedDoctor.id}`}
+                                className="w-full mt-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                              >
+                                {onchainAction === `revoke-doctor-${selectedDoctor.id}` ? 'Revocando en Stellar...' : 'Revocar de la Red'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
+                        <div className="mt-4 space-y-3">
+                          {[
+                            ['name', 'Nombre médico'],
+                            ['licenseId', 'Licencia'],
+                            ['specialty', 'Especialidad'],
+                            ['contact', 'Contacto'],
+                            ['wallet', 'Wallet Stellar'],
+                          ].map(([key, label]) => (
+                            <label key={key} className="block">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</span>
+                              <input
+                                value={manualDoctor[key as keyof typeof manualDoctor]}
+                                onChange={(event) => setManualDoctor((current) => ({ ...current, [key]: event.target.value }))}
+                                className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+                              />
+                            </label>
+                          ))}
+                          <button onClick={addManualDoctor} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory cursor-pointer">
+                            Agregar médico autorizado
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -2558,7 +3022,15 @@ function AdminRoute({
                       </div>
                     ) : (
                       approved.map((dispensary) => (
-                        <div key={dispensary.id} className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/40 p-4">
+                        <div
+                          key={dispensary.id}
+                          onClick={() => setSelectedDispensaryId(dispensary.id)}
+                          className={`rounded-2xl border p-4 cursor-pointer transition-all hover:-translate-y-0.5 duration-200 ${
+                            selectedDispensaryId === dispensary.id
+                              ? 'border-brand-gold bg-brand-gold/5 shadow-sm'
+                              : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:bg-brand-neutral/60'
+                          }`}
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="font-bold text-brand-green-deep">{dispensary.name}</p>
@@ -2569,35 +3041,142 @@ function AdminRoute({
                           <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-brand-green-mid/70">
                             <span>Registro legal: <strong>{dispensary.legalId}</strong></span>
                             <span>Contacto: <strong>{dispensary.contact}</strong></span>
-                            <span className="break-all font-mono">{dispensary.wallet}</span>
+                            <div className="flex items-center gap-1.5 font-mono text-[11px] text-brand-green-deep/80 select-all mt-1">
+                              <span className="bg-white/60 px-2 py-0.5 rounded border border-brand-green-deep/5 flex items-center gap-1.5 hover:bg-white transition-all font-mono">
+                                {dispensary.wallet.slice(0, 8)}...{dispensary.wallet.slice(-8)}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(dispensary.wallet);
+                                    setCopiedId(dispensary.id);
+                                    setTimeout(() => setCopiedId(null), 2000);
+                                  }}
+                                  className="p-0.5 rounded hover:bg-white text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer"
+                                  title="Copiar wallet"
+                                >
+                                  {copiedId === dispensary.id ? <Check size={10} className="text-emerald-600" /> : <Copy size={10} />}
+                                </button>
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ))
                     )}
                   </div>
                   <div className="rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
-                    <div className="mt-4 space-y-3">
-                      {[
-                        ['name', 'Nombre dispensario'],
-                        ['legalId', 'Registro legal'],
-                        ['address', 'Dirección'],
-                        ['contact', 'Contacto'],
-                        ['wallet', 'Wallet Stellar'],
-                      ].map(([key, label]) => (
-                        <label key={key} className="block">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</span>
-                          <input
-                            value={manualDispensary[key as keyof typeof manualDispensary]}
-                            onChange={(event) => setManualDispensary((current) => ({ ...current, [key]: event.target.value }))}
-                            className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
-                          />
-                        </label>
-                      ))}
-                      <button onClick={addManualDispensary} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory">
-                        Agregar dispensario autorizado
-                      </button>
-                    </div>
+                    {selectedDispensary ? (
+                      <div>
+                        <div className="flex items-center justify-between border-b border-brand-green-deep/10 pb-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Detalle del dispensario</p>
+                          <button
+                            onClick={() => setSelectedDispensaryId(null)}
+                            className="text-xs font-bold text-brand-green-deep hover:underline cursor-pointer"
+                          >
+                            + Alta manual
+                          </button>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Nombre dispensario</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDispensary.name}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Registro legal</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDispensary.legalId}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Dirección</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDispensary.address}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Contacto</span>
+                            <p className="font-bold text-brand-green-deep text-sm">{selectedDispensary.contact}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45 block">Wallet Stellar</span>
+                            <div className="mt-1 flex items-start gap-2 bg-white/70 p-3 rounded-xl border border-brand-green-deep/5 select-all">
+                              <p className="font-mono text-xs text-brand-green-deep break-all flex-grow select-all">
+                                {selectedDispensary.wallet}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedDispensary.wallet);
+                                  setCopiedId(`detail-${selectedDispensary.id}`);
+                                  setTimeout(() => setCopiedId(null), 2000);
+                                }}
+                                className="p-1 rounded bg-white hover:bg-brand-neutral text-brand-green-mid/60 hover:text-brand-green-deep transition-colors cursor-pointer flex-shrink-0"
+                                title="Copiar wallet completo"
+                              >
+                                {copiedId === `detail-${selectedDispensary.id}` ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-brand-green-deep/5 flex flex-col gap-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-brand-green-mid/65">Registro Testnet:</span>
+                              <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${onchainClass[selectedDispensary.onchainStatus]}`}>
+                                {onchainLabel[selectedDispensary.onchainStatus]}
+                              </span>
+                            </div>
+                            {selectedDispensary.onchainStatus !== 'registered' && (
+                              <button
+                                onClick={() =>
+                                  runOnchainAction(
+                                    `dispensary-${selectedDispensary.id}`,
+                                    () => onRegisterDispensaryOnchain(selectedDispensary),
+                                    'Dispensario registrado en DispensaryRegistry Testnet.',
+                                  )
+                                }
+                                disabled={onchainAction === `dispensary-${selectedDispensary.id}`}
+                                className="w-full mt-2 rounded-xl bg-brand-green-deep px-4 py-2.5 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                              >
+                                {onchainAction === `dispensary-${selectedDispensary.id}` ? 'Registrando en Stellar...' : 'Registrar on-chain'}
+                              </button>
+                            )}
+                            {selectedDispensary.onchainStatus === 'registered' && (
+                              <button
+                                onClick={() =>
+                                  runOnchainAction(
+                                    `revoke-dispensary-${selectedDispensary.id}`,
+                                    () => onRevokeDispensaryOnchain(selectedDispensary),
+                                    'Dispensario revocado en Testnet.',
+                                  )
+                                }
+                                disabled={onchainAction === `revoke-dispensary-${selectedDispensary.id}`}
+                                className="w-full mt-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                              >
+                                {onchainAction === `revoke-dispensary-${selectedDispensary.id}` ? 'Revocando en Stellar...' : 'Revocar de la Red'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold">Alta manual</p>
+                        <div className="mt-4 space-y-3">
+                          {[
+                            ['name', 'Nombre dispensario'],
+                            ['legalId', 'Registro legal'],
+                            ['address', 'Dirección'],
+                            ['contact', 'Contacto'],
+                            ['wallet', 'Wallet Stellar'],
+                          ].map(([key, label]) => (
+                            <label key={key} className="block">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{label}</span>
+                              <input
+                                value={manualDispensary[key as keyof typeof manualDispensary]}
+                                onChange={(event) => setManualDispensary((current) => ({ ...current, [key]: event.target.value }))}
+                                className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-gold/40"
+                              />
+                            </label>
+                          ))}
+                          <button onClick={addManualDispensary} className="w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory cursor-pointer">
+                            Agregar dispensario autorizado
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -14,6 +14,8 @@ import {
   validatePrescriptionForDispensary,
   registerDoctorOnTestnet,
   registerDispensaryOnTestnet,
+  revokeDoctorOnTestnet,
+  revokeDispensaryOnTestnet,
   retainPrescriptionForDispensary,
   releasePrescriptionToPatient,
   buildIssuePrescriptionTx,
@@ -463,6 +465,46 @@ async function startServer() {
         error instanceof Error
           ? error.message
           : "No fue posible registrar el dispensario en DispensaryRegistry Testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/revoke-doctor", async (req, res) => {
+    try {
+      const { doctorAddress } = req.body ?? {};
+      if (!doctorAddress) {
+        res.status(400).json({ message: "Falta doctorAddress." });
+        return;
+      }
+      const result = await revokeDoctorOnTestnet({
+        doctorAddress: String(doctorAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible revocar el medico en DoctorRegistry Testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/revoke-dispensary", async (req, res) => {
+    try {
+      const { dispensaryAddress } = req.body ?? {};
+      if (!dispensaryAddress) {
+        res.status(400).json({ message: "Falta dispensaryAddress." });
+        return;
+      }
+      const result = await revokeDispensaryOnTestnet({
+        dispensaryAddress: String(dispensaryAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible revocar el dispensario en DispensaryRegistry Testnet.";
       res.status(500).json({ message });
     }
   });

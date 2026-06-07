@@ -76,6 +76,7 @@ function nowIso() {
 
 function readLocal<T extends ActorApplication>(kind: ApplicationKind): T[] {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const saved = localStorage.getItem(STORAGE_KEYS[kind]);
     const records = saved ? JSON.parse(saved) : [];
     if (!Array.isArray(records)) return [];
@@ -86,7 +87,13 @@ function readLocal<T extends ActorApplication>(kind: ApplicationKind): T[] {
 }
 
 function writeLocal<T extends ActorApplication>(kind: ApplicationKind, records: T[]) {
-  localStorage.setItem(STORAGE_KEYS[kind], JSON.stringify(records));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS[kind], JSON.stringify(records));
+    }
+  } catch (err) {
+    console.warn('LocalStorage write failed:', err);
+  }
 }
 
 function normalizeApplication<T extends Partial<ActorApplication>>(record: T): T & {
@@ -101,6 +108,17 @@ function normalizeApplication<T extends Partial<ActorApplication>>(record: T): T
 }
 
 function canUseFirebase() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('trust_leaf_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.mode === 'demo') {
+          return false;
+        }
+      }
+    }
+  } catch {}
   return Boolean(auth.currentUser);
 }
 
@@ -304,24 +322,37 @@ async function loadApplications<T extends ActorApplication>(kind: ApplicationKin
   return { records: readLocal<T>(kind), source: 'local-demo' };
 }
 
+function cleanUndefined<T extends Record<string, any>>(obj: T): T {
+  const cleaned = { ...obj };
+  Object.keys(cleaned).forEach((key) => {
+    if (cleaned[key] === undefined) {
+      delete cleaned[key];
+    }
+  });
+  return cleaned;
+}
+
 async function createApplication<T extends ActorApplication>(kind: ApplicationKind, record: T): Promise<PersistenceSource> {
-  const localRecords = [record, ...readLocal<T>(kind).filter((item) => item.id !== record.id)];
+  const cleanedRecord = cleanUndefined(record);
+  const localRecords = [cleanedRecord, ...readLocal<T>(kind).filter((item) => item.id !== cleanedRecord.id)];
   writeLocal(kind, localRecords);
 
   if (canUseFirebase()) {
     try {
-      await setDoc(doc(db, COLLECTIONS[kind], record.id), record);
+      await setDoc(doc(db, COLLECTIONS[kind], cleanedRecord.id), cleanedRecord);
       return 'firebase';
-    } catch {
+    } catch (err) {
+      console.error(`[Firebase Firestore] Error al guardar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
 
   if (canUseSupabase()) {
     try {
-      await createApplicationInSupabase(kind, record);
+      await createApplicationInSupabase(kind, cleanedRecord);
       return 'supabase';
-    } catch {
+    } catch (err) {
+      console.error(`[Supabase] Error al guardar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
@@ -334,25 +365,28 @@ async function updateApplication<T extends ActorApplication>(
   id: string,
   updates: Partial<T>,
 ): Promise<PersistenceSource> {
+  const cleanedUpdates = cleanUndefined(updates);
   const localRecords = readLocal<T>(kind).map((record) =>
-    record.id === id ? { ...record, ...updates } : record,
+    record.id === id ? { ...record, ...cleanedUpdates } : record,
   );
   writeLocal(kind, localRecords);
 
   if (canUseFirebase()) {
     try {
-      await updateDoc(doc(db, COLLECTIONS[kind], id), updates as Record<string, unknown>);
+      await updateDoc(doc(db, COLLECTIONS[kind], id), cleanedUpdates as Record<string, unknown>);
       return 'firebase';
-    } catch {
+    } catch (err) {
+      console.error(`[Firebase Firestore] Error al actualizar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
 
   if (canUseSupabase()) {
     try {
-      await updateApplicationInSupabase(kind, id, updates);
+      await updateApplicationInSupabase(kind, id, cleanedUpdates);
       return 'supabase';
-    } catch {
+    } catch (err) {
+      console.error(`[Supabase] Error al actualizar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
@@ -362,6 +396,7 @@ async function updateApplication<T extends ActorApplication>(
 
 function registerSubmittedId(id: string) {
   try {
+    if (typeof localStorage === 'undefined') return;
     const saved = localStorage.getItem('trust_submitted_ids');
     const ids = saved ? JSON.parse(saved) : [];
     if (Array.isArray(ids) && !ids.includes(id)) {
