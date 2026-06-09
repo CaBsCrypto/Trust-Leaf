@@ -1063,9 +1063,6 @@ export async function dispensePrescriptionForPatient(input: {
         const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
         clawbackTxHash = clawbackResult.hash;
         console.log(`[NFT Burn] Receta NFT ${assetCode} quemada (Clawback exitoso): ${clawbackTxHash}`);
-      } else {
-        console.warn(`[NFT Burn] No se configuró STELLAR_DOCTOR_SECRET. Se omite quema física en testnet.`);
-      }
     } catch (burnErr) {
       console.error(`[NFT Burn] Error al ejecutar Clawback del NFT de receta:`, burnErr);
     }
