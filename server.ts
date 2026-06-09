@@ -21,6 +21,7 @@ import {
   buildIssuePrescriptionTx,
   buildDispensePrescriptionTx,
   submitSignedTransaction,
+  getDeterministicKeypair,
 } from "./api/_lib/stellar";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -157,6 +158,26 @@ async function startServer() {
     }
   });
 
+  app.post("/api/stellar/derive-wallet", async (req, res) => {
+    try {
+      const { email } = req.body ?? {};
+      if (!email) {
+        res.status(400).json({ message: "Falta email." });
+        return;
+      }
+      const normalized = String(email).toLowerCase().trim();
+      if (normalized === "paciente@trustleaf.test") {
+        res.json({ publicKey: "GDKCAFBRPVG4E6VEX4SUFVOMLDQKXDVEECR2DIWYRDEMIAS7CUR2RMXP" });
+        return;
+      }
+      const keypair = getDeterministicKeypair(normalized);
+      res.json({ publicKey: keypair.publicKey() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al derivar la wallet.";
+      res.status(500).json({ message });
+    }
+  });
+
   app.get("/api/stellar/patient/:address/dashboard", async (req, res) => {
     try {
       const dashboard = await getPatientDashboard(req.params.address);
@@ -178,6 +199,7 @@ async function startServer() {
         dosage,
         notes,
         durationDays,
+        doctorEmail,
       } = req.body ?? {};
 
       if (!patientAddress || !treatment || !dosage || !durationDays) {
@@ -202,6 +224,7 @@ async function startServer() {
         dosage: String(dosage),
         notes: notes ? String(notes) : "",
         durationDays: normalizedDurationDays,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.json(result);
@@ -216,7 +239,7 @@ async function startServer() {
 
   app.post("/api/stellar/dispensary/dispense-prescription", writeLimiter, async (req, res) => {
     try {
-      const { prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
+      const { prescriptionId, productLabel, batchLabel, quantity, dispensaryEmail, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
       const normalizedQuantity = Number(quantity);
 
@@ -238,6 +261,8 @@ async function startServer() {
         productLabel: String(productLabel),
         batchLabel: String(batchLabel),
         quantity: normalizedQuantity,
+        dispensaryEmail: dispensaryEmail ? String(dispensaryEmail) : undefined,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.json(result);
@@ -342,7 +367,7 @@ async function startServer() {
 
   app.post("/api/stellar/dispensary/retain-prescription", async (req, res) => {
     try {
-      const { prescriptionId, dispensaryAddress, lockPeriodDays } = req.body ?? {};
+      const { prescriptionId, dispensaryAddress, lockPeriodDays, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
 
       if (!Number.isFinite(normalizedPrescriptionId) || !dispensaryAddress) {
@@ -356,6 +381,7 @@ async function startServer() {
         prescriptionId: normalizedPrescriptionId,
         dispensaryAddress: String(dispensaryAddress),
         lockPeriodDays: lockPeriodDays ? Number(lockPeriodDays) : undefined,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.json(result);
@@ -370,7 +396,7 @@ async function startServer() {
 
   app.post("/api/stellar/dispensary/release-prescription", async (req, res) => {
     try {
-      const { prescriptionId } = req.body ?? {};
+      const { prescriptionId, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
 
       if (!Number.isFinite(normalizedPrescriptionId)) {
@@ -382,6 +408,7 @@ async function startServer() {
 
       const result = await releasePrescriptionToPatient({
         prescriptionId: normalizedPrescriptionId,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.json(result);

@@ -59,9 +59,9 @@ const PATIENT_VIEWS: PortalView[] = ['overview', 'doctors', 'prescriptions', 'di
 const DOCTOR_VIEWS: PortalView[] = ['doctors'];
 const DISPENSARY_VIEWS: PortalView[] = ['dispensaries', 'history', 'pickups'];
 const TRUST_SESSION_KEY = 'trust_leaf_session';
-const DEFAULT_PATIENT_WALLET = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
-const DEFAULT_DOCTOR_WALLET = 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX';
-const DEFAULT_DISPENSARY_WALLET = 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
+const DEFAULT_PATIENT_WALLET = 'GDKCAFBRPVG4E6VEX4SUFVOMLDQKXDVEECR2DIWYRDEMIAS7CUR2RMXP';
+const DEFAULT_DOCTOR_WALLET = 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV';
+const DEFAULT_DISPENSARY_WALLET = 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX';
 
 function seedDemoPatientState() {
   localStorage.setItem(
@@ -202,23 +202,29 @@ function AppContent() {
               setPatientProfile(null);
             }
           } else {
-            // Document does not exist yet. If Doctor or Dispensary is approved, auto-create its mapping in 'users'!
-            const approvedDocs = doctorRegistrations.filter((r) => r.status === 'approved');
-            const approvedDisps = dispensaryRegistrations.filter((r) => r.status === 'approved');
-            const currentReg = session.role === 'doctor'
-              ? approvedDocs.find((r) => r.contact === session.email || r.name === session.name)
-              : session.role === 'dispensary'
-                ? approvedDisps.find((r) => r.contact === session.email || r.name === session.name)
-                : null;
-
-            if (currentReg && currentReg.wallet) {
+            // Document does not exist yet. If Patient, auto-derive and create profile. If Doctor or Dispensary is approved, auto-create its mapping in 'users'!
+            if (session.role === 'patient') {
               try {
+                const derivedWalletAddress = await deriveStellarPublicKey(session.email);
+                
+                // Fund account on Testnet
+                try {
+                  await fetch('/api/stellar/faucet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: 'patient', address: derivedWalletAddress })
+                  });
+                } catch (faucetErr) {
+                  console.warn('Silent faucet funding failed:', faucetErr);
+                }
+
                 const profileData = {
                   uid: adminAuth.user!.uid,
-                  name: currentReg.name || adminAuth.user!.displayName || 'Usuario de Google',
-                  stellarPublicKey: currentReg.wallet,
+                  name: session.name || adminAuth.user!.displayName || 'Paciente Registrado',
+                  email: session.email,
+                  stellarPublicKey: derivedWalletAddress,
                   primaryMethod: 'demo',
-                  walletLabel: session.role === 'doctor' ? 'Credencial Profesional Médica' : 'Credencial Operativa Dispensario',
+                  walletLabel: 'Usuario Google Piloto',
                   createdAt: new Date().toISOString(),
                 };
                 await setDoc(userRef, profileData);
@@ -247,10 +253,58 @@ function AppContent() {
                   }),
                 );
               } catch (err) {
-                console.error('Error auto-creating user mapping doc:', err);
+                console.error('Error auto-creating patient profile:', err);
               }
             } else {
-              setPatientProfile(null);
+              const approvedDocs = doctorRegistrations.filter((r) => r.status === 'approved');
+              const approvedDisps = dispensaryRegistrations.filter((r) => r.status === 'approved');
+              const currentReg = session.role === 'doctor'
+                ? approvedDocs.find((r) => r.contact === session.email || r.name === session.name)
+                : session.role === 'dispensary'
+                  ? approvedDisps.find((r) => r.contact === session.email || r.name === session.name)
+                  : null;
+
+              if (currentReg && currentReg.wallet) {
+                try {
+                  const profileData = {
+                    uid: adminAuth.user!.uid,
+                    name: currentReg.name || adminAuth.user!.displayName || 'Usuario de Google',
+                    stellarPublicKey: currentReg.wallet,
+                    primaryMethod: 'demo',
+                    walletLabel: session.role === 'doctor' ? 'Credencial Profesional Médica' : 'Credencial Operativa Dispensario',
+                    createdAt: new Date().toISOString(),
+                  };
+                  await setDoc(userRef, profileData);
+                  const profile = {
+                    uid: adminAuth.user!.uid,
+                    name: profileData.name,
+                    stellarPublicKey: profileData.stellarPublicKey,
+                  };
+                  setPatientProfile(profile);
+                  setWalletSetup({
+                    primaryMethod: 'demo',
+                    hasFreighterBackup: false,
+                    walletLabel: profileData.walletLabel,
+                    contractAccount: profileData.stellarPublicKey,
+                    networkLabel: 'Stellar Testnet',
+                  });
+                  localStorage.setItem(
+                    'trust_wallet_setup',
+                    JSON.stringify({
+                      primaryMethod: 'demo',
+                      hasFreighterBackup: false,
+                      walletLabel: profileData.walletLabel,
+                      contractAccount: profileData.stellarPublicKey,
+                      freighterAddress: profileData.stellarPublicKey,
+                      networkLabel: 'Stellar Testnet',
+                    }),
+                  );
+                } catch (err) {
+                  console.error('Error auto-creating user mapping doc:', err);
+                }
+              } else {
+                setPatientProfile(null);
+              }
             }
           }
         })
@@ -3260,6 +3314,16 @@ function DispensaryRegistrationRoute({
   const approved = dispensaryRegistrations.filter((request) => request.status === 'approved');
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
+  useEffect(() => {
+    if (session?.email) {
+      deriveStellarPublicKey(session.email).then((wallet) => {
+        if (wallet) {
+          setRegistrationForm((curr) => ({ ...curr, wallet }));
+        }
+      });
+    }
+  }, [session?.email]);
+
   const submitRegistration = () => {
     if (!registrationForm.name || !registrationForm.legalId || !registrationForm.address || !registrationForm.contact) {
       return;
@@ -3544,6 +3608,16 @@ function DoctorRegistrationRoute({
   const latestRegistration = ownRegistrations[0] ?? null;
   const approved = doctorRegistrations.filter((request) => request.status === 'approved');
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
+
+  useEffect(() => {
+    if (session?.email) {
+      deriveStellarPublicKey(session.email).then((wallet) => {
+        if (wallet) {
+          setRegistrationForm((curr) => ({ ...curr, wallet }));
+        }
+      });
+    }
+  }, [session?.email]);
 
   const submitRegistration = () => {
     if (!registrationForm.name || !registrationForm.licenseId || !registrationForm.specialty || !registrationForm.contact || !registrationForm.rut || !registrationForm.sisRegistrationId) {

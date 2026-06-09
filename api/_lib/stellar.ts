@@ -18,6 +18,25 @@ const DEFAULT_DEMO_DOCTOR_ADDRESS =
 const DEFAULT_DEMO_DISPENSARY_ADDRESS =
   'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
+import * as crypto from 'crypto';
+
+export function getDeterministicKeypair(email: string): StellarSdk.Keypair {
+  const normalized = email.toLowerCase().trim();
+
+  if (normalized === 'medico@trustleaf.test') {
+    const secret = getDoctorSecret();
+    if (secret) return StellarSdk.Keypair.fromSecret(secret);
+  }
+  if (normalized === 'dispensario@trustleaf.test') {
+    const secret = getDispensarySecret();
+    if (secret) return StellarSdk.Keypair.fromSecret(secret);
+  }
+
+  const salt = getAdminSecret() || 'trust-leaf-secret-salt-2026';
+  const hash = crypto.createHmac('sha256', salt).update(normalized).digest();
+  return StellarSdk.Keypair.fromRawEd25519Seed(hash);
+}
+
 export function getRpcUrl() {
   return process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org';
 }
@@ -445,6 +464,7 @@ export async function issuePrescriptionForPatient(input: {
   notes?: string;
   durationDays: number;
   totalQuantity?: number;
+  doctorEmail?: string;
 }) {
   const treatment = input.treatment.trim();
   const dosage = input.dosage.trim();
@@ -462,15 +482,20 @@ export async function issuePrescriptionForPatient(input: {
     throw new Error('La cantidad total autorizada debe ser mayor o igual a 1.');
   }
 
-  const doctorSecret = getDoctorSecret();
-  if (!doctorSecret) {
-    throw new Error(
-      'Falta STELLAR_DOCTOR_SECRET para emitir recetas reales desde el POV médico.',
-    );
+  let doctorKeypair: StellarSdk.Keypair;
+  if (input.doctorEmail) {
+    doctorKeypair = getDeterministicKeypair(input.doctorEmail);
+  } else {
+    const doctorSecret = getDoctorSecret();
+    if (!doctorSecret) {
+      throw new Error(
+        'Falta STELLAR_DOCTOR_SECRET para emitir recetas reales desde el POV médico.',
+      );
+    }
+    doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   }
 
   const server = getSorobanServer();
-  const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   const doctorAddress = doctorKeypair.publicKey();
   const sourceAccount = await server.getAccount(doctorAddress);
   const contract = new StellarSdk.Contract(getPrescriptionContractId());
@@ -604,6 +629,7 @@ export async function retainPrescriptionForDispensary(input: {
   prescriptionId: number;
   dispensaryAddress: string;
   lockPeriodDays?: number;
+  doctorEmail?: string;
 }) {
   const prescriptionId = Math.floor(input.prescriptionId);
   const dispensaryAddress = input.dispensaryAddress.trim();
@@ -630,12 +656,17 @@ export async function retainPrescriptionForDispensary(input: {
     : 'https://horizon.stellar.org';
   const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
 
-  const doctorSecret = getDoctorSecret();
-  if (!doctorSecret) {
-    throw new Error('Falta STELLAR_DOCTOR_SECRET para reasignar la custodia del NFT.');
+  let doctorKeypair: StellarSdk.Keypair;
+  if (input.doctorEmail) {
+    doctorKeypair = getDeterministicKeypair(input.doctorEmail);
+  } else {
+    const doctorSecret = getDoctorSecret();
+    if (!doctorSecret) {
+      throw new Error('Falta STELLAR_DOCTOR_SECRET para reasignar la custodia del NFT.');
+    }
+    doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   }
 
-  const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
   const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
 
@@ -714,6 +745,7 @@ export async function retainPrescriptionForDispensary(input: {
 
 export async function releasePrescriptionToPatient(input: {
   prescriptionId: number;
+  doctorEmail?: string;
 }) {
   const prescriptionId = Math.floor(input.prescriptionId);
 
@@ -738,14 +770,19 @@ export async function releasePrescriptionToPatient(input: {
     : 'https://horizon.stellar.org';
   const serverHorizon = new StellarSdk.Horizon.Server(horizonUrl);
 
-  const doctorSecret = getDoctorSecret();
-  if (!doctorSecret) {
-    throw new Error('Falta STELLAR_DOCTOR_SECRET para reasignar la custodia del NFT de vuelta al paciente.');
+  let doctorKeypair: StellarSdk.Keypair;
+  if (input.doctorEmail) {
+    doctorKeypair = getDeterministicKeypair(input.doctorEmail);
+  } else {
+    const doctorSecret = getDoctorSecret();
+    if (!doctorSecret) {
+      throw new Error('Falta STELLAR_DOCTOR_SECRET para reasignar la custodia del NFT de vuelta al paciente.');
+    }
+    doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   }
 
   const dispensaryAddress = getDispensaryAddress();
 
-  const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
   const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
 
@@ -820,6 +857,8 @@ export async function dispensePrescriptionForPatient(input: {
   productLabel: string;
   batchLabel: string;
   quantity: number;
+  dispensaryEmail?: string;
+  doctorEmail?: string;
 }) {
   const productLabel = input.productLabel.trim();
   const batchLabel = input.batchLabel.trim();
@@ -837,15 +876,20 @@ export async function dispensePrescriptionForPatient(input: {
     throw new Error('quantity debe ser un numero mayor o igual a 1.');
   }
 
-  const dispensarySecret = getDispensarySecret();
-  if (!dispensarySecret) {
-    throw new Error(
-      'Falta STELLAR_DISPENSARY_SECRET para dispensar recetas reales desde el POV dispensario.',
-    );
+  let dispensaryKeypair: StellarSdk.Keypair;
+  if (input.dispensaryEmail) {
+    dispensaryKeypair = getDeterministicKeypair(input.dispensaryEmail);
+  } else {
+    const dispensarySecret = getDispensarySecret();
+    if (!dispensarySecret) {
+      throw new Error(
+        'Falta STELLAR_DISPENSARY_SECRET para dispensar recetas reales desde el POV dispensario.',
+      );
+    }
+    dispensaryKeypair = StellarSdk.Keypair.fromSecret(dispensarySecret);
   }
 
   const server = getSorobanServer();
-  const dispensaryKeypair = StellarSdk.Keypair.fromSecret(dispensarySecret);
   const dispensaryAddress = dispensaryKeypair.publicKey();
   const dispenseRecordContract = new StellarSdk.Contract(getDispenseRecordContractId());
   const prescriptionId = Math.floor(input.prescriptionId);
@@ -974,12 +1018,20 @@ export async function dispensePrescriptionForPatient(input: {
 
   if (isFullyUsed) {
     try {
-      const doctorSecret = getDoctorSecret();
-      if (doctorSecret) {
-        console.log(`[NFT Burn] Receta completamente consumida. Preparando transacción clásica de quema para el asset ${assetCode}...`);
-        const doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
-        const doctorAddress = doctorKeypair.publicKey();
-        const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
+      let doctorKeypair: StellarSdk.Keypair;
+      if (input.doctorEmail) {
+        doctorKeypair = getDeterministicKeypair(input.doctorEmail);
+      } else {
+        const doctorSecret = getDoctorSecret();
+        if (doctorSecret) {
+          doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
+        } else {
+          throw new Error('Falta STELLAR_DOCTOR_SECRET para quemar el NFT de la receta.');
+        }
+      }
+      console.log(`[NFT Burn] Receta completamente consumida. Preparando transacción clásica de quema para el asset ${assetCode}...`);
+      const doctorAddress = doctorKeypair.publicKey();
+      const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
         
         const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
         const clawbackBuilder = new StellarSdk.TransactionBuilder(doctorAccountResp, {

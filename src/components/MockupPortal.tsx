@@ -189,6 +189,8 @@ interface PrivacyPermission {
   hash: string;
   qrToken: string;
   createdAt: string;
+  patientName?: string;
+  patientWallet?: string;
 }
 
 function ActionCard({
@@ -433,7 +435,7 @@ function normalizeInventoryProduct<T extends Record<string, any>>(product: T): T
   ) as T;
 }
 
-const DEMO_PATIENT_ADDRESS = 'GBOVHFJQXZR5LMODPMKM766SHK5D7XOPZUHUYRPHENQKWDQI33DSWRJ6';
+const DEMO_PATIENT_ADDRESS = 'GDKCAFBRPVG4E6VEX4SUFVOMLDQKXDVEECR2DIWYRDEMIAS7CUR2RMXP';
 const DEMO_PRESCRIPTION_ID = '1';
 const DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS = 30;
 const DEFAULT_PRESCRIPTION_USED_GRAMS = 9;
@@ -462,7 +464,7 @@ function buildDemoPatientDashboard(patientAddress = DEMO_PATIENT_ADDRESS): Patie
       {
         id: Number(DEMO_PRESCRIPTION_ID),
         patient: patientAddress,
-        doctor: 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX',
+        doctor: 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV',
         medicationHash: 'demo-minimal-prescription-hash',
         expiresAt,
         totalQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
@@ -480,8 +482,8 @@ function buildDemoPatientDashboard(patientAddress = DEMO_PATIENT_ADDRESS): Patie
         id: 1,
         prescriptionId: Number(DEMO_PRESCRIPTION_ID),
         patient: patientAddress,
-        doctor: 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX',
-        dispensary: 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6',
+        doctor: 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV',
+        dispensary: 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX',
         productHash: 'demo-product-hash',
         batchHash: 'demo-batch-hash',
         quantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
@@ -501,7 +503,7 @@ function buildDemoPrescriptionValidation(
     prescription: {
       id: prescriptionId,
       patient: DEMO_PATIENT_ADDRESS,
-      doctor: 'GD2MXRXHYBSSY7CXQWAYN5S7OHAUVEULPHV4SYQA3542GIQLUGJ57VNX',
+      doctor: 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV',
       medicationHash: 'demo-minimal-prescription-hash',
       expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
       totalQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
@@ -516,7 +518,7 @@ function buildDemoPrescriptionValidation(
     lastRecord: {
       id: 1,
       quantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
-      dispensary: 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6',
+      dispensary: 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX',
     },
   };
 }
@@ -1099,6 +1101,9 @@ export default function MockupPortal({
     const saved = localStorage.getItem('trust_privacy_permissions');
     return saved ? JSON.parse(saved) : [];
   });
+  const [selectedDoctorForPermissionName, setSelectedDoctorForPermissionName] = useState<string>('Dr. Alejandro Merino');
+  const [selectedDispensaryForPermissionName, setSelectedDispensaryForPermissionName] = useState<string>('Green Leaf Center');
+  const [authorizedDoctorName, setAuthorizedDoctorName] = useState<string>('Dr. Alejandro Merino');
   const [selectedQrPermission, setSelectedQrPermission] = useState<PrivacyPermission | null>(null);
   const [dispensaryValidation, setDispensaryValidation] = useState<PrivacyPermission | null>(null);
   const [uploadedClinicalExams, setUploadedClinicalExams] = useState<Array<{
@@ -1299,15 +1304,18 @@ export default function MockupPortal({
 
   const [realDoctors, setRealDoctors] = useState<any[]>([]);
   const [loadingRealDoctors, setLoadingRealDoctors] = useState(false);
+  const [realDispensaries, setRealDispensaries] = useState<any[]>([]);
+  const [loadingRealDispensaries, setLoadingRealDispensaries] = useState(false);
 
   useEffect(() => {
     let active = true;
-    const loadDoctors = async () => {
+    const loadData = async () => {
       setLoadingRealDoctors(true);
+      setLoadingRealDispensaries(true);
       try {
-        const result = await trustDataStore.loadDoctorApplications();
+        const docResult = await trustDataStore.loadDoctorApplications();
         if (active) {
-          const approved = result.records
+          const approvedDocs = docResult.records
             .filter((doc) => doc.status === 'approved')
             .map((doc) => ({
               id: doc.id,
@@ -1317,28 +1325,58 @@ export default function MockupPortal({
               reviews: 0,
               availability: "Bajo demanda",
               wallet: doc.wallet,
+              email: doc.contact,
             }));
-          setRealDoctors(approved);
+          setRealDoctors(approvedDocs);
+        }
+
+        const dispResult = await trustDataStore.loadDispensaryApplications();
+        if (active) {
+          const approvedDisps = dispResult.records
+            .filter((disp) => disp.status === 'approved')
+            .map((disp) => ({
+              id: disp.id,
+              name: disp.name,
+              address: disp.address || "Dirección Registrada",
+              distance: "Ubicación verificada",
+              status: "Abierto",
+              stock: "Alto",
+              wallet: disp.wallet,
+              inventory: MOCK_DISPENSARIES[0]?.inventory || [],
+            }));
+          setRealDispensaries(approvedDisps);
         }
       } catch (err) {
-        console.error("Error loading real doctors:", err);
+        console.error("Error loading real data:", err);
       } finally {
         if (active) {
           setLoadingRealDoctors(false);
+          setLoadingRealDispensaries(false);
         }
       }
     };
-    loadDoctors();
+    loadData();
     return () => {
       active = false;
     };
   }, []);
 
   const allDoctors = useMemo(() => {
-    const mockNames = new Set(MOCK_DOCTORS.map((d) => d.name.toLowerCase()));
-    const filteredReal = realDoctors.filter((d) => !mockNames.has(d.name.toLowerCase()));
-    return [...filteredReal, ...MOCK_DOCTORS];
+    return realDoctors;
   }, [realDoctors]);
+
+  useEffect(() => {
+    if (allDoctors.length > 0) {
+      setSelectedDoctorForPermissionName(allDoctors[0].name);
+      setAuthorizedDoctorName(allDoctors[0].name);
+    }
+  }, [allDoctors]);
+
+  useEffect(() => {
+    if (realDispensaries.length > 0) {
+      setSelectedDispensaryForPermissionName(realDispensaries[0].name);
+    }
+  }, [realDispensaries]);
 
   useEffect(() => {
     localStorage.setItem('trust_consultation_clinical_records', JSON.stringify(consultationClinicalRecords));
@@ -1440,9 +1478,54 @@ export default function MockupPortal({
   const activePrivacyPermissions = privacyPermissions.filter((permission) => permission.status === 'active');
   const patientTrustAccountAddress = patientIdentityAddress ?? DEMO_PATIENT_ADDRESS;
   const doctorCredentialAddress =
-    runtimeReadiness?.signers.doctor.address ?? 'GD2MXRXH...UGJ57VNX';
+    runtimeReadiness?.signers.doctor.address ?? 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV';
   const dispensaryCredentialAddress =
-    runtimeReadiness?.signers.dispensary.address ?? 'GCJLFG6P...CWEJZRJ6';
+    runtimeReadiness?.signers.dispensary.address ?? 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX';
+  const currentUserWallet = useMemo(() => {
+    if (isDoctorPortal) {
+      return doctorCredentialAddress;
+    }
+    if (isDispensaryPortal) {
+      return dispensaryCredentialAddress;
+    }
+    return patientTrustAccountAddress;
+  }, [isDoctorPortal, isDispensaryPortal, doctorCredentialAddress, dispensaryCredentialAddress, patientTrustAccountAddress]);
+  const doctorActivePatients = useMemo(() => {
+    if (!isDoctorPortal || !session) return [];
+    
+    const doctorNameLower = (session.name || '').trim().toLowerCase();
+    const doctorEmailLower = (session.email || '').trim().toLowerCase();
+
+    const matchingPermissions = privacyPermissions.filter((p) => {
+      if (p.role !== 'Medico' || p.status !== 'active') return false;
+      const actorLower = (p.actor || '').trim().toLowerCase();
+      return actorLower === doctorNameLower || actorLower === doctorEmailLower;
+    });
+
+    const patientsMap = new Map<string, { id: string; name: string; reason: string; status: string; lastVisit: string; wallet: string }>();
+
+    matchingPermissions.forEach((p) => {
+      const pWallet = p.patientWallet || DEMO_PATIENT_ADDRESS;
+      const pName = p.patientName || 'Paciente Registrado';
+      if (!patientsMap.has(pWallet)) {
+        patientsMap.set(pWallet, {
+          id: p.id,
+          name: pName,
+          reason: 'Consulta solicitada vía Consentimiento Stellar',
+          status: 'Autorizado (24h)',
+          lastVisit: 'Reciente',
+          wallet: pWallet,
+        });
+      }
+    });
+
+    if (patientsMap.size === 0 && session.mode === 'demo') {
+      return DOCTOR_SESSION_PATIENTS;
+    }
+
+    return Array.from(patientsMap.values());
+  }, [isDoctorPortal, session, privacyPermissions]);
+
   const trustAccountMetrics = [
     ['Recetas verificables', patientDashboardLoading ? '...' : String(patientDashboard?.summary.total ?? 0)],
     ['Permisos activos', String(activePrivacyPermissions.length)],
@@ -1451,7 +1534,7 @@ export default function MockupPortal({
   const doctorCredentialMetrics = [
     ['Estado', doctorSignerReady ? 'Autorizado' : 'En revisión'],
     ['Recetas emitidas', String(patientDashboard?.summary.total ?? 1)],
-    ['Pacientes con permiso', String(activePrivacyPermissions.filter((permission) => permission.role === 'Medico').length || 1)],
+    ['Pacientes con permiso', String(doctorActivePatients.length)],
   ] as const;
   const dispensaryCredentialMetrics = [
     ['Estado', dispensarySignerReady ? 'Autorizado' : 'En revisión'],
@@ -1927,6 +2010,7 @@ export default function MockupPortal({
             1,
             Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
           ),
+          doctorEmail: session?.email,
         }),
       });
 
@@ -2455,6 +2539,10 @@ export default function MockupPortal({
         .map((item) => item.strain.batch || item.strain.id)
         .join(' + ');
       const quantity = cart.reduce((total, item) => total + item.quantity, 0);
+      const doctorWallet = prescriptionValidation?.prescription?.doctor;
+      const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
+      const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
+
       const response = await fetch('/api/stellar/dispensary/dispense-prescription', {
         method: 'POST',
         headers: {
@@ -2465,6 +2553,8 @@ export default function MockupPortal({
           productLabel,
           batchLabel,
           quantity,
+          dispensaryEmail: session?.email,
+          doctorEmail: doctorEmail,
         }),
       });
       const payload = await response.json();
@@ -2635,9 +2725,9 @@ export default function MockupPortal({
     }));
   };
 
-  const createPrivacyPermission = (kind: PrivacyPermissionKind, openQr = true) => {
+  const createPrivacyPermission = (kind: PrivacyPermissionKind, openQr = true, targetActorName?: string) => {
     const isMedical = kind === 'medical-consultation';
-    const actor = isMedical ? clinicalAccessDoctor : selectedDispensary?.name ?? 'Green Leaf Center';
+    const actor = targetActorName ?? (isMedical ? clinicalAccessDoctor : selectedDispensary?.name ?? 'Green Leaf Center');
     const permission: PrivacyPermission = {
       id: `perm-${kind}-${Date.now()}`,
       kind,
@@ -2651,6 +2741,8 @@ export default function MockupPortal({
       hash: `hash:permit-${makeDemoHash(`${kind}-${actor}`).slice(0, 10)}`,
       qrToken: `TL-${kind === 'medical-consultation' ? 'MED' : 'RECETA'}-${makeDemoHash(`${actor}-${Date.now()}`).slice(0, 8).toUpperCase()}`,
       createdAt: 'Ahora',
+      patientName: session?.name || 'Paciente Demo',
+      patientWallet: patientTrustAccountAddress,
     };
 
     setPrivacyPermissions((current) => [permission, ...current]);
@@ -2858,13 +2950,18 @@ export default function MockupPortal({
     setRetainReleaseSuccess(null);
 
     try {
+      const doctorWallet = prescriptionValidation?.prescription?.doctor;
+      const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
+      const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
+
       const response = await fetch('/api/stellar/dispensary/retain-prescription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prescriptionId,
-          dispensaryAddress: 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6',
+          dispensaryAddress: dispensaryCredentialAddress,
           lockPeriodDays,
+          doctorEmail: doctorEmail,
         }),
       });
       const payload = await response.json();
@@ -2896,10 +2993,17 @@ export default function MockupPortal({
     setRetainReleaseSuccess(null);
 
     try {
+      const doctorWallet = prescriptionValidation?.prescription?.doctor;
+      const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
+      const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
+
       const response = await fetch('/api/stellar/dispensary/release-prescription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prescriptionId }),
+        body: JSON.stringify({
+          prescriptionId,
+          doctorEmail: doctorEmail,
+        }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -3835,11 +3939,11 @@ export default function MockupPortal({
                   {activeView === 'profile' && 'Mi Cuenta Trust Leaf'}
                 </h3>
                 <div className="flex items-center gap-2 sm:gap-3">
-                  {walletConnected && (
+                  {(walletConnected || isDoctorPortal || isDispensaryPortal) && (
                     <div className="flex items-center gap-2 rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-[10px] sm:text-xs text-brand-green-deep shadow-sm">
                       <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
                       <span className="font-bold uppercase text-[8px] sm:text-[9px] tracking-wider text-brand-green-mid">Stellar:</span>
-                      <span className="font-mono font-semibold">{shortenAddress(patientTrustAccountAddress, 6)}</span>
+                      <span className="font-mono font-semibold">{shortenAddress(currentUserWallet, 6)}</span>
                     </div>
                   )}
                   {onSignOut && (
@@ -4392,7 +4496,7 @@ export default function MockupPortal({
                           whileHover={{ y: -5, backgroundColor: 'rgba(255, 255, 255, 1)' }}
                           onClick={() => {
                             if (hasPrescription) {
-                              setSelectedDispensary(MOCK_DISPENSARIES[0]);
+                              setSelectedDispensary(realDispensaries[0] || null);
                               setDispensaryStep('inventory');
                               switchView('dispensaries');
                             } else {
@@ -4600,22 +4704,31 @@ export default function MockupPortal({
                             </div>
 
                             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                              {DOCTOR_SESSION_PATIENTS.map((patient) => (
-                                <button
-                                  key={`quick-${patient.id}`}
-                                  type="button"
-                                  onClick={() => setDoctorPatientAddress(patient.wallet)}
-                                  className={`rounded-2xl border p-4 text-left transition-colors ${
-                                    doctorPatientAddress === patient.wallet
-                                      ? 'border-brand-gold bg-brand-gold/10'
-                                      : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:border-brand-gold/40'
-                                  }`}
-                                >
-                                  <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
-                                  <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/60">{patient.reason}</p>
-                                  <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{patient.status}</p>
-                                </button>
-                              ))}
+                              {doctorActivePatients.length === 0 ? (
+                                <div className="col-span-3 rounded-2xl border border-dashed border-brand-green-deep/20 bg-brand-neutral/20 p-6 text-center">
+                                  <p className="text-sm font-semibold text-brand-green-deep">Sin pacientes autorizados</p>
+                                  <p className="mt-1 text-xs text-brand-green-mid/70">
+                                    Los pacientes deben otorgarte un permiso de privacidad activo en el portal para que aparezcan en tu lista de trabajo.
+                                  </p>
+                                </div>
+                              ) : (
+                                doctorActivePatients.map((patient) => (
+                                  <button
+                                    key={`quick-${patient.id}`}
+                                    type="button"
+                                    onClick={() => setDoctorPatientAddress(patient.wallet)}
+                                    className={`rounded-2xl border p-4 text-left transition-colors ${
+                                      doctorPatientAddress === patient.wallet
+                                        ? 'border-brand-gold bg-brand-gold/10'
+                                        : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:border-brand-gold/40'
+                                    }`}
+                                  >
+                                    <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+                                    <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/60">{patient.reason}</p>
+                                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{patient.status}</p>
+                                  </button>
+                                ))
+                              )}
                             </div>
 
                             <label className="mt-5 block">
@@ -5156,29 +5269,38 @@ export default function MockupPortal({
                             Selecciona un paciente para preparar la receta o usa una reserva para abrir la consulta completa.
                           </p>
                           <div className="mt-4 space-y-3">
-                            {DOCTOR_SESSION_PATIENTS.map((patient) => (
-                              <button
-                                key={patient.id}
-                                type="button"
-                                onClick={() => setDoctorPatientAddress(patient.wallet)}
-                                className={`w-full rounded-2xl border p-4 text-left transition-colors ${
-                                  doctorPatientAddress === patient.wallet
-                                    ? 'border-brand-gold bg-brand-gold/5'
-                                    : 'border-brand-green-deep/5 bg-brand-neutral/40 hover:border-brand-gold/40'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
-                                    <p className="mt-1 text-xs text-brand-green-mid/60">{patient.reason}</p>
+                            {doctorActivePatients.length === 0 ? (
+                              <div className="rounded-2xl border border-dashed border-brand-green-deep/20 bg-brand-neutral/20 p-6 text-center">
+                                <p className="text-sm font-semibold text-brand-green-deep">Sin pacientes autorizados</p>
+                                <p className="mt-1 text-xs text-brand-green-mid/70">
+                                  Los pacientes deben otorgarte un permiso de privacidad activo en el portal para que aparezcan en tu lista de trabajo.
+                                </p>
+                              </div>
+                            ) : (
+                              doctorActivePatients.map((patient) => (
+                                <button
+                                  key={patient.id}
+                                  type="button"
+                                  onClick={() => setDoctorPatientAddress(patient.wallet)}
+                                  className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                                    doctorPatientAddress === patient.wallet
+                                      ? 'border-brand-gold bg-brand-gold/5'
+                                      : 'border-brand-green-deep/5 bg-brand-neutral/40 hover:border-brand-gold/40'
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+                                      <p className="mt-1 text-xs text-brand-green-mid/60">{patient.reason}</p>
+                                    </div>
+                                    <span className="rounded-full bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                                      {patient.status}
+                                    </span>
                                   </div>
-                                  <span className="rounded-full bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/60">
-                                    {patient.status}
-                                  </span>
-                                </div>
-                                <p className="mt-3 text-[10px] font-mono text-brand-green-mid/45">{shortenAddress(patient.wallet, 8)}</p>
-                              </button>
-                            ))}
+                                  <p className="mt-3 text-[10px] font-mono text-brand-green-mid/45">{shortenAddress(patient.wallet, 8)}</p>
+                                </button>
+                              ))
+                            )}
                           </div>
                         </div>
 
@@ -5576,10 +5698,10 @@ export default function MockupPortal({
                                       Esta receta se encuentra bajo custodia de la farmacia:
                                     </p>
                                     <p className="mt-1 font-mono text-[10px] font-bold text-brand-green-deep break-all">
-                                      {prescriptionValidation.prescription.retainedBy || 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6'}
+                                      {prescriptionValidation.prescription.retainedBy || dispensaryCredentialAddress}
                                     </p>
                                     
-                                    {prescriptionValidation.prescription.retainedBy === 'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6' ? (
+                                    {(!prescriptionValidation.prescription.retainedBy || prescriptionValidation.prescription.retainedBy === dispensaryCredentialAddress) ? (
                                       <div className="mt-4">
                                         <div className="flex items-center gap-2 rounded-xl bg-amber-50/70 p-3 text-xs text-amber-800 border border-amber-200/50">
                                           <span>🔒</span>
@@ -6187,7 +6309,7 @@ export default function MockupPortal({
                            <input type="text" placeholder="Buscar dispensario o medicina..." className="w-full pl-12 pr-4 py-3 bg-brand-neutral rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/50" />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {MOCK_DISPENSARIES.map(disp => (
+                          {realDispensaries.map(disp => (
                             <div key={`portal-dispensary-${disp.id}`} className="p-6 bg-brand-neutral/30 rounded-2xl border border-brand-green-deep/5">
                                <div className="flex justify-between items-start mb-4">
                                   <h4 className="font-bold text-brand-green-deep">{disp.name}</h4>
@@ -6726,21 +6848,63 @@ export default function MockupPortal({
                             Tu historial y receta se comparten por ventanas temporales. El QR nunca contiene datos clinicos: solo una referencia revocable, alcance y prueba verificable.
                           </p>
                         </div>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            onClick={() => createPrivacyPermission('medical-consultation')}
-                            className="rounded-xl bg-brand-green-deep px-4 py-3 text-xs font-bold text-brand-ivory"
-                          >
-                            Compartir con medico
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => createPrivacyPermission('dispensary-prescription')}
-                            className="rounded-xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-3 text-xs font-bold text-brand-green-deep"
-                          >
-                            Compartir receta con dispensario
-                          </button>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold text-brand-green-mid/60 uppercase tracking-wider">Médico Destinatario</label>
+                            <select
+                              value={selectedDoctorForPermissionName}
+                              onChange={(e) => setSelectedDoctorForPermissionName(e.target.value)}
+                              className="rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-xs font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            >
+                              {allDoctors.length === 0 ? (
+                                <option value="Dr. Alejandro Merino">Dr. Alejandro Merino (Demo)</option>
+                              ) : (
+                                allDoctors.map((doc) => (
+                                  <option key={doc.id} value={doc.name}>
+                                    {doc.name}
+                                  </option>
+                                ))
+                              )}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => createPrivacyPermission('medical-consultation', true, selectedDoctorForPermissionName)}
+                              className="mt-1.5 rounded-xl bg-brand-green-deep px-4 py-2.5 text-xs font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 transition-all"
+                            >
+                              Compartir con médico
+                            </button>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold text-brand-green-mid/60 uppercase tracking-wider">Dispensario Destinatario</label>
+                            <select
+                              value={selectedDispensaryForPermissionName}
+                              onChange={(e) => setSelectedDispensaryForPermissionName(e.target.value)}
+                              className="rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-xs font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                            >
+                              {realDispensaries.length === 0 ? (
+                                <option value="Green Leaf Center">Green Leaf Center (Demo)</option>
+                              ) : (
+                                realDispensaries.map((disp) => (
+                                  <option key={disp.id} value={disp.name}>
+                                    {disp.name}
+                                  </option>
+                                ))
+                              )}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const matchedDisp = realDispensaries.find(d => d.name === selectedDispensaryForPermissionName);
+                                if (matchedDisp) {
+                                  setSelectedDispensary(matchedDisp);
+                                }
+                                createPrivacyPermission('dispensary-prescription', true, selectedDispensaryForPermissionName);
+                              }}
+                              className="mt-1.5 rounded-xl border border-brand-gold/30 bg-[#fbf7ef] px-4 py-2.5 text-xs font-bold text-brand-green-deep hover:bg-brand-gold/10 active:scale-95 transition-all"
+                            >
+                              Compartir receta con dispensario
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -8533,17 +8697,33 @@ export default function MockupPortal({
                   </label>
                 </div>
                 <div className="rounded-2xl border border-brand-green-deep/10 bg-white p-4">
-                  <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-2">Solicitud de acceso</p>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-base font-bold text-brand-green-deep">{clinicalAccessDoctor}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/60">
-                        Endocannabinología - solicita leer este dato para validar tratamiento y emitir receta verificable.
-                      </p>
+                  <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45 font-bold mb-2">Seleccionar Médico para Autorizar</p>
+                  <div className="flex flex-col gap-3">
+                    <select
+                      value={authorizedDoctorName}
+                      onChange={(e) => setAuthorizedDoctorName(e.target.value)}
+                      className="w-full rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-xs font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+                    >
+                      {allDoctors.length === 0 ? (
+                        <option value="Dr. Alejandro Merino">Dr. Alejandro Merino (Demo)</option>
+                      ) : (
+                        allDoctors.map((doc) => (
+                          <option key={doc.id} value={doc.name}>
+                            {doc.name} ({doc.specialty || 'Especialista'})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs leading-relaxed text-brand-green-mid/60">
+                          El médico seleccionado solicita leer este dato para validar tratamiento y emitir receta verificable.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-brand-neutral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                        24h
+                      </span>
                     </div>
-                    <span className="rounded-full bg-brand-neutral px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/60">
-                      24h
-                    </span>
                   </div>
                 </div>
                 <div className={`rounded-2xl border p-4 text-xs leading-relaxed ${
@@ -8554,10 +8734,10 @@ export default function MockupPortal({
                       : 'border-blue-100 bg-blue-50 text-blue-700'
                 }`}>
                   {selectedClinicalAccess === 'authorized'
-                    ? `Acceso autorizado por 24h para ${clinicalAccessDoctor}. El médico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.`
+                    ? `Acceso autorizado por 24h para ${authorizedDoctorName}. El médico recibe una ventana temporal con documentos cifrados y hashes verificables; Stellar registra solo prueba de permiso y estado.`
                     : selectedClinicalAccess === 'revoked'
-                      ? `Acceso revocado para ${clinicalAccessDoctor}. El médico conserva solo el hash público y pierde la ventana temporal de lectura privada.`
-                      : `402 privacy gate: ${clinicalAccessDoctor} solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.`}
+                      ? `Acceso revocado para ${authorizedDoctorName}. El médico conserva solo el hash público y pierde la ventana temporal de lectura privada.`
+                      : `402 privacy gate: ${authorizedDoctorName} solicita acceso, el paciente aprueba una ventana temporal, y el sistema entrega documentos cifrados + hashes verificables. Stellar recibe solo prueba de integridad y estado.`}
                 </div>
                 <div className="rounded-2xl border border-brand-gold/20 bg-brand-gold/5 p-4">
                   <div className="mb-1 flex items-center justify-between gap-3">
@@ -8579,9 +8759,9 @@ export default function MockupPortal({
                   <p className="font-mono text-xs text-brand-green-deep">{selectedClinicalRecord.proof}</p>
                   <p className="mt-2 text-[10px] leading-relaxed text-brand-green-mid/55">
                     {selectedClinicalAccess === 'authorized'
-                      ? `Permiso temporal para ${clinicalAccessDoctor}: permiso-${selectedClinicalRecord.id}-24h - expira mañana.`
+                      ? `Permiso temporal para ${authorizedDoctorName}: permiso-${selectedClinicalRecord.id}-24h - expira mañana.`
                       : selectedClinicalAccess === 'revoked'
-                        ? `Revocación para ${clinicalAccessDoctor}: revoke-${selectedClinicalRecord.id}-402.`
+                        ? `Revocación para ${authorizedDoctorName}: revoke-${selectedClinicalRecord.id}-402.`
                         : 'Sin permiso activo. Solo esta prueba publica puede validarse fuera del portal.'}
                   </p>
                 </div>
@@ -8593,7 +8773,7 @@ export default function MockupPortal({
                         ...current,
                         [selectedClinicalRecord.id]: 'authorized',
                       }));
-                      createPrivacyPermission('medical-consultation');
+                      createPrivacyPermission('medical-consultation', false, authorizedDoctorName);
                     }}
                     className={`rounded-2xl px-4 py-3 text-sm font-bold transition-all active:scale-95 ${
                       selectedClinicalAccess === 'authorized'

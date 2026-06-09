@@ -15,6 +15,7 @@ export default async function handler(req: any, res: any) {
       durationDays,
       totalQuantity,
       totalQuantityGrams,
+      doctorEmail,
     } = req.body ?? {};
 
     if (!patientAddress || !treatment || !dosage || !durationDays) {
@@ -47,6 +48,7 @@ export default async function handler(req: any, res: any) {
       notes: notes ? String(notes) : '',
       durationDays: normalizedDurationDays,
       totalQuantity: normalizedTotalQuantity,
+      doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
     });
 
     res.status(200).json(result);

@@ -1,3 +1,6 @@
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { Buffer } from 'buffer';
+
 export const STELLAR_TESTNET_NETWORK = 'TESTNET';
 export const STELLAR_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 export const TRUST_LEAF_PASSKEY_APP = 'Trust Leaf Testnet';
@@ -40,3 +43,51 @@ export function getPasskeyRpId() {
 
   return hostname;
 }
+
+export async function deriveStellarPublicKey(email: string): Promise<string> {
+  const normalized = email.toLowerCase().trim();
+
+  // Compatibility mapping with default wallets
+  if (normalized === 'medico@trustleaf.test') {
+    return 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV';
+  }
+  if (normalized === 'dispensario@trustleaf.test') {
+    return 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX';
+  }
+  if (normalized === 'paciente@trustleaf.test') {
+    return 'GDKCAFBRPVG4E6VEX4SUFVOMLDQKXDVEECR2DIWYRDEMIAS7CUR2RMXP';
+  }
+
+  try {
+    const response = await fetch('/api/stellar/derive-wallet', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: normalized }),
+    });
+    if (response.ok) {
+      const payload = await response.json();
+      if (payload.publicKey) {
+        return payload.publicKey;
+      }
+    }
+  } catch (error) {
+    console.error('Error deriving wallet from backend API:', error);
+  }
+
+  // Deterministic hashing fallback
+  const encoder = new TextEncoder();
+  const data = encoder.encode(normalized + 'trust-leaf-secret-salt-2026');
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+  try {
+    const keypair = StellarSdk.Keypair.fromRawEd25519Seed(Buffer.from(hashArray));
+    return keypair.publicKey();
+  } catch (e) {
+    console.error('Error deriving keypair:', e);
+    return '';
+  }
+}
+

@@ -34,7 +34,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (action === 'dispense-prescription') {
-      const { prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
+      const { prescriptionId, productLabel, batchLabel, quantity, dispensaryEmail, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
       const normalizedQuantity = Number(quantity);
 
@@ -56,6 +56,8 @@ export default async function handler(req: any, res: any) {
         productLabel: String(productLabel),
         batchLabel: String(batchLabel),
         quantity: normalizedQuantity,
+        dispensaryEmail: dispensaryEmail ? String(dispensaryEmail) : undefined,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.status(200).json(result);
@@ -63,7 +65,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (action === 'retain-prescription') {
-      const { prescriptionId, dispensaryAddress, lockPeriodDays } = req.body ?? {};
+      const { prescriptionId, dispensaryAddress, lockPeriodDays, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
 
       if (!Number.isFinite(normalizedPrescriptionId) || !dispensaryAddress) {
@@ -77,6 +79,7 @@ export default async function handler(req: any, res: any) {
         prescriptionId: normalizedPrescriptionId,
         dispensaryAddress: String(dispensaryAddress),
         lockPeriodDays: lockPeriodDays ? Number(lockPeriodDays) : undefined,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.status(200).json(result);
@@ -84,7 +87,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (action === 'release-prescription') {
-      const { prescriptionId } = req.body ?? {};
+      const { prescriptionId, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
 
       if (!Number.isFinite(normalizedPrescriptionId)) {
@@ -96,6 +99,7 @@ export default async function handler(req: any, res: any) {
 
       const result = await releasePrescriptionToPatient({
         prescriptionId: normalizedPrescriptionId,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.status(200).json(result);

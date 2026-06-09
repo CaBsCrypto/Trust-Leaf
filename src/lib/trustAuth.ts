@@ -2,6 +2,7 @@ import { GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithEm
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { createPasskeyWallet } from './stellar/passkeys';
+import { deriveStellarPublicKey } from './stellar/config';
 
 export type AdminAuthMode = 'checking' | 'signed-out' | 'authorized' | 'not-admin' | 'demo';
 
@@ -21,13 +22,12 @@ export async function signInWithGoogle() {
       const userSnap = await getDoc(userRef);
       
       if (!userSnap.exists()) {
-        console.log('[Auth Real] Nuevo usuario detectado. Acuñando Smart Wallet biométrico con Passkeys...');
+        console.log('[Auth Real] Nuevo usuario detectado. Derivando Stellar Wallet...');
         
-        // 1. Generar la llave biométrica de Stellar (Passkey)
-        const userLabel = result.user.email || result.user.uid;
-        const passkeyWallet = await createPasskeyWallet(userLabel);
+        const email = result.user.email || result.user.uid;
+        const derivedWalletAddress = await deriveStellarPublicKey(email);
         
-        console.log(`[Auth Real] Smart Wallet acuñado con éxito: ${passkeyWallet.contractId}`);
+        console.log(`[Auth Real] Stellar Wallet derivado: ${derivedWalletAddress}`);
 
         // 2. Fondeo automático de la cuenta en Stellar Testnet llamando a la API
         try {
@@ -37,7 +37,7 @@ export async function signInWithGoogle() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               role: 'patient',
-              address: passkeyWallet.contractId
+              address: derivedWalletAddress
             })
           });
           const faucetResult = await faucetResponse.json();
@@ -55,7 +55,7 @@ export async function signInWithGoogle() {
           uid: result.user.uid,
           name: result.user.displayName || 'Paciente Registrado',
           email: result.user.email || '',
-          stellarPublicKey: passkeyWallet.contractId,
+          stellarPublicKey: derivedWalletAddress,
           createdAt: new Date().toISOString()
         });
       } else {
