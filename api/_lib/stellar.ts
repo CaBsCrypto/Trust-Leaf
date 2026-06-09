@@ -750,6 +750,8 @@ export async function retainPrescriptionForDispensary(input: {
 export async function releasePrescriptionToPatient(input: {
   prescriptionId: number;
   doctorEmail?: string;
+  dispensaryEmail?: string;
+  dispensaryAddress?: string;
 }) {
   const prescriptionId = Math.floor(input.prescriptionId);
 
@@ -785,7 +787,14 @@ export async function releasePrescriptionToPatient(input: {
     doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
   }
 
-  const dispensaryAddress = getDispensaryAddress();
+  let dispensaryAddress: string;
+  if (input.dispensaryEmail) {
+    dispensaryAddress = getDeterministicKeypair(input.dispensaryEmail).publicKey();
+  } else if (input.dispensaryAddress) {
+    dispensaryAddress = input.dispensaryAddress;
+  } else {
+    dispensaryAddress = getDispensaryAddress();
+  }
 
   const doctorAccountResp = await serverHorizon.loadAccount(doctorAddress);
   const nftAsset = new StellarSdk.Asset(assetCode, doctorAddress);
@@ -1889,21 +1898,10 @@ export async function submitSignedTransaction(input: {
           try {
             const claimableBalances = await serverHorizon
               .claimableBalances()
-              .claimant(patientAddress)
               .asset(nftAsset)
               .call();
             if (claimableBalances.records.length > 0) {
               claimableBalanceId = claimableBalances.records[0].id;
-            } else {
-              const dispensaryAddress = getDispensaryAddress();
-              const claimableBalancesDisp = await serverHorizon
-                .claimableBalances()
-                .claimant(dispensaryAddress)
-                .asset(nftAsset)
-                .call();
-              if (claimableBalancesDisp.records.length > 0) {
-                claimableBalanceId = claimableBalancesDisp.records[0].id;
-              }
             }
           } catch (err) {
             console.error(`[NFT Burn] Error buscando balance para quema:`, err);

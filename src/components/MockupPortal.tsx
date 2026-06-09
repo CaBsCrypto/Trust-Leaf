@@ -3,7 +3,7 @@ import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, Ma
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
-import { shortenAddress, stellarConfig } from '../lib/stellar/config';
+import { shortenAddress, stellarConfig, deriveStellarPublicKey } from '../lib/stellar/config';
 import { connectFreighterOnTestnet } from '../lib/stellar/freighter';
 import {
   addFreighterBackupSigner,
@@ -1398,6 +1398,17 @@ export default function MockupPortal({
     return () => window.clearInterval(interval);
   }, []);
 
+  const [sessionWallet, setSessionWallet] = useState<string>('');
+  useEffect(() => {
+    if (session?.email) {
+      deriveStellarPublicKey(session.email).then((w) => {
+        if (w) setSessionWallet(w);
+      });
+    } else {
+      setSessionWallet('');
+    }
+  }, [session?.email]);
+
   const walletConnected = walletSetup.primaryMethod !== null;
   const passkeyAvailability = getPasskeyAvailability();
   const patientIdentityAddress = useMemo(() => {
@@ -1483,13 +1494,13 @@ export default function MockupPortal({
     runtimeReadiness?.signers.dispensary.address ?? 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX';
   const currentUserWallet = useMemo(() => {
     if (isDoctorPortal) {
-      return doctorCredentialAddress;
+      return sessionWallet || doctorCredentialAddress;
     }
     if (isDispensaryPortal) {
-      return dispensaryCredentialAddress;
+      return sessionWallet || dispensaryCredentialAddress;
     }
     return patientTrustAccountAddress;
-  }, [isDoctorPortal, isDispensaryPortal, doctorCredentialAddress, dispensaryCredentialAddress, patientTrustAccountAddress]);
+  }, [isDoctorPortal, isDispensaryPortal, sessionWallet, doctorCredentialAddress, dispensaryCredentialAddress, patientTrustAccountAddress]);
   const doctorActivePatients = useMemo(() => {
     if (!isDoctorPortal || !session) return [];
     
@@ -2959,7 +2970,7 @@ export default function MockupPortal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prescriptionId,
-          dispensaryAddress: dispensaryCredentialAddress,
+          dispensaryAddress: currentUserWallet,
           lockPeriodDays,
           doctorEmail: doctorEmail,
         }),
@@ -3003,6 +3014,8 @@ export default function MockupPortal({
         body: JSON.stringify({
           prescriptionId,
           doctorEmail: doctorEmail,
+          dispensaryEmail: session?.email,
+          dispensaryAddress: currentUserWallet,
         }),
       });
       const payload = await response.json();
@@ -5698,10 +5711,10 @@ export default function MockupPortal({
                                       Esta receta se encuentra bajo custodia de la farmacia:
                                     </p>
                                     <p className="mt-1 font-mono text-[10px] font-bold text-brand-green-deep break-all">
-                                      {prescriptionValidation.prescription.retainedBy || dispensaryCredentialAddress}
+                                      {prescriptionValidation.prescription.retainedBy || currentUserWallet}
                                     </p>
                                     
-                                    {(!prescriptionValidation.prescription.retainedBy || prescriptionValidation.prescription.retainedBy === dispensaryCredentialAddress) ? (
+                                    {(!prescriptionValidation.prescription.retainedBy || prescriptionValidation.prescription.retainedBy === currentUserWallet) ? (
                                       <div className="mt-4">
                                         <div className="flex items-center gap-2 rounded-xl bg-amber-50/70 p-3 text-xs text-amber-800 border border-amber-200/50">
                                           <span>🔒</span>

@@ -395,7 +395,7 @@ async function startServer() {
 
   app.post("/api/stellar/dispensary/release-prescription", async (req, res) => {
     try {
-      const { prescriptionId, doctorEmail } = req.body ?? {};
+      const { prescriptionId, doctorEmail, dispensaryEmail, dispensaryAddress } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
 
       if (!Number.isFinite(normalizedPrescriptionId)) {
@@ -408,6 +408,8 @@ async function startServer() {
       const result = await releasePrescriptionToPatient({
         prescriptionId: normalizedPrescriptionId,
         doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
+        dispensaryEmail: dispensaryEmail ? String(dispensaryEmail) : undefined,
+        dispensaryAddress: dispensaryAddress ? String(dispensaryAddress) : undefined,
       });
 
       res.json(result);
