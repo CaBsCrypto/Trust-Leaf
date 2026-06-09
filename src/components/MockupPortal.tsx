@@ -27,6 +27,13 @@ interface MockupPortalProps {
   pageMode?: boolean;
   roleLabel?: string;
   onSignOut?: () => void;
+  session?: {
+    role: string;
+    email: string;
+    name: string;
+    mode: 'demo' | 'email';
+    createdAt: string;
+  } | null;
 }
 
 interface PatientPrescriptionRecord {
@@ -988,6 +995,7 @@ export default function MockupPortal({
   pageMode = false,
   roleLabel = 'Trust Leaf Portal',
   onSignOut,
+  session = null,
 }: MockupPortalProps) {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PortalView>(initialView);
@@ -1258,6 +1266,80 @@ export default function MockupPortal({
     localStorage.setItem('trust_consultation_status', JSON.stringify(consultationStatusById));
   }, [consultationStatusById]);
 
+  // Prevent demo cache leak in real sessions
+  useEffect(() => {
+    if (session && session.role === 'patient' && session.mode !== 'demo') {
+      const savedWallet = localStorage.getItem('trust_wallet_setup');
+      if (savedWallet) {
+        const parsed = JSON.parse(savedWallet);
+        if (parsed.primaryMethod === 'demo') {
+          localStorage.removeItem('trust_wallet_setup');
+          setWalletSetup({
+            primaryMethod: null,
+            hasFreighterBackup: false,
+            walletLabel: 'Trust Leaf Smart Wallet',
+            contractAccount: 'CAX7...LEAF',
+            networkLabel: stellarConfig.networkLabel,
+          });
+        }
+      }
+      
+      const savedDashboard = localStorage.getItem('trust_patient_dashboard');
+      if (savedDashboard) {
+        const parsed = JSON.parse(savedDashboard);
+        if (parsed.patientAddress === DEMO_PATIENT_ADDRESS) {
+          localStorage.removeItem('trust_patient_dashboard');
+          setPatientDashboard(null);
+          setHasPrescription(false);
+          localStorage.setItem('trust_has_rx', 'false');
+        }
+      }
+    }
+  }, [session]);
+
+  const [realDoctors, setRealDoctors] = useState<any[]>([]);
+  const [loadingRealDoctors, setLoadingRealDoctors] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadDoctors = async () => {
+      setLoadingRealDoctors(true);
+      try {
+        const result = await trustDataStore.loadDoctorApplications();
+        if (active) {
+          const approved = result.records
+            .filter((doc) => doc.status === 'approved')
+            .map((doc) => ({
+              id: doc.id,
+              name: doc.name,
+              specialty: doc.specialty || "Médico General",
+              rating: 5.0,
+              reviews: 0,
+              availability: "Bajo demanda",
+              wallet: doc.wallet,
+            }));
+          setRealDoctors(approved);
+        }
+      } catch (err) {
+        console.error("Error loading real doctors:", err);
+      } finally {
+        if (active) {
+          setLoadingRealDoctors(false);
+        }
+      }
+    };
+    loadDoctors();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const allDoctors = useMemo(() => {
+    const mockNames = new Set(MOCK_DOCTORS.map((d) => d.name.toLowerCase()));
+    const filteredReal = realDoctors.filter((d) => !mockNames.has(d.name.toLowerCase()));
+    return [...filteredReal, ...MOCK_DOCTORS];
+  }, [realDoctors]);
+
   useEffect(() => {
     localStorage.setItem('trust_consultation_clinical_records', JSON.stringify(consultationClinicalRecords));
   }, [consultationClinicalRecords]);
@@ -1291,6 +1373,17 @@ export default function MockupPortal({
 
     return walletSetup.freighterAddress ?? walletSetup.contractAccount;
   }, [walletConnected, walletSetup.contractAccount, walletSetup.freighterAddress, walletSetup.primaryMethod]);
+
+  const welcomeText = useMemo(() => {
+    const defaultWelcome = t.portal.viewWelcome;
+    if (session?.name) {
+      return defaultWelcome
+        .replace("Paciente 0", session.name)
+        .replace("Patient 0", session.name);
+    }
+    return defaultWelcome;
+  }, [session?.name, t.portal.viewWelcome]);
+
   const primaryPrescription = patientDashboard?.prescriptions[0] ?? null;
   const activePrescription = patientDashboard?.prescriptions.find(
     (prescription) => prescription.status === 'active',
@@ -1436,7 +1529,8 @@ export default function MockupPortal({
           return;
         }
 
-        if (walletSetup.primaryMethod === 'demo' && payload.summary.total === 0) {
+        const isDemo = session?.mode === 'demo' || walletSetup.primaryMethod === 'demo';
+        if (isDemo && payload.summary.total === 0) {
           setPatientDashboard(buildDemoPatientDashboard(patientIdentityAddress));
           setHasPrescription(true);
           return;
@@ -3731,7 +3825,7 @@ export default function MockupPortal({
             <div className="flex-1 overflow-y-auto bg-white mb-[80px] md:mb-0">
               <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 px-6 md:px-8 py-4 md:py-6 border-b border-brand-green-deep/5 flex justify-between items-center">
                 <h3 className="text-xl md:text-2xl font-serif text-brand-green-deep">
-                  {activeView === 'overview' && t.portal.viewWelcome}
+                  {activeView === 'overview' && welcomeText}
                   {activeView === 'doctors' && (isDoctorPortal ? 'Panel médico' : t.portal.viewDoctors)}
                   {activeView === 'dispensaries' && (isDispensaryPortal ? 'Operación dispensario' : t.portal.viewDispensaries)}
                   {activeView === 'prescriptions' && t.portal.viewPrescriptions}
@@ -3775,7 +3869,7 @@ export default function MockupPortal({
                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                           <p className="text-xs font-bold text-brand-gold uppercase tracking-[0.2em] mb-1">{t.portal.panelControl}</p>
-                          <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">{t.portal.viewWelcome}</h3>
+                          <h3 className="text-3xl md:text-4xl font-serif text-brand-green-deep">{welcomeText}</h3>
                         </div>
                         {showTechnicalDetails && isPatientPortal && (
                           <div className="flex flex-col gap-2 sm:flex-row">
@@ -5212,7 +5306,7 @@ export default function MockupPortal({
                         />
                       </div>
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-6xl">
-                      {MOCK_DOCTORS.filter(doc => 
+                      {allDoctors.filter(doc => 
                         doc.name.toLowerCase().includes(doctorSearchQuery.toLowerCase()) || 
                         doc.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase())
                       ).map(doc => (

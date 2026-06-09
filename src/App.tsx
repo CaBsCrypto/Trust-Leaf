@@ -773,6 +773,7 @@ function AppContent() {
         pageMode
         roleLabel="Portal Paciente"
         onSignOut={endSession}
+        session={session}
       />
     );
   }
@@ -851,6 +852,7 @@ function AppContent() {
         pageMode
         roleLabel="Portal Médico"
         onSignOut={endSession}
+        session={session}
       />
     );
   }
@@ -935,6 +937,7 @@ function AppContent() {
         pageMode
         roleLabel="Portal Dispensario"
         onSignOut={endSession}
+        session={session}
       />
     );
   }
