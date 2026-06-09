@@ -3501,7 +3501,7 @@ function DispensaryRegistrationRoute({
               }}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 transition-transform shadow-lg shadow-brand-green-deep/15 cursor-pointer"
             >
-              Comenzar a dispensar <ArrowRight size={16} />
+              Ingresar al panel del dispensario <ArrowRight size={16} />
             </button>
           </motion.div>
         </div>
@@ -3854,7 +3854,7 @@ function DoctorRegistrationRoute({
               }}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 transition-transform shadow-lg shadow-brand-green-deep/15 cursor-pointer"
             >
-              Comenzar a emitir recetas <ArrowRight size={16} />
+              Ingresar al panel médico <ArrowRight size={16} />
             </button>
           </motion.div>
         </div>
