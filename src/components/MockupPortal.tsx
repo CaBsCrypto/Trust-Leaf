@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
 import { shortenAddress, stellarConfig, deriveStellarPublicKey } from '../lib/stellar/config';
-import { connectFreighterOnTestnet } from '../lib/stellar/freighter';
+import { connectFreighterOnTestnet, signXdrWithFreighter } from '../lib/stellar/freighter';
 import {
   addFreighterBackupSigner,
   connectOrCreatePasskeyWallet,
@@ -13,9 +13,10 @@ import {
 import { passkeyService } from '../lib/stellar/passkeyService';
 import { validateRut, formatRut, CHILEAN_REGIONS } from '../lib/stellar/chileHelpers';
 
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { trustDataStore } from '../lib/trustData';
+import { logAuditEvent } from '../lib/auditLogger';
 
 export type PortalView = 'overview' | 'doctors' | 'dispensaries' | 'profile' | 'prescriptions' | 'pickups' | 'history' | 'traveler';
 
@@ -1001,6 +1002,17 @@ export default function MockupPortal({
 }: MockupPortalProps) {
   const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PortalView>(initialView);
+  const [signingMethod, setSigningMethod] = useState<'managed' | 'freighter'>('managed');
+  const [freighterInstalled, setFreighterInstalled] = useState(false);
+
+  useEffect(() => {
+    const checkFreighter = () => {
+      setFreighterInstalled(Boolean((window as any).freighter || (window as any).stellarWebKit));
+    };
+    checkFreighter();
+    const interval = setInterval(checkFreighter, 2000);
+    return () => clearInterval(interval);
+  }, []);
   const isDoctorPortal = roleLabel === 'Portal Médico';
   const isDispensaryPortal = roleLabel === 'Portal Dispensario';
   const isPatientPortal = roleLabel === 'Portal Paciente';
@@ -1154,6 +1166,15 @@ export default function MockupPortal({
     const saved = localStorage.getItem('trust_pickups');
     return saved ? JSON.parse(saved) : [];
   });
+  // ── Toast notification system ────────────────────────────────────────────
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'info' | 'error'>('success');
+  const showToast = (msg: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+  const pendingPickupCount = activePickups.filter((p: any) => p.status === 'pending').length;
   const [hasPrescription, setHasPrescription] = useState(() => {
     const saved = localStorage.getItem('trust_has_rx');
     return saved === 'true';
@@ -1666,6 +1687,43 @@ export default function MockupPortal({
   }, [patientIdentityAddress]);
 
   useEffect(() => {
+    if (session?.mode === 'demo' || !auth.currentUser) {
+      return;
+    }
+
+    let q = null;
+    if (isPatientPortal && patientIdentityAddress) {
+      const patientId = auth.currentUser.uid;
+      q = query(collection(db, 'pickups'), where('patientId', '==', patientId));
+    } else if (isDispensaryPortal && currentUserWallet) {
+      const currentDisp = realDispensaries.find(d => d.wallet === currentUserWallet);
+      const dispId = currentDisp?.id || 'demo-dispensary';
+      q = query(collection(db, 'pickups'), where('dispensaryId', '==', dispId), where('status', '==', 'pending'));
+    }
+
+    if (!q) return;
+
+    console.log("[Firestore Sync] Escuchando pickups en tiempo real...");
+    let isFirstSnapshot = true;
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const pickups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setActivePickups(pickups);
+      // Notify dispensary of new incoming pickups (skip initial load)
+      if (!isFirstSnapshot && isDispensaryPortal) {
+        const newPending = snapshot.docChanges().filter(c => c.type === 'added' && c.doc.data().status === 'pending');
+        if (newPending.length > 0) {
+          showToast(`📋 Nuevo retiro pendiente recibido en cola`, 'info');
+        }
+      }
+      isFirstSnapshot = false;
+    }, (err) => {
+      console.error("[Firestore Sync] Error en listener de pickups:", err);
+    });
+
+    return () => unsubscribe();
+  }, [isPatientPortal, isDispensaryPortal, patientIdentityAddress, currentUserWallet, realDispensaries, session]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadRuntimeReadiness = async () => {
@@ -1972,6 +2030,145 @@ export default function MockupPortal({
     });
   };
 
+  const generatePrescriptionPDF = async (prescriptionId: string, doctorName: string, doctorEmail: string, patientName: string, patientAddress: string, treatment: string, dosage: string) => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const QRCode = await import('qrcode');
+
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Header background block
+      doc.setFillColor(10, 60, 47); // Brand Green Deep
+      doc.rect(0, 0, 210, 40, 'F');
+
+      // Title
+      doc.setTextColor(253, 251, 247); // Ivory
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text('TRUST LEAF', 15, 20);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(212, 175, 55); // Gold
+      doc.text('RECETA MÉDICA MAGISTRAL CANNÁBICA', 15, 27);
+      doc.text('SISTEMA DE TRAZABILIDAD BLOCKCHAIN', 15, 32);
+
+      // Sello Médico (Top Right)
+      doc.setTextColor(253, 251, 247);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Dr. ${doctorName}`, 130, 15);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Registro Nacional SIS: 198273`, 130, 20);
+      doc.text(`Email: ${doctorEmail}`, 130, 24);
+      doc.text(`Fecha Emisión: ${new Date().toLocaleDateString('es-CL')}`, 130, 28);
+
+      // Green Line separator
+      doc.setDrawColor(212, 175, 55); // Gold
+      doc.setLineWidth(1);
+      doc.line(0, 40, 210, 40);
+
+      // Body formatting
+      doc.setTextColor(10, 60, 47); // Green Deep
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('1. INFORMACIÓN DEL PACIENTE', 15, 55);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+      doc.text(`Nombre Completo: ${patientName}`, 15, 63);
+      doc.text(`Wallet Address: ${shortenAddress(patientAddress, 16)}`, 15, 69);
+      doc.text(`ID Receta (Soroban): #${prescriptionId}`, 15, 75);
+
+      // Divider
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.5);
+      doc.line(15, 82, 195, 82);
+
+      // 2. Clinical Info
+      doc.setTextColor(10, 60, 47);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('2. PRESCRIPCIÓN CLÍNICA Y DOSIFICACIÓN', 15, 95);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+      
+      const treatmentLines = doc.splitTextToSize(treatment, 180);
+      doc.text(treatmentLines, 15, 103);
+      
+      const dosageY = 103 + (treatmentLines.length * 5) + 5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Instrucciones de Dosificación:', 15, dosageY);
+      doc.setFont('helvetica', 'normal');
+      const dosageLines = doc.splitTextToSize(dosage, 180);
+      doc.text(dosageLines, 15, dosageY + 6);
+
+      const nextSectionY = dosageY + 6 + (dosageLines.length * 5) + 10;
+
+      // Divider
+      doc.line(15, nextSectionY - 5, 195, nextSectionY - 5);
+
+      // 3. Legal and protection framework
+      doc.setTextColor(10, 60, 47);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('3. AMPARO LEGAL (CHILE LEY 20.000 / 21.572)', 15, nextSectionY);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      const legalText = 'Esta receta médica magistral se emite bajo el amparo de la legislación chilena vigente (Ley 20.000, Ley 21.572 y decretos del Ministerio de Salud). Autoriza la adquisición de preparados medicinales en locales autorizados y el autocultivo personal/doméstico con fines de tratamiento médico exclusivo según las especificaciones anteriores.';
+      const legalLines = doc.splitTextToSize(legalText, 180);
+      doc.text(legalLines, 15, nextSectionY + 6);
+
+      const signY = nextSectionY + 6 + (legalLines.length * 4) + 15;
+
+      // QR Code and Signatures Side by Side
+      const qrDataUrl = await QRCode.toDataURL(`https://www.trustleaf.org/verify/${prescriptionId}`);
+      doc.addImage(qrDataUrl, 'PNG', 15, signY, 35, 35);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text('QR de Validación Criptográfica', 15, signY + 39);
+      doc.text('Escanee para verificar en Ledger', 15, signY + 42);
+
+      // Holographic Signature Rubric Draw
+      doc.setDrawColor(30, 100, 200); // Blue ink
+      doc.setLineWidth(1);
+      doc.line(125, signY + 12, 140, signY + 6);
+      doc.line(140, signY + 6, 150, signY + 20);
+      doc.line(150, signY + 20, 160, signY + 8);
+      doc.line(160, signY + 8, 175, signY + 14);
+
+      doc.setTextColor(10, 60, 47);
+      doc.setDrawColor(10, 60, 47);
+      doc.setLineWidth(0.5);
+      doc.line(120, signY + 25, 180, signY + 25);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Dr. ${doctorName}`, 150, signY + 30, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Firma Digitalizada Homologada', 150, signY + 34, { align: 'center' });
+      doc.text(`TX Hash: ${prescriptionId ? 'Soroban #' + prescriptionId : 'Emitido en Piloto'}`, 150, signY + 38, { align: 'center' });
+
+      // Save PDF
+      doc.save(`Receta_Magistral_${prescriptionId}.pdf`);
+      console.log(`[PDF] Receta #${prescriptionId} descargada con éxito.`);
+    } catch (pdfError) {
+      console.error("Error generating PDF:", pdfError);
+    }
+  };
+
   const handleDoctorIssuePrescription = async () => {
     const targetPatientAddress = prescriptionPatientAddress.trim();
 
@@ -2005,45 +2202,123 @@ export default function MockupPortal({
         ? ` | Ley 21.57 protection: Región ${doctorIssueForm.autocultivoRegion}, Comuna ${doctorIssueForm.autocultivoComuna}, Dirección ${doctorIssueForm.autocultivoAddress}, Límite ${doctorIssueForm.autocultivoPlants} macetas`
         : '';
       const fullTreatment = `${doctorIssueForm.treatment} [CIE-10: ${doctorIssueForm.patientDiagnosis || 'N/A'} | ${complianceDetail} | ${compoundingDetail}${autocultivoDetail}]`;
+      const totalQuantity = Math.max(
+        1,
+        Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+      );
 
-      const response = await fetch('/api/stellar/doctor/issue-prescription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patientAddress: targetPatientAddress,
-          treatment: fullTreatment,
-          dosage: doctorIssueForm.dosage,
-          notes: doctorIssueForm.notes,
-          durationDays: doctorIssueForm.durationDays,
-          totalQuantity: Math.max(
-            1,
-            Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-          ),
-          doctorEmail: session?.email,
-        }),
-      });
+      let txHash = '';
+      let issuedId = null;
+      let dashboard = null;
 
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.message || 'No fue posible emitir la receta en testnet.');
+      if (signingMethod === 'freighter') {
+        if (!freighterInstalled) {
+          throw new Error('La extensión Freighter no está instalada o habilitada.');
+        }
+        const freighterConn = await connectFreighterOnTestnet();
+        const buildResp = await fetch('/api/stellar/doctor/build-issue-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            doctorAddress: freighterConn.address,
+            patientAddress: targetPatientAddress,
+            treatment: fullTreatment,
+            dosage: doctorIssueForm.dosage,
+            notes: doctorIssueForm.notes,
+            durationDays: doctorIssueForm.durationDays,
+            totalQuantity,
+          }),
+        });
+        const buildPayload = await buildResp.json();
+        if (!buildResp.ok) {
+          throw new Error(buildPayload.message || 'Error construyendo la transacción para Freighter.');
+        }
+
+        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
+
+        const submitResp = await fetch('/api/stellar/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            xdr: signedXdr,
+            operationType: 'issue',
+            patientAddress: targetPatientAddress,
+            medicationHash: buildPayload.medicationHash,
+            totalQuantity: buildPayload.totalQuantity,
+            durationDays: doctorIssueForm.durationDays,
+          }),
+        });
+        const submitPayload = await submitResp.json();
+        if (!submitResp.ok) {
+          throw new Error(submitPayload.message || 'Error al transmitir la transacción firmada.');
+        }
+        txHash = submitPayload.txHash;
+        issuedId = submitPayload.issuedId;
+        dashboard = submitPayload.dashboard;
+      } else {
+        const response = await fetch('/api/stellar/doctor/issue-prescription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            patientAddress: targetPatientAddress,
+            treatment: fullTreatment,
+            dosage: doctorIssueForm.dosage,
+            notes: doctorIssueForm.notes,
+            durationDays: doctorIssueForm.durationDays,
+            totalQuantity,
+            doctorEmail: session?.email,
+          }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || 'No fue posible emitir la receta en testnet.');
+        }
+        txHash = payload.txHash;
+        issuedId = payload.issuedId;
+        dashboard = payload.dashboard;
       }
 
-      setPatientDashboard(payload.dashboard);
-      setHasPrescription(payload.dashboard.summary.total > 0);
+      if (dashboard) {
+        setPatientDashboard(dashboard);
+        setHasPrescription(dashboard.summary.total > 0);
+      }
       setDoctorIssueSuccess(
-        `Receta emitida en testnet. Número ${payload.issuedId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
+        `Receta emitida en testnet. Número ${issuedId ?? 'pendiente'} - Tx ${shortenHash(txHash)}`,
       );
+      showToast(`✅ Receta #${issuedId ?? 'N/A'} emitida y registrada en Testnet`);
+      // Audit trail
+      void logAuditEvent({
+        type: 'prescription_issued',
+        txHash: txHash || 'pending',
+        actorAddress: currentUserWallet || session?.email || 'unknown',
+        actorRole: 'doctor',
+        prescriptionId: issuedId ? Number(issuedId) : null,
+        patientAddress: targetPatientAddress,
+        metadata: { treatment: fullTreatment.slice(0, 80), durationDays: doctorIssueForm.durationDays, signingMethod },
+      });
       setPrescriptionToolOpen(false);
       setPrescriptionAllowance({
-        monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
+        monthlyLimitGrams: totalQuantity,
         usedGrams: 0,
       });
-      if (payload.issuedId !== undefined && payload.issuedId !== null) {
-        const issuedId = String(payload.issuedId);
-        localStorage.setItem('trust_latest_prescription_id', issuedId);
-        setDispensePrescriptionId(issuedId);
+      if (issuedId !== undefined && issuedId !== null) {
+        const issuedIdStr = String(issuedId);
+        localStorage.setItem('trust_latest_prescription_id', issuedIdStr);
+        setDispensePrescriptionId(issuedIdStr);
+
+        // Generar y descargar el PDF de forma automática
+        await generatePrescriptionPDF(
+          issuedIdStr,
+          session?.name || 'Médico Autorizado',
+          session?.email || 'medico@trustleaf.test',
+          doctorIssueForm.patientRut ? `RUT: ${doctorIssueForm.patientRut}` : 'Paciente Piloto',
+          targetPatientAddress,
+          fullTreatment,
+          doctorIssueForm.dosage
+        );
       }
       setRecentActivity((prev: any[]) => [
         {
@@ -2427,6 +2702,7 @@ export default function MockupPortal({
         expires: 'Expira en 23:59h',
         patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
         dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+        prescriptionId: primaryPrescription?.id || 1,
       };
       trustDataStore.createPickup(p);
       return p;
@@ -2489,6 +2765,7 @@ export default function MockupPortal({
             quantity: pickup.quantity,
             strain: pickup.strain,
             status: pickup.status,
+            prescriptionId,
             createdAt: new Date().toISOString()
           });
         } catch (e) {
@@ -2554,31 +2831,94 @@ export default function MockupPortal({
       const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
       const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
 
-      const response = await fetch('/api/stellar/dispensary/dispense-prescription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prescriptionId,
-          productLabel,
-          batchLabel,
-          quantity,
-          dispensaryEmail: session?.email,
-          doctorEmail: doctorEmail,
-        }),
-      });
-      const payload = await response.json();
+      let txHash = '';
+      let recordId = null;
+      let dashboard = null;
 
-      if (!response.ok) {
-        throw new Error(payload.code || payload.message || 'No fue posible dispensar la receta en testnet.');
+      if (signingMethod === 'freighter') {
+        if (!freighterInstalled) {
+          throw new Error('La extensión Freighter no está instalada o habilitada.');
+        }
+        const freighterConn = await connectFreighterOnTestnet();
+        const buildResp = await fetch('/api/stellar/dispensary/build-dispense-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dispensaryAddress: freighterConn.address,
+            prescriptionId,
+            productLabel,
+            batchLabel,
+            quantity,
+          }),
+        });
+        const buildPayload = await buildResp.json();
+        if (!buildResp.ok) {
+          throw new Error(buildPayload.message || 'Error construyendo la transacción de dispensación.');
+        }
+
+        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
+
+        const submitResp = await fetch('/api/stellar/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            xdr: signedXdr,
+            operationType: 'dispense',
+            prescriptionId,
+          }),
+        });
+        const submitPayload = await submitResp.json();
+        if (!submitResp.ok) {
+          throw new Error(submitPayload.message || 'Error transmitiendo la dispensación.');
+        }
+        txHash = submitPayload.txHash;
+        recordId = submitPayload.recordId;
+        dashboard = submitPayload.dashboard;
+      } else {
+        const response = await fetch('/api/stellar/dispensary/dispense-prescription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prescriptionId,
+            productLabel,
+            batchLabel,
+            quantity,
+            dispensaryEmail: session?.email,
+            doctorEmail: doctorEmail,
+          }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.code || payload.message || 'No fue posible dispensar la receta en testnet.');
+        }
+        txHash = payload.txHash;
+        recordId = payload.recordId;
+        dashboard = payload.dashboard;
       }
 
-      setPatientDashboard(payload.dashboard);
-      setHasPrescription(payload.dashboard.summary.total > 0);
+      if (dashboard) {
+        setPatientDashboard(dashboard);
+        setHasPrescription(dashboard.summary.total > 0);
+      }
       setDispenseSuccess(
-        `Retiro parcial registrado. Record ${payload.recordId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}. La receta sigue disponible para futuros retiros.`,
+        `Retiro parcial registrado. Record ${recordId ?? 'pendiente'} - Tx ${shortenHash(txHash)}. La receta sigue disponible para futuros retiros.`,
       );
+      showToast(`✅ Dispensación #${recordId ?? 'N/A'} confirmada en Testnet`);
+      // Audit trail
+      void logAuditEvent({
+        type: 'prescription_dispensed',
+        txHash: txHash || 'pending',
+        actorAddress: currentUserWallet || session?.email || 'unknown',
+        actorRole: 'dispensary',
+        prescriptionId,
+        patientAddress: prescriptionValidation?.prescription?.patient,
+        dispensaryId: selectedDispensary?.id || selectedDispensary?.name,
+        quantity: cart.reduce((sum: number, item: any) => sum + item.quantity, 0),
+        metadata: { recordId, productLabel, batchLabel, signingMethod },
+      });
       setPrescriptionAllowance((current: any) => ({
         ...current,
         usedGrams: Math.min(
@@ -2595,7 +2935,7 @@ export default function MockupPortal({
           const updatedPickup = {
             ...pickup,
             status: 'completed',
-            token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
+            token: `RECETA-${prescriptionId}-DR-${recordId ?? 'TESTNET'}`,
             expires: 'Retiro completado en dispensario',
             patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
             dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
@@ -2620,7 +2960,7 @@ export default function MockupPortal({
             quantity: item.quantity,
             dispensary: selectedDispensary,
             status: 'completed',
-            token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
+            token: `RECETA-${prescriptionId}-DR-${recordId ?? 'TESTNET'}`,
             expires: 'Retiro completado en dispensario',
             patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
             dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
@@ -2889,8 +3229,9 @@ export default function MockupPortal({
     setSelectedQrPermission(permission);
   };
 
-  const validatePrescriptionOnTestnet = async () => {
-    const prescriptionId = Number(dispensePrescriptionId.match(/\d+/)?.[0] ?? Number.NaN);
+  const validatePrescriptionOnTestnet = async (overrideId?: number) => {
+    const rawId = overrideId !== undefined ? String(overrideId) : dispensePrescriptionId;
+    const prescriptionId = Number(rawId.match(/\d+/)?.[0] ?? Number.NaN);
 
     if (!Number.isFinite(prescriptionId)) {
       setPrescriptionValidationError('Ingresa un numero de receta valido.');
@@ -2965,24 +3306,74 @@ export default function MockupPortal({
       const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
       const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
 
-      const response = await fetch('/api/stellar/dispensary/retain-prescription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prescriptionId,
-          dispensaryAddress: currentUserWallet,
-          lockPeriodDays,
-          doctorEmail: doctorEmail,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.message || 'No fue posible registrar la retención criptográfica.');
+      let txHash = '';
+
+      if (signingMethod === 'freighter') {
+        if (!freighterInstalled) {
+          throw new Error('La extensión Freighter no está instalada o habilitada.');
+        }
+        const freighterConn = await connectFreighterOnTestnet();
+        const buildResp = await fetch('/api/stellar/dispensary/build-retain-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dispensaryAddress: freighterConn.address,
+            prescriptionId,
+          }),
+        });
+        const buildPayload = await buildResp.json();
+        if (!buildResp.ok) {
+          throw new Error(buildPayload.message || 'Error construyendo la retención para Freighter.');
+        }
+
+        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
+
+        const submitResp = await fetch('/api/stellar/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            xdr: signedXdr,
+            operationType: 'retain',
+            prescriptionId,
+          }),
+        });
+        const submitPayload = await submitResp.json();
+        if (!submitResp.ok) {
+          throw new Error(submitPayload.message || 'Error al transmitir la retención.');
+        }
+        txHash = submitPayload.txHash;
+      } else {
+        const response = await fetch('/api/stellar/dispensary/retain-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prescriptionId,
+            dispensaryAddress: currentUserWallet,
+            lockPeriodDays,
+            doctorEmail: doctorEmail,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || 'No fue posible registrar la retención criptográfica.');
+        }
+        txHash = payload.txHash;
       }
 
       setRetainReleaseSuccess(
-        `Retención criptográfica exitosa en testnet. Receta bloqueada por ${lockPeriodDays} días. Tx: ${payload.txHash.slice(0, 8)}...`
+        `Retención criptográfica exitosa en testnet. Receta bloqueada por ${lockPeriodDays} días. Tx: ${txHash.slice(0, 8)}...`
       );
+      showToast(`🔒 Receta #${prescriptionId} retenida por ${lockPeriodDays} días en Testnet`);
+      // Audit trail
+      void logAuditEvent({
+        type: 'prescription_retained',
+        txHash: txHash || 'pending',
+        actorAddress: currentUserWallet || session?.email || 'unknown',
+        actorRole: 'dispensary',
+        prescriptionId,
+        dispensaryId: currentUserWallet,
+        metadata: { lockPeriodDays, signingMethod },
+      });
       // Actualizar la validación de la receta on-chain
       await validatePrescriptionOnTestnet();
     } catch (err: any) {
@@ -3008,22 +3399,72 @@ export default function MockupPortal({
       const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
       const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
 
-      const response = await fetch('/api/stellar/dispensary/release-prescription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prescriptionId,
-          doctorEmail: doctorEmail,
-          dispensaryEmail: session?.email,
-          dispensaryAddress: currentUserWallet,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.message || 'No fue posible liberar la receta.');
+      let txHash = '';
+
+      if (signingMethod === 'freighter') {
+        if (!freighterInstalled) {
+          throw new Error('La extensión Freighter no está instalada o habilitada.');
+        }
+        const freighterConn = await connectFreighterOnTestnet();
+        const buildResp = await fetch('/api/stellar/dispensary/build-release-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callerAddress: freighterConn.address,
+            prescriptionId,
+          }),
+        });
+        const buildPayload = await buildResp.json();
+        if (!buildResp.ok) {
+          throw new Error(buildPayload.message || 'Error construyendo la liberación para Freighter.');
+        }
+
+        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
+
+        const submitResp = await fetch('/api/stellar/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            xdr: signedXdr,
+            operationType: 'release',
+            prescriptionId,
+          }),
+        });
+        const submitPayload = await submitResp.json();
+        if (!submitResp.ok) {
+          throw new Error(submitPayload.message || 'Error al transmitir la liberación.');
+        }
+        txHash = submitPayload.txHash;
+      } else {
+        const response = await fetch('/api/stellar/dispensary/release-prescription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prescriptionId,
+            doctorEmail: doctorEmail,
+            dispensaryEmail: session?.email,
+            dispensaryAddress: currentUserWallet,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || 'No fue posible liberar la receta.');
+        }
+        txHash = payload.txHash;
       }
 
-      setRetainReleaseSuccess(`Receta liberada con éxito en testnet. Devuelta al paciente. Tx: ${payload.txHash.slice(0, 8)}...`);
+      setRetainReleaseSuccess(`Receta liberada con éxito en testnet. Devuelta al paciente. Tx: ${txHash.slice(0, 8)}...`);
+      showToast(`🔓 Receta #${prescriptionId} liberada al paciente en Testnet`);
+      // Audit trail
+      void logAuditEvent({
+        type: 'prescription_released',
+        txHash: txHash || 'pending',
+        actorAddress: currentUserWallet || session?.email || 'unknown',
+        actorRole: 'dispensary',
+        prescriptionId,
+        dispensaryId: currentUserWallet,
+        metadata: { signingMethod },
+      });
       // Actualizar la validación de la receta on-chain
       await validatePrescriptionOnTestnet();
     } catch (err: any) {
@@ -3768,6 +4209,27 @@ export default function MockupPortal({
             className={`bg-brand-ivory w-full h-full overflow-hidden flex flex-col md:flex-row relative ${pageMode ? 'max-w-none rounded-none shadow-none md:h-full' : 'max-w-5xl md:h-[85vh] rounded-none md:rounded-[32px] shadow-2xl'}`}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* ─ Toast Notification Overlay ─────────────────────────────────── */}
+            <AnimatePresence>
+              {toastMessage && (
+                <motion.div
+                  key="toast"
+                  initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 280, damping: 25 }}
+                  className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 rounded-2xl px-5 py-3 text-sm font-semibold shadow-xl ${
+                    toastType === 'success' ? 'bg-emerald-600 text-white' :
+                    toastType === 'info' ? 'bg-blue-600 text-white' :
+                    'bg-red-600 text-white'
+                  }`}
+                >
+                  <span>{toastMessage}</span>
+                  <button onClick={() => setToastMessage(null)} className="ml-1 opacity-70 hover:opacity-100">×</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Sidebar Mockup (Desktop) / Bottom Nav (Mobile) */}
             <div className="hidden md:flex w-64 bg-brand-green-deep p-6 text-brand-ivory flex-col gap-8">
               <div className="flex items-center gap-2">
@@ -3822,6 +4284,11 @@ export default function MockupPortal({
                   className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${activeView === 'pickups' ? 'bg-white/10 text-brand-ivory' : 'text-white/60 hover:bg-white/5'}`}
                 >
                   <Package size={18} /> {t.portal.navPickups}
+                  {pendingPickupCount > 0 && (
+                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-brand-green-deep">
+                      {pendingPickupCount}
+                    </span>
+                  )}
                 </button>
                 )}
                 {isViewAllowed('history') && (
@@ -5623,6 +6090,51 @@ export default function MockupPortal({
                           </div>
                         </div>
 
+                        {isDispensaryPortal && activePickups.length > 0 && (
+                          <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6 shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-gold animate-pulse">
+                                <span className="h-2 w-2 rounded-full bg-brand-gold" />
+                              </span>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Cola de Dispensación en Tiempo Real (Firestore)</p>
+                                <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Retiros pendientes por entregar</h3>
+                              </div>
+                            </div>
+                            <div className="mt-4 divide-y divide-brand-green-deep/5">
+                              {activePickups.map((pickup: any) => (
+                                <div key={pickup.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 first:pt-0 last:pb-0 gap-4">
+                                  <div>
+                                    <p className="font-bold text-brand-green-deep">{pickup.strain?.name || 'Medicina personalizada'}</p>
+                                    <p className="text-xs text-brand-green-mid/70">
+                                      Cantidad: <span className="font-bold text-brand-green-deep">{pickup.quantity}g</span> • Paciente ID: <span className="font-mono text-brand-gold">{pickup.patientId?.slice(-6)}</span> • Token: <span className="font-mono text-brand-green-deep">{pickup.token}</span>
+                                    </p>
+                                    {pickup.prescriptionId && (
+                                      <p className="text-[10px] text-brand-green-mid/45 mt-0.5">
+                                        Vinculado a Receta Soroban: #{pickup.prescriptionId}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const rxIdStr = String(pickup.prescriptionId || 1);
+                                      setDispensePrescriptionId(rxIdStr);
+                                      setSelectedDispensary(buildOperatorDispensary());
+                                      setCart([{ strain: pickup.strain, quantity: pickup.quantity }]);
+                                      await validatePrescriptionOnTestnet(Number(rxIdStr));
+                                      openDrawer('dispensary-dispense');
+                                    }}
+                                    className="rounded-xl bg-brand-gold/10 hover:bg-brand-gold px-4 py-2.5 text-xs font-bold text-brand-green-deep transition-all duration-200 border border-brand-gold/25 hover:text-brand-green-deep active:scale-95"
+                                  >
+                                    ⚡ Procesar y Dispensar
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]">
                           <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6">
                             <div className="flex items-start justify-between gap-4">
@@ -5640,6 +6152,43 @@ export default function MockupPortal({
                               }`}>
                                 {dispensaryValidation ? 'QR valido' : 'Sin QR'}
                               </span>
+                            </div>
+
+                            <div className="mt-4 border-t border-brand-green-deep/5 pt-4">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold font-bold">Firma de Transacciones</p>
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSigningMethod('managed')}
+                                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                                    signingMethod === 'managed'
+                                      ? 'bg-brand-green-deep text-brand-ivory shadow-sm'
+                                      : 'bg-white border border-brand-green-deep/10 text-brand-green-deep hover:bg-brand-neutral'
+                                  }`}
+                                >
+                                  🔑 Custodial
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSigningMethod('freighter')}
+                                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                                    signingMethod === 'freighter'
+                                      ? 'bg-brand-green-deep text-brand-ivory shadow-sm'
+                                      : 'bg-white border border-brand-green-deep/10 text-brand-green-deep hover:bg-brand-neutral'
+                                  }`}
+                                >
+                                  ⚓ Freighter
+                                </button>
+                              </div>
+                              {signingMethod === 'freighter' && !freighterInstalled && (
+                                <div className="mt-2 p-2 rounded-xl bg-amber-50 text-amber-800 text-[11px] border border-amber-200">
+                                  <p className="font-bold">⚠️ Freighter no detectado</p>
+                                  <p className="mt-0.5">Necesitas la extensión para firmar localmente.</p>
+                                  <a href="https://www.freighter.app/" target="_blank" rel="noopener noreferrer" className="font-bold underline text-amber-900 block mt-1">
+                                    Instalar Freighter ↗
+                                  </a>
+                                </div>
+                              )}
                             </div>
 
                             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
@@ -8501,6 +9050,49 @@ export default function MockupPortal({
                       className="w-full resize-none rounded-xl bg-brand-neutral px-4 py-3 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
                     />
                   </label>
+
+                  {/* Método de firma */}
+                  <div className="md:col-span-2 rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold font-bold">Método de Firma de Transacción</p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSigningMethod('managed')}
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                          signingMethod === 'managed'
+                            ? 'bg-brand-green-deep text-brand-ivory shadow-sm'
+                            : 'bg-white border border-brand-green-deep/10 text-brand-green-deep hover:bg-brand-neutral'
+                        }`}
+                      >
+                        🔑 Firma Custodial (Demo)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSigningMethod('freighter')}
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          signingMethod === 'freighter'
+                            ? 'bg-brand-green-deep text-brand-ivory shadow-sm'
+                            : 'bg-white border border-brand-green-deep/10 text-brand-green-deep hover:bg-brand-neutral'
+                        }`}
+                      >
+                        ⚓ Firma Local (Freighter)
+                      </button>
+                    </div>
+                    {signingMethod === 'freighter' && !freighterInstalled && (
+                      <div className="mt-3 p-3 rounded-xl bg-amber-50 text-amber-800 text-xs border border-amber-200 flex flex-col gap-1.5">
+                        <p className="font-bold">⚠️ Extensión Freighter no detectada</p>
+                        <p>Para firmar localmente, necesitas instalar la extensión Freighter en tu navegador. De lo contrario, la emisión fallará.</p>
+                        <a
+                          href="https://www.freighter.app/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold underline text-amber-900 hover:text-amber-950 self-start"
+                        >
+                          Descargar Freighter ↗
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -9050,7 +9642,22 @@ export default function MockupPortal({
                 </div>
               </div>
               <div className="p-6 bg-brand-neutral/30 flex flex-col sm:flex-row gap-3">
-                 <button className="w-full py-4 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold shadow-lg active:scale-95 transition-transform">Descargar PDF</button>
+                 <button
+                   onClick={async () => {
+                     await generatePrescriptionPDF(
+                       String(selectedPrescription.id),
+                       selectedPrescription.doctorName || 'Dr. Alejandro Merino',
+                       selectedPrescription.doctorEmail || 'medico@trustleaf.test',
+                       'Paciente Autorizado',
+                       selectedPrescription.patient || patientTrustAccountAddress || 'demo-patient-wallet',
+                       selectedPrescription.treatment,
+                       selectedPrescription.dosage || 'Dosis personalizada según receta magistral'
+                     );
+                   }}
+                   className="w-full py-4 bg-brand-green-deep text-brand-ivory rounded-xl text-sm font-bold shadow-lg active:scale-95 transition-transform"
+                 >
+                   Descargar PDF
+                 </button>
                  <button className="w-full py-4 border border-brand-green-deep/10 rounded-xl text-sm font-bold text-brand-green-deep hover:bg-white transition-colors active:scale-95">Compartir</button>
               </div>
             </motion.div>

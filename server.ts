@@ -19,6 +19,8 @@ import {
   releasePrescriptionToPatient,
   buildIssuePrescriptionTx,
   buildDispensePrescriptionTx,
+  buildRetainPrescriptionTx,
+  buildReleasePrescriptionTx,
   submitSignedTransaction,
   getDeterministicKeypair,
 } from "./api/_lib/stellar";
@@ -349,7 +351,7 @@ async function startServer() {
 
       const result = await submitSignedTransaction({
         xdr: String(xdr),
-        operationType: String(operationType) as "issue" | "dispense",
+        operationType: String(operationType) as "issue" | "dispense" | "retain" | "release",
         patientAddress: patientAddress ? String(patientAddress) : undefined,
         medicationHash: medicationHash ? String(medicationHash) : undefined,
         totalQuantity: totalQuantity ? Number(totalQuantity) : undefined,
@@ -360,6 +362,52 @@ async function startServer() {
       res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "No fue posible transmitir la transacción firmada a testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/build-retain-prescription", async (req, res) => {
+    try {
+      const { dispensaryAddress, prescriptionId } = req.body ?? {};
+
+      if (!dispensaryAddress || prescriptionId === undefined) {
+        res.status(400).json({
+          message: "Faltan datos para construir la retención: dispensaryAddress y prescriptionId.",
+        });
+        return;
+      }
+
+      const result = await buildRetainPrescriptionTx({
+        dispensaryAddress: String(dispensaryAddress),
+        prescriptionId: Number(prescriptionId),
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de retención.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/build-release-prescription", async (req, res) => {
+    try {
+      const { callerAddress, prescriptionId } = req.body ?? {};
+
+      if (!callerAddress || prescriptionId === undefined) {
+        res.status(400).json({
+          message: "Faltan datos para construir la liberación: callerAddress y prescriptionId.",
+        });
+        return;
+      }
+
+      const result = await buildReleasePrescriptionTx({
+        callerAddress: String(callerAddress),
+        prescriptionId: Number(prescriptionId),
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de liberación.";
       res.status(500).json({ message });
     }
   });
@@ -658,6 +706,54 @@ async function startServer() {
         message: "La cuenta del paciente no existe en Stellar Testnet o no se pudo cargar.",
         accountId
       });
+    }
+  });
+
+  // ─── Public Prescription Verification (unauthenticated) ─────────────────
+  // Intentionally open so QR-code links printed on PDFs work without login.
+  // Only exposes non-sensitive, publicly available on-chain data.
+  app.get("/api/stellar/prescription/:id/verify", async (req, res) => {
+    const prescriptionId = Number(req.params.id);
+    if (!Number.isFinite(prescriptionId) || prescriptionId < 1) {
+      res.status(400).json({ message: "ID de receta inválido." });
+      return;
+    }
+    try {
+      const rpcServer = new StellarSdk.rpc.Server(getRpcUrl(), { allowHttp: false });
+      const raw = await invokeReadonlyContract(
+        rpcServer,
+        getPrescriptionContractId(),
+        "get_prescription",
+        { prescription_id: BigInt(prescriptionId) },
+      );
+      if (!raw || typeof raw !== "object") {
+        res.status(404).json({ found: false, message: "Receta no encontrada en el ledger de Testnet." });
+        return;
+      }
+      const expiresAt = Number(raw.expires_at);
+      const isUsed = Boolean(raw.is_used);
+      const now = Math.floor(Date.now() / 1000);
+      const status = isUsed ? "used" : expiresAt <= now ? "expired" : "active";
+      const totalQuantity = Number(raw.total_quantity ?? 0);
+      const dispensedQuantity = Number(raw.dispensed_quantity ?? 0);
+      res.json({
+        found: true,
+        prescriptionId,
+        status,
+        expiresAt,
+        expiresAtHuman: new Date(expiresAt * 1000).toLocaleDateString("es-CL"),
+        issuedBy: String(raw.doctor ?? "").slice(0, 10) + "…",
+        patientAddress: String(raw.patient ?? "").slice(0, 10) + "…",
+        totalQuantity,
+        dispensedQuantity,
+        remainingQuantity: Math.max(0, totalQuantity - dispensedQuantity),
+        network: "testnet",
+        contractId: getPrescriptionContractId(),
+        verifiedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible verificar la receta en Testnet.";
+      res.status(500).json({ found: false, message });
     }
   });
 

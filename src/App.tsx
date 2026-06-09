@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock, Copy, ExternalLink, FileText } from 'lucide-react';
@@ -37,6 +32,7 @@ import WalletOnboarding, { type WalletSetupState } from './components/WalletOnbo
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 const MockupPortal = lazy(() => import('./components/MockupPortal'));
+const PrescriptionVerifier = lazy(() => import('./components/PrescriptionVerifier'));
 
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
@@ -1047,6 +1043,22 @@ function AppContent() {
 
   if (path === '/mvp') {
     return <MvpStatusRoute onBack={() => navigate('/')} onNavigate={navigate} />;
+  }
+
+  // ── Public verification route — no auth required ──────────────────────────
+  // Matches /verify/123 or /verify/123/any-suffix
+  const verifyMatch = path.match(/^\/verify\/([\w-]+)/);
+  if (verifyMatch) {
+    const prescriptionId = verifyMatch[1];
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-[#edf2ee] flex items-center justify-center">
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-brand-green-deep border-t-transparent" />
+        </div>
+      }>
+        <PrescriptionVerifier id={prescriptionId} onBack={() => navigate('/')} />
+      </Suspense>
+    );
   }
 
   return (

@@ -23,6 +23,7 @@ pub struct Prescription {
     pub total_quantity: u64,
     pub dispensed_quantity: u64,
     pub is_used: bool,
+    pub retained_by: Option<Address>,
 }
 
 #[derive(Clone)]
@@ -46,6 +47,7 @@ pub enum PrescriptionError {
     PrescriptionExpired = 6,
     InvalidQuantity = 7,
     QuantityExceeded = 8,
+    NotAuthorizedToRelease = 9,
 }
 
 #[contractevent(topics = ["PrescriptionIssued"], data_format = "vec")]
@@ -110,6 +112,7 @@ impl PrescriptionContract {
             total_quantity,
             dispensed_quantity: 0,
             is_used: false,
+            retained_by: None,
         };
 
         env.storage()
@@ -126,6 +129,47 @@ impl PrescriptionContract {
         .publish(&env);
 
         id
+    }
+
+    pub fn retain_prescription(env: Env, dispensary: Address, prescription_id: u64) {
+        dispensary.require_auth();
+
+        if !is_authorized_dispensary(&env, &dispensary) {
+            panic_with_error!(&env, PrescriptionError::UnauthorizedDispensary);
+        }
+
+        let mut prescription = get_prescription_internal(&env, prescription_id);
+        if prescription.is_used {
+            panic_with_error!(&env, PrescriptionError::PrescriptionAlreadyUsed);
+        }
+        if env.ledger().timestamp() >= prescription.expires_at {
+            panic_with_error!(&env, PrescriptionError::PrescriptionExpired);
+        }
+
+        prescription.retained_by = Some(dispensary);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Prescription(prescription_id), &prescription);
+        extend_instance_ttl(&env);
+    }
+
+    pub fn release_prescription(env: Env, caller: Address, prescription_id: u64) {
+        caller.require_auth();
+
+        let mut prescription = get_prescription_internal(&env, prescription_id);
+
+        let is_doctor = caller == prescription.doctor;
+        let is_dispensary = Some(caller.clone()) == prescription.retained_by;
+
+        if !is_doctor && !is_dispensary {
+            panic_with_error!(&env, PrescriptionError::NotAuthorizedToRelease);
+        }
+
+        prescription.retained_by = None;
+        env.storage()
+            .persistent()
+            .set(&DataKey::Prescription(prescription_id), &prescription);
+        extend_instance_ttl(&env);
     }
 
     pub fn consume_prescription(env: Env, dispensary: Address, prescription_id: u64) {
@@ -157,6 +201,12 @@ impl PrescriptionContract {
         }
         if env.ledger().timestamp() >= prescription.expires_at {
             panic_with_error!(&env, PrescriptionError::PrescriptionExpired);
+        }
+
+        if let Some(ref current_dispensary) = prescription.retained_by {
+            if dispensary != *current_dispensary {
+                panic_with_error!(&env, PrescriptionError::UnauthorizedDispensary);
+            }
         }
 
         let remaining = prescription

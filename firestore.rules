@@ -188,5 +188,31 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidConsent(request.resource.data);
       allow read, update: if isSignedIn() && resource.data.patientId == request.auth.uid;
     }
+
+    // 8. Audit Logs — immutable append-only trail of on-chain operations
+    // Only authenticated users may write. No one may edit or delete.
+    // Admin may list-read for monitoring dashboards.
+    match /audit_logs/{logId} {
+      function isValidAuditLog(data) {
+        return data.keys().hasAll(['type', 'txHash', 'actorAddress', 'actorRole', 'timestamp', 'network'])
+          && data.type in [
+              'prescription_issued', 'prescription_dispensed',
+              'prescription_retained', 'prescription_released',
+              'pickup_confirmed', 'pickup_created',
+              'account_funded', 'doctor_registered', 'dispensary_registered'
+          ]
+          && data.txHash is string && data.txHash.size() <= 256
+          && data.actorAddress is string && data.actorAddress.size() <= 128
+          && data.actorRole in ['doctor', 'dispensary', 'patient', 'admin']
+          && data.network in ['testnet', 'mainnet'];
+      }
+
+      // Anyone authenticated may write (create) — fire-and-forget from the frontend
+      allow create: if isSignedIn() && isValidAuditLog(request.resource.data);
+      // Nobody may update or delete — immutable audit trail
+      allow update, delete: if false;
+      // Admin and authenticated users may read (for dashboards and traceability)
+      allow read: if isSignedIn();
+    }
   }
 }
