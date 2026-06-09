@@ -3254,6 +3254,7 @@ function DispensaryRegistrationRoute({
     contact: session?.email ?? '',
     wallet: '',
   });
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
   const ownRegistrations = dispensaryRegistrations.filter((request) => actorMatchesSession(request, session));
   const latestRegistration = ownRegistrations[0] ?? null;
   const approved = dispensaryRegistrations.filter((request) => request.status === 'approved');
@@ -3466,6 +3467,45 @@ function DispensaryRegistrationRoute({
           </div>
         </motion.section>
       </main>
+
+      {latestRegistration?.status === 'approved' && showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-green-deep/40 p-4 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-brand-green-deep/10 bg-white p-6 text-center shadow-2xl md:p-8"
+          >
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="absolute top-4 right-4 text-brand-green-mid/60 hover:text-brand-green-deep cursor-pointer p-1 rounded-full hover:bg-brand-neutral transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-6">
+              <ShoppingBag size={32} />
+            </div>
+            <h3 className="text-2xl font-serif text-brand-green-deep">¡Felicidades, ya estás dentro!</h3>
+            <p className="mt-3 text-sm text-brand-green-mid/80 leading-relaxed">
+              Tu solicitud de dispensario / farmacia ha sido aprobada y registrada de forma exitosa en la red Stellar.
+            </p>
+            <div className="mt-6 p-4 rounded-2xl bg-brand-neutral/40 border border-brand-green-deep/5 text-left mb-6 font-mono text-xs text-brand-green-deep break-all">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-gold font-sans">Credencial de Operación</p>
+              <p className="mt-1">
+                {latestRegistration.wallet}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowWelcomeModal(false);
+                onNavigate('/dispensario/operacion');
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 transition-transform shadow-lg shadow-brand-green-deep/15 cursor-pointer"
+            >
+              Comenzar a dispensar <ArrowRight size={16} />
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3490,6 +3530,7 @@ function DoctorRegistrationRoute({
   onSignOut: () => void;
 }) {
   const [rutError, setRutError] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
   const [registrationForm, setRegistrationForm] = useState({
     name: session?.name ?? '',
     licenseId: '',
@@ -3779,6 +3820,45 @@ function DoctorRegistrationRoute({
           </button>
         </motion.section>
       </main>
+
+      {latestRegistration?.status === 'approved' && showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-green-deep/40 p-4 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-brand-green-deep/10 bg-white p-6 text-center shadow-2xl md:p-8"
+          >
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="absolute top-4 right-4 text-brand-green-mid/60 hover:text-brand-green-deep cursor-pointer p-1 rounded-full hover:bg-brand-neutral transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-6">
+              <Stethoscope size={32} />
+            </div>
+            <h3 className="text-2xl font-serif text-brand-green-deep">¡Felicidades, ya estás dentro!</h3>
+            <p className="mt-3 text-sm text-brand-green-mid/80 leading-relaxed">
+              Tu solicitud como profesional médico ha sido aprobada y registrada de forma exitosa en la red Stellar.
+            </p>
+            <div className="mt-6 p-4 rounded-2xl bg-brand-neutral/40 border border-brand-green-deep/5 text-left mb-6 font-mono text-xs text-brand-green-deep break-all">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-gold font-sans">Credencial de Trabajo</p>
+              <p className="mt-1">
+                {latestRegistration.wallet}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowWelcomeModal(false);
+                onNavigate('/medico/operacion');
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 transition-transform shadow-lg shadow-brand-green-deep/15 cursor-pointer"
+            >
+              Comenzar a emitir recetas <ArrowRight size={16} />
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
