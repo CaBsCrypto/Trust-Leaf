@@ -34,3 +34,27 @@ Actualmente, los retiros se guardan en el estado del frontend (`localStorage`). 
 ## 📦 Despliegue
 - El `package.json` está configurado para ejecutar `tsx server.ts` en desarrollo.
 - Para producción (Vercel/Cloud Run), asegurar que las variables de entorno de `.env.example` estén configuradas.
+
+## 🎯 Decisiones de Diseño de la Segunda Fase (Alineación /grill-me)
+
+Durante la sesión de alineación del 9 de junio de 2026, acordamos los siguientes enfoques de diseño técnico para continuar la construcción del MVP:
+
+### 1. Sincronización Avanzada en Firestore (`pickups`)
+- **Query de Privacidad en Dispensario:** Al consultar retiros pendientes, el portal del dispensario filtrará en tiempo real solo los documentos de la colección `pickups` cuyo campo `dispensaryId` coincida con su ID aprobado de Firestore o su clave pública Stellar. Esto evita fugas de información inter-sucursal.
+- **Transición de Estado:** Cuando el dispensario registra la entrega, el estado de la dispensa en Firestore cambia de `pending` a `completed`, coordinándose con la quema/descuento on-chain.
+
+### 2. Soporte Híbrido de Firma para Profesionales (Web3 + Custodial)
+- **Selector de Firma:** Médicos y dispensarios tendrán un control interactivo en su interfaz para elegir:
+  - **Firma Delegada (Custodial):** Firma en el servidor derivando el keypair determinista desde el email de sesión (ideal para demos rápidas).
+  - **Firma Local (Web3):** Firma en el frontend usando la extensión de navegador **Freighter** o **Albedo**, delegando al servidor únicamente la transmisión final (`submit`).
+
+### 3. Custodia 100% On-chain en Soroban
+- **Modificación del Contrato `Prescription`:**
+  - Agregar la propiedad `retained_by: Option<Address>` al struct `Prescription`.
+  - Crear el método `retain_prescription(dispensary: Address, prescription_id: u64)` que guarda el dispensario custodio en el ledger.
+  - Crear el método `release_prescription(doctor: Address, prescription_id: u64)` para remover el custodio.
+  - Modificar `record_partial_dispense` para validar que si `retained_by` está definido, la llamada solo sea válida si proviene de la dirección del dispensario custodio.
+
+### 4. Receta Magistral PDF Client-Side
+- **jsPDF en el Cliente:** Generar el PDF oficial del preparado magistral directamente en el navegador del médico. El documento incluirá un código de barras, un QR dinámico con un enlace de verificación (`trustleaf.org/verify/[id]`) y la representación visual de la firma digital médica vinculada a la TX de Stellar.
+
