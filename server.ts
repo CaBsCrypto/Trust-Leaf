@@ -4,7 +4,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
-import * as LegacyStellarSdk from "stellar-sdk";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   dispensePrescriptionForPatient as dispensePrescriptionForPatientShared,
@@ -103,7 +102,7 @@ async function startServer() {
   app.get("/api/stellar/health", async (req, res) => {
     try {
       // Connect to Testnet by default
-      const server = new LegacyStellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
       const ledgers = await server.ledgers().limit(1).call();
       res.json({
         status: "connected",
@@ -601,7 +600,7 @@ async function startServer() {
   app.get("/api/stellar/verify-passport/:accountId", async (req, res) => {
     const { accountId } = req.params;
     try {
-      const server = new LegacyStellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
       const account = await server.loadAccount(accountId);
       
       // 1. Look for a specific data attribute 'MedicalTrustID' or similar

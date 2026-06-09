@@ -1,3 +1,7 @@
+declare global {
+  type URI = any;
+}
+
 import { createHash } from 'crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
 
