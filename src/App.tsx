@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import React, { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock, Copy, ExternalLink, FileText } from 'lucide-react';
 import Navbar from './components/Navbar';
@@ -22,7 +22,7 @@ import {
 } from './lib/trustAuth';
 import { getFirebaseRuntimeStatus, db } from './lib/firebase';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
-import { shortenAddress, stellarConfig } from './lib/stellar/config';
+import { shortenAddress, stellarConfig, deriveStellarPublicKey } from './lib/stellar/config';
 import { connectFreighterOnTestnet } from './lib/stellar/freighter';
 import { connectOrCreatePasskeyWallet, getPasskeyAvailability, connectPasskeyWallet as apiConnectPasskeyWallet } from './lib/stellar/passkeys';
 import { passkeyService } from './lib/stellar/passkeyService';
@@ -847,16 +847,18 @@ function AppContent() {
     }
 
     return (
-      <DoctorRegistrationRoute
-        onBack={() => navigate('/')}
-        onNavigate={navigate}
-        session={session}
-        doctorRegistrations={doctorRegistrations}
-        registrationSource={registrationSource}
-        canOperate={doctorCanOperate}
-        onSubmitDoctorRegistration={submitDoctorRegistration}
-        onSignOut={endSession}
-      />
+      <RegistrationErrorBoundary onReset={() => navigate('/')}>
+        <DoctorRegistrationRoute
+          onBack={() => navigate('/')}
+          onNavigate={navigate}
+          session={session}
+          doctorRegistrations={doctorRegistrations}
+          registrationSource={registrationSource}
+          canOperate={doctorCanOperate}
+          onSubmitDoctorRegistration={submitDoctorRegistration}
+          onSignOut={endSession}
+        />
+      </RegistrationErrorBoundary>
     );
   }
 
@@ -926,16 +928,18 @@ function AppContent() {
     }
 
     return (
-      <DispensaryRegistrationRoute
-        onBack={() => navigate('/')}
-        onNavigate={navigate}
-        session={session}
-        dispensaryRegistrations={dispensaryRegistrations}
-        registrationSource={registrationSource}
-        canOperate={dispensaryCanOperate}
-        onSubmitDispensaryRegistration={submitDispensaryRegistration}
-        onSignOut={endSession}
-      />
+      <RegistrationErrorBoundary onReset={() => navigate('/')}>
+        <DispensaryRegistrationRoute
+          onBack={() => navigate('/')}
+          onNavigate={navigate}
+          session={session}
+          dispensaryRegistrations={dispensaryRegistrations}
+          registrationSource={registrationSource}
+          canOperate={dispensaryCanOperate}
+          onSubmitDispensaryRegistration={submitDispensaryRegistration}
+          onSignOut={endSession}
+        />
+      </RegistrationErrorBoundary>
     );
   }
 
@@ -1581,6 +1585,55 @@ function LazyPortal(props: ComponentProps<typeof MockupPortal>) {
       <MockupPortal {...props} />
     </Suspense>
   );
+}
+
+class RegistrationErrorBoundary extends React.Component<
+  { children: ReactNode; onReset: () => void },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode; onReset: () => void }) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+
+  static getDerivedStateFromError(error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error inesperado al cargar el formulario.';
+    return { hasError: true, message };
+  }
+
+  componentDidCatch(error: unknown, info: unknown) {
+    console.error('[RegistrationErrorBoundary] Caught error:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#edf2ee] flex items-center justify-center px-6">
+          <div className="w-full max-w-md rounded-[28px] border border-red-100 bg-white p-8 shadow-sm text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+              <Leaf size={24} />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-red-500">Error de carga</p>
+            <h2 className="mt-3 text-2xl font-serif text-brand-green-deep">Algo salió mal</h2>
+            <p className="mt-3 text-sm leading-relaxed text-brand-green-mid/70">
+              {this.state.message}
+            </p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, message: '' });
+                this.props.onReset();
+              }}
+              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-brand-green-deep px-6 py-3 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 cursor-pointer"
+            >
+              <ArrowRight size={16} className="rotate-180" />
+              Volver al inicio
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function AuthGate({
@@ -3327,13 +3380,15 @@ function DispensaryRegistrationRoute({
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
   useEffect(() => {
-    if (session?.email) {
-      deriveStellarPublicKey(session.email).then((wallet) => {
-        if (wallet) {
-          setRegistrationForm((curr) => ({ ...curr, wallet }));
-        }
+    if (!session?.email) return;
+    deriveStellarPublicKey(session.email)
+      .then((wallet) => {
+        if (wallet) setRegistrationForm((curr) => ({ ...curr, wallet }));
+      })
+      .catch((err) => {
+        console.warn('[DispensaryRoute] No se pudo derivar wallet:', err);
+        // Silent — user can set wallet manually or use managed credential
       });
-    }
   }, [session?.email]);
 
   const submitRegistration = () => {
@@ -3622,13 +3677,15 @@ function DoctorRegistrationRoute({
   const sourceLabel = getRegistrationSourceLabel(registrationSource);
 
   useEffect(() => {
-    if (session?.email) {
-      deriveStellarPublicKey(session.email).then((wallet) => {
-        if (wallet) {
-          setRegistrationForm((curr) => ({ ...curr, wallet }));
-        }
+    if (!session?.email) return;
+    deriveStellarPublicKey(session.email)
+      .then((wallet) => {
+        if (wallet) setRegistrationForm((curr) => ({ ...curr, wallet }));
+      })
+      .catch((err) => {
+        console.warn('[DoctorRoute] No se pudo derivar wallet:', err);
+        // Silent — user can set wallet manually or use managed credential
       });
-    }
   }, [session?.email]);
 
   const submitRegistration = () => {

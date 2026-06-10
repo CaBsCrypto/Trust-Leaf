@@ -45,7 +45,14 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isOwner(userId) 
         && isValidUser(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'trustIdActive']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'trustIdActive',
+          'stellarPublicKey',
+          'primaryMethod',
+          'walletLabel',
+          'hasFreighterBackup'
+        ]);
     }
 
     // 2. Prescriptions Collection

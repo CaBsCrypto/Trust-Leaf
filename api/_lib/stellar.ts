@@ -705,6 +705,8 @@ export async function retainPrescriptionForDispensary(input: {
   prescriptionId: number;
   dispensaryAddress: string;
   dispensaryEmail?: string;
+  lockPeriodDays?: number;
+  doctorEmail?: string;
 }) {
   const prescriptionId = Math.floor(input.prescriptionId);
   const dispensaryAddress = input.dispensaryAddress.trim();

@@ -21,7 +21,7 @@
  */
 
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 export type AuditEventType =
   | 'prescription_issued'
@@ -55,6 +55,13 @@ export interface AuditEvent {
  * calling flow is never blocked or interrupted by a logging failure.
  */
 export async function logAuditEvent(event: AuditEvent): Promise<void> {
+  // If no Firebase Auth session is active yet, fall back to console-only
+  // logging. Firestore rules require isSignedIn() to create audit_logs.
+  if (!auth.currentUser) {
+    console.log(`[Audit] 📋 ${event.type} — TX: ${event.txHash.slice(0, 16)}... (no auth session, skipping Firestore)`);
+    return;
+  }
+
   try {
     await addDoc(collection(db, 'audit_logs'), {
       ...event,

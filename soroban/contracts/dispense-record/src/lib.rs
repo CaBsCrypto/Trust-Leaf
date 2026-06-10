@@ -37,6 +37,7 @@ struct PrescriptionSnapshot {
     pub total_quantity: u64,
     pub dispensed_quantity: u64,
     pub is_used: bool,
+    pub retained_by: Option<Address>,
 }
 
 #[derive(Clone)]
