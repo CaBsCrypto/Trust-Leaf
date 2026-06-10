@@ -521,6 +521,43 @@ export const trustDataStore = {
       return [];
     }
   },
+  async loadPickupsForDispensary(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'pickups'), where('dispensaryId', '==', dispensaryId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading dispensary pickups from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      const all: any[] = saved ? JSON.parse(saved) : [];
+      return all.filter((p) => p.dispensaryId === dispensaryId);
+    } catch {
+      return [];
+    }
+  },
+  async updatePickupStatus(pickupId: string, status: 'pending' | 'completed', txHash?: string): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      let current = saved ? JSON.parse(saved) : [];
+      current = current.map((p: any) => p.id === pickupId ? { ...p, status, txHash } : p);
+      localStorage.setItem('trust_pickups', JSON.stringify(current));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        const docRef = doc(db, 'pickups', pickupId);
+        await updateDoc(docRef, { status, txHash });
+      } catch (err) {
+        console.error('Error updating pickup status in Firestore:', err);
+      }
+    }
+  },
   async createPickup(pickup: any): Promise<void> {
     try {
       const saved = localStorage.getItem('trust_pickups');

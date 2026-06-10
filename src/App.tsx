@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import React, { Component, lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock, Copy, ExternalLink, FileText } from 'lucide-react';
 import Navbar from './components/Navbar';
@@ -1591,9 +1591,10 @@ class RegistrationErrorBoundary extends React.Component<
   { children: ReactNode; onReset: () => void },
   { hasError: boolean; message: string }
 > {
+  state: { hasError: boolean; message: string } = { hasError: false, message: '' };
+
   constructor(props: { children: ReactNode; onReset: () => void }) {
     super(props);
-    this.state = { hasError: false, message: '' };
   }
 
   static getDerivedStateFromError(error: unknown) {
@@ -1620,8 +1621,8 @@ class RegistrationErrorBoundary extends React.Component<
             </p>
             <button
               onClick={() => {
-                this.setState({ hasError: false, message: '' });
-                this.props.onReset();
+                (this as any).setState({ hasError: false, message: '' });
+                (this as any).props.onReset();
               }}
               className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-brand-green-deep px-6 py-3 text-sm font-bold text-brand-ivory hover:bg-brand-green-mid active:scale-95 cursor-pointer"
             >
@@ -1632,7 +1633,7 @@ class RegistrationErrorBoundary extends React.Component<
         </div>
       );
     }
-    return this.props.children;
+    return (this as any).props.children;
   }
 }
 

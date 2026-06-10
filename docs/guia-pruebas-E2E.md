@@ -98,3 +98,17 @@ Para evitar que un paciente intente retirar gramos simultáneamente en dos farma
    * El sistema ejecuta automáticamente un **Clawback** on-chain, **quemando y eliminando** de forma permanente el NFT `RX` de la red Stellar.
 4. Si intentas realizar un nuevo retiro con ese ID de receta, el ledger de Stellar arrojará un error de *"Receta sin saldo o inactiva"*, imposibilitando el doble gasto.
 5. El historial de auditoría y los registros de entrega del dispensario permanecen inmutables y accesibles para cumplimiento legal.
+
+---
+
+## ⚡ 3. Características Avanzadas del Piloto Real
+
+### A. Soporte Híbrido de Firma (Web3 + Custodial)
+Durante los pasos de Emisión y Dispensación, los Médicos y Dispensarios cuentan con un selector interactivo para decidir la modalidad de firma:
+*   **🔑 Custodial (Firma Delegada):** Firma gestionada de forma automática por el backend mediante claves derivadas del correo, ideal para demostraciones rápidas.
+*   **⚓ Freighter / Albedo (Firma Local Web3):** Firma local en el navegador del profesional mediante extensiones de hardware/wallet, delegando al backend únicamente la transmisión final (`submit`) del XDR firmado.
+
+### B. Cola de Retiros en Tiempo Real en Firestore (`pickups`)
+*   Al solicitar un retiro en el portal del paciente, se genera un registro en estado `pending` dentro de la colección `pickups` de Firestore.
+*   El panel del dispensario (`/dispensario/operacion`) realiza una suscripción en tiempo real (`onSnapshot`) filtrando únicamente las solicitudes que corresponden a su sucursal (`dispensaryId` = Firestore ID / Stellar Public Key), evitando fugas de información.
+*   Cuando el dispensario procesa la entrega on-chain, el estado en Firestore cambia automáticamente de `pending` a `completed`, vinculando el `txHash` de Stellar para trazabilidad.

@@ -37,24 +37,20 @@ Actualmente, los retiros se guardan en el estado del frontend (`localStorage`). 
 
 ## 🎯 Decisiones de Diseño de la Segunda Fase (Alineación /grill-me)
 
-Durante la sesión de alineación del 9 de junio de 2026, acordamos los siguientes enfoques de diseño técnico para continuar la construcción del MVP:
+Durante la sesión de alineación del 9 de junio de 2026, acordamos e implementamos los siguientes enfoques de diseño técnico:
 
-### 1. Sincronización Avanzada en Firestore (`pickups`)
-- **Query de Privacidad en Dispensario:** Al consultar retiros pendientes, el portal del dispensario filtrará en tiempo real solo los documentos de la colección `pickups` cuyo campo `dispensaryId` coincida con su ID aprobado de Firestore o su clave pública Stellar. Esto evita fugas de información inter-sucursal.
-- **Transición de Estado:** Cuando el dispensario registra la entrega, el estado de la dispensa en Firestore cambia de `pending` a `completed`, coordinándose con la quema/descuento on-chain.
+### 1. Sincronización Avanzada en Firestore (`pickups`) - **[COMPLETADO]**
+- **Query de Privacidad en Dispensario:** Al consultar retiros pendientes, el portal del dispensario filtra en tiempo real los documentos de la colección `pickups` en Firestore donde `dispensaryId` coincide con su ID aprobado de Firestore o su clave pública Stellar. Esto previene fugas de datos inter-sucursales.
+- **Transición de Estado:** Cuando el dispensario registra la entrega, el estado en Firestore cambia de `pending` a `completed`, coordinándose con el descuento/quema del NFT on-chain y asociando el `txHash`.
 
-### 2. Soporte Híbrido de Firma para Profesionales (Web3 + Custodial)
-- **Selector de Firma:** Médicos y dispensarios tendrán un control interactivo en su interfaz para elegir:
-  - **Firma Delegada (Custodial):** Firma en el servidor derivando el keypair determinista desde el email de sesión (ideal para demos rápidas).
-  - **Firma Local (Web3):** Firma en el frontend usando la extensión de navegador **Freighter** o **Albedo**, delegando al servidor únicamente la transmisión final (`submit`).
+### 2. Soporte Híbrido de Firma para Profesionales (Web3 + Custodial) - **[COMPLETADO]**
+- **Selector de Firma:** Médicos y dispensarios disponen de un selector interactivo para decidir entre:
+  - **Firma Delegada (Custodial):** Firma en el servidor derivando las claves desde el correo.
+  - **Firma Local (Web3):** Firma local en el cliente usando Freighter o Albedo, transmitiendo el XDR firmado al backend a través de `/api/stellar/submit`.
 
-### 3. Custodia 100% On-chain en Soroban
-- **Modificación del Contrato `Prescription`:**
-  - Agregar la propiedad `retained_by: Option<Address>` al struct `Prescription`.
-  - Crear el método `retain_prescription(dispensary: Address, prescription_id: u64)` que guarda el dispensario custodio en el ledger.
-  - Crear el método `release_prescription(doctor: Address, prescription_id: u64)` para remover el custodio.
-  - Modificar `record_partial_dispense` para validar que si `retained_by` está definido, la llamada solo sea válida si proviene de la dirección del dispensario custodio.
+### 3. Custodia 100% On-chain en Soroban - **[COMPLETADO]**
+- **Contrato `Prescription`:** Modificado para incluir `retained_by: Option<Address>`, con métodos `retain_prescription` y `release_prescription` validados e integrados en el backend y frontend.
 
-### 4. Receta Magistral PDF Client-Side
-- **jsPDF en el Cliente:** Generar el PDF oficial del preparado magistral directamente en el navegador del médico. El documento incluirá un código de barras, un QR dinámico con un enlace de verificación (`trustleaf.org/verify/[id]`) y la representación visual de la firma digital médica vinculada a la TX de Stellar.
+### 4. Receta Magistral PDF Client-Side - **[COMPLETADO]**
+- **jsPDF en el Cliente:** Generación del PDF oficial del preparado magistral directamente en el navegador del médico. El documento incluye código de barras, QR dinámico con enlace de verificación y la representación visual de la firma digital médica vinculada a la TX de Stellar.
 

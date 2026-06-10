@@ -2939,8 +2939,9 @@ export default function MockupPortal({
             expires: 'Retiro completado en dispensario',
             patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
             dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+            txHash: txHash || '',
           };
-          trustDataStore.createPickup(updatedPickup);
+          trustDataStore.updatePickupStatus(pickup.id, 'completed', txHash || '');
           return updatedPickup;
         }
         return pickup;
@@ -2964,6 +2965,7 @@ export default function MockupPortal({
             expires: 'Retiro completado en dispensario',
             patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
             dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+            txHash: txHash || '',
           };
           trustDataStore.createPickup(p);
           return p;
