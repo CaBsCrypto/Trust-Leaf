@@ -21,6 +21,8 @@ Este documento traza el camino estratégico y técnico de **Trust Leaf**, desde 
     *   Ocultar detalles puramente técnicos en los portales operativos (médico, paciente, dispensario), manteniéndolos legibles solo en `/admin` y `/mvp`.
 *   **Filtros de Privacidad Robustos:**
     *   Asegurar que las reglas de seguridad de Firestore (`firestore.rules`) impidan a cualquier actor no autorizado leer fichas clínicas o pickups que no le pertenecen.
+*   **Patrocinio Nativo de Comisiones (Fee Sponsorship):**
+    *   Integrar operaciones de patrocinio de red nativas en Stellar para que el backend asuma los costos en XLM, eliminando la necesidad de que el paciente o el profesional fondee su wallet de hardware para interactuar con Soroban.
 
 ---
 
@@ -42,6 +44,8 @@ Este documento traza el camino estratégico y técnico de **Trust Leaf**, desde 
 
 *   **Arquitectura Soroban Multi-Jurisdiccional:**
     *   Despliegue de instancias independientes de los contratos inteligentes `Prescription` y `DispenseRecord` por país (ej. `prescription_cl`, `prescription_ar`, `prescription_uy`) para cumplir con normativas locales de retención, plazos de expiración y límites de gramos.
+*   **Federación de Médicos Transfronterizos (Gobernanza Multi-firma):**
+    *   Diseñar e implementar un sistema de confianza federada on-chain. El contrato `DoctorRegistry` de cada país podrá delegar o validar firmas mediante esquemas multifirma (m de n) autorizados por gobernanza, permitiendo a un médico de una jurisdicción socia emitir recetas válidas en otra.
 *   **Integración de Credenciales Regionales:**
     *   **Argentina:** Integración con la red de registros **REPROCANN** para validar la posesión de autorizaciones de cultivo estatales directamente en la wallet del paciente.
     *   **Uruguay:** Cumplimiento con las regulaciones de adquisición farmacéutica del IRCCA.
@@ -64,8 +68,8 @@ graph LR
 
 *   **Trazabilidad del Cáñamo y Triple Impacto:**
     *   Uso de hashes inmutables vinculados a metadatos en **IPFS** y transacciones de Stellar para certificar la huella ecológica y origen lícito de productos industriales de cáñamo (materiales de construcción, textiles y empaques sustentables).
-*   **Token de Utilidad Ecosistémico:**
-    *   Emitir un token nativo de Stellar (Soroban Token) para incentivar la fidelidad del paciente, permitiendo acumular puntos y reclamar beneficios en una red de comercios y pymes ecológicas asociadas.
+*   **Acuñación y Distribución Programática de Recompensas (Soroban SAC):**
+    *   El token de fidelización se emitirá a través de un contrato inteligente Soroban Asset Contract (SAC). La distribución se gatillará de manera automática en la red al completarse un retiro de receta exitoso, firmando la transacción de transferencia desde la wallet del dispensario hacia la del paciente.
 *   **Hub Global Transatlántico:**
     *   Permitir la interoperabilidad de recetas mediante firmas Web3 para pacientes que viajen entre jurisdicciones autorizadas (LatAm, Europa y Estados Unidos).
 

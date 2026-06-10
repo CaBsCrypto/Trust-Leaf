@@ -23,6 +23,7 @@ Este documento detalla el **Roadmap Estratégico** de **Trust Leaf**. Nuestro ob
 
 *   **100% On-chain en Soroban:** Implementación de la retención criptográfica (`retained_by`) y consumo parcial sobre Stellar Testnet.
 *   **Firma Híbrida:** Integración de Freighter/Albedo en el frontend para permitir firmas Web3 locales y firmas Custodiales delegadas.
+*   **Patrocinio de Red (Fee Sponsorship):** Integrar de manera nativa operaciones de patrocinio en Stellar para que el backend asuma los costos en XLM de las interacciones con Soroban.
 *   **Sincronización Firestore:** Cola de dispensación en tiempo real con privacidad inter-sucursal.
 *   **Estabilidad de Tipos:** Typecheck completo y build optimizado de la dApp.
 
@@ -58,6 +59,8 @@ gantt
 
 *   **Arquitectura Soroban Multi-Jurisdiccional:**
     *   Despliegue de contratos inteligentes independientes por país (`prescription_cl`, `prescription_ar`, `prescription_uy`) para gestionar límites locales de gramos y tiempos de expiración regulados.
+*   **Federación Médica Transfronteriza:**
+    *   Confianza federada on-chain mediante esquemas multifirma (m de n) en los contratos de registro de médicos (`DoctorRegistry`), permitiendo verificar credenciales de países socios de forma descentralizada.
 *   **Integración de Credenciales Estatales:**
     *   **Argentina:** Conexión con el registro de autocultivo **REPROCANN** para validar el estatus legal del paciente directo en su wallet.
     *   **Uruguay:** Adaptación regulatoria ante las normativas del IRCCA.
@@ -80,8 +83,8 @@ graph TD
 
 *   **Trazabilidad de Cáñamo Industrial:**
     *   Certificación verde de origen, materiales biodegradables y huella ecológica usando hashes inmutables de Stellar e IPFS.
-*   **Utility Token de Fidelidad:**
-    *   Emisión de un token nativo de Stellar para incentivar a la comunidad, permitiendo acumular puntos y canjearlos en una red global de pymes de impacto ecológico.
+*   **Distribución de Utilidad Programática (Soroban SAC):**
+    *   Acuñación y distribución automática del token de fidelidad mediante un contrato inteligente Soroban Asset Contract (SAC), gatillado al completarse transacciones exitosas de retiro.
 *   **Interoperabilidad Transatlántica:**
     *   Mapeo de recetas válidas para viajes de pacientes entre LatAm, Europa y Estados Unidos.
 
