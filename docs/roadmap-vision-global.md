@@ -69,7 +69,10 @@ graph LR
 *   **Trazabilidad del Cáñamo y Triple Impacto:**
     *   Uso de hashes inmutables vinculados a metadatos en **IPFS** y transacciones de Stellar para certificar la huella ecológica y origen lícito de productos industriales de cáñamo (materiales de construcción, textiles y empaques sustentables).
 *   **Acuñación y Distribución Programática de Recompensas (Soroban SAC):**
-    *   El token de fidelización se emitirá a través de un contrato inteligente Soroban Asset Contract (SAC). La distribución se gatillará de manera automática en la red al completarse un retiro de receta exitoso, firmando la transacción de transferencia desde la wallet del dispensario hacia la del paciente.
+    *   El token de fidelización `$LEAF` se emitirá a través de un contrato inteligente Soroban Asset Contract (SAC). La distribución se gatillará de manera automática en la red al completarse un retiro de receta exitoso, firmando la transacción de transferencia desde la wallet del dispensario hacia la del paciente.
+*   **Integración de Staking en Defindex (Modelo ReFi):**
+    *   Integración con el protocolo **Defindex** en Stellar/Soroban para habilitar bóvedas de staking de `$LEAF`. Los pacientes y la comunidad podrán depositar sus tokens de utilidad en estrategias DeFi automatizadas (vaults/pools).
+    *   El rendimiento (yield) generado se redireccionará de forma programática para subsidiar consultas médicas de pacientes crónicos de bajos recursos o financiar directamente cooperativas agrícolas locales que cultivan bajo el marco de la Ley 21.575 (finanzas regenerativas).
 *   **Hub Global Transatlántico:**
     *   Permitir la interoperabilidad de recetas mediante firmas Web3 para pacientes que viajen entre jurisdicciones autorizadas (LatAm, Europa y Estados Unidos).
 

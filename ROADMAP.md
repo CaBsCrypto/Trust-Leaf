@@ -84,7 +84,9 @@ graph TD
 *   **Trazabilidad de Cáñamo Industrial:**
     *   Certificación verde de origen, materiales biodegradables y huella ecológica usando hashes inmutables de Stellar e IPFS.
 *   **Distribución de Utilidad Programática (Soroban SAC):**
-    *   Acuñación y distribución automática del token de fidelidad mediante un contrato inteligente Soroban Asset Contract (SAC), gatillado al completarse transacciones exitosas de retiro.
+    *   Acuñación y distribución automática del token de fidelidad `$LEAF` mediante un contrato inteligente Soroban Asset Contract (SAC), gatillado al completarse transacciones exitosas de retiro.
+*   **Staking en Defindex (Finanzas Regenerativas - ReFi):**
+    *   Integración con el protocolo **Defindex** en Stellar/Soroban para habilitar vaults de staking de `$LEAF`. El rendimiento (yield) generado se redirigirá programáticamente para subsidiar consultas y tratamientos de pacientes vulnerables y financiar cooperativas agrícolas locales.
 *   **Interoperabilidad Transatlántica:**
     *   Mapeo de recetas válidas para viajes de pacientes entre LatAm, Europa y Estados Unidos.
 
