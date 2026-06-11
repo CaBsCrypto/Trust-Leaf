@@ -3,15 +3,18 @@
 
 Este documento detalla la hoja de ruta técnica y de producto para la postulación de **Trust Leaf** al programa **Instawards** de Stellar. El plan se estructura en **3 sprints de 30 días**, con entregables concretos y criterios de aceptación claros orientados a la red de prueba (Testnet) y preparación del piloto real.
 
-```
-[ SPRINT 1: Identidad & Web3 ] ──► [ SPRINT 2: Privacidad & SIS ] ──► [ SPRINT 3: Fee Sponsorship & Piloto ]
-      Monto: $5,000 USD                   Monto: $5,000 USD                    Monto: $5,000 USD
-```
+---
+
+## 🛠️ Estado Actual de las Billeteras (Punto de Partida)
+Antes de iniciar los sprints de los Instawards, la infraestructura de wallets en Trust Leaf se compone de:
+1.  **Billeteras de Prueba (Demo/Derivadas):** Generación determinística a partir del correo mediante la API `/api/stellar/derive-wallet`. Ideal para demostraciones rápidas, pero no viable para entornos reales.
+2.  **Passkeys Híbridas locales:** Implementación nativa WebAuthn que dispara el prompt biométrico del sistema operativo, generando una llave Stellar almacenada localmente y resguardada en el navegador (`localStorage`).
+3.  **Billeteras Web3 (Freighter / Albedo):** Soporte inicial para la firma y envío de transacciones directamente desde el cliente.
 
 ---
 
-## 🏃‍♂️ Sprint 1 (Días 1 - 30): Robustez de Identidad Criptográfica, Passkeys y Firmas Web3
-> **Objetivo principal:** Reemplazar el Onboarding simulado por identidades criptográficas reales vinculadas a Firebase Auth, implementando firmas locales nativas Web3 y seguridad administrativa.  
+## 🏃‍♂️ Sprint 1 (Días 1 - 30): Onboarding Real y Registro On-Chain de Actores Habilitados
+> **Objetivo principal:** Conectar el backend Express y los contratos Soroban existentes con una autenticación real (Firebase Auth) y vincular de forma persistente las identidades de Pacientes, Médicos y Dispensarios con sus wallets (Freighter/Passkeys).  
 > **Monto Solicitado:** $5,000 USD (en XLM)
 
 ### 📦 Entregables Concretos
