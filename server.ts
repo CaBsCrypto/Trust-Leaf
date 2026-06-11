@@ -505,6 +505,60 @@ async function startServer() {
     }
   });
 
+  app.post("/api/stellar/admin/verify-sis", async (req, res) => {
+    try {
+      const { rut } = req.body ?? {};
+      if (!rut) {
+        res.status(400).json({ valid: false, message: "Falta el parámetro 'rut'." });
+        return;
+      }
+
+      // Normalizar el RUN a minúsculas y sin puntos ni guiones para hacer la comparación flexible,
+      // pero en este mock usaremos una base de datos simulada realista para profesionales chilenos.
+      const normalizedRut = String(rut).trim().replace(/\./g, "").replace(/-/g, "").toLowerCase();
+
+      // Base de datos simulada del Registro Nacional de Prestadores Individuales de Salud (SIS)
+      const sisDatabase: Record<string, { name: string; licenseId: string; specialty: string }> = {
+        "123456789": {
+          name: "Dr. Carlos Valenzuela",
+          licenseId: "SIS-87421",
+          specialty: "Medicina General / Cannabis Medicinal",
+        },
+        "222222222": {
+          name: "Dra. Sofía Lagos",
+          licenseId: "SIS-99312",
+          specialty: "Neurología / Tratamientos de Dolor",
+        },
+        "999999999": {
+          name: "Dr. Admin Root",
+          licenseId: "SIS-00001",
+          specialty: "Medicina Integrativa",
+        }
+      };
+
+      const record = sisDatabase[normalizedRut];
+      if (record) {
+        res.json({
+          valid: true,
+          rut: rut,
+          name: record.name,
+          licenseId: record.licenseId,
+          specialty: record.specialty,
+          verifiedAt: new Date().toISOString(),
+          registry: "Superintendencia de Salud de Chile (SIS)",
+        });
+      } else {
+        res.status(404).json({
+          valid: false,
+          message: "El RUN ingresado no figura en el Registro Nacional de Prestadores Individuales de Salud.",
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error interno en el servidor.";
+      res.status(500).json({ valid: false, message });
+    }
+  });
+
   app.post("/api/stellar/admin/register-doctor", async (req, res) => {
     try {
       const { doctorAddress } = req.body ?? {};

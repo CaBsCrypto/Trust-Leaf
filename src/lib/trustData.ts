@@ -594,4 +594,38 @@ export const trustDataStore = {
       }
     }
   },
+  async loadClinicalRecords(patientId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'clinicalRecords'), where('patientId', '==', patientId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading clinical records from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_consultation_clinical_records');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  async createClinicalRecord(record: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_consultation_clinical_records');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_consultation_clinical_records', JSON.stringify([record, ...current]));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'clinicalRecords', record.id), record);
+      } catch (err) {
+        console.error('Error saving clinical record in Firestore:', err);
+      }
+    }
+  },
 };
