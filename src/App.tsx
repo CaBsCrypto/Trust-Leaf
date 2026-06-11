@@ -20,7 +20,7 @@ import {
   signInWithGoogle,
   type AdminAuthState,
 } from './lib/trustAuth';
-import { getFirebaseRuntimeStatus, db } from './lib/firebase';
+import { getFirebaseRuntimeStatus, db, auth } from './lib/firebase';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { shortenAddress, stellarConfig, deriveStellarPublicKey } from './lib/stellar/config';
 import { connectFreighterOnTestnet } from './lib/stellar/freighter';
@@ -3328,9 +3328,13 @@ function getRegistrationSourceLabel(source: PersistenceSource) {
 }
 
 function actorMatchesSession(
-  request: { id?: string; contact: string; name: string },
+  request: { id?: string; contact: string; name: string; uid?: string },
   currentSession: TrustSession | null,
 ) {
+  if (request.uid && auth.currentUser && request.uid === auth.currentUser.uid) {
+    return true;
+  }
+
   try {
     const saved = localStorage.getItem('trust_submitted_ids');
     const submittedIds = saved ? JSON.parse(saved) : [];

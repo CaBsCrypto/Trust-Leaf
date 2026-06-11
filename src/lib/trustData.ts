@@ -30,6 +30,7 @@ export interface DoctorApplication {
   metadataHash?: string;
   rut?: string;
   sisRegistrationId?: string;
+  uid?: string;
 }
 
 export interface DispensaryApplication {
@@ -47,6 +48,7 @@ export interface DispensaryApplication {
   metadataHash?: string;
   rut?: string;
   ispResolutionNumber?: string;
+  uid?: string;
 }
 
 type ApplicationKind = 'doctor' | 'dispensary';
@@ -420,6 +422,7 @@ export const trustDataStore = {
       status: 'pending',
       onchainStatus: 'pending',
       submittedAt: nowIso(),
+      uid: auth.currentUser?.uid,
     });
   },
   createApprovedDoctor(input: Omit<DoctorApplication, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) {
@@ -479,6 +482,7 @@ export const trustDataStore = {
       status: 'pending',
       onchainStatus: 'pending',
       submittedAt: nowIso(),
+      uid: auth.currentUser?.uid,
     });
   },
   createApprovedDispensary(input: Omit<DispensaryApplication, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) {
