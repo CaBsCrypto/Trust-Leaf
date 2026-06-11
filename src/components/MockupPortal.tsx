@@ -6018,7 +6018,7 @@ export default function MockupPortal({
                       </div>
                     )}
 
-                    {false && !!patientDashboard?.prescriptions.length && (
+                    {!!patientDashboard?.prescriptions?.length && (
                       <div className="space-y-4">
                         <div className="mb-2 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
                           <Star size={14} fill="currentColor" />
@@ -6770,7 +6770,7 @@ export default function MockupPortal({
                       <div className="bg-white rounded-[32px] border border-brand-green-deep/10 p-8">
                         <p className="text-sm text-brand-green-mid/60">Consultando recetas del paciente en testnet...</p>
                       </div>
-                    ) : false && patientDashboard?.prescriptions.length ? (
+                    ) : patientDashboard?.prescriptions?.length ? (
                       <div className="space-y-4">
                         <div className="mb-2 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 text-blue-700 text-xs">
                           <Star size={14} fill="currentColor" />
