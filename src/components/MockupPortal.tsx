@@ -11436,7 +11436,7 @@ export default function MockupPortal({
 
                           </div>
 
-                          {false && selectedConsultationBlock && (
+                          {selectedConsultationBlock && (
 
                             <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white/80 p-4">
 
@@ -11524,7 +11524,7 @@ export default function MockupPortal({
 
                           )}
 
-                          {false && selectedConsultationBlock && (
+                          {selectedConsultationBlock && (
 
                             <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white/75 p-4">
 
@@ -11854,7 +11854,7 @@ export default function MockupPortal({
 
                             onClick={() => openDrawer('doctor-prescription')}
 
-                            disabled={!prescriptionPatientAddress}
+                            disabled={!prescriptionPatientAddress || (selectedConsultationStatus !== 'active' && selectedConsultationStatus !== 'completed')}
 
                             className="rounded-2xl bg-brand-green-deep p-4 text-left text-brand-ivory transition-colors hover:bg-brand-green-mid disabled:opacity-45"
 
