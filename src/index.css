@@ -1,20 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Instrument+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Instrument+Sans:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Outfit", "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
   
-  --color-brand-green-deep: #1a3b32;
-  --color-brand-green-mid: #2d5a4c;
-  --color-brand-ivory: #f2f6f2;
-  --color-brand-neutral: #e7ece7;
-  --color-brand-gold: #c5a47e;
+  --color-brand-green-deep: #0e2a22;
+  --color-brand-green-mid: #1d4e3f;
+  --color-brand-green-light: #2e7a63;
+  --color-brand-green-glow: #10b981;
+  --color-brand-ivory: #fafdfa;
+  --color-brand-neutral: #eff5ef;
+  --color-brand-gold: #d4af37;
+  
+  --shadow-premium: 0 10px 30px -10px rgba(14, 42, 34, 0.15);
+  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.2);
 }
 
 @layer base {
   html {
     overflow-x: hidden;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -27,9 +33,52 @@
   }
 }
 
+/* Glassmorphism premium panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px 0 rgba(14, 42, 34, 0.04);
+}
+
+.glass-panel-dark {
+  background: rgba(14, 42, 34, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
 .glass-morphism {
   background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
+
+/* Glow accents */
+.glow-accent {
+  box-shadow: 0 0 15px rgba(46, 122, 99, 0.25);
+  transition: all 0.3s ease;
+}
+
+.glow-accent:hover {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);
+}
+
+/* Custom transitions and scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(46, 122, 99, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(46, 122, 99, 0.5);
+}
+

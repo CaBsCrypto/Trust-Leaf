@@ -17,57 +17,134 @@ export async function signInWithGoogle() {
   const result = await signInWithPopup(auth, provider);
   
   if (result.user) {
-    try {
-      const userRef = doc(db, 'users', result.user.uid);
-      const userSnap = await getDoc(userRef);
+    const userRef = doc(db, 'users', result.user.uid);
+    let userSnap = await getDoc(userRef);
+    const exists = userSnap.exists();
+    let userData = exists ? userSnap.data() : null;
+
+    if (!exists) {
+      const isAdmin = result.user.email?.toLowerCase() === 'cabscryptocontacto@gmail.com';
       
-      if (!userSnap.exists()) {
-        console.log('[Auth Real] Nuevo usuario detectado. Derivando Stellar Wallet...');
-        
-        const email = result.user.email || result.user.uid;
-        const derivedWalletAddress = await deriveStellarPublicKey(email);
-        
-        console.log(`[Auth Real] Stellar Wallet derivado: ${derivedWalletAddress}`);
-
-        // 2. Fondeo automático de la cuenta en Stellar Testnet llamando a la API
-        try {
-          console.log('[Auth Real] Fondeando cuenta en Stellar Testnet...');
-          const faucetResponse = await fetch('/api/stellar/faucet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              role: 'patient',
-              address: derivedWalletAddress
-            })
-          });
-          const faucetResult = await faucetResponse.json();
-          if (faucetResponse.ok) {
-            console.log('[Auth Real] Cuenta fondeada de forma exitosa en Testnet.', faucetResult);
-          } else {
-            console.warn('[Auth Real] Advertencia al fondear cuenta (Faucet):', faucetResult.message);
-          }
-        } catch (faucetErr) {
-          console.error('[Auth Real] Error al intentar invocar faucet:', faucetErr);
-        }
-
-        // 3. Registrar el documento users/{uid} en Firestore mapeando la cuenta de Stellar
-        await setDoc(userRef, {
-          uid: result.user.uid,
-          name: result.user.displayName || 'Paciente Registrado',
-          email: result.user.email || '',
-          stellarPublicKey: derivedWalletAddress,
-          createdAt: new Date().toISOString()
-        });
-      } else {
-        const userData = userSnap.data();
-        console.log('[Auth Real] Usuario existente de Google detectado. Wallet vinculada:', userData.stellarPublicKey);
+      if (isAdmin) {
+        console.log('[Auth Real] Detectado usuario administrador. Registrando sin Passkey...');
+        await registerUserWithWallet(
+          result.user.uid,
+          result.user.displayName || 'Administrador',
+          result.user.email || '',
+          'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6', // Cuenta readonly por defecto
+          'freighter', // Admin no requiere passkey
+          'admin'
+        );
+        userSnap = await getDoc(userRef);
+        userData = userSnap.data();
+        return {
+          user: result.user,
+          exists: true,
+          userData
+        };
       }
-    } catch (err) {
-      console.error('Error registering user in Firestore / creating Passkey:', err);
-    }
-  }
 
-  return result.user;
+      // Return exists: false so frontend prompts for role selection
+      return {
+        user: result.user,
+        exists: false,
+        userData: null
+      };
+    }
+
+    return {
+      user: result.user,
+      exists: true,
+      userData
+    };
+  }
+  return null;
+}
+
+export async function registerNewUserRole(
+  user: User,
+  role: 'patient' | 'doctor' | 'dispensary'
+) {
+  const userRef = doc(db, 'users', user.uid);
+  let stellarPublicKey = '';
+  let primaryMethod: 'passkey' | 'freighter' = 'passkey';
+  let credentialId = '';
+
+  try {
+    if (role === 'patient') {
+      console.log('[Auth Real] Creando Passkey para Paciente...');
+      const passkey = await createPasskeyWallet(user.email || user.displayName || 'Paciente');
+      stellarPublicKey = passkey.contractId;
+      credentialId = passkey.keyId;
+    } else {
+      console.log(`[Auth Real] Derivando wallet determinística para ${role}...`);
+      const derived = await deriveStellarPublicKey(user.email || '');
+      stellarPublicKey = derived || 'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6';
+      primaryMethod = 'freighter';
+    }
+
+    await registerUserWithWallet(
+      user.uid,
+      user.displayName || (role === 'doctor' ? 'Médico' : 'Dispensario'),
+      user.email || '',
+      stellarPublicKey,
+      primaryMethod,
+      role
+    );
+
+    if (credentialId) {
+      await setDoc(userRef, { credentialId }, { merge: true });
+    }
+
+    const userSnap = await getDoc(userRef);
+    return userSnap.data();
+  } catch (err) {
+    console.error('[Auth Real] Error al registrar rol y wallet:', err);
+    await signOut(auth);
+    throw err;
+  }
+}
+
+
+export async function registerUserWithWallet(
+  uid: string,
+  name: string,
+  email: string,
+  stellarPublicKey: string,
+  primaryMethod: 'passkey' | 'freighter',
+  role: string = 'patient'
+) {
+  const userRef = doc(db, 'users', uid);
+  await setDoc(userRef, {
+    uid,
+    name,
+    email,
+    stellarPublicKey,
+    primaryMethod,
+    role,
+    createdAt: new Date().toISOString()
+  });
+  
+  // Fund the newly mapped account in testnet via faucet API
+  try {
+    console.log('[Auth Real] Fondeando cuenta en Stellar Testnet...');
+    const faucetResponse = await fetch('/api/stellar/faucet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role,
+        address: stellarPublicKey
+      })
+    });
+    const faucetResult = await faucetResponse.json();
+    if (faucetResponse.ok) {
+      console.log('[Auth Real] Cuenta fondeada de forma exitosa en Testnet.', faucetResult);
+    } else {
+      console.warn('[Auth Real] Advertencia al fondear cuenta (Faucet):', faucetResult.message);
+    }
+  } catch (faucetErr) {
+    console.error('[Auth Real] Error al intentar invocar faucet:', faucetErr);
+  }
 }
 
 export function listenAdminAuth(callback: (state: AdminAuthState) => void) {

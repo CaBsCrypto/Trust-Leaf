@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   where,
+  addDoc,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -628,4 +629,140 @@ export const trustDataStore = {
       }
     }
   },
+  async loadDispensaryInventory(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'dispensaryInventory'), where('dispensaryId', '==', dispensaryId))
+        );
+        if (!snapshot.empty) {
+          return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        }
+      } catch (err) {
+        console.error('Error loading inventory from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem(`trust_inventory_${dispensaryId}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    // Retornar inventario base por defecto si no existe persistencia previa
+    const defaultInventory = [
+      { id: 'batch-001', batchId: 'LOTE-THC-A23', strainName: 'Premium White Widow (Magistral)', quantityGrams: 150, thcRatio: 18, cbdRatio: 1 },
+      { id: 'batch-002', batchId: 'LOTE-CBD-B42', strainName: 'Sublingual CBD Drops (Aceite)', quantityGrams: 90, thcRatio: 1, cbdRatio: 15 },
+      { id: 'batch-003', batchId: 'LOTE-BAL-C11', strainName: 'Balanced Hybrid Cream (Topico)', quantityGrams: 200, thcRatio: 5, cbdRatio: 5 }
+    ];
+    try {
+      localStorage.setItem(`trust_inventory_${dispensaryId}`, JSON.stringify(defaultInventory));
+    } catch {}
+    return defaultInventory;
+  },
+  async deductInventoryStock(dispensaryId: string, batchId: string, quantityToDeduct: number): Promise<void> {
+    const inventory = await this.loadDispensaryInventory(dispensaryId);
+    const updated = inventory.map(item => {
+      if (item.batchId === batchId) {
+        return { ...item, quantityGrams: Math.max(0, item.quantityGrams - quantityToDeduct) };
+      }
+      return item;
+    });
+    try {
+      localStorage.setItem(`trust_inventory_${dispensaryId}`, JSON.stringify(updated));
+    } catch {}
+    if (canUseFirebase()) {
+      try {
+        const matched = updated.find(item => item.batchId === batchId);
+        if (matched) {
+          await setDoc(doc(db, 'dispensaryInventory', `${dispensaryId}_${batchId}`), {
+            ...matched,
+            dispensaryId,
+          });
+        }
+      } catch (err) {
+        console.error('Error updating inventory stock in Firestore:', err);
+      }
+    }
+  },
+  async addInventoryProduct(dispensaryId: string, product: any): Promise<void> {
+    const inventory = await this.loadDispensaryInventory(dispensaryId);
+    const updated = [product, ...inventory];
+    try {
+      localStorage.setItem(`trust_inventory_${dispensaryId}`, JSON.stringify(updated));
+    } catch {}
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'dispensaryInventory', `${dispensaryId}_${product.batchId}`), {
+          ...product,
+          dispensaryId,
+        });
+      } catch (err) {
+        console.error('Error adding inventory product to Firestore:', err);
+      }
+    }
+  },
+  async loadDispensaryMembers(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'dispensaryMembers'), where('dispensaryId', '==', dispensaryId))
+        );
+        if (!snapshot.empty) {
+          return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+        }
+      } catch (err) {
+        console.error('Error loading dispensary members from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem(`trust_members_${dispensaryId}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    const defaultMembers = [
+      { id: 'm1', name: 'Laura Restrepo', role: 'Administrador', email: 'laura@trustleaf.co', wallet: 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX' },
+      { id: 'm2', name: 'Carlos Mendoza', role: 'Farmacéutico', email: 'carlos@trustleaf.co', wallet: 'GDU5K...39ZA' },
+      { id: 'm3', name: 'Sofía Valenzuela', role: 'Operador', email: 'sofia@trustleaf.co', wallet: 'GDQ4J...88XY' }
+    ];
+    try {
+      localStorage.setItem(`trust_members_${dispensaryId}`, JSON.stringify(defaultMembers));
+    } catch {}
+    return defaultMembers;
+  },
+  async addDispensaryMember(dispensaryId: string, member: any): Promise<void> {
+    const members = await this.loadDispensaryMembers(dispensaryId);
+    const updated = [...members, member];
+    try {
+      localStorage.setItem(`trust_members_${dispensaryId}`, JSON.stringify(updated));
+    } catch {}
+    if (canUseFirebase()) {
+      try {
+        await addDoc(collection(db, 'dispensaryMembers'), {
+          ...member,
+          dispensaryId,
+        });
+      } catch (err) {
+        console.error('Error adding dispensary member to Firestore:', err);
+      }
+    }
+  },
+  async loadDispensaryPickupHistory(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'pickups'), where('dispensaryId', '==', dispensaryId))
+        );
+        return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading pickup history from Firestore:', err);
+      }
+    }
+    // Fallback to local trust_pickups
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      if (saved) {
+        const allPickups = JSON.parse(saved);
+        return allPickups.filter((p: any) => p.dispensaryId === dispensaryId);
+      }
+    } catch {}
+    return [];
+  },
 };
+

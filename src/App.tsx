@@ -18,6 +18,7 @@ import {
   signInAdmin,
   signOutAdmin,
   signInWithGoogle,
+  registerNewUserRole,
   type AdminAuthState,
 } from './lib/trustAuth';
 import { getFirebaseRuntimeStatus, db, auth } from './lib/firebase';
@@ -198,110 +199,7 @@ function AppContent() {
               setPatientProfile(null);
             }
           } else {
-            // Document does not exist yet. If Patient, auto-derive and create profile. If Doctor or Dispensary is approved, auto-create its mapping in 'users'!
-            if (session.role === 'patient') {
-              try {
-                const derivedWalletAddress = await deriveStellarPublicKey(session.email);
-                
-                // Fund account on Testnet
-                try {
-                  await fetch('/api/stellar/faucet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ role: 'patient', address: derivedWalletAddress })
-                  });
-                } catch (faucetErr) {
-                  console.warn('Silent faucet funding failed:', faucetErr);
-                }
-
-                const profileData = {
-                  uid: adminAuth.user!.uid,
-                  name: session.name || adminAuth.user!.displayName || 'Paciente Registrado',
-                  email: session.email,
-                  stellarPublicKey: derivedWalletAddress,
-                  primaryMethod: 'demo',
-                  walletLabel: 'Usuario Google Piloto',
-                  createdAt: new Date().toISOString(),
-                };
-                await setDoc(userRef, profileData);
-                const profile = {
-                  uid: adminAuth.user!.uid,
-                  name: profileData.name,
-                  stellarPublicKey: profileData.stellarPublicKey,
-                };
-                setPatientProfile(profile);
-                setWalletSetup({
-                  primaryMethod: 'demo',
-                  hasFreighterBackup: false,
-                  walletLabel: profileData.walletLabel,
-                  contractAccount: profileData.stellarPublicKey,
-                  networkLabel: 'Stellar Testnet',
-                });
-                localStorage.setItem(
-                  'trust_wallet_setup',
-                  JSON.stringify({
-                    primaryMethod: 'demo',
-                    hasFreighterBackup: false,
-                    walletLabel: profileData.walletLabel,
-                    contractAccount: profileData.stellarPublicKey,
-                    freighterAddress: profileData.stellarPublicKey,
-                    networkLabel: 'Stellar Testnet',
-                  }),
-                );
-              } catch (err) {
-                console.error('Error auto-creating patient profile:', err);
-              }
-            } else {
-              const approvedDocs = doctorRegistrations.filter((r) => r.status === 'approved');
-              const approvedDisps = dispensaryRegistrations.filter((r) => r.status === 'approved');
-              const currentReg = session.role === 'doctor'
-                ? approvedDocs.find((r) => r.contact === session.email || r.name === session.name)
-                : session.role === 'dispensary'
-                  ? approvedDisps.find((r) => r.contact === session.email || r.name === session.name)
-                  : null;
-
-              if (currentReg && currentReg.wallet) {
-                try {
-                  const profileData = {
-                    uid: adminAuth.user!.uid,
-                    name: currentReg.name || adminAuth.user!.displayName || 'Usuario de Google',
-                    stellarPublicKey: currentReg.wallet,
-                    primaryMethod: 'demo',
-                    walletLabel: session.role === 'doctor' ? 'Credencial Profesional Médica' : 'Credencial Operativa Dispensario',
-                    createdAt: new Date().toISOString(),
-                  };
-                  await setDoc(userRef, profileData);
-                  const profile = {
-                    uid: adminAuth.user!.uid,
-                    name: profileData.name,
-                    stellarPublicKey: profileData.stellarPublicKey,
-                  };
-                  setPatientProfile(profile);
-                  setWalletSetup({
-                    primaryMethod: 'demo',
-                    hasFreighterBackup: false,
-                    walletLabel: profileData.walletLabel,
-                    contractAccount: profileData.stellarPublicKey,
-                    networkLabel: 'Stellar Testnet',
-                  });
-                  localStorage.setItem(
-                    'trust_wallet_setup',
-                    JSON.stringify({
-                      primaryMethod: 'demo',
-                      hasFreighterBackup: false,
-                      walletLabel: profileData.walletLabel,
-                      contractAccount: profileData.stellarPublicKey,
-                      freighterAddress: profileData.stellarPublicKey,
-                      networkLabel: 'Stellar Testnet',
-                    }),
-                  );
-                } catch (err) {
-                  console.error('Error auto-creating user mapping doc:', err);
-                }
-              } else {
-                setPatientProfile(null);
-              }
-            }
+            setPatientProfile(null);
           }
         })
         .catch((err) => {
@@ -728,9 +626,22 @@ function AppContent() {
             primaryMethod: walletSetup.primaryMethod,
             hasFreighterBackup: walletSetup.hasFreighterBackup,
             walletLabel: walletSetup.walletLabel,
+            role: session?.role || 'patient',
             createdAt: new Date().toISOString(),
           };
           await setDoc(userRef, profileData);
+          
+          // Fund the newly created address in Stellar Testnet
+          try {
+            await fetch('/api/stellar/faucet', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ role: session?.role || 'patient', address: walletSetup.contractAccount })
+            });
+          } catch (faucetErr) {
+            console.warn('Faucet funding failed:', faucetErr);
+          }
+
           setPatientProfile(profileData);
           localStorage.setItem(
             'trust_wallet_setup',
@@ -748,6 +659,20 @@ function AppContent() {
         }
       };
 
+      const onboardingTitle =
+        session?.role === 'patient'
+          ? 'Configura tu acceso de Paciente'
+          : session?.role === 'doctor'
+            ? 'Configura tu acceso de Médico'
+            : 'Configura tu acceso de Dispensario';
+
+      const onboardingDesc =
+        session?.role === 'patient'
+          ? 'Conecta una billetera Stellar (Passkey o Freighter) para gestionar tus recetas y autorizar retiros con total privacidad. Las transacciones de la red testnet están 100% patrocinadas.'
+          : session?.role === 'doctor'
+            ? 'Conecta tu firma digital (Passkey o Freighter) para emitir recetas y resguardar la privacidad de tus pacientes de forma auditable en Stellar Testnet.'
+            : 'Conecta tu firma digital (Passkey o Freighter) para registrar retiros de medicamentos y preparados sin exponer datos clínicos sensibles.';
+
       return (
         <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep p-6 flex flex-col justify-center items-center">
           <div className="w-full max-w-4xl space-y-6">
@@ -764,9 +689,9 @@ function AppContent() {
             </header>
 
             <WalletOnboarding
-              title="Configura tu acceso médico"
+              title={onboardingTitle}
               eyebrow="Onboarding mandatorio de piloto"
-              description="Conecta una billetera Stellar para crear tu expediente clínico privado. Las transacciones de la red testnet están 100% patrocinadas por Trust Leaf."
+              description={onboardingDesc}
               primaryMethod={walletSetup.primaryMethod}
               hasFreighterBackup={walletSetup.hasFreighterBackup}
               walletLabel={walletSetup.walletLabel}
@@ -1666,6 +1591,7 @@ function AuthGate({
   });
   const [busy, setBusy] = useState<TrustSession['mode'] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<any | null>(null);
 
   const roleLabel = {
     patient: 'Paciente',
@@ -1689,8 +1615,6 @@ function AuthGate({
       if (mode === 'email') {
         await ensureActorAuthSession();
       } else {
-        // En modo demo, intentamos autenticar de forma silenciosa para usar Firestore,
-        // pero si falla (ej. sin internet o no configurado), continuamos localmente sin bloquear el login.
         await ensureActorAuthSession().catch((err) => {
           console.warn('Silent anonymous auth failed for demo mode:', err);
         });
@@ -1715,20 +1639,49 @@ function AuthGate({
     setBusy('email');
     setError(null);
     try {
-      const user = await signInWithGoogle();
-      if (!user) {
+      const result = await signInWithGoogle();
+      if (!result || !result.user) {
         throw new Error('El inicio de sesión con Google falló.');
       }
-      onStart(role, {
-        email: user.email ?? '',
-        name: user.displayName ?? 'Usuario de Google',
-        mode: 'email',
-      });
+      if (!result.exists) {
+        setPendingGoogleUser(result.user);
+      } else {
+        const userRole = (result.userData?.role || role) as ActorRole;
+        onStart(userRole, {
+          email: result.user.email ?? '',
+          name: result.user.displayName ?? 'Usuario de Google',
+          mode: 'email',
+        });
+      }
     } catch (authError) {
       setError(
         authError instanceof Error
           ? authError.message
           : 'No fue posible abrir sesion segura con Google. Puedes usar el acceso de prueba para continuar.',
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleRoleSelection = async (selectedRole: 'patient' | 'doctor' | 'dispensary') => {
+    if (!pendingGoogleUser) return;
+    setBusy('email');
+    setError(null);
+    try {
+      console.log(`[Auth Gate] Iniciando registro para rol: ${selectedRole}`);
+      const userData = await registerNewUserRole(pendingGoogleUser, selectedRole);
+      onStart(selectedRole, {
+        email: pendingGoogleUser.email ?? '',
+        name: pendingGoogleUser.displayName ?? 'Usuario de Google',
+        mode: 'email',
+      });
+      setPendingGoogleUser(null);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No fue posible completar el registro de rol. Reintente por favor.'
       );
     } finally {
       setBusy(null);
@@ -1763,88 +1716,132 @@ function AuthGate({
         </section>
 
         <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm flex flex-col justify-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso privado</p>
-          <h2 className="mt-2 text-2xl font-serif">Sesion de trabajo</h2>
-          <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65 mb-6">
-            Cada actor entra a su propio panel de control verificado. Las conexiones del piloto real se realizan a través de credenciales autenticadas de Google.
-          </p>
+          {pendingGoogleUser ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Primer ingreso</p>
+              <h2 className="mt-2 text-2xl font-serif">Elige tu rol en el piloto</h2>
+              <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65 mb-6">
+                Hola <strong className="text-brand-green-deep">{pendingGoogleUser.displayName || pendingGoogleUser.email}</strong>. Para configurar tu cuenta Stellar y permisos, indícanos qué rol cumples en Trust Leaf:
+              </p>
 
-          {error && (
-            <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
-              {error}
-            </div>
+              {error && (
+                <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-red-800">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { id: 'patient', name: 'Paciente', desc: 'Recibe recetas magistrales, consulta saldos y retira en dispensarios de forma privada.' },
+                  { id: 'doctor', name: 'Médico', desc: 'Emite recetas digitales firmadas criptográficamente y vinculadas al registro oficial del ISP/SIS.' },
+                  { id: 'dispensary', name: 'Dispensario', desc: 'Valida recetas, ingresa lotes y registra retiros parciales u on-chain.' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => handleRoleSelection(item.id as any)}
+                    className="flex flex-col items-start rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/30 p-4 text-left hover:border-brand-gold hover:bg-white transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <span className="font-bold text-brand-green-deep text-base">{item.name}</span>
+                    <span className="mt-1 text-xs text-brand-green-mid/65 leading-relaxed">{item.desc}</span>
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setPendingGoogleUser(null)}
+                  className="mt-4 text-center text-xs font-bold text-brand-green-mid/45 hover:text-brand-green-deep transition-colors cursor-pointer"
+                >
+                  Cancelar registro
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso privado</p>
+              <h2 className="mt-2 text-2xl font-serif">Sesion de trabajo</h2>
+              <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65 mb-6">
+                Cada actor entra a su propio panel de control verificado. Las conexiones del piloto real se realizan a través de credenciales autenticadas de Google.
+              </p>
+
+              {error && (
+                <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3">
+                {onPasskeySignIn && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setBusy('email');
+                      setError(null);
+                      try {
+                        await onPasskeySignIn();
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Error al conectar con Passkey.');
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                    disabled={Boolean(busy)}
+                    className="flex items-center justify-center gap-3 rounded-2xl bg-brand-gold text-brand-green-deep border border-brand-gold px-5 py-4 text-sm font-bold transition-all disabled:cursor-wait disabled:opacity-60 shadow-md cursor-pointer hover:bg-brand-ivory hover:-translate-y-0.5 duration-300 group"
+                  >
+                    <Fingerprint className="h-5 w-5 text-brand-green-deep group-hover:scale-110 transition-transform" />
+                    {busy === 'email' ? 'Verificando Passkey...' : 'Entrar con Smart Passkey (Biométrico)'}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={Boolean(busy)}
+                  className="flex items-center justify-center gap-3 rounded-2xl bg-white border border-brand-green-deep/10 px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60 shadow-sm cursor-pointer"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                      <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.89 21.56,11.43 21.35,11.1z" fill="#4285F4" />
+                      <path d="M12,21c2.43,0 4.47,-0.8 5.96,-2.18l-2.58,-2c-0.73,0.49 -1.66,0.78 -2.63,0.78 -2.03,0 -3.75,-1.37 -4.36,-3.22H2.33v2.66C3.81,17.43 7.64,21 12,21z" fill="#34A853" />
+                      <path d="M7.64,14.38c-0.16,-0.49 -0.25,-1 -0.25,-1.53s0.09,-1.04 0.25,-1.53V8.66H2.33C1.79,9.73 1.48,10.93 1.48,12s0.31,2.27 0.85,3.34L7.64,14.38z" fill="#FBBC05" />
+                      <path d="M12,5.38c1.32,0 2.51,0.45 3.44,1.35l2.58,-2.58C16.46,2.69 14.43,2 12,2 7.64,2 3.81,5.57 2.33,9.34l3.05,2.38C5.99,6.75 7.71,5.38 12,5.38z" fill="#EA4335" />
+                    </g>
+                  </svg>
+                  {busy === 'email' ? 'Autenticando...' : 'Iniciar sesión con Google'}
+                </button>
+                
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-brand-green-deep/10"></div>
+                  <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-brand-green-mid/45">o modo demo</span>
+                  <div className="flex-grow border-t border-brand-green-deep/10"></div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => submit('demo')}
+                  disabled={Boolean(busy)}
+                  className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                >
+                  {busy === 'demo' ? 'Entrando...' : demoAction}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que quieres restablecer los accesos de prueba? Esto limpiará la caché local del navegador para que puedas registrar nuevas llaves desde cero con Google Password Manager.")) {
+                      localStorage.clear();
+                      passkeyService.clearAll();
+                      window.location.reload();
+                    }
+                  }}
+                  className="mt-3 text-center text-xs font-bold text-brand-green-mid/45 hover:text-red-600 transition-colors cursor-pointer"
+                >
+                  Limpiar accesos locales y reiniciar llaves
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="grid grid-cols-1 gap-3">
-            {onPasskeySignIn && (
-              <button
-                type="button"
-                onClick={async () => {
-                  setBusy('email');
-                  setError(null);
-                  try {
-                    await onPasskeySignIn();
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Error al conectar con Passkey.');
-                  } finally {
-                    setBusy(null);
-                  }
-                }}
-                disabled={Boolean(busy)}
-                className="flex items-center justify-center gap-3 rounded-2xl bg-brand-gold text-brand-green-deep border border-brand-gold px-5 py-4 text-sm font-bold transition-all disabled:cursor-wait disabled:opacity-60 shadow-md cursor-pointer hover:bg-brand-ivory hover:-translate-y-0.5 duration-300 group"
-              >
-                <Fingerprint className="h-5 w-5 text-brand-green-deep group-hover:scale-110 transition-transform" />
-                {busy === 'email' ? 'Verificando Passkey...' : 'Entrar con Smart Passkey (Biométrico)'}
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={Boolean(busy)}
-              className="flex items-center justify-center gap-3 rounded-2xl bg-white border border-brand-green-deep/10 px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60 shadow-sm cursor-pointer"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                <g transform="matrix(1, 0, 0, 1, 0, 0)">
-                  <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.89 21.56,11.43 21.35,11.1z" fill="#4285F4" />
-                  <path d="M12,21c2.43,0 4.47,-0.8 5.96,-2.18l-2.58,-2c-0.73,0.49 -1.66,0.78 -2.63,0.78 -2.03,0 -3.75,-1.37 -4.36,-3.22H2.33v2.66C3.81,17.43 7.64,21 12,21z" fill="#34A853" />
-                  <path d="M7.64,14.38c-0.16,-0.49 -0.25,-1 -0.25,-1.53s0.09,-1.04 0.25,-1.53V8.66H2.33C1.79,9.73 1.48,10.93 1.48,12s0.31,2.27 0.85,3.34L7.64,14.38z" fill="#FBBC05" />
-                  <path d="M12,5.38c1.32,0 2.51,0.45 3.44,1.35l2.58,-2.58C16.46,2.69 14.43,2 12,2 7.64,2 3.81,5.57 2.33,9.34l3.05,2.38C5.99,6.75 7.71,5.38 12,5.38z" fill="#EA4335" />
-                </g>
-              </svg>
-              {busy === 'email' ? 'Autenticando...' : 'Iniciar sesión con Google'}
-            </button>
-            
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-brand-green-deep/10"></div>
-              <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-brand-green-mid/45">o modo demo</span>
-              <div className="flex-grow border-t border-brand-green-deep/10"></div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => submit('demo')}
-              disabled={Boolean(busy)}
-              className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
-            >
-              {busy === 'demo' ? 'Entrando...' : demoAction}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm("¿Seguro que quieres restablecer los accesos de prueba? Esto limpiará la caché local del navegador para que puedas registrar nuevas llaves desde cero con Google Password Manager.")) {
-                  localStorage.clear();
-                  passkeyService.clearAll();
-                  window.location.reload();
-                }
-              }}
-              className="mt-3 text-center text-xs font-bold text-brand-green-mid/45 hover:text-red-600 transition-colors cursor-pointer"
-            >
-              Limpiar accesos locales y reiniciar llaves
-            </button>
-          </div>
-
         </section>
       </main>
     </div>
@@ -2056,11 +2053,11 @@ function AdminAuthGate({
                   setBusy(true);
                   setError(null);
                   try {
-                    const user = await signInWithGoogle();
-                    if (!user) {
+                    const result = await signInWithGoogle();
+                    if (!result || !result.user) {
                       throw new Error("Inicio de sesión cancelado o fallido.");
                     }
-                    if (user.email?.toLowerCase() !== 'cabscryptocontacto@gmail.com') {
+                    if (result.user.email?.toLowerCase() !== 'cabscryptocontacto@gmail.com') {
                       throw new Error("Acceso denegado: Solo cabscryptocontacto@gmail.com está autorizado.");
                     }
                   } catch (err) {

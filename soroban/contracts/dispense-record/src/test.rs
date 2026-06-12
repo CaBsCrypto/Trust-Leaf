@@ -22,6 +22,7 @@ mod prescription_contract {
         pub total_quantity: u64,
         pub dispensed_quantity: u64,
         pub is_used: bool,
+        pub retained_by: Option<Address>,
     }
 
     #[derive(Clone)]
@@ -145,6 +146,7 @@ fn dispensary_can_record_dispense_for_valid_prescription() {
             total_quantity: 30,
             dispensed_quantity: 0,
             is_used: false,
+            retained_by: None,
         },
         &true,
     );
@@ -212,6 +214,7 @@ fn unauthorized_dispensary_cannot_record_dispense() {
             total_quantity: 30,
             dispensed_quantity: 0,
             is_used: false,
+            retained_by: None,
         },
         &true,
     );
@@ -261,6 +264,7 @@ fn invalid_prescription_cannot_be_recorded() {
             total_quantity: 30,
             dispensed_quantity: 0,
             is_used: false,
+            retained_by: None,
         },
         &false,
     );
@@ -272,4 +276,20 @@ fn invalid_prescription_cannot_be_recorded() {
     let product_hash = BytesN::from_array(&env, &[9; 32]);
     let batch_hash = BytesN::from_array(&env, &[3; 32]);
     client.record_dispense(&dispensary, &0_u64, &product_hash, &batch_hash, &2_u64);
+}
+
+#[test]
+#[should_panic]
+fn double_initialization_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let prescription_contract_id = Address::generate(&env);
+    let dispensary_registry_id = Address::generate(&env);
+
+    let contract_id = env.register(DispenseRecordContract, ());
+    let client = DispenseRecordContractClient::new(&env, &contract_id);
+    client.init(&admin, &prescription_contract_id, &dispensary_registry_id);
+    client.init(&admin, &prescription_contract_id, &dispensary_registry_id);
 }

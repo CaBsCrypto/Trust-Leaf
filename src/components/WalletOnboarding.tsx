@@ -160,8 +160,10 @@ export default function WalletOnboarding({
 
             <div className="grid gap-4 xl:grid-cols-3">
               {/* Passkey Custom Card */}
-              <div
-                className={`rounded-[28px] border p-5 text-left transition-all ${
+              <motion.div
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                className={`rounded-[28px] border p-5 text-left transition-all duration-300 ${
                   primaryMethod === 'passkey'
                     ? 'border-brand-gold bg-brand-gold/10 shadow-[0_12px_30px_rgba(197,164,126,0.12)]'
                     : 'border-white/10 bg-white/5'
@@ -250,7 +252,7 @@ export default function WalletOnboarding({
                     </div>
                   );
                 })()}
-              </div>
+              </motion.div>
 
               <WalletMethodCard
                 icon={<Wallet size={22} />}
@@ -274,7 +276,11 @@ export default function WalletOnboarding({
             </div>
 
             {canAddBackup && (
-              <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-[28px] border border-white/10 bg-white/5 p-5"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-bold text-brand-ivory">{backupTitle}</p>
@@ -285,15 +291,17 @@ export default function WalletOnboarding({
                   <ShieldCheck className="shrink-0 text-brand-gold" size={20} />
                 </div>
 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={onLinkFreighterBackup}
                   disabled={passkeyBusy || freighterBusy || backupBusy}
                   className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-brand-gold px-5 py-3 text-sm font-bold text-brand-green-deep transition-all active:scale-95"
                 >
                   {backupBusy ? 'Vinculando' : backupAction}
                   <ArrowRight size={16} />
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             )}
           </div>
 
@@ -349,14 +357,16 @@ export default function WalletOnboarding({
               </div>
             )}
 
-            <button
+            <motion.button
+              whileHover={onboardingComplete ? { scale: 1.02 } : {}}
+              whileTap={onboardingComplete ? { scale: 0.98 } : {}}
               onClick={onContinue}
               disabled={!onboardingComplete}
               className="mt-6 flex w-full items-center justify-center gap-3 rounded-[24px] bg-brand-ivory px-5 py-4 text-sm font-bold text-brand-green-deep transition-all disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.99] cursor-pointer"
             >
               {continueAction}
               <CheckCircle2 size={18} />
-            </button>
+            </motion.button>
 
             {onboardingComplete && onResetWallet && (
               <button
@@ -391,10 +401,12 @@ function WalletMethodCard({
   onClick: () => void | Promise<void>;
 }) {
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.02, y: -4 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-[28px] border p-5 text-left transition-all ${
+      className={`rounded-[28px] border p-5 text-left transition-all duration-300 ${
         active
           ? 'border-brand-gold bg-brand-gold/10 shadow-[0_12px_30px_rgba(197,164,126,0.12)]'
           : 'border-white/10 bg-white/5 hover:bg-white/8'
@@ -413,7 +425,7 @@ function WalletMethodCard({
         {actionLabel}
         <ArrowRight size={14} />
       </div>
-    </button>
+    </motion.button>
   );
 }
 

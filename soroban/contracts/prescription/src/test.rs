@@ -2,6 +2,7 @@
 
 use super::*;
 use soroban_sdk::testutils::Address as _;
+use soroban_sdk::testutils::Ledger as _;
 use soroban_sdk::{Address, BytesN, Env};
 
 mod registry_contract {
@@ -459,4 +460,280 @@ fn other_dispensary_cannot_dispense_retained() {
 
     prescription_client.retain_prescription(&dispensary, &issued_id);
     prescription_client.record_partial_dispense(&other_dispensary, &issued_id, &5_u64);
+}
+
+#[test]
+#[should_panic]
+fn prescription_double_initialization_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let doctor_registry = Address::generate(&env);
+    let dispensary_registry = Address::generate(&env);
+
+    let contract_id = env.register(PrescriptionContract, ());
+    let client = PrescriptionContractClient::new(&env, &contract_id);
+    client.init(&doctor_registry, &dispensary_registry);
+    client.init(&doctor_registry, &dispensary_registry);
+}
+
+#[test]
+#[should_panic]
+fn issue_prescription_with_zero_quantity_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let patient = Address::generate(&env);
+
+    let doctor_registry_id = env.register(registry_contract::RegistryContract, ());
+    let doctor_registry_client =
+        registry_contract::RegistryContractClient::new(&env, &doctor_registry_id);
+    doctor_registry_client.init(&admin);
+    doctor_registry_client.add_doctor(&admin, &doctor);
+
+    let dispensary_registry_id = Address::generate(&env);
+
+    let prescription_id = env.register(PrescriptionContract, ());
+    let prescription_client = PrescriptionContractClient::new(&env, &prescription_id);
+    prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &0_u64, // Zero quantity
+    );
+}
+
+#[test]
+#[should_panic]
+fn partial_dispense_of_zero_quantity_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+
+    let doctor_registry_id = env.register(registry_contract::RegistryContract, ());
+    let doctor_registry_client =
+        registry_contract::RegistryContractClient::new(&env, &doctor_registry_id);
+    doctor_registry_client.init(&admin);
+    doctor_registry_client.add_doctor(&admin, &doctor);
+
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+    let dispensary_registry_client =
+        dispensary_registry_contract::DispensaryRegistryContractClient::new(
+            &env,
+            &dispensary_registry_id,
+        );
+    dispensary_registry_client.init(&admin);
+    dispensary_registry_client.add_dispensary(&admin, &dispensary);
+
+    let prescription_id = env.register(PrescriptionContract, ());
+    let prescription_client = PrescriptionContractClient::new(&env, &prescription_id);
+    prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    let issued_id = prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &30_u64,
+    );
+
+    prescription_client.record_partial_dispense(&dispensary, &issued_id, &0_u64); // Zero dispense quantity
+}
+
+#[test]
+#[should_panic]
+fn expired_prescription_cannot_be_retained() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+
+    let doctor_registry_id = env.register(registry_contract::RegistryContract, ());
+    let doctor_registry_client =
+        registry_contract::RegistryContractClient::new(&env, &doctor_registry_id);
+    doctor_registry_client.init(&admin);
+    doctor_registry_client.add_doctor(&admin, &doctor);
+
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+    let dispensary_registry_client =
+        dispensary_registry_contract::DispensaryRegistryContractClient::new(
+            &env,
+            &dispensary_registry_id,
+        );
+    dispensary_registry_client.init(&admin);
+    dispensary_registry_client.add_dispensary(&admin, &dispensary);
+
+    let prescription_id = env.register(PrescriptionContract, ());
+    let prescription_client = PrescriptionContractClient::new(&env, &prescription_id);
+    prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    let issued_id = prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &30_u64,
+    );
+
+    // Travel in time beyond expiration
+    env.ledger().set_timestamp(3601);
+
+    prescription_client.retain_prescription(&dispensary, &issued_id);
+}
+
+#[test]
+#[should_panic]
+fn expired_prescription_cannot_be_dispensed() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+
+    let doctor_registry_id = env.register(registry_contract::RegistryContract, ());
+    let doctor_registry_client =
+        registry_contract::RegistryContractClient::new(&env, &doctor_registry_id);
+    doctor_registry_client.init(&admin);
+    doctor_registry_client.add_doctor(&admin, &doctor);
+
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+    let dispensary_registry_client =
+        dispensary_registry_contract::DispensaryRegistryContractClient::new(
+            &env,
+            &dispensary_registry_id,
+        );
+    dispensary_registry_client.init(&admin);
+    dispensary_registry_client.add_dispensary(&admin, &dispensary);
+
+    let prescription_id = env.register(PrescriptionContract, ());
+    let prescription_client = PrescriptionContractClient::new(&env, &prescription_id);
+    prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    let issued_id = prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &30_u64,
+    );
+
+    // Travel in time beyond expiration
+    env.ledger().set_timestamp(3601);
+
+    prescription_client.record_partial_dispense(&dispensary, &issued_id, &5_u64);
+}
+
+#[test]
+#[should_panic]
+fn used_prescription_cannot_be_dispensed() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+
+    let doctor_registry_id = env.register(registry_contract::RegistryContract, ());
+    let doctor_registry_client =
+        registry_contract::RegistryContractClient::new(&env, &doctor_registry_id);
+    doctor_registry_client.init(&admin);
+    doctor_registry_client.add_doctor(&admin, &doctor);
+
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+    let dispensary_registry_client =
+        dispensary_registry_contract::DispensaryRegistryContractClient::new(
+            &env,
+            &dispensary_registry_id,
+        );
+    dispensary_registry_client.init(&admin);
+    dispensary_registry_client.add_dispensary(&admin, &dispensary);
+
+    let prescription_id = env.register(PrescriptionContract, ());
+    let prescription_client = PrescriptionContractClient::new(&env, &prescription_id);
+    prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    let issued_id = prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &30_u64,
+    );
+
+    // Consume all quantity
+    prescription_client.consume_prescription(&dispensary, &issued_id);
+
+    // Try dispensing again
+    prescription_client.record_partial_dispense(&dispensary, &issued_id, &5_u64);
+}
+
+#[test]
+#[should_panic]
+fn release_prescription_unauthorized_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let doctor = Address::generate(&env);
+    let patient = Address::generate(&env);
+    let dispensary = Address::generate(&env);
+    let unauthorized_user = Address::generate(&env);
+
+    let doctor_registry_id = env.register(registry_contract::RegistryContract, ());
+    let doctor_registry_client =
+        registry_contract::RegistryContractClient::new(&env, &doctor_registry_id);
+    doctor_registry_client.init(&admin);
+    doctor_registry_client.add_doctor(&admin, &doctor);
+
+    let dispensary_registry_id =
+        env.register(dispensary_registry_contract::DispensaryRegistryContract, ());
+    let dispensary_registry_client =
+        dispensary_registry_contract::DispensaryRegistryContractClient::new(
+            &env,
+            &dispensary_registry_id,
+        );
+    dispensary_registry_client.init(&admin);
+    dispensary_registry_client.add_dispensary(&admin, &dispensary);
+
+    let prescription_id = env.register(PrescriptionContract, ());
+    let prescription_client = PrescriptionContractClient::new(&env, &prescription_id);
+    prescription_client.init(&doctor_registry_id, &dispensary_registry_id);
+
+    let medication_hash = BytesN::from_array(&env, &[7; 32]);
+    let issued_id = prescription_client.issue_prescription(
+        &doctor,
+        &patient,
+        &medication_hash,
+        &3600_u64,
+        &30_u64,
+    );
+
+    prescription_client.retain_prescription(&dispensary, &issued_id);
+
+    // Unauthorized release
+    prescription_client.release_prescription(&unauthorized_user, &issued_id);
 }
