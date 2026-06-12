@@ -3085,7 +3085,21 @@ export default function MockupPortal({
 
 
 
-    const matchingPermissions = privacyPermissions.filter((p) => {
+    // Check if the patient has a revoked permission for this doctor
+
+    const revokedPermissions = privacyPermissions.filter((p) => {
+
+      if (p.role !== 'Medico' || p.status !== 'revoked') return false;
+
+      const actorLower = (p.actor || '').trim().toLowerCase();
+
+      return actorLower === doctorNameLower || actorLower === doctorEmailLower;
+
+    });
+
+
+
+    const activePermissions = privacyPermissions.filter((p) => {
 
       if (p.role !== 'Medico' || p.status !== 'active') return false;
 
@@ -3101,7 +3115,7 @@ export default function MockupPortal({
 
 
 
-    matchingPermissions.forEach((p) => {
+    activePermissions.forEach((p) => {
 
       const pWallet = p.patientWallet || DEMO_PATIENT_ADDRESS;
 
@@ -3115,7 +3129,7 @@ export default function MockupPortal({
 
           name: pName,
 
-          reason: 'Consulta solicitada vÃ­a Consentimiento Stellar',
+          reason: 'Consulta autorizada via Consentimiento Stellar',
 
           status: 'Autorizado (24h)',
 
@@ -3131,9 +3145,107 @@ export default function MockupPortal({
 
 
 
+    // Also add revoked patients so the UI can show them as "Acceso Revocado"
+
+    revokedPermissions.forEach((p) => {
+
+      const pWallet = p.patientWallet || DEMO_PATIENT_ADDRESS;
+
+      const pName = p.patientName || 'Paciente Registrado';
+
+      // Only add as revoked if there's no active permission override
+
+      if (!patientsMap.has(pWallet)) {
+
+        patientsMap.set(pWallet, {
+
+          id: p.id,
+
+          name: pName,
+
+          reason: 'Permiso revocado por el paciente',
+
+          status: 'Acceso Revocado',
+
+          lastVisit: 'Inaccesible',
+
+          wallet: pWallet,
+
+        });
+
+      }
+
+    });
+
+
+
     if (patientsMap.size === 0 && session.mode === 'demo') {
 
+      const hasDemoRevoked = revokedPermissions.some(p => (p.patientWallet || DEMO_PATIENT_ADDRESS) === DEMO_PATIENT_ADDRESS);
+
+      if (hasDemoRevoked) {
+
+        return DOCTOR_SESSION_PATIENTS.map(p => {
+
+          if (p.wallet === DEMO_PATIENT_ADDRESS) {
+
+            return {
+
+              ...p,
+
+              reason: 'Permiso revocado por el paciente',
+
+              status: 'Acceso Revocado',
+
+              lastVisit: 'Inaccesible',
+
+            };
+
+          }
+
+          return p;
+
+        });
+
+      }
+
       return DOCTOR_SESSION_PATIENTS;
+
+    }
+
+
+
+    if (session.mode === 'demo') {
+
+      const hasDemoRevoked = revokedPermissions.some(p => (p.patientWallet || DEMO_PATIENT_ADDRESS) === DEMO_PATIENT_ADDRESS);
+
+      const hasDemoActive = activePermissions.some(p => (p.patientWallet || DEMO_PATIENT_ADDRESS) === DEMO_PATIENT_ADDRESS);
+
+      
+
+      if (hasDemoRevoked && !hasDemoActive) {
+
+        if (!patientsMap.has(DEMO_PATIENT_ADDRESS)) {
+
+          patientsMap.set(DEMO_PATIENT_ADDRESS, {
+
+            id: 'demo-revoked-id',
+
+            name: 'Paciente 0',
+
+            reason: 'Permiso revocado por el paciente',
+
+            status: 'Acceso Revocado',
+
+            lastVisit: 'Inaccesible',
+
+            wallet: DEMO_PATIENT_ADDRESS,
+
+          });
+
+        }
+
+      }
 
     }
 
@@ -3142,6 +3254,24 @@ export default function MockupPortal({
     return Array.from(patientsMap.values());
 
   }, [isDoctorPortal, session, privacyPermissions]);
+
+
+
+  useEffect(() => {
+
+    if (doctorPatientAddress) {
+
+      const currentPatient = doctorActivePatients.find(p => p.wallet === doctorPatientAddress);
+
+      if (currentPatient && currentPatient.status === 'Acceso Revocado') {
+
+        setDoctorPatientAddress('');
+
+      }
+
+    }
+
+  }, [doctorActivePatients, doctorPatientAddress]);
 
 
 
@@ -10586,37 +10716,53 @@ export default function MockupPortal({
 
                               ) : (
 
-                                doctorActivePatients.map((patient) => (
+                                doctorActivePatients.map((patient) => {
 
-                                  <button
+                                  const isRevoked = patient.status === 'Acceso Revocado';
 
-                                    key={`quick-${patient.id}`}
+                                  return (
 
-                                    type="button"
+                                    <button
 
-                                    onClick={() => setDoctorPatientAddress(patient.wallet)}
+                                      key={`quick-${patient.id}`}
 
-                                    className={`rounded-2xl border p-4 text-left transition-colors ${
+                                      type="button"
 
-                                      doctorPatientAddress === patient.wallet
+                                      disabled={isRevoked}
 
-                                        ? 'border-brand-gold bg-brand-gold/10'
+                                      onClick={() => !isRevoked && setDoctorPatientAddress(patient.wallet)}
 
-                                        : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:border-brand-gold/40'
+                                      className={`rounded-2xl border p-4 text-left transition-colors ${
 
-                                    }`}
+                                        isRevoked
 
-                                  >
+                                          ? 'opacity-60 border-red-200 bg-red-50/20 cursor-not-allowed'
 
-                                    <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+                                          : doctorPatientAddress === patient.wallet
 
-                                    <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/60">{patient.reason}</p>
+                                            ? 'border-brand-gold bg-brand-gold/10'
 
-                                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/45">{patient.status}</p>
+                                            : 'border-brand-green-deep/10 bg-brand-neutral/40 hover:border-brand-gold/40'
 
-                                  </button>
+                                      }`}
 
-                                ))
+                                    >
+
+                                      <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+
+                                      <p className="mt-1 text-[11px] leading-relaxed text-brand-green-mid/60">{patient.reason}</p>
+
+                                      <p className={`mt-2 text-[10px] font-bold uppercase tracking-widest ${isRevoked ? 'text-red-600' : 'text-brand-green-mid/45'}`}>
+
+                                        {patient.status}
+
+                                      </p>
+
+                                    </button>
+
+                                  );
+
+                                })
 
                               )}
 
@@ -11716,51 +11862,63 @@ export default function MockupPortal({
 
                             ) : (
 
-                              doctorActivePatients.map((patient) => (
+                              doctorActivePatients.map((patient) => {
 
-                                <button
+                                const isRevoked = patient.status === 'Acceso Revocado';
 
-                                  key={patient.id}
+                                return (
 
-                                  type="button"
+                                  <button
 
-                                  onClick={() => setDoctorPatientAddress(patient.wallet)}
+                                    key={patient.id}
 
-                                  className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                                    type="button"
 
-                                    doctorPatientAddress === patient.wallet
+                                    disabled={isRevoked}
 
-                                      ? 'border-brand-gold bg-brand-gold/5'
+                                    onClick={() => !isRevoked && setDoctorPatientAddress(patient.wallet)}
 
-                                      : 'border-brand-green-deep/5 bg-brand-neutral/40 hover:border-brand-gold/40'
+                                    className={`w-full rounded-2xl border p-4 text-left transition-colors ${
 
-                                  }`}
+                                      isRevoked
 
-                                >
+                                        ? 'opacity-60 border-red-200 bg-red-50/20 cursor-not-allowed'
 
-                                  <div className="flex items-start justify-between gap-3">
+                                        : doctorPatientAddress === patient.wallet
 
-                                    <div>
+                                          ? 'border-brand-gold bg-brand-gold/5'
 
-                                      <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+                                          : 'border-brand-green-deep/5 bg-brand-neutral/40 hover:border-brand-gold/40'
 
-                                      <p className="mt-1 text-xs text-brand-green-mid/60">{patient.reason}</p>
+                                    }`}
+
+                                  >
+
+                                    <div className="flex items-start justify-between gap-3">
+
+                                      <div>
+
+                                        <p className="text-sm font-bold text-brand-green-deep">{patient.name}</p>
+
+                                        <p className="mt-1 text-xs text-brand-green-mid/60">{patient.reason}</p>
+
+                                      </div>
+
+                                      <span className={`rounded-full bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${isRevoked ? 'text-red-600 bg-red-50' : 'text-brand-green-mid/60'}`}>
+
+                                        {patient.status}
+
+                                      </span>
 
                                     </div>
 
-                                    <span className="rounded-full bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/60">
+                                    <p className="mt-3 text-[10px] font-mono text-brand-green-mid/45">{shortenAddress(patient.wallet, 8)}</p>
 
-                                      {patient.status}
+                                  </button>
 
-                                    </span>
+                                );
 
-                                  </div>
-
-                                  <p className="mt-3 text-[10px] font-mono text-brand-green-mid/45">{shortenAddress(patient.wallet, 8)}</p>
-
-                                </button>
-
-                              ))
+                              })
 
                             )}
 
