@@ -1,13 +1,15 @@
 import { motion } from 'motion/react';
-import { Leaf } from 'lucide-react';
+import { Leaf, Code } from 'lucide-react';
 
 interface NavbarProps {
   onPortalClick: () => void;
+  showTechnicalDetails?: boolean;
+  onToggleTechnicalDetails?: () => void;
 }
 
 import { useLanguage } from '../context/LanguageContext';
 
-export default function Navbar({ onPortalClick }: NavbarProps) {
+export default function Navbar({ onPortalClick, showTechnicalDetails, onToggleTechnicalDetails }: NavbarProps) {
   const { t, language, setLanguage } = useLanguage();
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -33,6 +35,19 @@ export default function Navbar({ onPortalClick }: NavbarProps) {
       </div>
       
       <div className="flex items-center gap-4">
+        {onToggleTechnicalDetails && (
+          <button
+            onClick={onToggleTechnicalDetails}
+            title={showTechnicalDetails ? "Desactivar Modo Dev" : "Activar Modo Dev"}
+            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+              showTechnicalDetails 
+                ? 'bg-brand-gold/20 border-brand-gold text-brand-green-deep' 
+                : 'bg-white/40 border-brand-green-deep/10 text-brand-green-deep/50 hover:bg-white hover:text-brand-green-deep'
+            }`}
+          >
+            <Code size={16} />
+          </button>
+        )}
         <button 
           onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
           className="text-xs font-bold text-brand-green-deep/60 hover:text-brand-green-deep transition-colors tracking-widest cursor-pointer px-4"

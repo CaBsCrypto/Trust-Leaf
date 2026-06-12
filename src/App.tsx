@@ -134,6 +134,7 @@ function AppContent() {
     stellarPublicKey: string;
   } | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(false);
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const [walletSetup, setWalletSetup] = useState<WalletSetupState>({
     primaryMethod: null,
     hasFreighterBackup: false,
@@ -746,6 +747,7 @@ function AppContent() {
         initialView={patientView}
         allowedViews={PATIENT_VIEWS}
         pageMode
+        showTechnicalDetails={showTechnicalDetails}
         roleLabel="Portal Paciente"
         onSignOut={endSession}
         session={session}
@@ -782,6 +784,7 @@ function AppContent() {
           canOperate={doctorCanOperate}
           onSubmitDoctorRegistration={submitDoctorRegistration}
           onSignOut={endSession}
+          showTechnicalDetails={showTechnicalDetails}
         />
       </RegistrationErrorBoundary>
     );
@@ -827,6 +830,7 @@ function AppContent() {
         initialView="doctors"
         allowedViews={DOCTOR_VIEWS}
         pageMode
+        showTechnicalDetails={showTechnicalDetails}
         roleLabel="Portal Médico"
         onSignOut={endSession}
         session={session}
@@ -863,6 +867,7 @@ function AppContent() {
           canOperate={dispensaryCanOperate}
           onSubmitDispensaryRegistration={submitDispensaryRegistration}
           onSignOut={endSession}
+          showTechnicalDetails={showTechnicalDetails}
         />
       </RegistrationErrorBoundary>
     );
@@ -914,6 +919,7 @@ function AppContent() {
         }
         allowedViews={DISPENSARY_VIEWS}
         pageMode
+        showTechnicalDetails={showTechnicalDetails}
         roleLabel="Portal Dispensario"
         onSignOut={endSession}
         session={session}
@@ -992,7 +998,11 @@ function AppContent() {
 
   return (
     <div className="min-h-screen selection:bg-brand-gold/30 selection:text-brand-green-deep relative overflow-hidden bg-brand-ivory">
-      <Navbar onPortalClick={() => navigate('/paciente')} />
+      <Navbar 
+        onPortalClick={() => navigate('/paciente')} 
+        showTechnicalDetails={showTechnicalDetails}
+        onToggleTechnicalDetails={() => setShowTechnicalDetails(prev => !prev)}
+      />
       <main>
         <Hero onStartClick={() => navigate('/paciente')} />
         <NetworkPreview onNavigate={navigate} />
@@ -3358,6 +3368,7 @@ function DispensaryRegistrationRoute({
   canOperate,
   onSubmitDispensaryRegistration,
   onSignOut,
+  showTechnicalDetails = false,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
@@ -3367,6 +3378,7 @@ function DispensaryRegistrationRoute({
   canOperate: boolean;
   onSubmitDispensaryRegistration: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
   onSignOut: () => void;
+  showTechnicalDetails?: boolean;
 }) {
   const [registrationForm, setRegistrationForm] = useState({
     name: session?.name ?? '',
@@ -3652,6 +3664,7 @@ function DoctorRegistrationRoute({
   canOperate,
   onSubmitDoctorRegistration,
   onSignOut,
+  showTechnicalDetails = false,
 }: {
   onBack: () => void;
   onNavigate: (path: string) => void;
@@ -3661,6 +3674,7 @@ function DoctorRegistrationRoute({
   canOperate: boolean;
   onSubmitDoctorRegistration: (input: Omit<DoctorRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
   onSignOut: () => void;
+  showTechnicalDetails?: boolean;
 }) {
   const [rutError, setRutError] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
@@ -4023,6 +4037,7 @@ function RoleRoutePage({
   onNavigate,
   dispensaryRegistrations = [],
   onSubmitDispensaryRegistration,
+  showTechnicalDetails = false,
 }: {
   role: string;
   eyebrow: string;
@@ -4038,6 +4053,7 @@ function RoleRoutePage({
   onNavigate: (path: string) => void;
   dispensaryRegistrations?: DispensaryRegistration[];
   onSubmitDispensaryRegistration?: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+  showTechnicalDetails?: boolean;
 }) {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [initialView, setInitialView] = useState<PortalView>(defaultView);
@@ -4324,6 +4340,7 @@ function RoleRoutePage({
         onClose={() => setWorkspaceOpen(false)}
         initialView={initialView}
         allowedViews={allowedViews}
+        showTechnicalDetails={showTechnicalDetails}
         roleLabel={roleLabel}
       />
     </div>

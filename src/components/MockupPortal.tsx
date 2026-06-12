@@ -1068,19 +1068,15 @@ function isPrescriptionNotValidError(message: string) {
 
 // transitions to Stellar. The UI below keeps that privacy model visible in MVP.
 
-// Current MVP records each dispense as a partial allowance. Production should
-
 // enforce weekly limits/remaining grams in contract state, not burn the prescription.
-
-
 
 const MOCK_DOCTORS = [
 
-  { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "EndocannabinologÃ­a", rating: 4.9, reviews: 124, availability: "Hoy" },
+  { id: 'doc-1', name: "Dr. Alejandro Merino", specialty: "Endocannabinología", rating: 4.9, reviews: 124, availability: "Hoy" },
 
-  { id: 'doc-2', name: "Dra. Elena Sotillo", specialty: "Medicina Interna", rating: 4.8, reviews: 89, availability: "MaÃ±ana" },
+  { id: 'doc-2', name: "Dra. Elena Sotillo", specialty: "Medicina Interna", rating: 4.8, reviews: 89, availability: "Mañana" },
 
-  { id: 'doc-3', name: "Dr. Roberto ValdÃ©s", specialty: "PsiquiatrÃ­a TerapÃ©utica", rating: 5.0, reviews: 56, availability: "En 2 dÃ­as" }
+  { id: 'doc-3', name: "Dr. Roberto Valdés", specialty: "Psiquiatría Terapéutica", rating: 5.0, reviews: 56, availability: "En 2 días" }
 
 ];
 
@@ -1120,11 +1116,11 @@ const MOCK_DISPENSARIES = [
 
         effect: "Sedativo / Relajante",
 
-        recommendation: "Recomendado para: Insomnio prolongado y dolores musculares crÃ³nicos.",
+        recommendation: "Recomendado para: Insomnio prolongado y dolores musculares crónicos.",
 
-        origin: "Cultivo OrgÃ¡nico - Mendoza, AR",
+        origin: "Cultivo Orgánico - Mendoza, AR",
 
-        lab: "QC-991 â¢ Pure Labs",
+        lab: "QC-991 • Pure Labs",
 
         harvestDate: "Marzo 2026",
 
@@ -1998,13 +1994,15 @@ export default function MockupPortal({
 
   pageMode = false,
 
+  showTechnicalDetails = false,
+
   roleLabel = 'Trust Leaf Portal',
 
   onSignOut,
 
   session = null,
 
-}: MockupPortalProps) {
+}: MockupPortalProps & { showTechnicalDetails?: boolean }) {
 
   const { t } = useLanguage();
 
@@ -2038,7 +2036,7 @@ export default function MockupPortal({
 
   const isPatientPortal = roleLabel === 'Portal Paciente';
 
-  const showTechnicalDetails = false;
+
 
   const isViewAllowed = (view: PortalView) => !allowedViews || allowedViews.includes(view);
 
