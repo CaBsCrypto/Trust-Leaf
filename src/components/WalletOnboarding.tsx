@@ -163,95 +163,124 @@ export default function WalletOnboarding({
               <motion.div
                 whileHover={{ scale: 1.02, y: -4 }}
                 whileTap={{ scale: 0.98 }}
-                className={`rounded-[28px] border p-5 text-left transition-all duration-300 ${
+                className={`rounded-[28px] border p-5 text-left transition-all duration-300 relative overflow-hidden ${
                   primaryMethod === 'passkey'
-                    ? 'border-brand-gold bg-brand-gold/10 shadow-[0_12px_30px_rgba(197,164,126,0.12)]'
-                    : 'border-white/10 bg-white/5'
+                    ? 'border-brand-gold bg-brand-gold/10 shadow-[0_12px_30px_rgba(197,164,126,0.15)]'
+                    : passkeyBusy
+                      ? 'border-brand-gold/50 bg-brand-gold/5 shadow-[0_0_25px_rgba(212,175,55,0.15)]'
+                      : 'border-white/10 bg-white/5'
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className={`rounded-2xl p-3 ${primaryMethod === 'passkey' ? 'bg-brand-gold text-brand-green-deep' : 'bg-white/10 text-brand-ivory'}`}>
-                    <Fingerprint size={22} />
+                {/* Immersive biometric laser scan background line */}
+                {passkeyBusy && (
+                  <motion.div
+                    initial={{ y: '-100%' }}
+                    animate={{ y: '200%' }}
+                    transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                    className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-brand-gold to-transparent opacity-60 z-0 pointer-events-none"
+                  />
+                )}
+
+                <div className="flex items-start justify-between gap-4 relative z-10">
+                  <div className="relative">
+                    {/* Pulsing glow ring when scanning */}
+                    {passkeyBusy && (
+                      <span className="absolute inset-0 rounded-2xl bg-brand-gold/20 animate-ping" />
+                    )}
+                    <div className={`rounded-2xl p-3 relative transition-all duration-300 ${
+                      primaryMethod === 'passkey' 
+                        ? 'bg-brand-gold text-brand-green-deep' 
+                        : passkeyBusy
+                          ? 'bg-brand-gold/20 text-brand-gold'
+                          : 'bg-white/10 text-brand-ivory'
+                    }`}>
+                      <Fingerprint size={22} className={passkeyBusy ? "animate-pulse" : ""} />
+                    </div>
                   </div>
                   {primaryMethod === 'passkey' && <CheckCircle2 size={18} className="text-brand-gold" />}
                 </div>
 
-                <p className="mt-5 text-lg font-bold text-brand-ivory">{passkeyTitle}</p>
-                <p className="mt-2 text-sm leading-relaxed text-brand-ivory/60">{passkeyDescription}</p>
+                <p className="mt-5 text-lg font-bold text-brand-ivory relative z-10">{passkeyTitle}</p>
+                <p className="mt-2 text-sm leading-relaxed text-brand-ivory/60 relative z-10">{passkeyDescription}</p>
 
-                {primaryMethod === 'passkey' ? (
-                  <div className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-gold">
-                    {linkedLabel}
-                    <ArrowRight size={14} />
-                  </div>
-                ) : passkeyBusy ? (
-                  <div className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-gold animate-pulse">
-                    Conectando...
-                    <ArrowRight size={14} className="animate-spin" />
-                  </div>
-                ) : (() => {
-                  const hasWallet = getStoredPasskeyWallet() !== null;
-                  if (hasWallet) {
-                    return (
-                      <button
-                        onClick={() => onConnectPasskey()}
-                        disabled={passkeyBusy || freighterBusy || backupBusy}
-                        className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-brand-green-deep transition-all hover:bg-brand-gold/95 active:scale-95 disabled:opacity-40"
-                      >
-                        Iniciar Sesión con Passkey
-                        <ArrowRight size={14} />
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <div className="mt-5 space-y-3">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold/80">
-                        Selecciona cómo registrarte:
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => onConnectPasskey('platform')}
-                          disabled={passkeyBusy || freighterBusy || backupBusy}
-                          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-xs font-semibold text-brand-ivory transition-all hover:bg-brand-gold/15 hover:border-brand-gold/40 active:scale-[0.98] disabled:opacity-30 cursor-pointer"
-                        >
-                          <Laptop size={14} className="text-brand-gold shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold">Este PC / Dispositivo</p>
-                            <p className="text-[10px] text-brand-ivory/40 truncate">Windows Hello o TouchID</p>
-                          </div>
-                          <ArrowRight size={12} className="text-brand-gold/60 shrink-0" />
-                        </button>
-
-                        <button
-                          onClick={() => onConnectPasskey('cross-platform')}
-                          disabled={passkeyBusy || freighterBusy || backupBusy}
-                          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-xs font-semibold text-brand-ivory transition-all hover:bg-brand-gold/15 hover:border-brand-gold/40 active:scale-[0.98] disabled:opacity-30 cursor-pointer"
-                        >
-                          <Smartphone size={14} className="text-brand-gold shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold">Llave Física o Celular</p>
-                            <p className="text-[10px] text-brand-ivory/40 truncate">Yubikey, iPhone o Android QR</p>
-                          </div>
-                          <ArrowRight size={12} className="text-brand-gold/60 shrink-0" />
-                        </button>
-
-                        <button
-                          onClick={() => onConnectPasskey(undefined)}
-                          disabled={passkeyBusy || freighterBusy || backupBusy}
-                          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-xs font-semibold text-brand-ivory transition-all hover:bg-brand-gold/15 hover:border-brand-gold/40 active:scale-[0.98] disabled:opacity-30 cursor-pointer"
-                        >
-                          <Sparkles size={14} className="text-brand-gold shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold">Autodetectar</p>
-                            <p className="text-[10px] text-brand-ivory/40 truncate">Preferencia del navegador</p>
-                          </div>
-                          <ArrowRight size={12} className="text-brand-gold/60 shrink-0" />
-                        </button>
-                      </div>
+                <div className="relative z-10">
+                  {primaryMethod === 'passkey' ? (
+                    <div className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-gold">
+                      {linkedLabel}
+                      <ArrowRight size={14} />
                     </div>
-                  );
-                })()}
+                  ) : passkeyBusy ? (
+                    <div className="mt-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.16em] text-brand-gold">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-gold"></span>
+                      </span>
+                      <span>Escaneando Biometría...</span>
+                    </div>
+                  ) : (() => {
+                    const hasWallet = getStoredPasskeyWallet() !== null;
+                    if (hasWallet) {
+                      return (
+                        <button
+                          onClick={() => onConnectPasskey()}
+                          disabled={passkeyBusy || freighterBusy || backupBusy}
+                          className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-brand-green-deep transition-all hover:bg-brand-gold/95 active:scale-95 disabled:opacity-40 cursor-pointer"
+                        >
+                          Iniciar Sesión con Passkey
+                          <ArrowRight size={14} />
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <div className="mt-5 space-y-3">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold/80">
+                          Selecciona cómo registrarte:
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => onConnectPasskey('platform')}
+                            disabled={passkeyBusy || freighterBusy || backupBusy}
+                            className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-xs font-semibold text-brand-ivory transition-all hover:bg-brand-gold/15 hover:border-brand-gold/40 active:scale-[0.98] disabled:opacity-30 cursor-pointer"
+                          >
+                            <Laptop size={14} className="text-brand-gold shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-bold">Este PC / Dispositivo</p>
+                              <p className="text-[10px] text-brand-ivory/40 truncate">Windows Hello o TouchID</p>
+                            </div>
+                            <ArrowRight size={12} className="text-brand-gold/60 shrink-0" />
+                          </button>
+
+                          <button
+                            onClick={() => onConnectPasskey('cross-platform')}
+                            disabled={passkeyBusy || freighterBusy || backupBusy}
+                            className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-xs font-semibold text-brand-ivory transition-all hover:bg-brand-gold/15 hover:border-brand-gold/40 active:scale-[0.98] disabled:opacity-30 cursor-pointer"
+                          >
+                            <Smartphone size={14} className="text-brand-gold shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-bold">Llave Física o Celular</p>
+                              <p className="text-[10px] text-brand-ivory/40 truncate">Yubikey, iPhone o Android QR</p>
+                            </div>
+                            <ArrowRight size={12} className="text-brand-gold/60 shrink-0" />
+                          </button>
+
+                          <button
+                            onClick={() => onConnectPasskey(undefined)}
+                            disabled={passkeyBusy || freighterBusy || backupBusy}
+                            className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-xs font-semibold text-brand-ivory transition-all hover:bg-brand-gold/15 hover:border-brand-gold/40 active:scale-[0.98] disabled:opacity-30 cursor-pointer"
+                          >
+                            <Sparkles size={14} className="text-brand-gold shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-bold">Autodetectar</p>
+                              <p className="text-[10px] text-brand-ivory/40 truncate">Preferencia del navegador</p>
+                            </div>
+                            <ArrowRight size={12} className="text-brand-gold/60 shrink-0" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </motion.div>
 
               <WalletMethodCard

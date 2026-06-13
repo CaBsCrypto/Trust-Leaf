@@ -14312,15 +14312,17 @@ export default function MockupPortal({
 
                             onClick={() => openOnchainPrescription(prescription)}
 
-                            className="group w-full cursor-pointer rounded-2xl border border-brand-green-deep/10 bg-white p-6 text-left transition-all hover:border-brand-gold hover:shadow-md"
+                            className="group w-full cursor-pointer rounded-3xl border border-brand-green-deep/10 bg-white/70 backdrop-blur-md p-6 text-left transition-all duration-300 hover:border-brand-gold hover:shadow-[0_12px_30px_rgba(14,42,34,0.08)] hover:-translate-y-0.5 relative overflow-hidden"
 
                           >
+                            {/* Hover gold glow effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-brand-gold/0 via-brand-gold/[0.02] to-brand-gold/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
 
                               <div className="flex items-center gap-4">
 
-                                <div className="rounded-xl bg-brand-neutral p-3 text-brand-green-deep transition-colors group-hover:bg-brand-gold/10 group-hover:text-brand-gold">
+                                <div className="rounded-2xl bg-brand-neutral p-3.5 text-brand-green-deep transition-all duration-300 group-hover:bg-brand-gold/10 group-hover:text-brand-gold group-hover:scale-105">
 
                                   <FileText size={24} />
 
@@ -14328,15 +14330,15 @@ export default function MockupPortal({
 
                                 <div>
 
-                                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
 
-                                    <p className="text-xs font-bold uppercase tracking-widest text-brand-green-mid/40">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-brand-green-mid/40">
 
                                       Receta #{prescription.id}
 
                                     </p>
 
-                                    <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                                    <span className="flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50/80 px-2 py-0.5 text-[9px] font-bold text-blue-600">
 
                                       <Database size={10} /> {doctorSignerReady ? 'VERIFICABLE' : 'PRIVADO'}
 
@@ -14344,15 +14346,15 @@ export default function MockupPortal({
 
                                   </div>
 
-                                  <h4 className="font-bold text-brand-green-deep">
+                                  <h4 className="font-bold text-brand-green-deep text-lg">
 
                                     {prescription.status === 'active' ? 'Receta vigente' : prescription.status === 'used' ? 'Receta usada' : 'Receta expirada'}
 
                                   </h4>
 
-                                  <p className="text-sm text-brand-green-mid/70">
+                                  <p className="text-sm text-brand-green-mid/70 mt-0.5">
 
-                                    {shortenAddress(prescription.doctor, 6)} Â· {formatPortalDate(prescription.issuedAt)}
+                                    {shortenAddress(prescription.doctor, 6)} &middot; {formatPortalDate(prescription.issuedAt)}
 
                                   </p>
 
@@ -14362,17 +14364,17 @@ export default function MockupPortal({
 
                               <div className="flex items-center justify-between gap-4 sm:justify-end">
 
-                                <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                <span className={`rounded-full px-3.5 py-1 text-xs font-bold tracking-wide ${
 
                                   prescription.status === 'active'
 
-                                    ? 'bg-green-50 text-green-600'
+                                    ? 'bg-green-50 text-green-700 border border-green-100'
 
                                     : prescription.status === 'used'
 
-                                      ? 'bg-blue-50 text-blue-600'
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-100'
 
-                                      : 'bg-amber-50 text-amber-700'
+                                      : 'bg-amber-50 text-amber-850 border border-amber-100'
 
                                 }`}>
 
@@ -14380,7 +14382,9 @@ export default function MockupPortal({
 
                                 </span>
 
-                                <ArrowRight size={20} className="text-brand-green-mid/40 transition-colors group-hover:text-brand-gold" />
+                                <div className="h-10 w-10 rounded-xl bg-brand-neutral flex items-center justify-center transition-all group-hover:bg-brand-gold/10 group-hover:text-brand-gold">
+                                  <ArrowRight size={18} className="text-brand-green-mid/40 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-gold" />
+                                </div>
 
                               </div>
 
