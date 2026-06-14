@@ -2470,61 +2470,79 @@ export default function MockupPortal({
 
 
 
+  // Real-time Pickups Sync
   useEffect(() => {
-
-    if (auth.currentUser) {
-
-      const pickupsRef = collection(db, 'pickups');
-
-      const q = query(pickupsRef, where('patientId', '==', auth.currentUser.uid));
-
-      getDocs(q)
-
-        .then((snapshot) => {
-
-          const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-          if (items.length > 0) {
-
-            setActivePickups(items);
-
-          }
-
-        })
-
-        .catch((e) => {
-
-          console.error("Error loading pickups from Firestore:", e);
-
-        });
-
-      const recordsRef = collection(db, 'clinicalRecords');
-
-      const recordsQuery = query(recordsRef, where('patientId', '==', auth.currentUser.uid));
-
-      getDocs(recordsQuery)
-
-        .then((snapshot) => {
-
-          const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
-
-          if (items.length > 0) {
-
-            setConsultationClinicalRecords(items);
-
-          }
-
-        })
-
-        .catch((e) => {
-
-          console.error("Error loading clinical records from Firestore:", e);
-
-        });
-
+    if (!auth.currentUser) return;
+    const pickupsRef = collection(db, 'pickups');
+    let q = query(pickupsRef, where('patientId', '==', auth.currentUser.uid));
+    
+    if (isDispensaryPortal) {
+      q = query(pickupsRef, where('dispensaryId', '==', auth.currentUser.uid));
     }
 
-  }, []);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setActivePickups(items);
+    }, (error) => {
+      console.error("Firestore onSnapshot error for pickups:", error);
+    });
+
+    return () => unsubscribe();
+  }, [isDispensaryPortal, auth.currentUser]);
+
+  // Real-time Agenda Sync
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const agendaRef = collection(db, 'agenda');
+
+    const unsubscribe = onSnapshot(agendaRef, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DoctorAgendaBlock[];
+      if (isDoctorPortal) {
+        const docItems = items.filter(item => (item as any).doctorId === auth.currentUser?.uid);
+        setDoctorAgendaBlocks(docItems);
+      } else {
+        setDoctorAgendaBlocks(items);
+      }
+    }, (error) => {
+      console.error("Firestore onSnapshot error for agenda:", error);
+    });
+
+    return () => unsubscribe();
+  }, [isDoctorPortal, auth.currentUser]);
+
+  // Real-time Notifications Sync
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(notificationsRef, where('userId', '==', auth.currentUser.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      setNotifications(items);
+    }, (error) => {
+      console.error("Firestore onSnapshot error for notifications:", error);
+    });
+
+    return () => unsubscribe();
+  }, [auth.currentUser]);
+
+  // Clinical Records Loader
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const recordsRef = collection(db, 'clinicalRecords');
+    const recordsQuery = query(recordsRef, where('patientId', '==', auth.currentUser.uid));
+    
+    getDocs(recordsQuery)
+      .then((snapshot) => {
+        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+        if (items.length > 0) {
+          setConsultationClinicalRecords(items);
+        }
+      })
+      .catch((e) => {
+        console.error("Error loading clinical records from Firestore:", e);
+      });
+  }, [auth.currentUser]);
 
 
 
@@ -4935,16 +4953,17 @@ export default function MockupPortal({
 
 
 
-  const handleCompleteBooking = () => {
+  const handleCompleteBooking = async () => {
 
     setBookingStep('success');
 
     if (bookingDoctor && selectedDate && selectedTime) {
 
       const patientName = session?.name || 'Paciente de prueba';
+      const bookedBlockId = `agenda-booking-${Date.now()}`;
       const bookedBlock: DoctorAgendaBlock = {
 
-        id: `agenda-booking-${Date.now()}`,
+        id: bookedBlockId,
 
         date: selectedDate,
 
@@ -4958,42 +4977,31 @@ export default function MockupPortal({
 
       };
 
-      setNotifications((prev) => [
-        {
-          id: `notif-booking-${Date.now()}`,
+      const doctorId = bookingDoctor.uid || bookingDoctor.id || 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV';
+
+      try {
+        const blockRef = doc(db, 'agenda', bookedBlockId);
+        await setDoc(blockRef, {
+          ...bookedBlock,
+          doctorId,
+          patientId: auth.currentUser?.uid || 'anonymous-patient',
+          createdAt: new Date().toISOString()
+        });
+
+        const notifId = `notif-booking-${Date.now()}`;
+        const notifRef = doc(db, 'notifications', notifId);
+        await setDoc(notifRef, {
+          id: notifId,
+          userId: doctorId,
           text: `Nueva reserva de ${patientName} para el ${selectedDate} a las ${selectedTime}`,
           time: 'Hace un momento',
           read: false,
-          type: 'booking'
-        },
-        ...prev
-      ]);
-
-      setDoctorAgendaBlocks((prev) => {
-
-        const hasExistingBlock = prev.some((block) => block.date === selectedDate && block.time === selectedTime);
-
-
-
-        if (!hasExistingBlock) {
-
-          return [bookedBlock, ...prev];
-
-        }
-
-
-
-        return prev.map((block) => (
-
-          block.date === selectedDate && block.time === selectedTime
-
-            ? { ...block, ...bookedBlock, id: block.id }
-
-            : block
-
-        ));
-
-      });
+          type: 'booking',
+          createdAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error("Error creating booking in Firestore:", err);
+      }
 
     }
 
@@ -5021,11 +5029,12 @@ export default function MockupPortal({
 
 
 
-  const handleAddAgendaBlock = () => {
+  const handleAddAgendaBlock = async () => {
 
+    const blockId = `agenda-custom-${Date.now()}`;
     const block: DoctorAgendaBlock = {
 
-      id: `agenda-custom-${Date.now()}`,
+      id: blockId,
 
       date: agendaForm.date.trim() || formatRelativeAgendaDate(currentNow, 1),
 
@@ -5039,9 +5048,20 @@ export default function MockupPortal({
 
     };
 
-
-
-    setDoctorAgendaBlocks((prev) => [block, ...prev]);
+    if (auth.currentUser) {
+      try {
+        const docRef = doc(db, 'agenda', blockId);
+        await setDoc(docRef, {
+          ...block,
+          doctorId: auth.currentUser.uid,
+          createdAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error("Error saving agenda block to Firestore:", err);
+      }
+    } else {
+      setDoctorAgendaBlocks((prev) => [block, ...prev]);
+    }
 
     setAgendaForm({
 
@@ -5061,49 +5081,38 @@ export default function MockupPortal({
 
 
 
-  const toggleAgendaBlockStatus = (blockId: string) => {
+  const toggleAgendaBlockStatus = async (blockId: string) => {
 
-    setDoctorAgendaBlocks((prev) => prev.map((block) => {
+    const targetBlock = doctorAgendaBlocks.find(block => block.id === blockId);
+    if (!targetBlock) return;
 
-      if (block.id !== blockId) {
+    let updatedFields: Partial<DoctorAgendaBlock> = {};
 
-        return block;
-
-      }
-
-
-
-      if (block.status === 'Reservado') {
-
-        return {
-
-          ...block,
-
-          status: 'Disponible',
-
-          patient: undefined,
-
-          reason: undefined,
-
-        };
-
-      }
-
-
-
-      return {
-
-        ...block,
-
-        status: 'Reservado',
-
-        patient: 'Paciente de prueba',
-
-        reason: 'Reserva manual desde panel médico',
-
+    if (targetBlock.status === 'Reservado') {
+      updatedFields = {
+        status: 'Disponible',
+        patient: undefined,
+        reason: undefined,
       };
+    } else {
+      updatedFields = {
+        status: 'Reservado',
+        patient: session?.name || 'Paciente de prueba',
+        reason: 'Reserva manual desde panel médico',
+      };
+    }
 
-    }));
+    try {
+      const docRef = doc(db, 'agenda', blockId);
+      await updateDoc(docRef, updatedFields);
+    } catch (err) {
+      console.error("Error updating agenda block status in Firestore:", err);
+      // Fallback
+      setDoctorAgendaBlocks((prev) => prev.map((block) => {
+        if (block.id !== blockId) return block;
+        return { ...block, ...updatedFields };
+      }));
+    }
 
   };
 

@@ -1821,20 +1821,7 @@ function AuthGate({
                   {busy === 'email' ? 'Autenticando...' : 'Iniciar sesión con Google'}
                 </button>
                 
-                <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-brand-green-deep/10"></div>
-                  <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-brand-green-mid/45">o modo demo</span>
-                  <div className="flex-grow border-t border-brand-green-deep/10"></div>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => submit('demo')}
-                  disabled={Boolean(busy)}
-                  className="rounded-2xl border border-brand-green-deep/10 bg-[#fbf7ef] px-5 py-4 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-gold/10 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
-                >
-                  {busy === 'demo' ? 'Entrando...' : demoAction}
-                </button>
 
                 <button
                   type="button"
@@ -2102,21 +2089,7 @@ function AdminAuthGate({
             </div>
           </div>
 
-          <div className="mt-8">
-            <div className="relative flex py-3 items-center">
-              <div className="flex-grow border-t border-brand-green-deep/5"></div>
-              <span className="flex-shrink mx-4 text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Desarrollo y Pruebas</span>
-              <div className="flex-grow border-t border-brand-green-deep/5"></div>
-            </div>
 
-            <button
-              type="button"
-              onClick={onDemo}
-              className="w-full rounded-2xl border border-dashed border-brand-green-deep/15 bg-[#fbf7ef]/50 px-5 py-3.5 text-xs font-bold text-brand-green-mid transition-all hover:bg-brand-gold/10 hover:border-brand-gold/30 hover:text-brand-green-deep active:scale-[0.99] cursor-pointer"
-            >
-              Entrar en Modo Grabación (Demo Local)
-            </button>
-          </div>
         </section>
       </main>
     </div>
@@ -2321,21 +2294,21 @@ function AdminRoute({
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
         <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
             <div>
+
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Centro de control</p>
-              <h2 className="mt-2 text-3xl font-serif">Preparar red Testnet</h2>
+
+              <h2 className="mt-2 text-3xl font-serif">Red Testnet Activa</h2>
+
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-brand-green-mid/70">
-                Admin puede aprobar solicitudes reales o crear actores verificados manualmente. Para grabar, deja al menos un medico y un dispensario live antes de mostrar el flujo paciente.
+
+                Admin puede aprobar solicitudes reales o crear actores verificados manualmente. Todos los cambios impactan la base de datos de Firebase y la red Stellar Testnet de forma directa.
+
               </p>
+
             </div>
-            <button
-              type="button"
-              onClick={prepareAdminDemo}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory transition-all hover:bg-brand-green-mid active:scale-95"
-            >
-              Preparar flujo de grabacion
-              <ArrowRight size={16} />
-            </button>
+
           </div>
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4">
             {[

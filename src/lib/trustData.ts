@@ -764,5 +764,65 @@ export const trustDataStore = {
     } catch {}
     return [];
   },
+  async loadAgenda(doctorId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'agenda'), where('doctorId', '==', doctorId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading agenda from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  async createAgendaBlock(block: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify([block, ...current]));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'agenda', block.id), block);
+      } catch (err) {
+        console.error('Error saving agenda block in Firestore:', err);
+      }
+    }
+  },
+  async updateAgendaBlock(blockId: string, updates: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+      let current = saved ? JSON.parse(saved) : [];
+      current = current.map((p: any) => p.id === blockId ? { ...p, ...updates } : p);
+      localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify(current));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await updateDoc(doc(db, 'agenda', blockId), updates);
+      } catch (err) {
+        console.error('Error updating agenda block in Firestore:', err);
+      }
+    }
+  },
+  async createNotification(notification: any): Promise<void> {
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'notifications', notification.id), notification);
+      } catch (err) {
+        console.error('Error saving notification in Firestore:', err);
+      }
+    }
+  },
 };
 

@@ -293,16 +293,7 @@ export default function WalletOnboarding({
                 onClick={onConnectFreighter}
               />
 
-              <WalletMethodCard
-                icon={<Database size={22} />}
-                title={demoTitle}
-                description={demoDescription}
-                actionLabel={primaryMethod === 'demo' ? linkedLabel : demoAction}
-                active={primaryMethod === 'demo'}
-                disabled={passkeyBusy || freighterBusy || backupBusy}
-                onClick={onConnectDemo}
-              />
-            </div>
+             </div>
 
             {canAddBackup && (
               <motion.div
