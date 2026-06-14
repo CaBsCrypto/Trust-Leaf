@@ -2288,7 +2288,31 @@ export default function MockupPortal({
 
     const saved = localStorage.getItem('trust_doctor_agenda_blocks');
 
-    return saved ? JSON.parse(saved) : buildDefaultDoctorAgenda(new Date());
+    if (saved) return JSON.parse(saved);
+
+    try {
+
+      const savedSession = localStorage.getItem('trust_leaf_session');
+
+      if (savedSession) {
+
+        const parsed = JSON.parse(savedSession);
+
+        if (parsed.mode === 'demo') {
+
+          return buildDefaultDoctorAgenda(new Date());
+
+        }
+
+      }
+
+    } catch (e) {
+
+      console.error("Error checking session for agenda seeding:", e);
+
+    }
+
+    return [];
 
   });
 
@@ -7771,81 +7795,97 @@ export default function MockupPortal({
 
             <div className="space-y-3">
 
-              {doctorAgendaBlocks.map((block) => (
+              {doctorAgendaBlocks.length === 0 ? (
 
-                <div key={block.id} className="rounded-2xl glass-panel border border-brand-green-light/10 p-4">
+                <div className="rounded-2xl border border-dashed border-brand-green-deep/10 bg-[#fbf7ef]/20 p-6 text-center">
 
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-brand-green-mid/70 leading-relaxed">
 
-                    <div>
+                    No tienes bloques creados en tu agenda. Agrega tu primer bloque de disponibilidad usando el formulario de arriba.
 
-                      <p className="text-sm font-bold text-brand-green-deep">{block.date} Â· {block.time}</p>
+                  </p>
 
-                      <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-green-mid/45">
+                </div>
 
-                        {block.status}{block.patient ? ` Â· ${block.patient}` : ''}
+              ) : (
 
-                      </p>
+                doctorAgendaBlocks.map((block) => (
 
-                      {block.reason && <p className="mt-1 text-xs text-brand-green-mid/60">{block.reason}</p>}
+                  <div key={block.id} className="rounded-2xl glass-panel border border-brand-green-light/10 p-4">
 
-                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
-                    <div className="flex flex-wrap gap-2">
+                      <div>
 
-                      {block.status === 'Reservado' && (
+                        <p className="text-sm font-bold text-brand-green-deep">{block.date} Â· {block.time}</p>
+
+                        <p className="mt-1 text-[10px] uppercase tracking-widest text-brand-green-mid/45">
+
+                          {block.status}{block.patient ? ` Â· ${block.patient}` : ''}
+
+                        </p>
+
+                        {block.reason && <p className="mt-1 text-xs text-brand-green-mid/60">{block.reason}</p>}
+
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+
+                        {block.status === 'Reservado' && (
+
+                          <button
+
+                            type="button"
+
+                            onClick={() => {
+
+                              openConsultationFromBlock(block);
+
+                              setActiveDrawer('doctor-consultation');
+
+                            }}
+
+                            className="rounded-full bg-brand-green-deep px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-ivory"
+
+                          >
+
+                            Abrir consulta
+
+                          </button>
+
+                        )}
 
                         <button
 
                           type="button"
 
-                          onClick={() => {
+                          onClick={() => toggleAgendaBlockStatus(block.id)}
 
-                            openConsultationFromBlock(block);
+                          className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest ${
 
-                            setActiveDrawer('doctor-consultation');
+                            block.status === 'Disponible'
 
-                          }}
+                              ? 'bg-green-100 text-green-700'
 
-                          className="rounded-full bg-brand-green-deep px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-ivory"
+                              : 'bg-brand-gold/15 text-brand-green-deep'
+
+                          }`}
 
                         >
 
-                          Abrir consulta
+                          {block.status === 'Disponible' ? 'Reservar' : 'Liberar'}
 
                         </button>
 
-                      )}
-
-                      <button
-
-                        type="button"
-
-                        onClick={() => toggleAgendaBlockStatus(block.id)}
-
-                        className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest ${
-
-                          block.status === 'Disponible'
-
-                            ? 'bg-green-100 text-green-700'
-
-                            : 'bg-brand-gold/15 text-brand-green-deep'
-
-                        }`}
-
-                      >
-
-                        {block.status === 'Disponible' ? 'Reservar' : 'Liberar'}
-
-                      </button>
+                      </div>
 
                     </div>
 
                   </div>
 
-                </div>
+                ))
 
-              ))}
+              )}
 
             </div>
 
@@ -11598,60 +11638,153 @@ export default function MockupPortal({
 
                             </div>
 
-                            {/* Section: Active Reservations (Próximas consultas) */}
-                            {reservedAgendaBlocks.length > 0 && (
-                              <div className="mt-5 space-y-3">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-green-mid/50 border-b border-brand-green-deep/5 pb-1">
-                                  Reservas Recibidas ({reservedAgendaBlocks.length})
-                                </p>
-                                <div className="space-y-2">
-                                  {reservedAgendaBlocks.map((block) => (
-                                    <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[#fbf7ef] border border-brand-gold/30 px-4 py-3 shadow-sm">
-                                      <div>
-                                        <p className="text-sm font-bold text-brand-green-deep">{block.date} &middot; {block.time}</p>
-                                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-gold">
-                                          Paciente: {block.patient || 'Sin nombre'}
-                                        </p>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => openConsultationFromBlock(block)}
-                                        className="rounded-xl bg-brand-green-deep px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-ivory hover:bg-brand-green-mid transition-all cursor-pointer animate-pulse"
-                                      >
-                                        Consulta
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            {doctorAgendaBlocks.length === 0 ? (
 
-                            {/* Section: Available slots */}
-                            <div className="mt-5 space-y-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-green-mid/50 border-b border-brand-green-deep/5 pb-1">
-                                Bloques Disponibles
-                              </p>
-                              <div className="space-y-2">
-                                {availableAgendaBlocks.slice(0, 3).map((block) => (
-                                  <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green-deep/5 bg-white/70 px-4 py-3">
-                                    <div>
-                                      <p className="text-xs font-bold text-brand-green-deep">{block.date} &middot; {block.time}</p>
-                                      <p className="text-[9px] uppercase tracking-widest text-brand-green-mid/45">Libre</p>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleAgendaBlockStatus(block.id)}
-                                      className="rounded-xl border border-brand-green-deep/10 bg-white px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-brand-green-deep hover:bg-brand-neutral transition-all cursor-pointer"
-                                    >
-                                      Reservar
-                                    </button>
-                                  </div>
-                                ))}
-                                {availableAgendaBlocks.length === 0 && (
-                                  <p className="text-xs text-brand-green-mid/50 text-center py-2">No tienes bloques disponibles creados.</p>
-                                )}
+                              <div className="mt-6 rounded-2xl border border-dashed border-brand-gold/30 bg-[#fbf7ef]/40 p-6 text-center">
+
+                                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-gold/10 text-brand-gold">
+
+                                  <Stethoscope size={24} />
+
+                                </span>
+
+                                <h5 className="mt-3 font-bold text-brand-green-deep">Tu agenda está vacía</h5>
+
+                                <p className="mt-2 text-xs leading-relaxed text-brand-green-mid/70">
+
+                                  Antes de recibir consultas de pacientes, debes configurar tus horarios y bloques de disponibilidad.
+
+                                </p>
+
+                                <button
+
+                                  type="button"
+
+                                  onClick={() => openDrawer('doctor-agenda')}
+
+                                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-gold px-4 py-2.5 text-xs font-bold text-brand-green-deep shadow-sm hover:bg-brand-gold/90 transition-all cursor-pointer"
+
+                                >
+
+                                  Configurar mis horarios
+
+                                </button>
+
                               </div>
-                            </div>
+
+                            ) : (
+
+                              <>
+
+                                {/* Section: Active Reservations (Próximas consultas) */}
+
+                                {reservedAgendaBlocks.length > 0 && (
+
+                                  <div className="mt-5 space-y-3">
+
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-green-mid/50 border-b border-brand-green-deep/5 pb-1">
+
+                                      Reservas Recibidas ({reservedAgendaBlocks.length})
+
+                                    </p>
+
+                                    <div className="space-y-2">
+
+                                      {reservedAgendaBlocks.map((block) => (
+
+                                        <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[#fbf7ef] border border-brand-gold/30 px-4 py-3 shadow-sm">
+
+                                          <div>
+
+                                            <p className="text-sm font-bold text-brand-green-deep">{block.date} &middot; {block.time}</p>
+
+                                            <p className="text-[10px] uppercase font-bold tracking-widest text-brand-gold">
+
+                                              Paciente: {block.patient || 'Sin nombre'}
+
+                                            </p>
+
+                                          </div>
+
+                                          <button
+
+                                            type="button"
+
+                                            onClick={() => openConsultationFromBlock(block)}
+
+                                            className="rounded-xl bg-brand-green-deep px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-ivory hover:bg-brand-green-mid transition-all cursor-pointer animate-pulse"
+
+                                          >
+
+                                            Consulta
+
+                                          </button>
+
+                                        </div>
+
+                                      ))}
+
+                                    </div>
+
+                                  </div>
+
+                                )}
+
+                                {/* Section: Available slots */}
+
+                                <div className="mt-5 space-y-3">
+
+                                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-green-mid/50 border-b border-brand-green-deep/5 pb-1">
+
+                                    Bloques Disponibles
+
+                                  </p>
+
+                                  <div className="space-y-2">
+
+                                    {availableAgendaBlocks.slice(0, 3).map((block) => (
+
+                                      <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green-deep/5 bg-white/70 px-4 py-3">
+
+                                        <div>
+
+                                          <p className="text-xs font-bold text-brand-green-deep">{block.date} &middot; {block.time}</p>
+
+                                          <p className="text-[9px] uppercase tracking-widest text-brand-green-mid/45">Libre</p>
+
+                                        </div>
+
+                                        <button
+
+                                          type="button"
+
+                                          onClick={() => toggleAgendaBlockStatus(block.id)}
+
+                                          className="rounded-xl border border-brand-green-deep/10 bg-white px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-brand-green-deep hover:bg-brand-neutral transition-all cursor-pointer"
+
+                                        >
+
+                                          Reservar
+
+                                        </button>
+
+                                      </div>
+
+                                    ))}
+
+                                    {availableAgendaBlocks.length === 0 && (
+
+                                      <p className="text-xs text-brand-green-mid/50 text-center py-2">No tienes bloques disponibles creados.</p>
+
+                                    )}
+
+                                  </div>
+
+                                </div>
+
+                              </>
+
+                            )}
 
                             <button
 
