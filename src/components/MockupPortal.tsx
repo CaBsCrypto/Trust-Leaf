@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 
-import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images, Leaf } from 'lucide-react';
+import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images, Leaf, Bell, Copy } from 'lucide-react';
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 
@@ -1994,7 +1994,7 @@ export default function MockupPortal({
 
   pageMode = false,
 
-  showTechnicalDetails = false,
+  showTechnicalDetails: showTechnicalDetailsProp = false,
 
   roleLabel = 'Trust Leaf Portal',
 
@@ -2005,6 +2005,12 @@ export default function MockupPortal({
 }: MockupPortalProps & { showTechnicalDetails?: boolean }) {
 
   const { t } = useLanguage();
+
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(showTechnicalDetailsProp);
+
+  useEffect(() => {
+    setShowTechnicalDetails(showTechnicalDetailsProp);
+  }, [showTechnicalDetailsProp]);
 
   const [activeView, setActiveView] = useState<PortalView>(initialView);
 
@@ -2220,6 +2226,13 @@ export default function MockupPortal({
   const [selectedClinicalRecord, setSelectedClinicalRecord] = useState<any | null>(null);
 
   const [activeDrawer, setActiveDrawer] = useState<ActionDrawerKey | null>(null);
+
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: string; text: string; time: string; read: boolean; type: string }>>([
+    { id: 'notif-1', text: 'Tu credencial médica ha sido autorizada on-chain por la gobernanza de Trust Leaf.', time: 'Ayer', read: false, type: 'system' }
+  ]);
+  const [dismissedCredentialBanner, setDismissedCredentialBanner] = useState(() => localStorage.getItem('trust_dismiss_credential_banner') === 'true');
 
   const [clinicalAccessState, setClinicalAccessState] = useState<Record<string, 'private' | 'authorized' | 'revoked'>>({});
 
@@ -4904,6 +4917,7 @@ export default function MockupPortal({
 
     if (bookingDoctor && selectedDate && selectedTime) {
 
+      const patientName = session?.name || 'Paciente de prueba';
       const bookedBlock: DoctorAgendaBlock = {
 
         id: `agenda-booking-${Date.now()}`,
@@ -4914,11 +4928,22 @@ export default function MockupPortal({
 
         status: 'Reservado',
 
-        patient: 'Paciente de prueba',
+        patient: patientName,
 
         reason: `Reserva desde portal paciente con ${bookingDoctor.name}`,
 
       };
+
+      setNotifications((prev) => [
+        {
+          id: `notif-booking-${Date.now()}`,
+          text: `Nueva reserva de ${patientName} para el ${selectedDate} a las ${selectedTime}`,
+          time: 'Hace un momento',
+          read: false,
+          type: 'booking'
+        },
+        ...prev
+      ]);
 
       setDoctorAgendaBlocks((prev) => {
 
@@ -9168,37 +9193,293 @@ export default function MockupPortal({
 
                 </h3>
 
-                <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 relative">
 
-                  {(walletConnected || isDoctorPortal || isDispensaryPortal) && (
+                  {isDoctorPortal ? (
 
-                    <div className="flex items-center gap-2 rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-[10px] sm:text-xs text-brand-green-deep shadow-sm">
+                    <>
 
-                      <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
+                      {/* Notifications bell button */}
 
-                      <span className="font-bold uppercase text-[8px] sm:text-[9px] tracking-wider text-brand-green-mid">Stellar:</span>
+                      <div className="relative">
 
-                      <span className="font-mono font-semibold">{shortenAddress(currentUserWallet, 6)}</span>
+                        <button
 
-                    </div>
+                          onClick={() => {
+
+                            setShowNotificationDropdown(!showNotificationDropdown);
+
+                            setShowProfileDropdown(false);
+
+                            // Mark all notifications as read when opening
+
+                            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+                          }}
+
+                          className="p-2.5 rounded-xl border border-brand-green-deep/10 bg-white hover:bg-brand-neutral text-brand-green-deep transition-all relative active:scale-95 cursor-pointer shadow-sm"
+
+                        >
+
+                          <Bell size={18} className="shrink-0" />
+
+                          {notifications.filter(n => !n.read).length > 0 && (
+
+                            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-brand-gold text-[9px] font-bold text-brand-green-deep flex items-center justify-center animate-bounce">
+
+                              {notifications.filter(n => !n.read).length}
+
+                            </span>
+
+                          )}
+
+                        </button>
+
+
+                        <AnimatePresence>
+
+                          {showNotificationDropdown && (
+
+                            <motion.div
+
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+
+                              className="absolute right-0 mt-2 w-80 bg-white border border-brand-green-deep/10 rounded-2xl p-4 shadow-xl z-[150] space-y-3"
+
+                            >
+
+                              <div className="flex items-center justify-between border-b border-brand-green-deep/5 pb-2">
+
+                                <p className="text-xs font-bold text-brand-green-deep uppercase tracking-wider">Notificaciones</p>
+
+                                <button 
+
+                                  onClick={() => setNotifications([])}
+
+                                  className="text-[9px] font-bold uppercase tracking-widest text-red-600 hover:text-red-800"
+
+                                >
+
+                                  Limpiar
+
+                                </button>
+
+                              </div>
+
+                              <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1">
+
+                                {notifications.length === 0 ? (
+
+                                  <p className="text-xs text-brand-green-mid/50 text-center py-4">Sin notificaciones nuevas</p>
+
+                                ) : (
+
+                                  notifications.map((n) => (
+
+                                    <div key={n.id} className="p-2 rounded-xl bg-brand-neutral/30 border border-brand-green-deep/5 text-xs text-brand-green-deep">
+
+                                      <p className="leading-relaxed font-medium text-brand-green-deep">{n.text}</p>
+
+                                      <span className="text-[9px] text-brand-green-mid/45 block mt-1">{n.time}</span>
+
+                                    </div>
+
+                                  ))
+
+                                )}
+
+                              </div>
+
+                            </motion.div>
+
+                          )}
+
+                        </AnimatePresence>
+
+                      </div>
+
+
+                      {/* Smaller Stellar profile widget dropdown */}
+
+                      <div className="relative">
+
+                        <button
+
+                          onClick={() => {
+
+                            setShowProfileDropdown(!showProfileDropdown);
+
+                            setShowNotificationDropdown(false);
+
+                          }}
+
+                          className="flex items-center gap-2 rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-[10px] sm:text-xs text-brand-green-deep shadow-sm hover:border-brand-gold/40 active:scale-95 transition-all cursor-pointer"
+
+                        >
+
+                          <div className="h-5 w-5 rounded-full bg-brand-green-deep text-brand-gold flex items-center justify-center font-bold text-[10px] uppercase shrink-0">
+
+                            {session?.name ? session.name[0] : 'D'}
+
+                          </div>
+
+                          <span className="font-bold hidden md:inline truncate max-w-[100px] text-brand-green-deep">{session?.name || 'Médico Autorizado'}</span>
+
+                          <span className="font-mono text-[9px] opacity-60 text-brand-green-deep">{shortenAddress(currentUserWallet, 4)}</span>
+
+                        </button>
+
+
+                        <AnimatePresence>
+
+                          {showProfileDropdown && (
+
+                            <motion.div
+
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+
+                              className="absolute right-0 mt-2 w-72 bg-white border border-brand-green-deep/10 rounded-2xl p-4 shadow-xl z-[150] space-y-3"
+
+                            >
+
+                              <div className="border-b border-brand-green-deep/5 pb-3">
+
+                                <p className="text-xs font-bold text-brand-green-deep">{session?.name || 'Dr. Carlos Valenzuela'}</p>
+
+                                <p className="text-[10px] text-brand-green-mid/60 mt-0.5 truncate">{session?.email || 'medico@trustleaf.test'}</p>
+
+                              </div>
+
+
+                              <div className="space-y-2 text-xs">
+
+                                <div className="p-2.5 rounded-xl bg-brand-neutral/40 border border-brand-green-deep/5 flex flex-col gap-1">
+
+                                  <span className="text-[9px] font-bold uppercase tracking-widest text-brand-green-mid/45">Billetera Stellar</span>
+
+                                  <div className="flex items-center justify-between gap-2">
+
+                                    <span className="font-mono font-bold break-all text-[10px] text-brand-green-deep">{shortenAddress(currentUserWallet, 12)}</span>
+
+                                    <button 
+
+                                      onClick={() => {
+
+                                        navigator.clipboard.writeText(currentUserWallet);
+
+                                        showToast('Copiado al portapapeles', 'success');
+
+                                      }}
+
+                                      className="p-1 text-brand-green-mid hover:text-brand-gold shrink-0 active:scale-90"
+
+                                      title="Copiar llave pública"
+
+                                    >
+
+                                      <Copy size={12} />
+
+                                    </button>
+
+                                  </div>
+
+                                </div>
+
+
+                                <button
+
+                                  onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+
+                                  className="w-full text-left p-2 rounded-xl hover:bg-brand-neutral/50 font-medium text-brand-green-deep flex justify-between items-center"
+
+                                >
+
+                                  <span>Modo Técnico (MVP)</span>
+
+                                  <span className={`h-2.5 w-5 rounded-full p-0.5 transition-colors cursor-pointer ${showTechnicalDetails ? 'bg-brand-gold' : 'bg-brand-neutral border'}`}>
+
+                                    <span className={`block h-1.5 w-1.5 rounded-full bg-white transition-transform ${showTechnicalDetails ? 'translate-x-2' : ''}`} />
+
+                                  </span>
+
+                                </button>
+
+                              </div>
+
+
+                              {onSignOut && (
+
+                                <button
+
+                                  onClick={onSignOut}
+
+                                  className="w-full text-center py-2.5 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-650 hover:text-red-700 font-bold uppercase tracking-wider text-[10px] border border-red-500/10 active:scale-95 transition-all cursor-pointer"
+
+                                >
+
+                                  Cerrar Sesión
+
+                                </button>
+
+                              )}
+
+                            </motion.div>
+
+                          )}
+
+                        </AnimatePresence>
+
+                      </div>
+
+                    </>
+
+                  ) : (
+
+                    <>
+
+                      {(walletConnected || isDoctorPortal || isDispensaryPortal) && (
+
+                        <div className="flex items-center gap-2 rounded-xl border border-brand-green-deep/10 bg-[#fbf7ef] px-3 py-2 text-[10px] sm:text-xs text-brand-green-deep shadow-sm">
+
+                          <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 animate-pulse" />
+
+                          <span className="font-bold uppercase text-[8px] sm:text-[9px] tracking-wider text-brand-green-mid">Stellar:</span>
+
+                          <span className="font-mono font-semibold">{shortenAddress(currentUserWallet, 6)}</span>
+
+                        </div>
+
+                      )}
+
+
+                      {onSignOut && (
+
+                        <button
+
+                          onClick={onSignOut}
+
+                          className="text-xs font-bold uppercase tracking-[0.12em] bg-red-500/5 hover:bg-red-500/10 text-red-650 hover:text-red-700 px-3 py-2 rounded-xl transition-all border border-red-500/10 active:scale-95 cursor-pointer"
+
+                        >
+
+                          Cerrar Sesión
+
+                        </button>
+
+                      )}
+
+                    </>
 
                   )}
 
-                  {onSignOut && (
-
-                    <button
-
-                      onClick={onSignOut}
-
-                      className="text-xs font-bold uppercase tracking-[0.12em] bg-red-500/5 hover:bg-red-500/10 text-red-600 hover:text-red-700 px-3 py-2 rounded-xl transition-all border border-red-500/10 active:scale-95 cursor-pointer"
-
-                    >
-
-                      Cerrar SesiÃ³n
-
-                    </button>
-
-                  )}
 
                   <button onClick={onClose} className="p-3 md:p-2 -mr-2 md:mr-0 hover:bg-brand-neutral rounded-full transition-colors cursor-pointer">
 
@@ -11070,9 +11351,22 @@ export default function MockupPortal({
 
 
 
-                      {isDoctorPortal && (
+                      {isDoctorPortal && !dismissedCredentialBanner && (
 
-                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 shadow-sm">
+                        <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-6 shadow-sm relative overflow-hidden">
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDismissedCredentialBanner(true);
+                              localStorage.setItem('trust_dismiss_credential_banner', 'true');
+                              showToast('Anuncio minimizado. Puedes ver el estado de tu credencial en tu Perfil.', 'info');
+                            }}
+                            className="absolute top-4 right-4 text-brand-green-mid/40 hover:text-brand-green-deep p-1.5 rounded-full hover:bg-brand-neutral transition-all cursor-pointer"
+                            title="No volver a mostrar"
+                          >
+                            <X size={16} />
+                          </button>
 
                           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
 
@@ -11116,6 +11410,20 @@ export default function MockupPortal({
 
                         </div>
 
+                      )}
+
+                      {isDoctorPortal && dismissedCredentialBanner && (
+                        <div className="flex justify-end">
+                          <button 
+                            onClick={() => {
+                              setDismissedCredentialBanner(false);
+                              localStorage.removeItem('trust_dismiss_credential_banner');
+                            }}
+                            className="text-[10px] font-bold uppercase tracking-widest text-brand-gold hover:text-brand-green-deep transition-colors cursor-pointer"
+                          >
+                            Mostrar Credencial Profesional
+                          </button>
+                        </div>
                       )}
 
 
@@ -11270,7 +11578,7 @@ export default function MockupPortal({
 
                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Horarios</p>
 
-                                <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Disponibilidad</h4>
+                                <h4 className="mt-1 text-xl font-bold text-brand-green-deep">Agenda de Consultas</h4>
 
                               </div>
 
@@ -11280,7 +11588,7 @@ export default function MockupPortal({
 
                                 onClick={() => openDrawer('doctor-agenda')}
 
-                                className="rounded-xl border border-brand-green-deep/15 bg-white px-4 py-2 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral/60"
+                                className="rounded-xl border border-brand-green-deep/15 bg-white px-4 py-2 text-xs font-bold text-brand-green-deep shadow-sm transition-colors hover:bg-brand-neutral/60 cursor-pointer"
 
                               >
 
@@ -11290,190 +11598,59 @@ export default function MockupPortal({
 
                             </div>
 
-                            <div className="mt-4 rounded-2xl border border-brand-gold/20 bg-white/70 px-4 py-3">
-
-                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-green-mid/45">Fecha actual</p>
-
-                              <p className="mt-1 text-sm font-bold leading-relaxed text-brand-green-deep">
-
-                                {formatLiveDate(currentNow)}
-
-                                <span className="block text-xs font-semibold text-brand-green-mid/60">Actualizado {formatLiveTime(currentNow)}</span>
-
-                              </p>
-
-                            </div>
-
-                            {false && showAgendaForm && (
-
-                              <div className="mt-4 rounded-2xl border border-brand-green-deep/10 bg-white p-4">
-
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
-                                  <label className="space-y-1">
-
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Fecha</span>
-
-                                    <input
-
-                                      value={agendaForm.date}
-
-                                      onChange={(event) => setAgendaForm((current) => ({ ...current, date: event.target.value }))}
-
-                                      className="w-full rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
-
-                                    />
-
-                                  </label>
-
-                                  <label className="space-y-1">
-
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">Hora</span>
-
-                                    <input
-
-                                      value={agendaForm.time}
-
-                                      onChange={(event) => setAgendaForm((current) => ({ ...current, time: event.target.value }))}
-
-                                      className="w-full rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
-
-                                    />
-
-                                  </label>
-
+                            {/* Section: Active Reservations (Próximas consultas) */}
+                            {reservedAgendaBlocks.length > 0 && (
+                              <div className="mt-5 space-y-3">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-green-mid/50 border-b border-brand-green-deep/5 pb-1">
+                                  Reservas Recibidas ({reservedAgendaBlocks.length})
+                                </p>
+                                <div className="space-y-2">
+                                  {reservedAgendaBlocks.map((block) => (
+                                    <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[#fbf7ef] border border-brand-gold/30 px-4 py-3 shadow-sm">
+                                      <div>
+                                        <p className="text-sm font-bold text-brand-green-deep">{block.date} &middot; {block.time}</p>
+                                        <p className="text-[10px] uppercase font-bold tracking-widest text-brand-gold">
+                                          Paciente: {block.patient || 'Sin nombre'}
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => openConsultationFromBlock(block)}
+                                        className="rounded-xl bg-brand-green-deep px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-ivory hover:bg-brand-green-mid transition-all cursor-pointer animate-pulse"
+                                      >
+                                        Consulta
+                                      </button>
+                                    </div>
+                                  ))}
                                 </div>
-
-                                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[0.8fr_1.2fr]">
-
-                                  <select
-
-                                    value={agendaForm.status}
-
-                                    onChange={(event) => setAgendaForm((current) => ({
-
-                                      ...current,
-
-                                      status: event.target.value as DoctorAgendaBlock['status'],
-
-                                    }))}
-
-                                    className="rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm font-bold text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
-
-                                  >
-
-                                    <option value="Disponible">Disponible</option>
-
-                                    <option value="Reservado">Reservado</option>
-
-                                  </select>
-
-                                  <input
-
-                                    value={agendaForm.patient}
-
-                                    onChange={(event) => setAgendaForm((current) => ({ ...current, patient: event.target.value }))}
-
-                                    placeholder="Paciente, si ya esta reservado"
-
-                                    className="rounded-xl bg-brand-neutral/60 px-3 py-2 text-sm text-brand-green-deep focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
-
-                                  />
-
-                                </div>
-
-                                <button
-
-                                  type="button"
-
-                                  onClick={handleAddAgendaBlock}
-
-                                  className="mt-3 w-full rounded-xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
-
-                                >
-
-                                  Guardar bloque horario
-
-                                </button>
-
                               </div>
-
                             )}
 
-                            <div className="mt-4 grid grid-cols-1 gap-2">
-
-                              {doctorAgendaBlocks.slice(0, 3).map((block) => (
-
-                                <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green-deep/5 bg-white/70 px-4 py-3">
-
-                                  <div>
-
-                                    <p className="text-sm font-bold text-brand-green-deep">{block.date} Â· {block.time}</p>
-
-                                    <p className="text-[10px] uppercase tracking-widest text-brand-green-mid/45">
-
-                                      {block.status}
-
-                                      {block.patient ? ` Â· ${block.patient}` : ''}
-
-                                    </p>
-
-                                    {block.reason && (
-
-                                      <p className="mt-1 text-xs text-brand-green-mid/55">{block.reason}</p>
-
-                                    )}
-
-                                  </div>
-
-                                  <div className="flex shrink-0 flex-col gap-2">
-
-                                    {block.status === 'Reservado' && (
-
-                                      <button
-
-                                        type="button"
-
-                                        onClick={() => openConsultationFromBlock(block)}
-
-                                        className="rounded-full bg-brand-green-deep px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-ivory"
-
-                                      >
-
-                                        Consulta
-
-                                      </button>
-
-                                    )}
-
+                            {/* Section: Available slots */}
+                            <div className="mt-5 space-y-3">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-green-mid/50 border-b border-brand-green-deep/5 pb-1">
+                                Bloques Disponibles
+                              </p>
+                              <div className="space-y-2">
+                                {availableAgendaBlocks.slice(0, 3).map((block) => (
+                                  <div key={block.id} className="flex items-center justify-between gap-3 rounded-2xl border border-brand-green-deep/5 bg-white/70 px-4 py-3">
+                                    <div>
+                                      <p className="text-xs font-bold text-brand-green-deep">{block.date} &middot; {block.time}</p>
+                                      <p className="text-[9px] uppercase tracking-widest text-brand-green-mid/45">Libre</p>
+                                    </div>
                                     <button
-
                                       type="button"
-
                                       onClick={() => toggleAgendaBlockStatus(block.id)}
-
-                                      className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
-
-                                        block.status === 'Disponible'
-
-                                          ? 'bg-green-100 text-green-700'
-
-                                          : 'bg-brand-gold/15 text-brand-green-deep'
-
-                                      }`}
-
+                                      className="rounded-xl border border-brand-green-deep/10 bg-white px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-brand-green-deep hover:bg-brand-neutral transition-all cursor-pointer"
                                     >
-
-                                      {block.status === 'Disponible' ? 'Reservar' : 'Liberar'}
-
+                                      Reservar
                                     </button>
-
                                   </div>
-
-                                </div>
-
-                              ))}
-
+                                ))}
+                                {availableAgendaBlocks.length === 0 && (
+                                  <p className="text-xs text-brand-green-mid/50 text-center py-2">No tienes bloques disponibles creados.</p>
+                                )}
+                              </div>
                             </div>
 
                             <button
@@ -11482,7 +11659,7 @@ export default function MockupPortal({
 
                               onClick={() => openDrawer('doctor-agenda')}
 
-                              className="mt-4 w-full rounded-xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral"
+                              className="mt-4 w-full rounded-xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep transition-colors hover:bg-brand-neutral cursor-pointer"
 
                             >
 
@@ -11764,7 +11941,21 @@ export default function MockupPortal({
 
                           )}
 
-                          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+
+                            <button
+
+                              type="button"
+
+                              onClick={() => openDrawer('doctor-agenda')}
+
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep hover:bg-brand-neutral/40 transition-colors"
+
+                            >
+
+                              Agenda médica
+
+                            </button>
 
                             <button
 
@@ -11774,7 +11965,7 @@ export default function MockupPortal({
 
                               disabled={!selectedConsultationBlock}
 
-                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep"
+                              className="rounded-2xl border border-brand-green-deep/10 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep disabled:opacity-40"
 
                             >
 
@@ -11790,7 +11981,7 @@ export default function MockupPortal({
 
                               disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'checked_in'}
 
-                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory disabled:opacity-45"
+                              className="rounded-2xl bg-brand-green-deep px-4 py-3 text-sm font-bold text-brand-ivory disabled:opacity-45 hover:bg-brand-green-mid"
 
                             >
 
@@ -11806,7 +11997,7 @@ export default function MockupPortal({
 
                               disabled={!selectedConsultationBlock || selectedConsultationStatus !== 'active'}
 
-                              className="rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep disabled:opacity-45"
+                              className="rounded-2xl border border-brand-gold/30 bg-white px-4 py-3 text-sm font-bold text-brand-green-deep disabled:opacity-45 hover:bg-brand-gold/5"
 
                             >
 
