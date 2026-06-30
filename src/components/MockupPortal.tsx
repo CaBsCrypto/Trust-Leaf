@@ -6496,7 +6496,7 @@ export default function MockupPortal({
 
 
 
-  const createPrivacyPermission = (kind: PrivacyPermissionKind, openQr = true, targetActorName?: string) => {
+  const createPrivacyPermission = async (kind: PrivacyPermissionKind, openQr = true, targetActorName?: string) => {
 
     const isMedical = kind === 'medical-consultation';
 
@@ -6526,7 +6526,7 @@ export default function MockupPortal({
 
       qrToken: `TL-${kind === 'medical-consultation' ? 'MED' : 'RECETA'}-${makeDemoHash(`${actor}-${Date.now()}`).slice(0, 8).toUpperCase()}`,
 
-      createdAt: 'Ahora',
+      createdAt: new Date().toISOString(),
 
       patientName: session?.name || 'Paciente Demo',
 
@@ -6534,9 +6534,15 @@ export default function MockupPortal({
 
     };
 
-
-
-    setPrivacyPermissions((current) => [permission, ...current]);
+    if (auth.currentUser) {
+      try {
+        await setDoc(doc(db, 'privacyPermissions', permission.id), permission);
+      } catch (err) {
+        console.error("Error creating privacy permission in Firestore:", err);
+      }
+    } else {
+      setPrivacyPermissions((current) => [permission, ...current]);
+    }
 
     setRecentActivity((prev: any[]) => [
 
@@ -6576,17 +6582,21 @@ export default function MockupPortal({
 
 
 
-  const revokePrivacyPermission = (permissionId: string) => {
+  const revokePrivacyPermission = async (permissionId: string) => {
 
-    setPrivacyPermissions((current) => current.map((permission) => (
-
-      permission.id === permissionId
-
-        ? { ...permission, status: 'revoked' }
-
-        : permission
-
-    )));
+    if (auth.currentUser) {
+      try {
+        await updateDoc(doc(db, 'privacyPermissions', permissionId), { status: 'revoked' });
+      } catch (err) {
+        console.error("Error revoking privacy permission in Firestore:", err);
+      }
+    } else {
+      setPrivacyPermissions((current) => current.map((permission) => (
+        permission.id === permissionId
+          ? { ...permission, status: 'revoked' }
+          : permission
+      )));
+    }
 
   };
 
