@@ -24,6 +24,23 @@ import {
   submitSignedTransaction,
   getDeterministicKeypair,
 } from "./api/_lib/stellar";
+import {
+  DEFINDEX_VAULTS,
+  buildDefindexDeposit,
+  buildDefindexWithdraw,
+  buildDefindexWithdrawShares,
+  getDefindexApiKey,
+  getDefindexNetwork,
+  getDefindexShares,
+  getDefaultVaultAddress,
+  getSocialFundAddress,
+  getVaultByAddress,
+  signAndSubmitDefindex,
+  submitDefindexSigned,
+  executeSplitDeposit,
+  stroopsToDisplay,
+  displayToStroops,
+} from "./api/_lib/defindex";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -808,6 +825,210 @@ async function startServer() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "No fue posible verificar la receta en Testnet.";
       res.status(500).json({ found: false, message });
+    }
+  });
+
+  // ─── Defindex ReFi Vault Integration (Testnet) ─────────────────────────
+  // Wraps the Defindex REST API. All operations support both custodial signing
+  // (server-derived keypair from email) and Web3 signing (returns unsigned XDR
+  // for Freighter/Albedo). Fee sponsorship is applied on custodial paths.
+  app.get("/api/defindex/vaults", (_req, res) => {
+    res.json({
+      vaults: DEFINDEX_VAULTS,
+      defaultVault: getDefaultVaultAddress(),
+      network: getDefindexNetwork(),
+      apiKeyConfigured: Boolean(getDefindexApiKey()),
+      socialFundAddress: getSocialFundAddress(),
+    });
+  });
+
+  app.get("/api/defindex/balance/:vault/:address", async (req, res) => {
+    try {
+      const { vault, address } = req.params;
+      const shares = await getDefindexShares(vault, address);
+      const vaultInfo = getVaultByAddress(vault);
+      res.json({
+        shares: shares.toString(),
+        sharesDisplay: stroopsToDisplay(shares, vaultInfo?.decimals ?? 7),
+        vaultAddress: vault,
+        address,
+        network: getDefindexNetwork(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible leer el balance del vault.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/build-deposit", async (req, res) => {
+    try {
+      const { vaultAddress, caller, amount, slippageBps, invest } = req.body ?? {};
+      if (!vaultAddress || !caller || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, caller, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const xdr = await buildDefindexDeposit({
+        vaultAddress,
+        caller,
+        amountStroops,
+        slippageBps,
+        invest,
+      });
+      res.json({ xdr, vaultAddress, caller, amountStroops: amountStroops.toString() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el depósito de Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/build-withdraw", async (req, res) => {
+    try {
+      const { vaultAddress, caller, amount, slippageBps } = req.body ?? {};
+      if (!vaultAddress || !caller || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, caller, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const xdr = await buildDefindexWithdraw({
+        vaultAddress,
+        caller,
+        amountStroops,
+        slippageBps,
+      });
+      res.json({ xdr, vaultAddress, caller, amountStroops: amountStroops.toString() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el retiro de Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/build-withdraw-shares", async (req, res) => {
+    try {
+      const { vaultAddress, caller, shares, slippageBps } = req.body ?? {};
+      if (!vaultAddress || !caller || !shares) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, caller, shares." });
+        return;
+      }
+      const xdr = await buildDefindexWithdrawShares({
+        vaultAddress,
+        caller,
+        shares: BigInt(String(shares)),
+        slippageBps,
+      });
+      res.json({ xdr, vaultAddress, caller });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el retiro por shares de Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/submit", async (req, res) => {
+    try {
+      const { xdr } = req.body ?? {};
+      if (!xdr) {
+        res.status(400).json({ message: "Falta el parámetro xdr firmado." });
+        return;
+      }
+      const txHash = await submitDefindexSigned(String(xdr));
+      res.json({ txHash, network: getDefindexNetwork() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible transmitir la transacción a Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/custodial-deposit", writeLimiter, async (req, res) => {
+    try {
+      const { vaultAddress, email, amount, fundPercent, slippageBps, invest } = req.body ?? {};
+      if (!vaultAddress || !email || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, email, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const userKeypair = getDeterministicKeypair(String(email));
+
+      if (typeof fundPercent === "number" && fundPercent > 0) {
+        const result = await executeSplitDeposit({
+          vaultAddress,
+          userAddress: userKeypair.publicKey(),
+          userKeypair,
+          totalAmountStroops: amountStroops,
+          fundPercent,
+          slippageBps,
+          invest,
+        });
+        res.json({
+          mode: "split",
+          ...result,
+          userAmountDisplay: stroopsToDisplay(result.userAmountStroops, vaultInfo?.decimals ?? 7),
+          fundAmountDisplay: stroopsToDisplay(result.fundAmountStroops, vaultInfo?.decimals ?? 7),
+          network: getDefindexNetwork(),
+        });
+        return;
+      }
+
+      const unsignedXdr = await buildDefindexDeposit({
+        vaultAddress,
+        caller: userKeypair.publicKey(),
+        amountStroops,
+        slippageBps,
+        invest,
+      });
+      const { txHash, signedXdr } = await signAndSubmitDefindex({
+        unsignedXdr,
+        signerKeypair: userKeypair,
+        applyFeeSponsorship: true,
+      });
+      res.json({
+        mode: "custodial",
+        txHash,
+        signedXdr,
+        amountStroops: amountStroops.toString(),
+        amountDisplay: stroopsToDisplay(amountStroops, vaultInfo?.decimals ?? 7),
+        network: getDefindexNetwork(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible ejecutar el depósito custodial en Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/custodial-withdraw", writeLimiter, async (req, res) => {
+    try {
+      const { vaultAddress, email, amount, slippageBps } = req.body ?? {};
+      if (!vaultAddress || !email || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, email, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const userKeypair = getDeterministicKeypair(String(email));
+
+      const unsignedXdr = await buildDefindexWithdraw({
+        vaultAddress,
+        caller: userKeypair.publicKey(),
+        amountStroops,
+        slippageBps,
+      });
+      const { txHash, signedXdr } = await signAndSubmitDefindex({
+        unsignedXdr,
+        signerKeypair: userKeypair,
+        applyFeeSponsorship: true,
+      });
+      res.json({
+        txHash,
+        signedXdr,
+        amountStroops: amountStroops.toString(),
+        amountDisplay: stroopsToDisplay(amountStroops, vaultInfo?.decimals ?? 7),
+        network: getDefindexNetwork(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible ejecutar el retiro custodial en Defindex.";
+      res.status(500).json({ message });
     }
   });
 
