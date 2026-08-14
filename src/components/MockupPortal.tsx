@@ -4617,6 +4617,8 @@ export default function MockupPortal({
 
         issueDemoPrescription(targetPatientAddress);
 
+        setDoctorIssueSuccess('DEMO / NO VÁLIDA: vista previa local; no es una receta médica ni fue firmada.');
+
         setConsultationStatus('completed');
 
         setPrescriptionToolOpen(false);
@@ -11242,7 +11244,7 @@ export default function MockupPortal({
 
                               >
 
-                                {doctorIssueBusy ? 'Emitiendo...' : 'Emitir receta'}
+                                {doctorIssueBusy ? 'Preparando...' : doctorSignerReady ? 'Emitir en testnet' : 'Crear vista previa DEMO'}
 
                               </button>
 
@@ -11288,7 +11290,7 @@ export default function MockupPortal({
 
                                       <div>
 
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-700/70">Receta lista</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-700/70">{doctorSignerReady ? 'Receta testnet lista' : 'DEMO / NO VÁLIDA'}</p>
 
                                         <p className="mt-1 font-bold text-brand-green-deep">{doctorIssueSuccess}</p>
 
@@ -11551,7 +11553,7 @@ export default function MockupPortal({
 
                             eyebrow="Receta"
 
-                            title="Emitir receta"
+                            title={doctorSignerReady ? 'Emitir en testnet' : 'Vista previa DEMO'}
 
                             description="Preparar tratamiento, dosis, vigencia y saldo autorizado."
 
@@ -12165,7 +12167,7 @@ export default function MockupPortal({
 
                       {!isDoctorPortal && (
 
-                        <p className="text-sm text-brand-green-mid/70">Todos los médicos en Trust Leaf estÃ¡n validados y poseen licencias vigentes para la prescripciÃ³n de cannabis medicinal.</p>
+                        <p className="text-sm text-brand-green-mid/70">Directorio demostrativo con profesionales ficticios. La habilitación debe verificarse antes de una atención real.</p>
 
                       )}
 
@@ -18195,7 +18197,7 @@ export default function MockupPortal({
 
                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-700">
 
-                  Agente 402: valida licencia médica y genera un hash clínico. La receta se emite sin publicar diagnÃ³stico ni notas completas.
+                  Simulación: prepara evidencia técnica sin validar licencia profesional ni emitir una receta clínicamente válida.
 
                 </div>
 
@@ -18929,7 +18931,7 @@ export default function MockupPortal({
 
                       <FileText size={16} />
 
-                      Emitir receta
+                      {doctorSignerReady ? 'Emitir en testnet' : 'Crear vista previa DEMO / NO VÁLIDA'}
 
                     </>
 

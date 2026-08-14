@@ -4,6 +4,7 @@ import {
   releasePrescriptionToPatient,
   retainPrescriptionForDispensary,
 } from '../../_lib/stellar.js';
+import { assertTestnetMutationEnabled } from '../../_lib/pilot-safety.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -14,6 +15,9 @@ export default async function handler(req: any, res: any) {
   const { action } = req.query ?? {};
 
   try {
+    if (action !== 'validate-prescription') {
+      assertTestnetMutationEnabled();
+    }
     if (action === 'validate-prescription') {
       const { prescriptionId } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);

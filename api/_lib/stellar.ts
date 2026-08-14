@@ -4,6 +4,7 @@ declare global {
 
 import { createHash } from 'crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { getPilotMutationSafety } from './pilot-safety.js';
 
 const DEFAULT_READONLY_ACCOUNT =
   'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6';
@@ -127,6 +128,7 @@ export function getAdminAddress() {
 }
 
 export function getRuntimeReadiness() {
+  const mutationSafety = getPilotMutationSafety();
   const hasAdminSigner = Boolean(getAdminSecret());
   const hasDoctorSigner = Boolean(getDoctorSecret());
   const hasDispensarySigner = Boolean(getDispensarySecret());
@@ -140,6 +142,7 @@ export function getRuntimeReadiness() {
 
   return {
     network: 'Stellar Testnet',
+    pilotSafety: mutationSafety,
     rpcUrl: getRpcUrl(),
     contracts: {
       registryContractId: getRegistryContractId(),
@@ -167,10 +170,10 @@ export function getRuntimeReadiness() {
     },
     capabilities: {
       readContracts: true,
-      registerActors: hasAdminSigner,
-      issuePrescriptions: hasDoctorSigner,
-      dispensePrescriptions: hasDispensarySigner,
-      passkeyRelay: hasPasskeyRelayer,
+      registerActors: mutationSafety.enabled && hasAdminSigner,
+      issuePrescriptions: mutationSafety.enabled && hasDoctorSigner,
+      dispensePrescriptions: mutationSafety.enabled && hasDispensarySigner,
+      passkeyRelay: mutationSafety.enabled && hasPasskeyRelayer,
       passkeyDiscovery: hasMercuryLookup,
     },
     missing: [

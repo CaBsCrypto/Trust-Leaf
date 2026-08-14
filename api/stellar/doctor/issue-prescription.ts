@@ -1,4 +1,5 @@
 import { issuePrescriptionForPatient } from '../../_lib/stellar.js';
+import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../../_lib/pilot-safety.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -7,6 +8,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    assertTestnetMutationEnabled();
     const {
       patientAddress,
       treatment,
@@ -53,11 +55,6 @@ export default async function handler(req: any, res: any) {
 
     res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({
-      message:
-        error instanceof Error
-          ? error.message
-          : 'No fue posible emitir la receta en testnet.',
-    });
+    sendPilotSafetyError(res, error, 'No fue posible emitir la receta en testnet.');
   }
 }

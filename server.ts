@@ -41,6 +41,7 @@ import {
   stroopsToDisplay,
   displayToStroops,
 } from "./api/_lib/defindex";
+import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,6 +100,30 @@ async function startServer() {
 
   // Middlewares
   app.use(express.json());
+  app.use((req, res, next) => {
+    const protectedMutation = req.method === "POST" && (
+      req.path === "/api/stellar/faucet" ||
+      req.path === "/api/stellar/doctor/issue-prescription" ||
+      req.path === "/api/stellar/dispensary/dispense-prescription" ||
+      req.path === "/api/stellar/dispensary/retain-prescription" ||
+      req.path === "/api/stellar/dispensary/release-prescription" ||
+      req.path === "/api/stellar/submit" ||
+      req.path.startsWith("/api/stellar/admin/") ||
+      req.path === "/api/passkeys/send" ||
+      req.path === "/api/defindex/submit" ||
+      req.path.startsWith("/api/defindex/custodial-")
+    );
+    if (!protectedMutation) return next();
+    try {
+      assertTestnetMutationEnabled();
+      next();
+    } catch (error) {
+      res.status(503).json({
+        code: "TESTNET_MUTATIONS_DISABLED",
+        message: error instanceof Error ? error.message : "Mutaciones testnet deshabilitadas.",
+      });
+    }
+  });
 
   // HTTP Security Headers (XSS, Clickjacking, MIME Sniffing & HSTS Defense)
   app.use((req, res, next) => {

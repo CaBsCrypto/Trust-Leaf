@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:pilot-safety": "node --experimental-strip-types tests/pilot-safety.test.ts",
+    "test:critical-static": "node tests/critical-demo-routes.mjs",
+    "preflight:config": "node tests/preflight-config.mjs",
+    "preflight": "npm run preflight:config && npm run test:pilot-safety && npm run test:critical-static && npm run lint && npm run build"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
