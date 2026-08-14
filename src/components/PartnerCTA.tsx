@@ -1,33 +1,40 @@
 import { motion } from 'motion/react';
-import { Mail } from 'lucide-react';
+import { Mail, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function PartnerCTA() {
   const { t } = useLanguage();
 
   return (
-    <section className="py-16 bg-brand-neutral/30">
-      <div className="container mx-auto px-6 md:px-12">
-        <div className="max-w-4xl mx-auto p-12 bg-white rounded-[40px] shadow-xl border border-brand-green-mid/5 relative overflow-hidden text-center md:text-left">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+    <section className="relative py-10 md:py-14 overflow-hidden bg-white">
+      <div className="container relative z-10 mx-auto px-6 md:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto rounded-3xl p-6 sm:p-8 md:p-10 relative overflow-hidden bg-gradient-to-br from-emerald-50/70 to-slate-50 border border-emerald-200/90 shadow-sm"
+        >
+          {/* Background glow */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-200/30 rounded-full blur-[90px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
           
-          <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-10 relative z-10">
             <div className="flex-1">
-              <h2 className="text-3xl md:text-4xl font-serif text-brand-green-deep mb-6 leading-tight">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-800 mb-3">Colabora con nosotros</p>
+              <h2 className="text-3xl md:text-4xl font-light text-slate-950 mb-3 leading-tight">
                 {t.partners.title}
               </h2>
-              <p className="text-brand-green-mid/70 text-lg leading-relaxed mb-0 font-medium">
+              <p className="text-slate-600 text-base leading-relaxed font-normal">
                 {t.partners.subtitle}
               </p>
             </div>
             
-            <div>
-              <button className="px-8 py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold hover:bg-brand-green-mid transition-all shadow-xl shadow-brand-green-deep/10 flex items-center gap-3 whitespace-nowrap active:scale-95">
-                <Mail size={20} /> {t.partners.cta}
+            <div className="shrink-0">
+              <button className="btn-neon-fill !py-4 !px-8 !text-sm !font-bold !rounded-2xl whitespace-nowrap shadow-md">
+                <Mail size={18} /> {t.partners.cta}
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

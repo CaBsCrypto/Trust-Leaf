@@ -5,6 +5,7 @@
   --font-sans: "Outfit", "Instrument Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
   
+  /* Original brand tokens — used by internal portals (do NOT remove) */
   --color-brand-green-deep: #0e2a22;
   --color-brand-green-mid: #1d4e3f;
   --color-brand-green-light: #2e7a63;
@@ -15,6 +16,24 @@
   
   --shadow-premium: 0 10px 30px -10px rgba(14, 42, 34, 0.15);
   --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.2);
+
+  /* ── Landing Theme tokens (Clean Light Theme) ─────────────── */
+  --color-void: #ffffff;
+  --color-surface: #f8fafc;
+  --color-elevated: #ffffff;
+  --color-neon: #059669;
+  --color-neon-dim: rgba(5, 150, 105, 0.08);
+  --color-neon-subtle: rgba(5, 150, 105, 0.04);
+  --color-neon-border: rgba(5, 150, 105, 0.20);
+  --color-neon-border-hover: rgba(5, 150, 105, 0.50);
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+
+  --shadow-neon-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(5, 150, 105, 0.08);
+  --shadow-neon-md: 0 4px 14px -2px rgba(5, 150, 105, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  --shadow-neon-lg: 0 12px 28px -6px rgba(5, 150, 105, 0.15), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  --shadow-neon-xl: 0 20px 40px -10px rgba(5, 150, 105, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
@@ -24,7 +43,7 @@
   }
 
   body {
-    @apply bg-brand-ivory text-brand-green-deep font-sans;
+    @apply bg-white text-slate-900 font-sans;
     overflow-x: hidden;
   }
 
@@ -33,17 +52,23 @@
   }
 }
 
-/* Glassmorphism premium panels */
+/* ── Landing Wrapper ───────────────────────────────────────── */
+.landing-dark, .landing-light {
+  background-color: #ffffff;
+  color: var(--color-text-primary);
+}
+
+/* ── Glassmorphism panels (used by portals & light components) */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 8px 32px 0 rgba(14, 42, 34, 0.04);
 }
 
 .glass-panel-dark {
-  background: rgba(14, 42, 34, 0.85);
+  background: rgba(14, 42, 34, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -51,34 +76,187 @@
 }
 
 .glass-morphism {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-/* Glow accents */
+/* ── Landing Glassmorphism (Light & Crisp) ──────────────────── */
+.glass-neon {
+  background: #ffffff;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-neon:hover {
+  background: #ffffff;
+  border-color: var(--color-neon-border-hover);
+  box-shadow: var(--shadow-neon-md);
+  transform: translateY(-2px);
+}
+
+.glass-neon-strong {
+  background: #ffffff;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(5, 150, 105, 0.22);
+  box-shadow: 0 8px 24px -4px rgba(5, 150, 105, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-neon-strong:hover {
+  border-color: rgba(5, 150, 105, 0.45);
+  box-shadow: var(--shadow-neon-lg);
+}
+
+/* ── Neon accents ──────────────────────────────────────────── */
+.neon-text {
+  color: var(--color-neon);
+}
+
+.neon-border {
+  border: 1px solid var(--color-neon-border);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.neon-border:hover {
+  border-color: var(--color-neon-border-hover);
+  box-shadow: var(--shadow-neon-sm);
+}
+
+.neon-glow {
+  box-shadow: var(--shadow-neon-md);
+}
+
+.neon-glow-strong {
+  box-shadow: var(--shadow-neon-lg);
+}
+
+/* Neon line separator */
+.neon-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(5, 150, 105, 0.20), transparent);
+}
+
+.neon-line-strong {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(5, 150, 105, 0.40), transparent);
+}
+
+/* ── Button styles for landing ─────────────────────────────── */
+.btn-neon-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-neon);
+  border: 1.5px solid var(--color-neon);
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.btn-neon-outline:hover {
+  background: rgba(5, 150, 105, 0.06);
+  border-color: #047857;
+  color: #047857;
+  box-shadow: var(--shadow-neon-sm);
+  transform: translateY(-1px);
+}
+
+.btn-neon-outline:active {
+  transform: scale(0.98);
+}
+
+.btn-neon-fill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border: 1px solid #047857;
+  border-radius: 9999px;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.btn-neon-fill:hover {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-neon-fill:active {
+  transform: scale(0.98);
+}
+
+/* ── Glow accents (original — used by portals) ─────────────── */
 .glow-accent {
-  box-shadow: 0 0 15px rgba(46, 122, 99, 0.25);
+  box-shadow: 0 0 15px rgba(46, 122, 99, 0.15);
   transition: all 0.3s ease;
 }
 
 .glow-accent:hover {
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
 }
 
-/* Custom transitions and scrollbar */
+/* ── Light radial gradient background ───────────────────────── */
+.bg-radial-neon {
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(5, 150, 105, 0.07) 0%, transparent 70%);
+}
+
+.bg-radial-neon-bottom {
+  background: radial-gradient(ellipse 70% 45% at 50% 100%, rgba(5, 150, 105, 0.06) 0%, transparent 70%);
+}
+
+.bg-radial-neon-center {
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(5, 150, 105, 0.05) 0%, transparent 70%);
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f8fafc;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(46, 122, 99, 0.3);
+  background: rgba(5, 150, 105, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(46, 122, 99, 0.5);
+  background: rgba(5, 150, 105, 0.45);
 }
 
+/* ── Animations ────────────────────────────────────────────── */
+@keyframes pulse-neon {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-pulse-neon {
+  animation: pulse-neon 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

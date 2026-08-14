@@ -1,51 +1,73 @@
-import { Leaf, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { Leaf, Instagram, Twitter, Linkedin, Github } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Footer() {
   const { t } = useLanguage();
   
   return (
-    <footer className="py-20 bg-brand-ivory border-t border-brand-green-deep/5 overflow-hidden">
-      <div className="container mx-auto px-6 md:px-12">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-20">
+    <footer className="relative pt-12 pb-8 overflow-hidden bg-slate-50 border-t border-slate-200">
+      <div className="container relative z-10 mx-auto px-6 md:px-12">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-10 mb-8">
           <div className="max-w-xs">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="p-1.5 bg-brand-green-deep rounded-lg text-brand-ivory">
-                <Leaf size={20} />
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="p-1.5 rounded-xl bg-emerald-100 border border-emerald-300 shadow-2xs">
+                <Leaf size={18} className="text-emerald-700" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-brand-green-deep italic">Trust Leaf</span>
+              <span className="text-lg font-bold tracking-tight text-slate-900">
+                Trust<span className="text-emerald-600">Leaf</span>
+              </span>
             </div>
-            <p className="text-brand-green-mid/60 text-sm leading-relaxed mb-6 font-medium">
+            <p className="text-slate-600 text-sm leading-relaxed mb-6 font-normal">
               Redefiniendo el acceso y la confianza en la salud transfronteriza a través de un ecosistema premium y unificado.
             </p>
-            <div className="flex gap-4">
-              <a href="#" className="p-2 bg-brand-neutral rounded-full text-brand-green-deep hover:bg-brand-green-deep hover:text-brand-ivory transition-all"><Instagram size={18} /></a>
-              <a href="#" className="p-2 bg-brand-neutral rounded-full text-brand-green-deep hover:bg-brand-green-deep hover:text-brand-ivory transition-all"><Twitter size={18} /></a>
-              <a href="#" className="p-2 bg-brand-neutral rounded-full text-brand-green-deep hover:bg-brand-green-deep hover:text-brand-ivory transition-all"><Linkedin size={18} /></a>
+            <div className="flex gap-3">
+              {[
+                { icon: <Instagram size={16} />, href: '#' },
+                { icon: <Twitter size={16} />, href: '#' },
+                { icon: <Linkedin size={16} />, href: '#' },
+                { icon: <Github size={16} />, href: 'https://github.com/CaBsCrypto/Trust-Leaf' },
+              ].map((social, i) => (
+                <a
+                  key={i}
+                  href={social.href}
+                  className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 hover:shadow-xs transition-all duration-200"
+                >
+                  {social.icon}
+                </a>
+              ))}
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-10 md:gap-12">
             <div>
-              <h5 className="font-bold text-brand-green-deep mb-6 uppercase text-xs tracking-widest">Network</h5>
-              <ul className="space-y-4 text-sm text-brand-green-mid/70 font-medium">
-                <li><a href="#" className="hover:text-brand-green-deep transition-colors">{t.footer.investors}</a></li>
-                <li><a href="#" className="hover:text-brand-green-deep transition-colors">{t.footer.partners}</a></li>
-                <li><a href="#" className="hover:text-brand-green-deep transition-colors">Strategic Advisors</a></li>
+              <h5 className="font-bold text-slate-900 mb-4 uppercase text-[11px] tracking-[0.18em]">Network</h5>
+              <ul className="space-y-2.5 text-sm text-slate-600 font-normal">
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">{t.footer.investors}</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">{t.footer.partners}</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">Strategic Advisors</a></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold text-brand-green-deep mb-6 uppercase text-xs tracking-widest">Compromiso</h5>
-              <ul className="space-y-4 text-sm text-brand-green-mid/70 font-medium">
-                <li><a href="#" className="hover:text-brand-green-deep transition-colors">{t.footer.privacy}</a></li>
-                <li><a href="#" className="hover:text-brand-green-deep transition-colors">{t.footer.legal}</a></li>
-                <li><a href="#" className="hover:text-brand-green-deep transition-colors">Compliance Hub</a></li>
+              <h5 className="font-bold text-slate-900 mb-4 uppercase text-[11px] tracking-[0.18em]">Compromiso</h5>
+              <ul className="space-y-2.5 text-sm text-slate-600 font-normal">
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">{t.footer.privacy}</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">{t.footer.legal}</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">Compliance Hub</a></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-bold text-slate-900 mb-4 uppercase text-[11px] tracking-[0.18em]">Tech</h5>
+              <ul className="space-y-2.5 text-sm text-slate-600 font-normal">
+                <li><a href="https://stellar.org" target="_blank" rel="noopener" className="hover:text-emerald-600 transition-colors duration-200">Stellar Network</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">Soroban Contracts</a></li>
+                <li><a href="#" className="hover:text-emerald-600 transition-colors duration-200">Documentation</a></li>
               </ul>
             </div>
           </div>
         </div>
         
-        <div className="pt-12 border-t border-brand-green-deep/5 text-center text-[10px] text-brand-green-mid/40 font-bold uppercase tracking-[0.2em] md:tracking-[0.3em]">
+        <div className="h-px bg-slate-200 mb-8" />
+        <div className="text-center text-xs text-slate-500 font-semibold uppercase tracking-[0.15em]">
           <p>{t.footer.rights}</p>
         </div>
       </div>

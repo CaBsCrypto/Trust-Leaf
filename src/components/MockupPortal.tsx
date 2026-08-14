@@ -6602,31 +6602,18 @@ export default function MockupPortal({
 
 
 
-  const prepareRecordingDemo = () => {
-
+  const prepareRecordingDemo = async () => {
     const consultationBlock: DoctorAgendaBlock = {
-
       id: `agenda-recording-${Date.now()}`,
-
       date: formatRelativeAgendaDate(currentNow, 0),
-
       time: '10:30',
-
       status: 'Reservado',
-
       patient: 'Paciente de prueba',
-
       reason: 'Consulta preparada: revisar ficha privada y emitir receta verificable',
-
     };
-
     const prescriptionId = Number(DEMO_PRESCRIPTION_ID);
-
-    const medicalPermission = createPrivacyPermission('medical-consultation', false);
-
-    const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
-
-
+    const medicalPermission = await createPrivacyPermission('medical-consultation', false);
+    const dispensaryPermission = await createPrivacyPermission('dispensary-prescription', false);
 
     connectDemoPatientWallet();
 

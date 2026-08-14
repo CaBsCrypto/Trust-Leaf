@@ -318,6 +318,7 @@ export interface SplitDepositOptions {
   totalAmountStroops: bigint;
   fundPercent: number;
   slippageBps?: number;
+  invest?: boolean;
   network?: 'testnet' | 'mainnet';
 }
 
@@ -350,6 +351,7 @@ export async function executeSplitDeposit(
       caller: opts.userAddress,
       amountStroops: userAmount,
       slippageBps: opts.slippageBps,
+      invest: opts.invest,
       network: opts.network,
     });
     const userResult = await signAndSubmitDefindex({

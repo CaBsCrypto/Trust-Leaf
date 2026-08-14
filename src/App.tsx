@@ -4,6 +4,11 @@ import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethos
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
+import Process from './components/Process';
+import Metrics from './components/Metrics';
+import FAQ from './components/FAQ';
+import PartnerCTA from './components/PartnerCTA';
+import Ecosystem from './components/Ecosystem';
 import type { PortalView } from './components/MockupPortal';
 import {
   trustDataStore,
@@ -997,77 +1002,86 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen selection:bg-brand-gold/30 selection:text-brand-green-deep relative overflow-hidden bg-brand-ivory">
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-emerald-100 selection:text-emerald-900 relative overflow-hidden">
       <Navbar 
         onPortalClick={() => navigate('/paciente')} 
         showTechnicalDetails={showTechnicalDetails}
         onToggleTechnicalDetails={() => setShowTechnicalDetails(prev => !prev)}
       />
       <main>
-        <Hero onStartClick={() => navigate('/paciente')} />
+        <Hero onStartClick={() => navigate('/paciente')} onNavigate={navigate} />
+        <Ecosystem />
         <NetworkPreview onNavigate={navigate} />
+        <Process />
+        <Metrics />
         <ProfessionalAccess onNavigate={navigate} />
         
-        <section className="px-6 py-14 md:px-12 md:py-18">
-           <div className="mx-auto grid max-w-6xl grid-cols-1 overflow-hidden rounded-3xl border border-brand-green-deep/10 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="p-8 md:p-12">
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Siguiente paso</p>
-                <motion.h2
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="mt-3 text-4xl font-serif leading-tight text-brand-green-deep md:text-6xl"
+        {/* Closure CTA */}
+        <section className="relative px-6 py-10 md:px-12 md:py-16 overflow-hidden bg-white">
+          <div className="absolute inset-0 bg-white" />
+          <div className="absolute inset-0 bg-radial-neon" />
+          <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 overflow-hidden rounded-3xl bg-white border border-emerald-200/90 shadow-md lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="p-6 sm:p-8 md:p-10">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-800">Siguiente paso</p>
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="mt-2.5 text-3xl sm:text-4xl font-light leading-tight text-slate-950 md:text-5xl"
+              >
+                 {t.closure.title}
+              </motion.h2>
+              <p className="mt-3.5 max-w-xl text-sm font-normal leading-relaxed text-slate-600 md:text-base">
+                 {t.closure.desc}
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                   onClick={() => navigate('/paciente')}
+                   className="btn-neon-fill !py-3.5 !px-7 !text-sm !font-bold !rounded-2xl shadow-md"
                 >
-                   {t.closure.title}
-                </motion.h2>
-                <p className="mt-5 max-w-xl text-sm font-medium leading-relaxed text-brand-green-mid/70 md:text-base">
-                   {t.closure.desc}
-                </p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <button
-                     onClick={() => navigate('/paciente')}
-                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-8 py-4 text-base font-bold text-brand-ivory shadow-xl transition-all hover:bg-brand-green-mid active:scale-95"
-                  >
-                    {t.closure.cta}
-                    <ArrowRight size={18} />
-                  </button>
-                  <button
-                     onClick={() => navigate('/medico')}
-                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-green-deep/10 bg-brand-neutral px-8 py-4 text-base font-bold text-brand-green-deep transition-all hover:border-brand-gold/50"
-                  >
-                    Soy profesional
-                  </button>
-                </div>
+                  {t.closure.cta}
+                  <ArrowRight size={16} />
+                </button>
+                <button
+                   onClick={() => navigate('/medico')}
+                   className="btn-neon-outline !py-3.5 !px-7 !text-sm !rounded-2xl"
+                >
+                  Soy profesional
+                </button>
               </div>
+            </div>
 
-              <div className="bg-brand-green-deep p-6 text-brand-ivory md:p-8">
-                <div className="grid h-full grid-cols-1 gap-3">
-                  {[
-                    ['Paciente', 'Crear expediente privado y buscar médico validado.', <UserRound size={18} />],
-                    ['Médico', 'Solicitar alta, configurar agenda y emitir receta.', <Stethoscope size={18} />],
-                    ['Dispensario', 'Postular inventario y registrar entregas trazables.', <ShoppingBag size={18} />],
-                  ].map(([title, desc, icon]) => (
-                    <button
-                      key={title as string}
-                      onClick={() => navigate(title === 'Paciente' ? '/paciente' : title === 'Médico' ? '/medico' : '/dispensario')}
-                      className="group flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-gold text-brand-green-deep">
-                        {icon}
-                      </span>
-                      <span>
-                        <span className="block text-sm font-bold">{title}</span>
-                        <span className="mt-1 block text-xs leading-relaxed text-brand-ivory/62">{desc}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
+            <div className="bg-slate-50 p-6 md:p-8 border-t lg:border-t-0 lg:border-l border-slate-200/90 flex flex-col justify-center">
+              <div className="grid h-full grid-cols-1 gap-3">
+                {[
+                  ['Paciente', 'Crear expediente privado y buscar médico validado.', <UserRound size={18} />],
+                  ['Médico', 'Solicitar alta, configurar agenda y emitir receta.', <Stethoscope size={18} />],
+                  ['Dispensario', 'Postular inventario y registrar entregas trazables.', <ShoppingBag size={18} />],
+                ].map(([title, desc, icon]) => (
+                  <button
+                    key={title as string}
+                    onClick={() => navigate(title === 'Paciente' ? '/paciente' : title === 'Médico' ? '/medico' : '/dispensario')}
+                    className="group flex items-start gap-4 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-300 hover:shadow-xs p-4 text-left transition-all duration-200 cursor-pointer"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-200">
+                      {icon}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-bold text-slate-900">{title}</span>
+                      <span className="mt-1 block text-xs leading-relaxed text-slate-600">{desc}</span>
+                    </span>
+                  </button>
+                ))}
               </div>
-           </div>
+            </div>
+          </div>
         </section>
+
+        <FAQ />
+        <PartnerCTA />
       </main>
       <Footer />
-      </div>
+    </div>
   );
 }
 
@@ -1129,42 +1143,36 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
   ];
 
   return (
-    <section id="red" className="relative overflow-hidden bg-white py-12 md:py-16">
-      <div aria-hidden="true" className="absolute inset-0">
-        <img
-          src="https://images.pexels.com/photos/7667731/pexels-photo-7667731.jpeg?auto=compress&cs=tinysrgb&w=1800"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.09]"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-white/88 to-brand-neutral/70" />
-      </div>
-      <div className="container relative mx-auto px-6 md:px-12">
+    <section id="red" className="relative overflow-hidden py-12 md:py-16 bg-white">
+      <div className="absolute inset-0 bg-white" />
+      <div className="absolute inset-0 bg-radial-neon-center" />
+
+      <div className="container relative z-10 mx-auto px-6 md:px-12">
         <div className="mb-8 max-w-3xl">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Red Trust Leaf</p>
-          <h2 className="mt-2 text-3xl font-serif text-brand-green-deep md:text-5xl">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-800 mb-2">Red Trust Leaf</p>
+          <h2 className="text-3xl font-light text-slate-950 md:text-4xl">
             Privacidad clínica, receta verificable y medicina trazable.
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-brand-green-mid/70 md:text-base">
+          <p className="mt-3 text-sm leading-relaxed text-slate-600 md:text-base font-normal">
             La plataforma separa lo que ve cada actor: el paciente controla sus datos, el médico valida el tratamiento y el dispensario confirma solo lo necesario para entregar.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {flowSteps.map((item) => (
             <button
               key={item.title}
               onClick={() => setSelectedDetail(item)}
-              className="group rounded-2xl border border-brand-green-deep/10 bg-white/82 p-5 text-left shadow-sm backdrop-blur-sm transition-colors hover:border-brand-gold/50 hover:bg-white"
+              className="group bg-white border border-slate-200/90 hover:border-emerald-300 hover:shadow-md rounded-2xl p-6 text-left cursor-pointer transition-all duration-300 shadow-2xs"
             >
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green-deep text-brand-gold">
+              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
                 {item.icon}
               </div>
-              <h3 className="text-xl font-bold text-brand-green-deep">{item.title}</h3>
-              <p className="mt-2 min-h-[64px] text-sm leading-relaxed text-brand-green-mid/70">{item.desc}</p>
-              <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-green-deep group-hover:text-brand-gold">
+              <h3 className="text-xl font-bold text-slate-900">{item.title}</h3>
+              <p className="mt-2 min-h-[64px] text-sm leading-relaxed text-slate-600 font-normal">{item.desc}</p>
+              <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-emerald-600 group-hover:text-emerald-700 transition-colors">
                 {item.action}
-                <ArrowRight size={15} />
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
               </span>
             </button>
           ))}
@@ -1176,41 +1184,41 @@ function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md"
           onClick={() => setSelectedDetail(null)}
         >
           <motion.div
             initial={{ opacity: 0, y: 18, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            className="w-full max-w-xl overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/10 bg-brand-neutral/60 p-6">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 p-6">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">{selectedDetail.eyebrow}</p>
-                <h3 className="mt-2 text-3xl font-serif text-brand-green-deep">{selectedDetail.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-brand-green-mid/70">{selectedDetail.desc}</p>
-                <p className="mt-4 rounded-2xl border border-brand-gold/20 bg-white/70 p-4 text-sm font-bold leading-relaxed text-brand-green-deep">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-800">{selectedDetail.eyebrow}</p>
+                <h3 className="mt-2 text-3xl font-light text-slate-950">{selectedDetail.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 font-normal">{selectedDetail.desc}</p>
+                <p className="mt-4 rounded-2xl bg-white border border-slate-200 p-4 text-sm font-semibold leading-relaxed text-slate-900 shadow-2xs">
                   {selectedDetail.invite}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedDetail(null)}
-                className="rounded-full p-2 text-brand-green-mid hover:bg-white"
+                className="rounded-full p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-3 p-6">
               {selectedDetail.points.map((point) => (
-                <div key={point} className="flex gap-3 rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/50 p-4">
-                  <ShieldCheck size={17} className="mt-0.5 shrink-0 text-brand-gold" />
-                  <p className="text-sm leading-relaxed text-brand-green-deep">{point}</p>
+                <div key={point} className="flex gap-3 rounded-2xl bg-slate-50 border border-slate-200/80 p-4">
+                  <ShieldCheck size={18} className="mt-0.5 shrink-0 text-emerald-600" />
+                  <p className="text-sm leading-relaxed text-slate-700 font-normal">{point}</p>
                 </div>
               ))}
               <button
                 onClick={() => onNavigate(selectedDetail.path)}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory"
+                className="mt-3 btn-neon-fill w-full !py-4 !text-sm !font-bold !rounded-2xl shadow-md"
               >
                 {selectedDetail.action}
                 <ArrowRight size={16} />
@@ -1463,13 +1471,13 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
   ];
 
   return (
-    <section id="profesionales" className="relative z-10 px-6 py-10 md:px-12">
-      <div className="mx-auto max-w-6xl rounded-2xl border border-brand-green-deep/10 bg-white/86 p-5 shadow-sm backdrop-blur-md md:p-6">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.7fr] lg:items-start">
+    <section id="profesionales" className="relative z-10 px-6 py-10 md:px-12 md:py-14 bg-white">
+      <div className="relative z-10 mx-auto max-w-6xl rounded-3xl p-5 md:p-7 bg-slate-50 border border-slate-200/90 shadow-sm">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.8fr_1.7fr] lg:items-start">
           <div className="max-w-md">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Accesos separados</p>
-            <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Cada rol tiene su propio camino.</h3>
-            <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-800">Accesos separados</p>
+            <h3 className="mt-2 text-2xl font-light text-slate-950">Cada rol tiene su propio camino.</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 font-normal">
               Cada actor entra por su propio flujo y ve solo sus herramientas.
             </p>
           </div>
@@ -1478,16 +1486,16 @@ function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void
               <button
                 key={entry.path}
                 onClick={() => onNavigate(entry.path)}
-                className="group flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
+                className="group flex min-h-[150px] flex-col items-start justify-between rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-300 hover:shadow-sm p-4 text-left cursor-pointer transition-all duration-200"
               >
                 <span>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-200">
                     {entry.icon}
                   </span>
-                  <span className="mt-4 block text-base font-bold text-brand-green-deep">{entry.label}</span>
-                  <span className="mt-2 block text-xs leading-relaxed text-brand-green-mid/65">{entry.desc}</span>
+                  <span className="mt-4 block text-base font-bold text-slate-900">{entry.label}</span>
+                  <span className="mt-2 block text-xs leading-relaxed text-slate-600 font-normal">{entry.desc}</span>
                 </span>
-                <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-brand-green-deep group-hover:text-brand-gold">
+                <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-emerald-600 group-hover:text-emerald-700 transition-colors">
                   Entrar
                   <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
                 </span>
