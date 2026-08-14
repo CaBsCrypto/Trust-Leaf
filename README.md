@@ -1,69 +1,208 @@
-# Trust Leaf
+# 🌿 Trust Leaf
+**Secure & Private Infrastructure for Regulated Prescriptions & Medical Cannabis**
 
-Trust Leaf is a Stellar/Soroban MVP for medical cannabis prescriptions,
-dispensary validation and partial-dispense traceability. The app separates
-patient, doctor, dispensary and admin workflows so clinical data stays private
-while authorization, prescription status and dispense records remain verifiable
-on Stellar Testnet.
+[![Stellar Network](https://img.shields.io/badge/Blockchain-Stellar%20Soroban-1b4d3e?style=flat-square&logo=stellar&logoColor=fff)](https://stellar.org) [![Vite React](https://img.shields.io/badge/Frontend-Vite%20%2B%20React%2018-c5a880?style=flat-square&logo=vite&logoColor=fff)](https://vitejs.dev) [![Firebase](https://img.shields.io/badge/Backend-Firebase-1b4d3e?style=flat-square&logo=firebase&logoColor=fff)](https://firebase.google.com) [![WebAuthn Passkeys](https://img.shields.io/badge/Security-Passkeys-c5a880?style=flat-square&logo=webauthn&logoColor=fff)](https://webauthn.guide)
 
-Production:
-- https://www.trustleaf.org
+![Trust Leaf Banner](docs/images/trust_leaf_banner.png)
 
-MVP status route:
-- `/mvp`
+> 🛠️ **En Construcción Activa (WIP):** El portal operacional y el piloto interactivo se encuentran desplegados en el dominio oficial **[https://www.trustleaf.org](https://www.trustleaf.org)** como prototipo técnico y MVP en desarrollo. Puedes auditar el estado del entorno y la preparación de los contratos en tiempo real en la ruta de diagnóstico: **[/mvp](https://www.trustleaf.org/mvp)**.
 
-## Current MVP State
+---
 
-- Network: Stellar Testnet.
-- Contracts: DoctorRegistry, DispensaryRegistry, Prescription and DispenseRecord.
-- Frontend: Vite + React.
-- API runtime: Vercel Functions under `api/`.
-- Admin auth: Firebase Auth + Firestore allowlist, with explicit demo fallback.
-- Patient wallet UX: Passkey, Freighter or demo Testnet identity.
-- Pilot persistence: Firebase first for actor applications; local demo fallback
-  remains available when no Firebase admin session exists.
+## 🏗️ 1. Arquitectura Híbrida de Privacidad (Zero-Knowledge Compliance)
 
-## Run Locally
+**Trust Leaf** resuelve de forma elegante el dilema de la privacidad médica y la trazabilidad de estupefacientes. Diseñado bajo un modelo híbrido, **garantizamos que ningún diagnóstico o dato sensible de salud (Ley 19.628) sea registrado en la blockchain**, delegando a Stellar únicamente la gobernanza de accesos, saldos de consumo autorizados, y hashes criptográficos inmutables.
 
-Prerequisites:
-- Node.js
-- Stellar CLI if working on Soroban contracts
+```mermaid
+graph TD
+    classDef primary fill:#1b4d3e,stroke:#c5a880,color:#fff,stroke-width:2px;
+    classDef secondary fill:#fbf7ef,stroke:#1b4d3e,color:#1b4d3e,stroke-width:2px;
+    classDef highlight fill:#c5a880,stroke:#1b4d3e,color:#fff,stroke-width:2px;
 
-Commands:
+    M[🩺 Portal Médico]:::primary -->|1. Emite Receta con Metadata Hash| API[🌐 Backend API / Vercel]:::secondary
+    P[👤 Smart Wallet Paciente]:::primary -->|2. Firma con Passkeys / Custodia Receta| API
+    D[💊 PoS Dispensario]:::primary -->|3. Valida Receta y Registra Retiro| API
+    
+    API -->|4. Registra Estado Inmutable| SC[⛓️ Stellar Soroban Ledger]:::highlight
+    API -.->|5. Resguarda Diagnóstico Cifrado| FS[(🔥 Firebase Firestore)]:::secondary
+```
 
+---
+
+## 🩺 2. Localización Regulatoria de Chile (Minsal / ISP)
+
+Trust Leaf está diseñado y validado específicamente bajo el marco legal y sanitario chileno, otorgando protección penal inexpugnable al paciente crónico y trazabilidad operativa al dispensario magistral:
+
+* **Ley 21.575 y Ley 20.000 (Art. 8):** La receta médica extendida por un médico cirujano tratante es causa justificada y suficiente para excluir de sanción penal el cultivo y posesión de cannabis medicinal. Al registrar la receta e incorporar los metadatos de autocultivo (plantas, dirección, comuna) on-chain con estampa de tiempo inalterable, blindamos la defensa jurídica del paciente ante fiscalías.
+* **Superintendencia de Salud (SIS):** Validación de identidad del profesional mandatoria mediante su **RUT** y su **Número de Registro SIS** de prestadores individuales.
+* **Preparación de Recetario Magistral (ISP & Minsal):** Herramienta médica guiada para formular formatos farmacéuticos (Aceites, Flores vaporizadas, Cremas, Cápsulas) y concentración precisa de fitocannabinoides (THC/CBD).
+* **Decreto 404 / 466:** Integración en el punto de venta del dispensario de un **Libro de Control de Estupefacientes digital** que traza el lote de laboratorio (QC), médico emisor, paciente receptor y saldos on-chain deducidos en tiempo real.
+
+---
+
+## ⛓️ 3. Ciclo de Vida del Token Soroban en Stellar
+
+El motor Web3 de la plataforma corre sobre **Stellar Soroban (Rust Contracts)**. Cada receta es tratada como un activo digital dinámico y condicional (similar a un NFT con cupo físico):
+
+```mermaid
+stateDiagram-v2
+    [*] --> Registrada: El Médico firma la emisión en Stellar
+    Registrada --> Activa: Se acuña el NFT (Allowance en Gramos)
+    Activa --> Bloqueada: Dispensario aplica Lock-up de Custodia por 90 días (Clawback habilitado)
+    Bloqueada --> ConsumoParcial: Paciente retira una fracción de gramos (Saldo deducido en Soroban)
+    ConsumoParcial --> Bloqueada: Continúa custodia
+    ConsumoParcial --> Quemada: Saldo llega a 0 gramos o expira el plazo
+    Quemada --> [*]: El backend ejecuta Clawback y destruye físicamente el NFT en Horizon
+```
+
+---
+
+## 🔐 4. Criptografía de Vanguardia: Passkeys (Llaves de Paso)
+
+Olvídate de las contraseñas débiles y de las complejas frases semilla de 12 palabras. Trust Leaf implementa **Passkeys (WebAuthn)** nativas de Stellar:
+
+* **Desbloqueo Biométrico:** Los usuarios firman transacciones descentralizadas utilizando su huella dactilar (TouchID) o rostro (FaceID).
+* **Llave Privada en Hardware:** La clave privada del usuario se genera y resguarda en el Enclave Seguro de Hardware de su dispositivo móvil, garantizando que Trust Leaf nunca posea custodia sobre sus fondos o activos médicos.
+* **Adopción Masiva:** Flujo híbrido Web2 a Web3 vinculando la cuenta Stellar a la cuenta de Google mediante autenticación federada en Firebase Firestore.
+
+---
+
+## 🎭 5. Flujos Detallados por Actor (Actor Workflows)
+
+Para una comprensión profunda de la experiencia operativa, a continuación se detallan las secuencias de interacción para cada actor del ecosistema:
+
+### A. Flujo del Paciente (Patient Onboarding & Dispense UX)
+Muestra cómo el paciente crea su wallet con biometría sin contraseñas, asiste a consulta y realiza retiros seguros con códigos QR temporales:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Paciente as 👤 Paciente
+    participant App as 📱 Smart Wallet (Passkey UI)
+    participant Server as 🌐 API Backend
+    participant Blockchain as ⛓️ Stellar Soroban
+
+    Paciente->>App: 1. Desbloquea biometría (FaceID / TouchID)
+    App->>Blockchain: 2. Crea/Resuelve wallet no custodial en Testnet (Llave en Hardware)
+    Paciente->>App: 3. Genera y comparte QR de consulta temporal con el Médico
+    Paciente->>App: 4. Recibe la receta emitida como NFT en su wallet
+    App->>Blockchain: 5. Consulta saldo de gramos y vigencia on-chain
+    Paciente->>App: 6. Presenta QR temporal de receta en el Dispensario
+    App->>Blockchain: 7. Recibe confirmación de dispensado y nuevo saldo on-chain
+```
+
+### B. Flujo del Médico (Doctor Registration & Issue UX)
+Muestra cómo el profesional acredita su licencia ante la Superintendencia de Salud (SIS), accede de forma consentida a la ficha del paciente y firma digitalmente la receta:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Medico as 🩺 Médico Cirujano
+    participant Portal as 🖥️ Portal Clínico
+    participant Registry as 🛡️ DoctorRegistry (Soroban)
+    participant SC as ⛓️ PrescriptionContract (Soroban)
+
+    Medico->>Portal: 1. Registro con RUT y Registro SIS (Superintendencia)
+    Note over Portal: Admin valida credencial SIS<br/>en Superintendencia de Salud
+    Portal->>Registry: 2. Transacción add_doctor (Aprobado on-chain)
+    Medico->>Portal: 3. Escanea QR del Paciente (Acceso temporal consentido)
+    Medico->>Portal: 4. Formula tratamiento magistral y geolocaliza Autocultivo (Ley 21.575)
+    Note over Portal: Compila SHA-256 (Hash Clínico)
+    Portal->>SC: 5. Firma y acuña la receta (Transacción Soroban)
+    SC-->>Portal: 6. Emisión exitosa de Receta NFT en Stellar Testnet
+```
+
+### C. Flujo del Dispensario (Dispensary Validation & PoS UX)
+Muestra cómo el farmacéutico valida la receta contra el ledger descentralizado, dispensa las dosis y descuenta el saldo on-chain, ejecutando la quema física del NFT si el saldo llega a cero:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dispensario as 💊 Dispensario (Farmacia)
+    participant PoS as 🛒 Punto de Venta (PoS)
+    participant SC as ⛓️ PrescriptionContract (Soroban)
+    participant Record as 📜 DispenseRecord (Soroban)
+
+    Dispensario->>PoS: 1. Registro con Autorización Sanitaria ISP
+    Dispensario->>PoS: 2. Escanea QR de receta del Paciente
+    PoS->>SC: 3. Consulta vigencia y saldo disponible en gramos
+    SC-->>PoS: 4. Confirma receta aprobada y saldo vigente
+    Dispensario->>PoS: 5. Selecciona Lote de Laboratorio (QC) y cantidad a entregar
+    PoS->>Record: 6. Invoca dispense_prescription (Deducción on-chain)
+    Note over Record: Resta saldo en Soroban. Si llega a 0g, ejecuta Clawback y quema el NFT
+    Record-->>PoS: 7. Entrega autorizada y registrada en Libro digital de Estupefacientes
+```
+
+---
+
+## 🚀 6. Visión de Mercado & Escabilidad Global
+
+Trust Leaf está diseñado como una infraestructura de trazabilidad y cumplimiento modular concebida para el mercado regulado global. Chile es nuestro punto de inicio y sandbox de validación, con una arquitectura lista para escalar a nivel mundial:
+
+```mermaid
+graph LR
+    classDef active fill:#1b4d3e,stroke:#c5a880,color:#fff,stroke-width:2px;
+    classDef pipeline fill:#fbf7ef,stroke:#1b4d3e,color:#1b4d3e,stroke-width:2px;
+    
+    F1[🇨🇱 Sandbox de Validación: Chile]:::active --> F2[🌎 Adaptabilidad Modular de Jurisdicción]:::pipeline
+    F2 --> F3[🌐 Escalamiento a Mercados Globales Regulados]:::pipeline
+```
+
+* **🇨🇱 Sandbox de Validación (Chile):** Nuestro mercado inicial de prueba de concepto. Validamos el cumplimiento clínico estricto (SIS), el control de preparados magistrales del recetario farmacéutico y la inmutabilidad jurídica de autocultivo (Ley 21.575), operando bajo condiciones reales.
+* **🌎 Arquitectura Modular Multi-Jurisdicción:** La infraestructura de Trust Leaf en Stellar Soroban es agnóstica a la geografía. Los contratos inteligentes de emisión y trazabilidad de recetas se adaptan modularmente a los parámetros específicos de cualquier agencia de medicamentos a nivel global.
+* **🌐 Potencial de Escalamiento Global:** La industria de medicamentos regulados y el cannabis medicinal representa una oportunidad de miles de millones de dólares. Con esta visión global, **actualmente sostenemos conversaciones y pilotos preliminares** con clínicas médicas y redes de dispensarios internacionales interesados en implementar nuestra infraestructura descentralizada de Passkeys para eliminar el fraude de recetas y agilizar la trazabilidad del paciente.
+
+## 🌱 7. Próximos Pasos & Ecosistema de Negocios (Futuro)
+
+Trust Leaf está diseñado para convertirse en el punto de encuentro de toda la cadena de valor de la industria verde, conectando no solo la salud regulada, sino también a la vibrante comunidad de emprendimientos del cannabis y el cáñamo:
+
+* **🟢 Hub de Cannabis & Salud:** Integrar en el futuro a clínicas médicas alternativas, marcas especializadas y laboratorios independientes para crear una red de bienestar donde el paciente tenga el control de su salud.
+* **🌾 Cáñamo Industrial & Triple Impacto:** Utilizar la trazabilidad inmutable de Stellar para certificar el origen ecológico de productos derivados del cáñamo (como textiles, eco-materiales y empaques sustentables), facilitando certificaciones verdes y comercio transparente.
+* **🤝 Comunidad & Red de Emprendedores:** Habilitar un canal digital que conecte a startups, pymes y creadores locales mediante herramientas Web3 de fidelidad, programas de beneficios cruzados y financiamiento comunitario para potenciar los negocios de impacto de la red.
+
+---
+
+## 📂 8. Directorio de Documentación Clave
+
+* 📂 **[docs/vc-executive-technical-whitepaper.md](docs/vc-executive-technical-whitepaper.md):** Dossier ejecutivo y técnico de alto nivel diseñado para Venture Capitalists (VCs) e inversionistas estratégicos.
+* 📂 **[docs/chile-legal-compliance.md](docs/chile-legal-compliance.md):** Análisis exhaustivo de acoplamiento legal chileno (Leyes 21.575, 20.000, 19.628, ISP, SIS).
+* 📂 **[docs/soroban-mvp.md](docs/soroban-mvp.md):** Arquitectura Web3, despliegue de contratos inteligentes y scripts de interacción en testnet.
+* 📂 **[docs/firebase-admin-setup.md](docs/firebase-admin-setup.md):** Guía de configuración para la lista de administración clínica y gobernanza en Firebase.
+
+---
+
+## 💻 9. Guía de Inicio Rápido para Desarrolladores
+
+### Prerrequisitos
+- Node.js v18+
+- npm o pnpm
+- Stellar CLI (si planeas compilar o desplegar los Smart Contracts en `soroban/`)
+
+### 1. Clonar el repositorio e instalar dependencias:
 ```bash
 npm install
+```
+
+### 2. Configurar variables de entorno:
+Crea un archivo `.env` en la raíz guiándote de `.env.example` y configura las variables de conexión de Firebase y de Stellar Testnet (IDs de contratos e inicializadores).
+
+### 3. Levantar servidor local en modo desarrollo:
+```bash
 npm run dev
 ```
+La consola indicará la dirección de acceso local (usualmente `http://localhost:5173` o `http://localhost:3000`).
 
-Quality checks:
-
+### 4. Pruebas de calidad y type-safety:
 ```bash
+# Verificar análisis estático y sintaxis con ESLint
 npm run lint
+
+# Validar tipado y compilación limpia de TypeScript
+npx tsc --noEmit
+
+# Compilar producción bundle
 npm run build
-cd soroban
-cargo test
 ```
 
-## Important Docs
-
-- `docs/scrum-master-mvp-update.md`: current SCRUM-facing MVP status.
-- `docs/SCRUM_PLAN_MAIN.md`: product roadmap and actor flows.
-- `docs/soroban-mvp.md`: contracts, Testnet deployment and web3 architecture.
-- `docs/firebase-admin-setup.md`: admin allowlist setup.
-
-## Pilot Readiness
-
-The `/mvp` route is the operational checklist. It should show:
-
-- Stellar Testnet contracts and signers.
-- Firebase config detected for real admin auth.
-- Passkey relayer/Mercury status.
-- Missing variables that block pilot mode but not the demo fallback.
-
-## Testnet Notes
-
-All web3 work must stay on Stellar Testnet until explicitly changed. Clinical
-documents, diagnoses, exams and full medical notes must never be written
-on-chain; Soroban stores authorization, hashes, status, expiration and dispense
-events only.
+---
+*Desarrollado con dedicación por el equipo de Trust Leaf Technologies © 2026. Todos los derechos reservados.*

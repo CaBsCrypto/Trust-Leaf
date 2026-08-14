@@ -34,3 +34,23 @@ Actualmente, los retiros se guardan en el estado del frontend (`localStorage`). 
 ## 📦 Despliegue
 - El `package.json` está configurado para ejecutar `tsx server.ts` en desarrollo.
 - Para producción (Vercel/Cloud Run), asegurar que las variables de entorno de `.env.example` estén configuradas.
+
+## 🎯 Decisiones de Diseño de la Segunda Fase (Alineación /grill-me)
+
+Durante la sesión de alineación del 9 de junio de 2026, acordamos e implementamos los siguientes enfoques de diseño técnico:
+
+### 1. Sincronización Avanzada en Firestore (`pickups`) - **[COMPLETADO]**
+- **Query de Privacidad en Dispensario:** Al consultar retiros pendientes, el portal del dispensario filtra en tiempo real los documentos de la colección `pickups` en Firestore donde `dispensaryId` coincide con su ID aprobado de Firestore o su clave pública Stellar. Esto previene fugas de datos inter-sucursales.
+- **Transición de Estado:** Cuando el dispensario registra la entrega, el estado en Firestore cambia de `pending` a `completed`, coordinándose con el descuento/quema del NFT on-chain y asociando el `txHash`.
+
+### 2. Soporte Híbrido de Firma para Profesionales (Web3 + Custodial) - **[COMPLETADO]**
+- **Selector de Firma:** Médicos y dispensarios disponen de un selector interactivo para decidir entre:
+  - **Firma Delegada (Custodial):** Firma en el servidor derivando las claves desde el correo.
+  - **Firma Local (Web3):** Firma local en el cliente usando Freighter o Albedo, transmitiendo el XDR firmado al backend a través de `/api/stellar/submit`.
+
+### 3. Custodia 100% On-chain en Soroban - **[COMPLETADO]**
+- **Contrato `Prescription`:** Modificado para incluir `retained_by: Option<Address>`, con métodos `retain_prescription` y `release_prescription` validados e integrados en el backend y frontend.
+
+### 4. Receta Magistral PDF Client-Side - **[COMPLETADO]**
+- **jsPDF en el Cliente:** Generación del PDF oficial del preparado magistral directamente en el navegador del médico. El documento incluye código de barras, QR dinámico con enlace de verificación y la representación visual de la firma digital médica vinculada a la TX de Stellar.
+

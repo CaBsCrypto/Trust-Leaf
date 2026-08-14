@@ -1,0 +1,635 @@
+diff --git a/src/components/MockupPortal.tsx b/src/components/MockupPortal.tsx
+index 5736568..21afe69 100644
+--- a/src/components/MockupPortal.tsx
++++ b/src/components/MockupPortal.tsx
+@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, type ReactNode } from 'react';
+ import { useLanguage } from '../context/LanguageContext';
+ import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
+ import { shortenAddress, stellarConfig, deriveStellarPublicKey } from '../lib/stellar/config';
+-import { connectFreighterOnTestnet } from '../lib/stellar/freighter';
++import { connectFreighterOnTestnet, signXdrWithFreighter } from '../lib/stellar/freighter';
+ import {
+   addFreighterBackupSigner,
+   connectOrCreatePasskeyWallet,
+@@ -13,7 +13,7 @@ import {
+ import { passkeyService } from '../lib/stellar/passkeyService';
+ import { validateRut, formatRut, CHILEAN_REGIONS } from '../lib/stellar/chileHelpers';
+ 
+-import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
++import { collection, query, where, getDocs, addDoc, deleteDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
+ import { db, auth } from '../lib/firebase';
+ import { trustDataStore } from '../lib/trustData';
+ 
+@@ -1001,6 +1001,17 @@ export default function MockupPortal({
+ }: MockupPortalProps) {
+   const { t } = useLanguage();
+   const [activeView, setActiveView] = useState<PortalView>(initialView);
++  const [signingMethod, setSigningMethod] = useState<'managed' | 'freighter'>('managed');
++  const [freighterInstalled, setFreighterInstalled] = useState(false);
++
++  useEffect(() => {
++    const checkFreighter = () => {
++      setFreighterInstalled(Boolean((window as any).freighter || (window as any).stellarWebKit));
++    };
++    checkFreighter();
++    const interval = setInterval(checkFreighter, 2000);
++    return () => clearInterval(interval);
++  }, []);
+   const isDoctorPortal = roleLabel === 'Portal Médico';
+   const isDispensaryPortal = roleLabel === 'Portal Dispensario';
+   const isPatientPortal = roleLabel === 'Portal Paciente';
+@@ -1665,6 +1676,34 @@ export default function MockupPortal({
+     };
+   }, [patientIdentityAddress]);
+ 
++  useEffect(() => {
++    if (session?.mode === 'demo' || !auth.currentUser) {
++      return;
++    }
++
++    let q = null;
++    if (isPatientPortal && patientIdentityAddress) {
++      const patientId = auth.currentUser.uid;
++      q = query(collection(db, 'pickups'), where('patientId', '==', patientId));
++    } else if (isDispensaryPortal && currentUserWallet) {
++      const currentDisp = realDispensaries.find(d => d.wallet === currentUserWallet);
++      const dispId = currentDisp?.id || 'demo-dispensary';
++      q = query(collection(db, 'pickups'), where('dispensaryId', '==', dispId), where('status', '==', 'pending'));
++    }
++
++    if (!q) return;
++
++    console.log("[Firestore Sync] Escuchando pickups en tiempo real...");
++    const unsubscribe = onSnapshot(q, (snapshot) => {
++      const pickups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
++      setActivePickups(pickups);
++    }, (err) => {
++      console.error("[Firestore Sync] Error en listener de pickups:", err);
++    });
++
++    return () => unsubscribe();
++  }, [isPatientPortal, isDispensaryPortal, patientIdentityAddress, currentUserWallet, realDispensaries, session]);
++
+   useEffect(() => {
+     let cancelled = false;
+ 
+@@ -1972,6 +2011,145 @@ export default function MockupPortal({
+     });
+   };
+ 
++  const generatePrescriptionPDF = async (prescriptionId: string, doctorName: string, doctorEmail: string, patientName: string, patientAddress: string, treatment: string, dosage: string) => {
++    try {
++      const { jsPDF } = await import('jspdf');
++      const QRCode = await import('qrcode');
++
++      const doc = new jsPDF({
++        orientation: 'portrait',
++        unit: 'mm',
++        format: 'a4'
++      });
++
++      // Header background block
++      doc.setFillColor(10, 60, 47); // Brand Green Deep
++      doc.rect(0, 0, 210, 40, 'F');
++
++      // Title
++      doc.setTextColor(253, 251, 247); // Ivory
++      doc.setFont('helvetica', 'bold');
++      doc.setFontSize(22);
++      doc.text('TRUST LEAF', 15, 20);
++
++      doc.setFontSize(10);
++      doc.setFont('helvetica', 'normal');
++      doc.setTextColor(212, 175, 55); // Gold
++      doc.text('RECETA MÉDICA MAGISTRAL CANNÁBICA', 15, 27);
++      doc.text('SISTEMA DE TRAZABILIDAD BLOCKCHAIN', 15, 32);
++
++      // Sello Médico (Top Right)
++      doc.setTextColor(253, 251, 247);
++      doc.setFont('helvetica', 'bold');
++      doc.text(`Dr. ${doctorName}`, 130, 15);
++      doc.setFont('helvetica', 'normal');
++      doc.setFontSize(8);
++      doc.text(`Registro Nacional SIS: 198273`, 130, 20);
++      doc.text(`Email: ${doctorEmail}`, 130, 24);
++      doc.text(`Fecha Emisión: ${new Date().toLocaleDateString('es-CL')}`, 130, 28);
++
++      // Green Line separator
++      doc.setDrawColor(212, 175, 55); // Gold
++      doc.setLineWidth(1);
++      doc.line(0, 40, 210, 40);
++
++      // Body formatting
++      doc.setTextColor(10, 60, 47); // Green Deep
++      doc.setFontSize(14);
++      doc.setFont('helvetica', 'bold');
++      doc.text('1. INFORMACIÓN DEL PACIENTE', 15, 55);
++
++      doc.setFontSize(10);
++      doc.setFont('helvetica', 'normal');
++      doc.setTextColor(30, 30, 30);
++      doc.text(`Nombre Completo: ${patientName}`, 15, 63);
++      doc.text(`Wallet Address: ${shortenAddress(patientAddress, 16)}`, 15, 69);
++      doc.text(`ID Receta (Soroban): #${prescriptionId}`, 15, 75);
++
++      // Divider
++      doc.setDrawColor(230, 230, 230);
++      doc.setLineWidth(0.5);
++      doc.line(15, 82, 195, 82);
++
++      // 2. Clinical Info
++      doc.setTextColor(10, 60, 47);
++      doc.setFontSize(14);
++      doc.setFont('helvetica', 'bold');
++      doc.text('2. PRESCRIPCIÓN CLÍNICA Y DOSIFICACIÓN', 15, 95);
++
++      doc.setFontSize(10);
++      doc.setFont('helvetica', 'normal');
++      doc.setTextColor(30, 30, 30);
++      
++      const treatmentLines = doc.splitTextToSize(treatment, 180);
++      doc.text(treatmentLines, 15, 103);
++      
++      const dosageY = 103 + (treatmentLines.length * 5) + 5;
++      doc.setFont('helvetica', 'bold');
++      doc.text('Instrucciones de Dosificación:', 15, dosageY);
++      doc.setFont('helvetica', 'normal');
++      const dosageLines = doc.splitTextToSize(dosage, 180);
++      doc.text(dosageLines, 15, dosageY + 6);
++
++      const nextSectionY = dosageY + 6 + (dosageLines.length * 5) + 10;
++
++      // Divider
++      doc.line(15, nextSectionY - 5, 195, nextSectionY - 5);
++
++      // 3. Legal and protection framework
++      doc.setTextColor(10, 60, 47);
++      doc.setFontSize(14);
++      doc.setFont('helvetica', 'bold');
++      doc.text('3. AMPARO LEGAL (CHILE LEY 20.000 / 21.572)', 15, nextSectionY);
++
++      doc.setFontSize(9);
++      doc.setFont('helvetica', 'normal');
++      doc.setTextColor(80, 80, 80);
++      const legalText = 'Esta receta médica magistral se emite bajo el amparo de la legislación chilena vigente (Ley 20.000, Ley 21.572 y decretos del Ministerio de Salud). Autoriza la adquisición de preparados medicinales en locales autorizados y el autocultivo personal/doméstico con fines de tratamiento médico exclusivo según las especificaciones anteriores.';
++      const legalLines = doc.splitTextToSize(legalText, 180);
++      doc.text(legalLines, 15, nextSectionY + 6);
++
++      const signY = nextSectionY + 6 + (legalLines.length * 4) + 15;
++
++      // QR Code and Signatures Side by Side
++      const qrDataUrl = await QRCode.toDataURL(`https://www.trustleaf.org/verify/${prescriptionId}`);
++      doc.addImage(qrDataUrl, 'PNG', 15, signY, 35, 35);
++      
++      doc.setFontSize(8);
++      doc.setFont('helvetica', 'normal');
++      doc.setTextColor(120, 120, 120);
++      doc.text('QR de Validación Criptográfica', 15, signY + 39);
++      doc.text('Escanee para verificar en Ledger', 15, signY + 42);
++
++      // Holographic Signature Rubric Draw
++      doc.setDrawColor(30, 100, 200); // Blue ink
++      doc.setLineWidth(1);
++      doc.line(125, signY + 12, 140, signY + 6);
++      doc.line(140, signY + 6, 150, signY + 20);
++      doc.line(150, signY + 20, 160, signY + 8);
++      doc.line(160, signY + 8, 175, signY + 14);
++
++      doc.setTextColor(10, 60, 47);
++      doc.setDrawColor(10, 60, 47);
++      doc.setLineWidth(0.5);
++      doc.line(120, signY + 25, 180, signY + 25);
++      doc.setFontSize(9);
++      doc.setFont('helvetica', 'bold');
++      doc.text(`Dr. ${doctorName}`, 150, signY + 30, { align: 'center' });
++      doc.setFont('helvetica', 'normal');
++      doc.setFontSize(8);
++      doc.setTextColor(120, 120, 120);
++      doc.text('Firma Digitalizada Homologada', 150, signY + 34, { align: 'center' });
++      doc.text(`TX Hash: ${prescriptionId ? 'Soroban #' + prescriptionId : 'Emitido en Piloto'}`, 150, signY + 38, { align: 'center' });
++
++      // Save PDF
++      doc.save(`Receta_Magistral_${prescriptionId}.pdf`);
++      console.log(`[PDF] Receta #${prescriptionId} descargada con éxito.`);
++    } catch (pdfError) {
++      console.error("Error generating PDF:", pdfError);
++    }
++  };
++
+   const handleDoctorIssuePrescription = async () => {
+     const targetPatientAddress = prescriptionPatientAddress.trim();
+ 
+@@ -2005,45 +2183,112 @@ export default function MockupPortal({
+         ? ` | Ley 21.57 protection: Región ${doctorIssueForm.autocultivoRegion}, Comuna ${doctorIssueForm.autocultivoComuna}, Dirección ${doctorIssueForm.autocultivoAddress}, Límite ${doctorIssueForm.autocultivoPlants} macetas`
+         : '';
+       const fullTreatment = `${doctorIssueForm.treatment} [CIE-10: ${doctorIssueForm.patientDiagnosis || 'N/A'} | ${complianceDetail} | ${compoundingDetail}${autocultivoDetail}]`;
++      const totalQuantity = Math.max(
++        1,
++        Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
++      );
+ 
+-      const response = await fetch('/api/stellar/doctor/issue-prescription', {
+-        method: 'POST',
+-        headers: {
+-          'Content-Type': 'application/json',
+-        },
+-        body: JSON.stringify({
+-          patientAddress: targetPatientAddress,
+-          treatment: fullTreatment,
+-          dosage: doctorIssueForm.dosage,
+-          notes: doctorIssueForm.notes,
+-          durationDays: doctorIssueForm.durationDays,
+-          totalQuantity: Math.max(
+-            1,
+-            Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
+-          ),
+-          doctorEmail: session?.email,
+-        }),
+-      });
++      let txHash = '';
++      let issuedId = null;
++      let dashboard = null;
+ 
+-      const payload = await response.json();
+-      if (!response.ok) {
+-        throw new Error(payload.message || 'No fue posible emitir la receta en testnet.');
++      if (signingMethod === 'freighter') {
++        if (!freighterInstalled) {
++          throw new Error('La extensión Freighter no está instalada o habilitada.');
++        }
++        const freighterConn = await connectFreighterOnTestnet();
++        const buildResp = await fetch('/api/stellar/doctor/build-issue-prescription', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            doctorAddress: freighterConn.address,
++            patientAddress: targetPatientAddress,
++            treatment: fullTreatment,
++            dosage: doctorIssueForm.dosage,
++            notes: doctorIssueForm.notes,
++            durationDays: doctorIssueForm.durationDays,
++            totalQuantity,
++          }),
++        });
++        const buildPayload = await buildResp.json();
++        if (!buildResp.ok) {
++          throw new Error(buildPayload.message || 'Error construyendo la transacción para Freighter.');
++        }
++
++        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
++
++        const submitResp = await fetch('/api/stellar/submit', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            xdr: signedXdr,
++            operationType: 'issue',
++            patientAddress: targetPatientAddress,
++            medicationHash: buildPayload.medicationHash,
++            totalQuantity: buildPayload.totalQuantity,
++            durationDays: doctorIssueForm.durationDays,
++          }),
++        });
++        const submitPayload = await submitResp.json();
++        if (!submitResp.ok) {
++          throw new Error(submitPayload.message || 'Error al transmitir la transacción firmada.');
++        }
++        txHash = submitPayload.txHash;
++        issuedId = submitPayload.issuedId;
++        dashboard = submitPayload.dashboard;
++      } else {
++        const response = await fetch('/api/stellar/doctor/issue-prescription', {
++          method: 'POST',
++          headers: {
++            'Content-Type': 'application/json',
++          },
++          body: JSON.stringify({
++            patientAddress: targetPatientAddress,
++            treatment: fullTreatment,
++            dosage: doctorIssueForm.dosage,
++            notes: doctorIssueForm.notes,
++            durationDays: doctorIssueForm.durationDays,
++            totalQuantity,
++            doctorEmail: session?.email,
++          }),
++        });
++
++        const payload = await response.json();
++        if (!response.ok) {
++          throw new Error(payload.message || 'No fue posible emitir la receta en testnet.');
++        }
++        txHash = payload.txHash;
++        issuedId = payload.issuedId;
++        dashboard = payload.dashboard;
+       }
+ 
+-      setPatientDashboard(payload.dashboard);
+-      setHasPrescription(payload.dashboard.summary.total > 0);
++      if (dashboard) {
++        setPatientDashboard(dashboard);
++        setHasPrescription(dashboard.summary.total > 0);
++      }
+       setDoctorIssueSuccess(
+-        `Receta emitida en testnet. Número ${payload.issuedId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}`,
++        `Receta emitida en testnet. Número ${issuedId ?? 'pendiente'} - Tx ${shortenHash(txHash)}`,
+       );
+       setPrescriptionToolOpen(false);
+       setPrescriptionAllowance({
+-        monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
++        monthlyLimitGrams: totalQuantity,
+         usedGrams: 0,
+       });
+-      if (payload.issuedId !== undefined && payload.issuedId !== null) {
+-        const issuedId = String(payload.issuedId);
+-        localStorage.setItem('trust_latest_prescription_id', issuedId);
+-        setDispensePrescriptionId(issuedId);
++      if (issuedId !== undefined && issuedId !== null) {
++        const issuedIdStr = String(issuedId);
++        localStorage.setItem('trust_latest_prescription_id', issuedIdStr);
++        setDispensePrescriptionId(issuedIdStr);
++
++        // Generar y descargar el PDF de forma automática
++        await generatePrescriptionPDF(
++          issuedIdStr,
++          session?.name || 'Médico Autorizado',
++          session?.email || 'medico@trustleaf.test',
++          doctorIssueForm.patientRut ? `RUT: ${doctorIssueForm.patientRut}` : 'Paciente Piloto',
++          targetPatientAddress,
++          fullTreatment,
++          doctorIssueForm.dosage
++        );
+       }
+       setRecentActivity((prev: any[]) => [
+         {
+@@ -2554,30 +2799,80 @@ export default function MockupPortal({
+       const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
+       const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
+ 
+-      const response = await fetch('/api/stellar/dispensary/dispense-prescription', {
+-        method: 'POST',
+-        headers: {
+-          'Content-Type': 'application/json',
+-        },
+-        body: JSON.stringify({
+-          prescriptionId,
+-          productLabel,
+-          batchLabel,
+-          quantity,
+-          dispensaryEmail: session?.email,
+-          doctorEmail: doctorEmail,
+-        }),
+-      });
+-      const payload = await response.json();
++      let txHash = '';
++      let recordId = null;
++      let dashboard = null;
+ 
+-      if (!response.ok) {
+-        throw new Error(payload.code || payload.message || 'No fue posible dispensar la receta en testnet.');
++      if (signingMethod === 'freighter') {
++        if (!freighterInstalled) {
++          throw new Error('La extensión Freighter no está instalada o habilitada.');
++        }
++        const freighterConn = await connectFreighterOnTestnet();
++        const buildResp = await fetch('/api/stellar/dispensary/build-dispense-prescription', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            dispensaryAddress: freighterConn.address,
++            prescriptionId,
++            productLabel,
++            batchLabel,
++            quantity,
++          }),
++        });
++        const buildPayload = await buildResp.json();
++        if (!buildResp.ok) {
++          throw new Error(buildPayload.message || 'Error construyendo la transacción de dispensación.');
++        }
++
++        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
++
++        const submitResp = await fetch('/api/stellar/submit', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            xdr: signedXdr,
++            operationType: 'dispense',
++            prescriptionId,
++          }),
++        });
++        const submitPayload = await submitResp.json();
++        if (!submitResp.ok) {
++          throw new Error(submitPayload.message || 'Error transmitiendo la dispensación.');
++        }
++        txHash = submitPayload.txHash;
++        recordId = submitPayload.recordId;
++        dashboard = submitPayload.dashboard;
++      } else {
++        const response = await fetch('/api/stellar/dispensary/dispense-prescription', {
++          method: 'POST',
++          headers: {
++            'Content-Type': 'application/json',
++          },
++          body: JSON.stringify({
++            prescriptionId,
++            productLabel,
++            batchLabel,
++            quantity,
++            dispensaryEmail: session?.email,
++            doctorEmail: doctorEmail,
++          }),
++        });
++        const payload = await response.json();
++
++        if (!response.ok) {
++          throw new Error(payload.code || payload.message || 'No fue posible dispensar la receta en testnet.');
++        }
++        txHash = payload.txHash;
++        recordId = payload.recordId;
++        dashboard = payload.dashboard;
+       }
+ 
+-      setPatientDashboard(payload.dashboard);
+-      setHasPrescription(payload.dashboard.summary.total > 0);
++      if (dashboard) {
++        setPatientDashboard(dashboard);
++        setHasPrescription(dashboard.summary.total > 0);
++      }
+       setDispenseSuccess(
+-        `Retiro parcial registrado. Record ${payload.recordId ?? 'pendiente'} - Tx ${shortenHash(payload.txHash)}. La receta sigue disponible para futuros retiros.`,
++        `Retiro parcial registrado. Record ${recordId ?? 'pendiente'} - Tx ${shortenHash(txHash)}. La receta sigue disponible para futuros retiros.`,
+       );
+       setPrescriptionAllowance((current: any) => ({
+         ...current,
+@@ -2595,7 +2890,7 @@ export default function MockupPortal({
+           const updatedPickup = {
+             ...pickup,
+             status: 'completed',
+-            token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
++            token: `RECETA-${prescriptionId}-DR-${recordId ?? 'TESTNET'}`,
+             expires: 'Retiro completado en dispensario',
+             patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
+             dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+@@ -2620,7 +2915,7 @@ export default function MockupPortal({
+             quantity: item.quantity,
+             dispensary: selectedDispensary,
+             status: 'completed',
+-            token: `RECETA-${prescriptionId}-DR-${payload.recordId ?? 'TESTNET'}`,
++            token: `RECETA-${prescriptionId}-DR-${recordId ?? 'TESTNET'}`,
+             expires: 'Retiro completado en dispensario',
+             patientId: auth.currentUser?.uid || patientIdentityAddress || 'demo-patient',
+             dispensaryId: selectedDispensary?.id || selectedDispensary?.name || 'demo-dispensary',
+@@ -2965,23 +3260,62 @@ export default function MockupPortal({
+       const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
+       const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
+ 
+-      const response = await fetch('/api/stellar/dispensary/retain-prescription', {
+-        method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
+-        body: JSON.stringify({
+-          prescriptionId,
+-          dispensaryAddress: currentUserWallet,
+-          lockPeriodDays,
+-          doctorEmail: doctorEmail,
+-        }),
+-      });
+-      const payload = await response.json();
+-      if (!response.ok) {
+-        throw new Error(payload.message || 'No fue posible registrar la retención criptográfica.');
++      let txHash = '';
++
++      if (signingMethod === 'freighter') {
++        if (!freighterInstalled) {
++          throw new Error('La extensión Freighter no está instalada o habilitada.');
++        }
++        const freighterConn = await connectFreighterOnTestnet();
++        const buildResp = await fetch('/api/stellar/dispensary/build-retain-prescription', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            dispensaryAddress: freighterConn.address,
++            prescriptionId,
++          }),
++        });
++        const buildPayload = await buildResp.json();
++        if (!buildResp.ok) {
++          throw new Error(buildPayload.message || 'Error construyendo la retención para Freighter.');
++        }
++
++        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
++
++        const submitResp = await fetch('/api/stellar/submit', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            xdr: signedXdr,
++            operationType: 'retain',
++            prescriptionId,
++          }),
++        });
++        const submitPayload = await submitResp.json();
++        if (!submitResp.ok) {
++          throw new Error(submitPayload.message || 'Error al transmitir la retención.');
++        }
++        txHash = submitPayload.txHash;
++      } else {
++        const response = await fetch('/api/stellar/dispensary/retain-prescription', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            prescriptionId,
++            dispensaryAddress: currentUserWallet,
++            lockPeriodDays,
++            doctorEmail: doctorEmail,
++          }),
++        });
++        const payload = await response.json();
++        if (!response.ok) {
++          throw new Error(payload.message || 'No fue posible registrar la retención criptográfica.');
++        }
++        txHash = payload.txHash;
+       }
+ 
+       setRetainReleaseSuccess(
+-        `Retención criptográfica exitosa en testnet. Receta bloqueada por ${lockPeriodDays} días. Tx: ${payload.txHash.slice(0, 8)}...`
++        `Retención criptográfica exitosa en testnet. Receta bloqueada por ${lockPeriodDays} días. Tx: ${txHash.slice(0, 8)}...`
+       );
+       // Actualizar la validación de la receta on-chain
+       await validatePrescriptionOnTestnet();
+@@ -3008,22 +3342,61 @@ export default function MockupPortal({
+       const matchedDoctor = realDoctors.find(d => d.wallet === doctorWallet);
+       const doctorEmail = matchedDoctor ? matchedDoctor.email : undefined;
+ 
+-      const response = await fetch('/api/stellar/dispensary/release-prescription', {
+-        method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
+-        body: JSON.stringify({
+-          prescriptionId,
+-          doctorEmail: doctorEmail,
+-          dispensaryEmail: session?.email,
+-          dispensaryAddress: currentUserWallet,
+-        }),
+-      });
+-      const payload = await response.json();
+-      if (!response.ok) {
+-        throw new Error(payload.message || 'No fue posible liberar la receta.');
++      let txHash = '';
++
++      if (signingMethod === 'freighter') {
++        if (!freighterInstalled) {
++          throw new Error('La extensión Freighter no está instalada o habilitada.');
++        }
++        const freighterConn = await connectFreighterOnTestnet();
++        const buildResp = await fetch('/api/stellar/dispensary/build-release-prescription', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            callerAddress: freighterConn.address,
++            prescriptionId,
++          }),
++        });
++        const buildPayload = await buildResp.json();
++        if (!buildResp.ok) {
++          throw new Error(buildPayload.message || 'Error construyendo la liberación para Freighter.');
++        }
++
++        const signedXdr = await signXdrWithFreighter(buildPayload.xdr);
++
++        const submitResp = await fetch('/api/stellar/submit', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            xdr: signedXdr,
++            operationType: 'release',
++            prescriptionId,
++          }),
++        });
++        const submitPayload = await submitResp.json();
++        if (!submitResp.ok) {
++          throw new Error(submitPayload.message || 'Error al transmitir la liberación.');
++        }
++        txHash = submitPayload.txHash;
++      } else {
++        const response = await fetch('/api/stellar/dispensary/release-prescription', {
++          method: 'POST',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({
++            prescriptionId,
++            doctorEmail: doctorEmail,
++            dispensaryEmail: session?.email,
++            dispensaryAddress: currentUserWallet,
++          }),
++        });
++        const payload = await response.json();
++        if (!response.ok) {
++          throw new Error(payload.message || 'No fue posible liberar la receta.');
++        }
++        txHash = payload.txHash;
+       }
+ 
+-      setRetainReleaseSuccess(`Receta liberada con éxito en testnet. Devuelta al paciente. Tx: ${payload.txHash.slice(0, 8)}...`);
++      setRetainReleaseSuccess(`Receta liberada con éxito en testnet. Devuelta al paciente. Tx: ${txHash.slice(0, 8)}...`);
+       // Actualizar la validación de la receta on-chain
+       await validatePrescriptionOnTestnet();
+     } catch (err: any) {

@@ -6,6 +6,9 @@ import {
   query,
   setDoc,
   updateDoc,
+  deleteDoc,
+  where,
+  addDoc,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -26,6 +29,9 @@ export interface DoctorApplication {
   reviewedAt?: string;
   reviewerNote?: string;
   metadataHash?: string;
+  rut?: string;
+  sisRegistrationId?: string;
+  uid?: string;
 }
 
 export interface DispensaryApplication {
@@ -41,6 +47,9 @@ export interface DispensaryApplication {
   reviewedAt?: string;
   reviewerNote?: string;
   metadataHash?: string;
+  rut?: string;
+  ispResolutionNumber?: string;
+  uid?: string;
 }
 
 type ApplicationKind = 'doctor' | 'dispensary';
@@ -70,6 +79,7 @@ function nowIso() {
 
 function readLocal<T extends ActorApplication>(kind: ApplicationKind): T[] {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const saved = localStorage.getItem(STORAGE_KEYS[kind]);
     const records = saved ? JSON.parse(saved) : [];
     if (!Array.isArray(records)) return [];
@@ -80,7 +90,13 @@ function readLocal<T extends ActorApplication>(kind: ApplicationKind): T[] {
 }
 
 function writeLocal<T extends ActorApplication>(kind: ApplicationKind, records: T[]) {
-  localStorage.setItem(STORAGE_KEYS[kind], JSON.stringify(records));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS[kind], JSON.stringify(records));
+    }
+  } catch (err) {
+    console.warn('LocalStorage write failed:', err);
+  }
 }
 
 function normalizeApplication<T extends Partial<ActorApplication>>(record: T): T & {
@@ -95,6 +111,17 @@ function normalizeApplication<T extends Partial<ActorApplication>>(record: T): T
 }
 
 function canUseFirebase() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('trust_leaf_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.mode === 'demo') {
+          return false;
+        }
+      }
+    }
+  } catch {}
   return Boolean(auth.currentUser);
 }
 
@@ -128,6 +155,7 @@ function toSupabaseRow(record: ActorApplication): SupabaseRow {
     reviewed_at: record.reviewedAt ?? null,
     reviewer_note: record.reviewerNote ?? null,
     metadata_hash: record.metadataHash ?? null,
+    rut: record.rut ?? null,
   };
 
   if ('licenseId' in record) {
@@ -135,6 +163,7 @@ function toSupabaseRow(record: ActorApplication): SupabaseRow {
       ...base,
       license_id: record.licenseId,
       specialty: record.specialty,
+      sis_registration_id: record.sisRegistrationId ?? null,
     };
   }
 
@@ -142,6 +171,7 @@ function toSupabaseRow(record: ActorApplication): SupabaseRow {
     ...base,
     legal_id: record.legalId,
     address: record.address,
+    isp_resolution_number: record.ispResolutionNumber ?? null,
   };
 }
 
@@ -161,6 +191,9 @@ function toSupabaseUpdate(updates: SupabaseUpdate): SupabaseRow {
   if ('specialty' in updates) row.specialty = updates.specialty;
   if ('legalId' in updates) row.legal_id = updates.legalId;
   if ('address' in updates) row.address = updates.address;
+  if ('rut' in updates) row.rut = updates.rut ?? null;
+  if ('sisRegistrationId' in updates) row.sis_registration_id = updates.sisRegistrationId ?? null;
+  if ('ispResolutionNumber' in updates) row.isp_resolution_number = updates.ispResolutionNumber ?? null;
 
   return row;
 }
@@ -177,6 +210,7 @@ function fromSupabaseRow<T extends ActorApplication>(kind: ApplicationKind, row:
     reviewedAt: row.reviewed_at ? String(row.reviewed_at) : undefined,
     reviewerNote: row.reviewer_note ? String(row.reviewer_note) : undefined,
     metadataHash: row.metadata_hash ? String(row.metadata_hash) : undefined,
+    rut: row.rut ? String(row.rut) : undefined,
   };
 
   if (kind === 'doctor') {
@@ -184,6 +218,7 @@ function fromSupabaseRow<T extends ActorApplication>(kind: ApplicationKind, row:
       ...base,
       licenseId: String(row.license_id ?? ''),
       specialty: String(row.specialty ?? ''),
+      sisRegistrationId: row.sis_registration_id ? String(row.sis_registration_id) : undefined,
     }) as T;
   }
 
@@ -191,6 +226,7 @@ function fromSupabaseRow<T extends ActorApplication>(kind: ApplicationKind, row:
     ...base,
     legalId: String(row.legal_id ?? ''),
     address: String(row.address ?? ''),
+    ispResolutionNumber: row.isp_resolution_number ? String(row.isp_resolution_number) : undefined,
   }) as T;
 }
 
@@ -289,24 +325,37 @@ async function loadApplications<T extends ActorApplication>(kind: ApplicationKin
   return { records: readLocal<T>(kind), source: 'local-demo' };
 }
 
+function cleanUndefined<T extends Record<string, any>>(obj: T): T {
+  const cleaned = { ...obj };
+  Object.keys(cleaned).forEach((key) => {
+    if (cleaned[key] === undefined) {
+      delete cleaned[key];
+    }
+  });
+  return cleaned;
+}
+
 async function createApplication<T extends ActorApplication>(kind: ApplicationKind, record: T): Promise<PersistenceSource> {
-  const localRecords = [record, ...readLocal<T>(kind).filter((item) => item.id !== record.id)];
+  const cleanedRecord = cleanUndefined(record);
+  const localRecords = [cleanedRecord, ...readLocal<T>(kind).filter((item) => item.id !== cleanedRecord.id)];
   writeLocal(kind, localRecords);
 
   if (canUseFirebase()) {
     try {
-      await setDoc(doc(db, COLLECTIONS[kind], record.id), record);
+      await setDoc(doc(db, COLLECTIONS[kind], cleanedRecord.id), cleanedRecord);
       return 'firebase';
-    } catch {
+    } catch (err) {
+      console.error(`[Firebase Firestore] Error al guardar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
 
   if (canUseSupabase()) {
     try {
-      await createApplicationInSupabase(kind, record);
+      await createApplicationInSupabase(kind, cleanedRecord);
       return 'supabase';
-    } catch {
+    } catch (err) {
+      console.error(`[Supabase] Error al guardar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
@@ -319,25 +368,28 @@ async function updateApplication<T extends ActorApplication>(
   id: string,
   updates: Partial<T>,
 ): Promise<PersistenceSource> {
+  const cleanedUpdates = cleanUndefined(updates);
   const localRecords = readLocal<T>(kind).map((record) =>
-    record.id === id ? { ...record, ...updates } : record,
+    record.id === id ? { ...record, ...cleanedUpdates } : record,
   );
   writeLocal(kind, localRecords);
 
   if (canUseFirebase()) {
     try {
-      await updateDoc(doc(db, COLLECTIONS[kind], id), updates as Record<string, unknown>);
+      await updateDoc(doc(db, COLLECTIONS[kind], id), cleanedUpdates as Record<string, unknown>);
       return 'firebase';
-    } catch {
+    } catch (err) {
+      console.error(`[Firebase Firestore] Error al actualizar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
 
   if (canUseSupabase()) {
     try {
-      await updateApplicationInSupabase(kind, id, updates);
+      await updateApplicationInSupabase(kind, id, cleanedUpdates);
       return 'supabase';
-    } catch {
+    } catch (err) {
+      console.error(`[Supabase] Error al actualizar solicitud de ${kind}:`, err);
       return 'local-demo';
     }
   }
@@ -345,16 +397,33 @@ async function updateApplication<T extends ActorApplication>(
   return 'local-demo';
 }
 
+function registerSubmittedId(id: string) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const saved = localStorage.getItem('trust_submitted_ids');
+    const ids = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(ids) && !ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem('trust_submitted_ids', JSON.stringify(ids));
+    }
+  } catch (e) {
+    console.error('Error saving submitted ID:', e);
+  }
+}
+
 export const trustDataStore = {
   loadDoctorApplications: () => loadApplications<DoctorApplication>('doctor'),
   loadDispensaryApplications: () => loadApplications<DispensaryApplication>('dispensary'),
   createDoctorApplication(input: Omit<DoctorApplication, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) {
+    const id = `doc-req-${Date.now()}`;
+    registerSubmittedId(id);
     return createApplication<DoctorApplication>('doctor', {
       ...input,
-      id: `doc-req-${Date.now()}`,
+      id,
       status: 'pending',
       onchainStatus: 'pending',
       submittedAt: nowIso(),
+      uid: auth.currentUser?.uid,
     });
   },
   createApprovedDoctor(input: Omit<DoctorApplication, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) {
@@ -406,12 +475,15 @@ export const trustDataStore = {
     });
   },
   createDispensaryApplication(input: Omit<DispensaryApplication, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) {
+    const id = `disp-req-${Date.now()}`;
+    registerSubmittedId(id);
     return createApplication<DispensaryApplication>('dispensary', {
       ...input,
-      id: `disp-req-${Date.now()}`,
+      id,
       status: 'pending',
       onchainStatus: 'pending',
       submittedAt: nowIso(),
+      uid: auth.currentUser?.uid,
     });
   },
   createApprovedDispensary(input: Omit<DispensaryApplication, 'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'onchainStatus'>) {
@@ -436,4 +508,321 @@ export const trustDataStore = {
       onchainStatus: 'pending',
     });
   },
+  async loadPickups(patientId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'pickups'), where('patientId', '==', patientId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading pickups from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  async loadPickupsForDispensary(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'pickups'), where('dispensaryId', '==', dispensaryId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading dispensary pickups from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      const all: any[] = saved ? JSON.parse(saved) : [];
+      return all.filter((p) => p.dispensaryId === dispensaryId);
+    } catch {
+      return [];
+    }
+  },
+  async updatePickupStatus(pickupId: string, status: 'pending' | 'completed', txHash?: string): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      let current = saved ? JSON.parse(saved) : [];
+      current = current.map((p: any) => p.id === pickupId ? { ...p, status, txHash } : p);
+      localStorage.setItem('trust_pickups', JSON.stringify(current));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        const docRef = doc(db, 'pickups', pickupId);
+        await updateDoc(docRef, { status, txHash });
+      } catch (err) {
+        console.error('Error updating pickup status in Firestore:', err);
+      }
+    }
+  },
+  async createPickup(pickup: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_pickups', JSON.stringify([pickup, ...current]));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'pickups', pickup.id), pickup);
+      } catch (err) {
+        console.error('Error saving pickup in Firestore:', err);
+      }
+    }
+  },
+  async deletePickup(pickupId: string): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_pickups', JSON.stringify(current.filter((p: any) => p.id !== pickupId)));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await deleteDoc(doc(db, 'pickups', pickupId));
+      } catch (err) {
+        console.error('Error deleting pickup from Firestore:', err);
+      }
+    }
+  },
+  async loadClinicalRecords(patientId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'clinicalRecords'), where('patientId', '==', patientId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading clinical records from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_consultation_clinical_records');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  async createClinicalRecord(record: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_consultation_clinical_records');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_consultation_clinical_records', JSON.stringify([record, ...current]));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'clinicalRecords', record.id), record);
+      } catch (err) {
+        console.error('Error saving clinical record in Firestore:', err);
+      }
+    }
+  },
+  async loadDispensaryInventory(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'dispensaryInventory'), where('dispensaryId', '==', dispensaryId))
+        );
+        if (!snapshot.empty) {
+          return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        }
+      } catch (err) {
+        console.error('Error loading inventory from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem(`trust_inventory_${dispensaryId}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    // Retornar inventario base por defecto si no existe persistencia previa
+    const defaultInventory = [
+      { id: 'batch-001', batchId: 'LOTE-THC-A23', strainName: 'Premium White Widow (Magistral)', quantityGrams: 150, thcRatio: 18, cbdRatio: 1 },
+      { id: 'batch-002', batchId: 'LOTE-CBD-B42', strainName: 'Sublingual CBD Drops (Aceite)', quantityGrams: 90, thcRatio: 1, cbdRatio: 15 },
+      { id: 'batch-003', batchId: 'LOTE-BAL-C11', strainName: 'Balanced Hybrid Cream (Topico)', quantityGrams: 200, thcRatio: 5, cbdRatio: 5 }
+    ];
+    try {
+      localStorage.setItem(`trust_inventory_${dispensaryId}`, JSON.stringify(defaultInventory));
+    } catch {}
+    return defaultInventory;
+  },
+  async deductInventoryStock(dispensaryId: string, batchId: string, quantityToDeduct: number): Promise<void> {
+    const inventory = await this.loadDispensaryInventory(dispensaryId);
+    const updated = inventory.map(item => {
+      if (item.batchId === batchId) {
+        return { ...item, quantityGrams: Math.max(0, item.quantityGrams - quantityToDeduct) };
+      }
+      return item;
+    });
+    try {
+      localStorage.setItem(`trust_inventory_${dispensaryId}`, JSON.stringify(updated));
+    } catch {}
+    if (canUseFirebase()) {
+      try {
+        const matched = updated.find(item => item.batchId === batchId);
+        if (matched) {
+          await setDoc(doc(db, 'dispensaryInventory', `${dispensaryId}_${batchId}`), {
+            ...matched,
+            dispensaryId,
+          });
+        }
+      } catch (err) {
+        console.error('Error updating inventory stock in Firestore:', err);
+      }
+    }
+  },
+  async addInventoryProduct(dispensaryId: string, product: any): Promise<void> {
+    const inventory = await this.loadDispensaryInventory(dispensaryId);
+    const updated = [product, ...inventory];
+    try {
+      localStorage.setItem(`trust_inventory_${dispensaryId}`, JSON.stringify(updated));
+    } catch {}
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'dispensaryInventory', `${dispensaryId}_${product.batchId}`), {
+          ...product,
+          dispensaryId,
+        });
+      } catch (err) {
+        console.error('Error adding inventory product to Firestore:', err);
+      }
+    }
+  },
+  async loadDispensaryMembers(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'dispensaryMembers'), where('dispensaryId', '==', dispensaryId))
+        );
+        if (!snapshot.empty) {
+          return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+        }
+      } catch (err) {
+        console.error('Error loading dispensary members from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem(`trust_members_${dispensaryId}`);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    const defaultMembers = [
+      { id: 'm1', name: 'Laura Restrepo', role: 'Administrador', email: 'laura@trustleaf.co', wallet: 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX' },
+      { id: 'm2', name: 'Carlos Mendoza', role: 'Farmacéutico', email: 'carlos@trustleaf.co', wallet: 'GDU5K...39ZA' },
+      { id: 'm3', name: 'Sofía Valenzuela', role: 'Operador', email: 'sofia@trustleaf.co', wallet: 'GDQ4J...88XY' }
+    ];
+    try {
+      localStorage.setItem(`trust_members_${dispensaryId}`, JSON.stringify(defaultMembers));
+    } catch {}
+    return defaultMembers;
+  },
+  async addDispensaryMember(dispensaryId: string, member: any): Promise<void> {
+    const members = await this.loadDispensaryMembers(dispensaryId);
+    const updated = [...members, member];
+    try {
+      localStorage.setItem(`trust_members_${dispensaryId}`, JSON.stringify(updated));
+    } catch {}
+    if (canUseFirebase()) {
+      try {
+        await addDoc(collection(db, 'dispensaryMembers'), {
+          ...member,
+          dispensaryId,
+        });
+      } catch (err) {
+        console.error('Error adding dispensary member to Firestore:', err);
+      }
+    }
+  },
+  async loadDispensaryPickupHistory(dispensaryId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'pickups'), where('dispensaryId', '==', dispensaryId))
+        );
+        return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading pickup history from Firestore:', err);
+      }
+    }
+    // Fallback to local trust_pickups
+    try {
+      const saved = localStorage.getItem('trust_pickups');
+      if (saved) {
+        const allPickups = JSON.parse(saved);
+        return allPickups.filter((p: any) => p.dispensaryId === dispensaryId);
+      }
+    } catch {}
+    return [];
+  },
+  async loadAgenda(doctorId: string): Promise<any[]> {
+    if (canUseFirebase()) {
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'agenda'), where('doctorId', '==', doctorId))
+        );
+        return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      } catch (err) {
+        console.error('Error loading agenda from Firestore:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  async createAgendaBlock(block: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+      const current = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify([block, ...current]));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'agenda', block.id), block);
+      } catch (err) {
+        console.error('Error saving agenda block in Firestore:', err);
+      }
+    }
+  },
+  async updateAgendaBlock(blockId: string, updates: any): Promise<void> {
+    try {
+      const saved = localStorage.getItem('trust_doctor_agenda_blocks');
+      let current = saved ? JSON.parse(saved) : [];
+      current = current.map((p: any) => p.id === blockId ? { ...p, ...updates } : p);
+      localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify(current));
+    } catch (e) {
+      console.error(e);
+    }
+    if (canUseFirebase()) {
+      try {
+        await updateDoc(doc(db, 'agenda', blockId), updates);
+      } catch (err) {
+        console.error('Error updating agenda block in Firestore:', err);
+      }
+    }
+  },
+  async createNotification(notification: any): Promise<void> {
+    if (canUseFirebase()) {
+      try {
+        await setDoc(doc(db, 'notifications', notification.id), notification);
+      } catch (err) {
+        console.error('Error saving notification in Firestore:', err);
+      }
+    }
+  },
 };
+

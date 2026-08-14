@@ -543,6 +543,12 @@
                   },
                   {
                     "key": {
+                      "symbol": "retained_by"
+                    },
+                    "val": "void"
+                  },
+                  {
+                    "key": {
                       "symbol": "total_quantity"
                     },
                     "val": {

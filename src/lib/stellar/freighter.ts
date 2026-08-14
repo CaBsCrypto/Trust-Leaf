@@ -2,6 +2,7 @@ import {
   getAddress,
   getNetworkDetails,
   requestAccess,
+  signTransaction,
 } from '@stellar/freighter-api';
 import { isTestnetPassphrase, stellarConfig } from './config';
 
@@ -47,3 +48,20 @@ export async function connectFreighterOnTestnet(): Promise<FreighterWalletConnec
     sorobanRpcUrl: details.sorobanRpcUrl,
   };
 }
+
+export async function signXdrWithFreighter(xdr: string): Promise<string> {
+  const result = await signTransaction(xdr, {
+    networkPassphrase: stellarConfig.networkPassphrase,
+  });
+
+  if (typeof result === 'object' && result !== null && 'error' in result) {
+    throw new Error(normalizeFreighterError((result as any).error?.message || String(result)));
+  }
+
+  if (typeof result === 'string') {
+    return result;
+  }
+
+  throw new Error('No se recibió una transacción firmada válida de Freighter.');
+}
+

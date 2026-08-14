@@ -3,10 +3,15 @@
 ## Comandos base
 
 ```powershell
-npm install
-npm run lint
-npm run build
+npm ci
+npm run preflight
 ```
+
+`npm ci` instala exactamente el lockfile. `npm run preflight` valida defaults seguros y secretos vacíos en el ejemplo, ejecuta los casos del guard de mutaciones, comprueba estáticamente rutas críticas/copy DEMO, corre TypeScript y produce el build. No usa datos clínicos ni envía transacciones.
+
+Comandos individuales para diagnosticar: `npm run preflight:config`, `npm run test:pilot-safety`, `npm run test:critical-static`, `npm run lint` y `npm run build`.
+
+Esta suite no reemplaza pruebas HTTP con servidor aislado, Firebase Emulator/RBAC, E2E de navegador, pruebas de contratos, pentest, revisión clínica ni validación legal. Es la puerta básica previa a esas pruebas manuales y especializadas.
 
 ## Pruebas obligatorias
 

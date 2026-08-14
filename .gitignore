@@ -1,7 +1,9 @@
 node_modules/
+.npm-cache/
 build/
 dist/
 coverage/
+scratch/
 .DS_Store
 *.log
 .env*

@@ -1,9 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
-import * as LegacyStellarSdk from "stellar-sdk";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   dispensePrescriptionForPatient as dispensePrescriptionForPatientShared,
@@ -11,7 +11,36 @@ import {
   getRuntimeReadiness,
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
   validatePrescriptionForDispensary,
+  registerDoctorOnTestnet,
+  registerDispensaryOnTestnet,
+  revokeDoctorOnTestnet,
+  revokeDispensaryOnTestnet,
+  retainPrescriptionForDispensary,
+  releasePrescriptionToPatient,
+  buildIssuePrescriptionTx,
+  buildDispensePrescriptionTx,
+  buildRetainPrescriptionTx,
+  buildReleasePrescriptionTx,
+  submitSignedTransaction,
+  getDeterministicKeypair,
 } from "./api/_lib/stellar";
+import {
+  DEFINDEX_VAULTS,
+  buildDefindexDeposit,
+  buildDefindexWithdraw,
+  buildDefindexWithdrawShares,
+  getDefindexApiKey,
+  getDefindexNetwork,
+  getDefindexShares,
+  getDefaultVaultAddress,
+  getSocialFundAddress,
+  getVaultByAddress,
+  signAndSubmitDefindex,
+  submitDefindexSigned,
+  executeSplitDeposit,
+  stroopsToDisplay,
+  displayToStroops,
+} from "./api/_lib/defindex";
 import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +65,34 @@ const PRESCRIPTION_WASM_PATH = path.join(
 );
 const prescriptionSpec = loadContractSpec(PRESCRIPTION_WASM_PATH);
 
+interface RateLimitInfo {
+  count: number;
+  resetAt: number;
+}
+const rateLimitStore = new Map<string, RateLimitInfo>();
+
+function createRateLimiter(limit: number, windowMs: number, message: string) {
+  return (req: any, res: any, next: any) => {
+    const ip = req.ip || req.headers["x-forwarded-for"] || "127.0.0.1";
+    const now = Date.now();
+    let record = rateLimitStore.get(ip);
+
+    if (!record || now > record.resetAt) {
+      record = { count: 0, resetAt: now + windowMs };
+    }
+
+    record.count++;
+    rateLimitStore.set(ip, record);
+
+    if (record.count > limit) {
+      res.status(429).json({ message });
+      return;
+    }
+
+    next();
+  };
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -44,13 +101,19 @@ async function startServer() {
   // Middlewares
   app.use(express.json());
   app.use((req, res, next) => {
-    const isProtectedMutation = req.method === "POST" && (
+    const protectedMutation = req.method === "POST" && (
       req.path === "/api/stellar/faucet" ||
       req.path === "/api/stellar/doctor/issue-prescription" ||
       req.path === "/api/stellar/dispensary/dispense-prescription" ||
-      req.path === "/api/passkeys/send"
+      req.path === "/api/stellar/dispensary/retain-prescription" ||
+      req.path === "/api/stellar/dispensary/release-prescription" ||
+      req.path === "/api/stellar/submit" ||
+      req.path.startsWith("/api/stellar/admin/") ||
+      req.path === "/api/passkeys/send" ||
+      req.path === "/api/defindex/submit" ||
+      req.path.startsWith("/api/defindex/custodial-")
     );
-    if (!isProtectedMutation) return next();
+    if (!protectedMutation) return next();
     try {
       assertTestnetMutationEnabled();
       next();
@@ -62,12 +125,28 @@ async function startServer() {
     }
   });
 
+  // HTTP Security Headers (XSS, Clickjacking, MIME Sniffing & HSTS Defense)
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (process.env.NODE_ENV === "production") {
+      res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    }
+    next();
+  });
+
+  // API Rate Limiters for DDoS & Spam Protection
+  const faucetLimiter = createRateLimiter(5, 15 * 60 * 1000, "Has superado el límite de fondeos. Inténtalo de nuevo en 15 minutos.");
+  const writeLimiter = createRateLimiter(10, 60 * 1000, "Has superado el límite de operaciones por minuto. Por favor, espera.");
+
   // API Routes
   // Stellar Network Config
   app.get("/api/stellar/health", async (req, res) => {
     try {
       // Connect to Testnet by default
-      const server = new LegacyStellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
       const ledgers = await server.ledgers().limit(1).call();
       res.json({
         status: "connected",
@@ -104,7 +183,7 @@ async function startServer() {
     res.json(getRuntimeReadiness());
   });
 
-  app.post("/api/stellar/faucet", async (req, res) => {
+  app.post("/api/stellar/faucet", faucetLimiter, async (req, res) => {
     try {
       const { role, address } = req.body ?? {};
       const result = await fundTestnetAccount({
@@ -122,6 +201,26 @@ async function startServer() {
     }
   });
 
+  app.post("/api/stellar/derive-wallet", async (req, res) => {
+    try {
+      const { email } = req.body ?? {};
+      if (!email) {
+        res.status(400).json({ message: "Falta email." });
+        return;
+      }
+      const normalized = String(email).toLowerCase().trim();
+      if (normalized === "paciente@trustleaf.test") {
+        res.json({ publicKey: "GDKCAFBRPVG4E6VEX4SUFVOMLDQKXDVEECR2DIWYRDEMIAS7CUR2RMXP" });
+        return;
+      }
+      const keypair = getDeterministicKeypair(normalized);
+      res.json({ publicKey: keypair.publicKey() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al derivar la wallet.";
+      res.status(500).json({ message });
+    }
+  });
+
   app.get("/api/stellar/patient/:address/dashboard", async (req, res) => {
     try {
       const dashboard = await getPatientDashboard(req.params.address);
@@ -135,7 +234,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/stellar/doctor/issue-prescription", async (req, res) => {
+  app.post("/api/stellar/doctor/issue-prescription", writeLimiter, async (req, res) => {
     try {
       const {
         patientAddress,
@@ -143,6 +242,7 @@ async function startServer() {
         dosage,
         notes,
         durationDays,
+        doctorEmail,
       } = req.body ?? {};
 
       if (!patientAddress || !treatment || !dosage || !durationDays) {
@@ -167,6 +267,7 @@ async function startServer() {
         dosage: String(dosage),
         notes: notes ? String(notes) : "",
         durationDays: normalizedDurationDays,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.json(result);
@@ -179,9 +280,9 @@ async function startServer() {
     }
   });
 
-  app.post("/api/stellar/dispensary/dispense-prescription", async (req, res) => {
+  app.post("/api/stellar/dispensary/dispense-prescription", writeLimiter, async (req, res) => {
     try {
-      const { prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
+      const { prescriptionId, productLabel, batchLabel, quantity, dispensaryEmail, doctorEmail } = req.body ?? {};
       const normalizedPrescriptionId = Number(prescriptionId);
       const normalizedQuantity = Number(quantity);
 
@@ -203,6 +304,8 @@ async function startServer() {
         productLabel: String(productLabel),
         batchLabel: String(batchLabel),
         quantity: normalizedQuantity,
+        dispensaryEmail: dispensaryEmail ? String(dispensaryEmail) : undefined,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
       });
 
       res.json(result);
@@ -211,6 +314,200 @@ async function startServer() {
         error instanceof Error
           ? error.message
           : "No fue posible dispensar la receta en testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/doctor/build-issue-prescription", async (req, res) => {
+    try {
+      const {
+        doctorAddress,
+        patientAddress,
+        treatment,
+        dosage,
+        notes,
+        durationDays,
+        totalQuantity,
+      } = req.body ?? {};
+
+      if (!doctorAddress || !patientAddress || !treatment || !dosage || !durationDays) {
+        res.status(400).json({
+          message: "Faltan datos para construir la receta: doctorAddress, patientAddress, treatment, dosage y durationDays.",
+        });
+        return;
+      }
+
+      const result = await buildIssuePrescriptionTx({
+        doctorAddress: String(doctorAddress),
+        patientAddress: String(patientAddress),
+        treatment: String(treatment),
+        dosage: String(dosage),
+        notes: notes ? String(notes) : "",
+        durationDays: Number(durationDays),
+        totalQuantity: totalQuantity ? Number(totalQuantity) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de emisión.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/build-dispense-prescription", async (req, res) => {
+    try {
+      const { dispensaryAddress, prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
+
+      if (!dispensaryAddress || !prescriptionId || !productLabel || !batchLabel || !quantity) {
+        res.status(400).json({
+          message: "Faltan datos para construir la dispensación: dispensaryAddress, prescriptionId, productLabel, batchLabel y quantity.",
+        });
+        return;
+      }
+
+      const result = await buildDispensePrescriptionTx({
+        dispensaryAddress: String(dispensaryAddress),
+        prescriptionId: Number(prescriptionId),
+        productLabel: String(productLabel),
+        batchLabel: String(batchLabel),
+        quantity: Number(quantity),
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de dispensación.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/submit", async (req, res) => {
+    try {
+      const { xdr, operationType, patientAddress, medicationHash, totalQuantity, prescriptionId, durationDays } = req.body ?? {};
+
+      if (!xdr || !operationType) {
+        res.status(400).json({
+          message: "Faltan parámetros obligatorios: xdr y operationType.",
+        });
+        return;
+      }
+
+      const result = await submitSignedTransaction({
+        xdr: String(xdr),
+        operationType: String(operationType) as "issue" | "dispense" | "retain" | "release",
+        patientAddress: patientAddress ? String(patientAddress) : undefined,
+        medicationHash: medicationHash ? String(medicationHash) : undefined,
+        totalQuantity: totalQuantity ? Number(totalQuantity) : undefined,
+        prescriptionId: prescriptionId ? Number(prescriptionId) : undefined,
+        durationDays: durationDays ? Number(durationDays) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible transmitir la transacción firmada a testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/build-retain-prescription", async (req, res) => {
+    try {
+      const { dispensaryAddress, prescriptionId } = req.body ?? {};
+
+      if (!dispensaryAddress || prescriptionId === undefined) {
+        res.status(400).json({
+          message: "Faltan datos para construir la retención: dispensaryAddress y prescriptionId.",
+        });
+        return;
+      }
+
+      const result = await buildRetainPrescriptionTx({
+        dispensaryAddress: String(dispensaryAddress),
+        prescriptionId: Number(prescriptionId),
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de retención.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/build-release-prescription", async (req, res) => {
+    try {
+      const { callerAddress, prescriptionId } = req.body ?? {};
+
+      if (!callerAddress || prescriptionId === undefined) {
+        res.status(400).json({
+          message: "Faltan datos para construir la liberación: callerAddress y prescriptionId.",
+        });
+        return;
+      }
+
+      const result = await buildReleasePrescriptionTx({
+        callerAddress: String(callerAddress),
+        prescriptionId: Number(prescriptionId),
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el XDR de liberación.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/retain-prescription", async (req, res) => {
+    try {
+      const { prescriptionId, dispensaryAddress, lockPeriodDays, doctorEmail } = req.body ?? {};
+      const normalizedPrescriptionId = Number(prescriptionId);
+
+      if (!Number.isFinite(normalizedPrescriptionId) || !dispensaryAddress) {
+        res.status(400).json({
+          message: "Faltan datos para retener la receta: prescriptionId y dispensaryAddress.",
+        });
+        return;
+      }
+
+      const result = await retainPrescriptionForDispensary({
+        prescriptionId: normalizedPrescriptionId,
+        dispensaryAddress: String(dispensaryAddress),
+        lockPeriodDays: lockPeriodDays ? Number(lockPeriodDays) : undefined,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible retener la receta en testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/dispensary/release-prescription", async (req, res) => {
+    try {
+      const { prescriptionId, doctorEmail, dispensaryEmail, dispensaryAddress } = req.body ?? {};
+      const normalizedPrescriptionId = Number(prescriptionId);
+
+      if (!Number.isFinite(normalizedPrescriptionId)) {
+        res.status(400).json({
+          message: "Falta prescriptionId para liberar la receta.",
+        });
+        return;
+      }
+
+      const result = await releasePrescriptionToPatient({
+        prescriptionId: normalizedPrescriptionId,
+        doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
+        dispensaryEmail: dispensaryEmail ? String(dispensaryEmail) : undefined,
+        dispensaryAddress: dispensaryAddress ? String(dispensaryAddress) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible liberar la receta en testnet.";
       res.status(500).json({ message });
     }
   });
@@ -246,6 +543,140 @@ async function startServer() {
         return;
       }
 
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/verify-sis", async (req, res) => {
+    try {
+      const { rut } = req.body ?? {};
+      if (!rut) {
+        res.status(400).json({ valid: false, message: "Falta el parámetro 'rut'." });
+        return;
+      }
+
+      // Normalizar el RUN a minúsculas y sin puntos ni guiones para hacer la comparación flexible,
+      // pero en este mock usaremos una base de datos simulada realista para profesionales chilenos.
+      const normalizedRut = String(rut).trim().replace(/\./g, "").replace(/-/g, "").toLowerCase();
+
+      // Base de datos simulada del Registro Nacional de Prestadores Individuales de Salud (SIS)
+      const sisDatabase: Record<string, { name: string; licenseId: string; specialty: string }> = {
+        "123456789": {
+          name: "Dr. Carlos Valenzuela",
+          licenseId: "SIS-87421",
+          specialty: "Medicina General / Cannabis Medicinal",
+        },
+        "222222222": {
+          name: "Dra. Sofía Lagos",
+          licenseId: "SIS-99312",
+          specialty: "Neurología / Tratamientos de Dolor",
+        },
+        "999999999": {
+          name: "Dr. Admin Root",
+          licenseId: "SIS-00001",
+          specialty: "Medicina Integrativa",
+        }
+      };
+
+      const record = sisDatabase[normalizedRut];
+      if (record) {
+        res.json({
+          valid: true,
+          rut: rut,
+          name: record.name,
+          licenseId: record.licenseId,
+          specialty: record.specialty,
+          verifiedAt: new Date().toISOString(),
+          registry: "Superintendencia de Salud de Chile (SIS)",
+        });
+      } else {
+        res.status(404).json({
+          valid: false,
+          message: "El RUN ingresado no figura en el Registro Nacional de Prestadores Individuales de Salud.",
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error interno en el servidor.";
+      res.status(500).json({ valid: false, message });
+    }
+  });
+
+  app.post("/api/stellar/admin/register-doctor", async (req, res) => {
+    try {
+      const { doctorAddress } = req.body ?? {};
+      if (!doctorAddress) {
+        res.status(400).json({ message: "Falta doctorAddress." });
+        return;
+      }
+      const result = await registerDoctorOnTestnet({
+        doctorAddress: String(doctorAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible registrar el medico en DoctorRegistry Testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/register-dispensary", async (req, res) => {
+    try {
+      const { dispensaryAddress } = req.body ?? {};
+      if (!dispensaryAddress) {
+        res.status(400).json({ message: "Falta dispensaryAddress." });
+        return;
+      }
+      const result = await registerDispensaryOnTestnet({
+        dispensaryAddress: String(dispensaryAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible registrar el dispensario en DispensaryRegistry Testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/revoke-doctor", async (req, res) => {
+    try {
+      const { doctorAddress } = req.body ?? {};
+      if (!doctorAddress) {
+        res.status(400).json({ message: "Falta doctorAddress." });
+        return;
+      }
+      const result = await revokeDoctorOnTestnet({
+        doctorAddress: String(doctorAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible revocar el medico en DoctorRegistry Testnet.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/stellar/admin/revoke-dispensary", async (req, res) => {
+    try {
+      const { dispensaryAddress } = req.body ?? {};
+      if (!dispensaryAddress) {
+        res.status(400).json({ message: "Falta dispensaryAddress." });
+        return;
+      }
+      const result = await revokeDispensaryOnTestnet({
+        dispensaryAddress: String(dispensaryAddress),
+      });
+      res.json(result);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible revocar el dispensario en DispensaryRegistry Testnet.";
       res.status(500).json({ message });
     }
   });
@@ -311,35 +742,318 @@ async function startServer() {
     }
   });
 
-  // Example: Verify a Trust ID (Patient Passport) on chain
+  // Verify a Patient Passport and active Prescription NFTs on chain
   app.get("/api/stellar/verify-passport/:accountId", async (req, res) => {
     const { accountId } = req.params;
     try {
-      const server = new LegacyStellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
       const account = await server.loadAccount(accountId);
       
-      /**
-       * RECETA MÉDICA COMO NFT TEMPORAL EN STELLAR
-       * 
-       * Para implementar recetas como NFTs con temporalidad en Stellar:
-       * 1. Minting: Emitir un asset (NFT) a la cuenta del paciente.
-       * 2. Temporalidad: Usar 'TimeBounds' en las transacciones para asegurar que el asset
-       *    solo sea válido en un rango de tiempo, o usar 'Clawback' para que el emisor
-       *    pueda recuperar/invalidar el token si expira.
-       * 3. Metadata: Guardar el hash de IPFS de la receta completa en un memo o como
-       *    data attribute en el ledger.
-       */
-      
-      // Look for a specific data attribute 'MedicalTrustID' or similar
+      // 1. Look for a specific data attribute 'MedicalTrustID' or similar
       const trustID = account.data && account.data["MedicalTrustID"];
+      const trustIDDecoded = trustID ? Buffer.from(trustID, 'base64').toString() : null;
+
+      // 2. Scan standard balances for active prescription NFTs (Asset code starting with 'RX')
+      const activePrescriptionNFTs = account.balances
+        .filter((b: any) => b.asset_code && b.asset_code.startsWith("RX") && Number(b.balance) > 0)
+        .map((b: any) => ({
+          assetCode: b.asset_code,
+          issuer: b.asset_issuer,
+          balance: b.balance
+        }));
+
+      // 3. Scan claimable balances where patient is claimant for prescription NFTs
+      let activeClaimableNFTs: any[] = [];
+      try {
+        const claimables = await server
+          .claimableBalances()
+          .claimant(accountId)
+          .call();
+        activeClaimableNFTs = claimables.records
+          .filter((record: any) => {
+            const assetStr = record.asset || "";
+            return assetStr.includes("RX");
+          })
+          .map((record: any) => {
+            const [assetCode, issuer] = record.asset.split(":");
+            return {
+              balanceId: record.id,
+              assetCode,
+              issuer,
+              amount: record.amount,
+              claimants: record.claimants
+            };
+          });
+      } catch (err) {
+        console.error("Error querying claimable balances for verify-passport:", err);
+      }
       
       res.json({
-        verified: !!trustID,
+        verified: !!trustID || activePrescriptionNFTs.length > 0 || activeClaimableNFTs.length > 0,
         accountId,
-        trustID: trustID ? Buffer.from(trustID, 'base64').toString() : null
+        trustID: trustIDDecoded,
+        activePrescriptionNFTs,
+        activeClaimableNFTs,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(404).json({ verified: false, message: "Account not found" });
+      res.status(404).json({ 
+        verified: false, 
+        message: "La cuenta del paciente no existe en Stellar Testnet o no se pudo cargar.",
+        accountId
+      });
+    }
+  });
+
+  // ─── Public Prescription Verification (unauthenticated) ─────────────────
+  // Intentionally open so QR-code links printed on PDFs work without login.
+  // Only exposes non-sensitive, publicly available on-chain data.
+  app.get("/api/stellar/prescription/:id/verify", async (req, res) => {
+    const prescriptionId = Number(req.params.id);
+    if (!Number.isFinite(prescriptionId) || prescriptionId < 1) {
+      res.status(400).json({ message: "ID de receta inválido." });
+      return;
+    }
+    try {
+      const rpcServer = new StellarSdk.rpc.Server(getRpcUrl(), { allowHttp: false });
+      const raw = await invokeReadonlyContract(
+        rpcServer,
+        getPrescriptionContractId(),
+        "get_prescription",
+        { prescription_id: BigInt(prescriptionId) },
+      );
+      if (!raw || typeof raw !== "object") {
+        res.status(404).json({ found: false, message: "Receta no encontrada en el ledger de Testnet." });
+        return;
+      }
+      const expiresAt = Number(raw.expires_at);
+      const isUsed = Boolean(raw.is_used);
+      const now = Math.floor(Date.now() / 1000);
+      const status = isUsed ? "used" : expiresAt <= now ? "expired" : "active";
+      const totalQuantity = Number(raw.total_quantity ?? 0);
+      const dispensedQuantity = Number(raw.dispensed_quantity ?? 0);
+      res.json({
+        found: true,
+        prescriptionId,
+        status,
+        expiresAt,
+        expiresAtHuman: new Date(expiresAt * 1000).toLocaleDateString("es-CL"),
+        issuedBy: String(raw.doctor ?? "").slice(0, 10) + "…",
+        patientAddress: String(raw.patient ?? "").slice(0, 10) + "…",
+        totalQuantity,
+        dispensedQuantity,
+        remainingQuantity: Math.max(0, totalQuantity - dispensedQuantity),
+        network: "testnet",
+        contractId: getPrescriptionContractId(),
+        verifiedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible verificar la receta en Testnet.";
+      res.status(500).json({ found: false, message });
+    }
+  });
+
+  // ─── Defindex ReFi Vault Integration (Testnet) ─────────────────────────
+  // Wraps the Defindex REST API. All operations support both custodial signing
+  // (server-derived keypair from email) and Web3 signing (returns unsigned XDR
+  // for Freighter/Albedo). Fee sponsorship is applied on custodial paths.
+  app.get("/api/defindex/vaults", (_req, res) => {
+    res.json({
+      vaults: DEFINDEX_VAULTS,
+      defaultVault: getDefaultVaultAddress(),
+      network: getDefindexNetwork(),
+      apiKeyConfigured: Boolean(getDefindexApiKey()),
+      socialFundAddress: getSocialFundAddress(),
+    });
+  });
+
+  app.get("/api/defindex/balance/:vault/:address", async (req, res) => {
+    try {
+      const { vault, address } = req.params;
+      const shares = await getDefindexShares(vault, address);
+      const vaultInfo = getVaultByAddress(vault);
+      res.json({
+        shares: shares.toString(),
+        sharesDisplay: stroopsToDisplay(shares, vaultInfo?.decimals ?? 7),
+        vaultAddress: vault,
+        address,
+        network: getDefindexNetwork(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible leer el balance del vault.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/build-deposit", async (req, res) => {
+    try {
+      const { vaultAddress, caller, amount, slippageBps, invest } = req.body ?? {};
+      if (!vaultAddress || !caller || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, caller, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const xdr = await buildDefindexDeposit({
+        vaultAddress,
+        caller,
+        amountStroops,
+        slippageBps,
+        invest,
+      });
+      res.json({ xdr, vaultAddress, caller, amountStroops: amountStroops.toString() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el depósito de Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/build-withdraw", async (req, res) => {
+    try {
+      const { vaultAddress, caller, amount, slippageBps } = req.body ?? {};
+      if (!vaultAddress || !caller || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, caller, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const xdr = await buildDefindexWithdraw({
+        vaultAddress,
+        caller,
+        amountStroops,
+        slippageBps,
+      });
+      res.json({ xdr, vaultAddress, caller, amountStroops: amountStroops.toString() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el retiro de Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/build-withdraw-shares", async (req, res) => {
+    try {
+      const { vaultAddress, caller, shares, slippageBps } = req.body ?? {};
+      if (!vaultAddress || !caller || !shares) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, caller, shares." });
+        return;
+      }
+      const xdr = await buildDefindexWithdrawShares({
+        vaultAddress,
+        caller,
+        shares: BigInt(String(shares)),
+        slippageBps,
+      });
+      res.json({ xdr, vaultAddress, caller });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible construir el retiro por shares de Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/submit", async (req, res) => {
+    try {
+      const { xdr } = req.body ?? {};
+      if (!xdr) {
+        res.status(400).json({ message: "Falta el parámetro xdr firmado." });
+        return;
+      }
+      const txHash = await submitDefindexSigned(String(xdr));
+      res.json({ txHash, network: getDefindexNetwork() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible transmitir la transacción a Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/custodial-deposit", writeLimiter, async (req, res) => {
+    try {
+      const { vaultAddress, email, amount, fundPercent, slippageBps, invest } = req.body ?? {};
+      if (!vaultAddress || !email || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, email, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const userKeypair = getDeterministicKeypair(String(email));
+
+      if (typeof fundPercent === "number" && fundPercent > 0) {
+        const result = await executeSplitDeposit({
+          vaultAddress,
+          userAddress: userKeypair.publicKey(),
+          userKeypair,
+          totalAmountStroops: amountStroops,
+          fundPercent,
+          slippageBps,
+          invest,
+        });
+        res.json({
+          mode: "split",
+          ...result,
+          userAmountDisplay: stroopsToDisplay(result.userAmountStroops, vaultInfo?.decimals ?? 7),
+          fundAmountDisplay: stroopsToDisplay(result.fundAmountStroops, vaultInfo?.decimals ?? 7),
+          network: getDefindexNetwork(),
+        });
+        return;
+      }
+
+      const unsignedXdr = await buildDefindexDeposit({
+        vaultAddress,
+        caller: userKeypair.publicKey(),
+        amountStroops,
+        slippageBps,
+        invest,
+      });
+      const { txHash, signedXdr } = await signAndSubmitDefindex({
+        unsignedXdr,
+        signerKeypair: userKeypair,
+        applyFeeSponsorship: true,
+      });
+      res.json({
+        mode: "custodial",
+        txHash,
+        signedXdr,
+        amountStroops: amountStroops.toString(),
+        amountDisplay: stroopsToDisplay(amountStroops, vaultInfo?.decimals ?? 7),
+        network: getDefindexNetwork(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible ejecutar el depósito custodial en Defindex.";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/defindex/custodial-withdraw", writeLimiter, async (req, res) => {
+    try {
+      const { vaultAddress, email, amount, slippageBps } = req.body ?? {};
+      if (!vaultAddress || !email || !amount) {
+        res.status(400).json({ message: "Faltan parámetros: vaultAddress, email, amount." });
+        return;
+      }
+      const vaultInfo = getVaultByAddress(vaultAddress);
+      const amountStroops = displayToStroops(String(amount), vaultInfo?.decimals ?? 7);
+      const userKeypair = getDeterministicKeypair(String(email));
+
+      const unsignedXdr = await buildDefindexWithdraw({
+        vaultAddress,
+        caller: userKeypair.publicKey(),
+        amountStroops,
+        slippageBps,
+      });
+      const { txHash, signedXdr } = await signAndSubmitDefindex({
+        unsignedXdr,
+        signerKeypair: userKeypair,
+        applyFeeSponsorship: true,
+      });
+      res.json({
+        txHash,
+        signedXdr,
+        amountStroops: amountStroops.toString(),
+        amountDisplay: stroopsToDisplay(amountStroops, vaultInfo?.decimals ?? 7),
+        network: getDefindexNetwork(),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible ejecutar el retiro custodial en Defindex.";
+      res.status(500).json({ message });
     }
   });
 
