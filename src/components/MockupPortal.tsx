@@ -6604,7 +6604,7 @@ export default function MockupPortal({
 
 
 
-  const prepareRecordingDemo = () => {
+  const prepareRecordingDemo = async () => {
 
     const consultationBlock: DoctorAgendaBlock = {
 
@@ -6624,9 +6624,10 @@ export default function MockupPortal({
 
     const prescriptionId = Number(DEMO_PRESCRIPTION_ID);
 
-    const medicalPermission = createPrivacyPermission('medical-consultation', false);
-
-    const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
+    const [medicalPermission, dispensaryPermission] = await Promise.all([
+      createPrivacyPermission('medical-consultation', false),
+      createPrivacyPermission('dispensary-prescription', false),
+    ]);
 
 
 
