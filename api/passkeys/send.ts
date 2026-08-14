@@ -1,8 +1,16 @@
 import { createPasskeyServer } from '../_lib/stellar.js';
+import { assertTestnetMutationEnabled } from '../_lib/pilot-safety.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.status(405).send('Method Not Allowed');
+    return;
+  }
+
+  try {
+    assertTestnetMutationEnabled();
+  } catch (error) {
+    res.status(503).send(error instanceof Error ? error.message : 'Mutaciones testnet deshabilitadas.');
     return;
   }
 

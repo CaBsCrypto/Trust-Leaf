@@ -1,4 +1,5 @@
 import { dispensePrescriptionForPatient } from '../../_lib/stellar.js';
+import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../../_lib/pilot-safety.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -7,6 +8,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    assertTestnetMutationEnabled();
     const { prescriptionId, productLabel, batchLabel, quantity } = req.body ?? {};
     const normalizedPrescriptionId = Number(prescriptionId);
     const normalizedQuantity = Number(quantity);
@@ -56,8 +58,6 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
-    res.status(500).json({
-      message,
-    });
+    sendPilotSafetyError(res, error, message);
   }
 }

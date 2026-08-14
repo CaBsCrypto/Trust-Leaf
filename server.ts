@@ -12,6 +12,7 @@ import {
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
   validatePrescriptionForDispensary,
 } from "./api/_lib/stellar";
+import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +43,24 @@ async function startServer() {
 
   // Middlewares
   app.use(express.json());
+  app.use((req, res, next) => {
+    const isProtectedMutation = req.method === "POST" && (
+      req.path === "/api/stellar/faucet" ||
+      req.path === "/api/stellar/doctor/issue-prescription" ||
+      req.path === "/api/stellar/dispensary/dispense-prescription" ||
+      req.path === "/api/passkeys/send"
+    );
+    if (!isProtectedMutation) return next();
+    try {
+      assertTestnetMutationEnabled();
+      next();
+    } catch (error) {
+      res.status(503).json({
+        code: "TESTNET_MUTATIONS_DISABLED",
+        message: error instanceof Error ? error.message : "Mutaciones testnet deshabilitadas.",
+      });
+    }
+  });
 
   // API Routes
   // Stellar Network Config
