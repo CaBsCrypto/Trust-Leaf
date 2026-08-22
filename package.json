@@ -21,6 +21,7 @@
     "test:auth-custody-readiness": "node --experimental-strip-types tests/auth-custody-readiness.test.ts",
     "test:stellar-rpc-prep": "node --experimental-strip-types tests/stellar-testnet-rpc-adapter.test.ts",
     "test:stellar-event-source": "node --experimental-strip-types tests/stellar-receipt-event-source.test.ts",
+    "test:testnet-e2e-data-qa": "node --experimental-strip-types tests/testnet-e2e-data-qa.test.ts",
     "test:visual-qa-regressions": "node --experimental-strip-types tests/visual-qa-regressions.test.ts",
     "audit:medical-flow": "node tests/medical-flow-capabilities-audit.mjs",
     "preflight:config": "node tests/preflight-config.mjs",
