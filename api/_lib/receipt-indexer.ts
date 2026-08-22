@@ -57,6 +57,14 @@ function validEvent(event: OpaqueReceiptEvent) {
     && event.version > 0;
 }
 
+function sameEvent(left: OpaqueReceiptEvent, right: OpaqueReceiptEvent) {
+  return left.eventId === right.eventId
+    && left.receiptId === right.receiptId
+    && left.operationId === right.operationId
+    && left.version === right.version
+    && left.state === right.state;
+}
+
 export function createSimulatedReceiptIndexer(options: { finalityDepth?: number; auditLimit?: number } = {}): ReceiptEventIndexerPort {
   const finalityDepth = Math.max(1, Math.min(options.finalityDepth ?? 3, 32));
   const auditLimit = Math.max(16, Math.min(options.auditLimit ?? 256, 2_048));
@@ -118,18 +126,30 @@ export function createSimulatedReceiptIndexer(options: { finalityDepth?: number;
           record('PARENT_HASH_MISMATCH', { ledgerSequence: ledger.sequence });
           throw Object.assign(new Error('Ledger parent mismatch; reconciliation required.'), { code: 'PARENT_HASH_MISMATCH' });
         }
-        const seenInLedger = new Set<string>();
+        const seenInLedger = new Map<string, OpaqueReceiptEvent>();
         for (const event of ledger.events) {
-          if (seenInLedger.has(event.operationId)) continue;
-          seenInLedger.add(event.operationId);
-          const priorEventId = operations.get(event.operationId);
-          if (priorEventId) {
-            const prior = events.get(priorEventId)!;
-            if (prior.eventId !== event.eventId || prior.receiptId !== event.receiptId || prior.version !== event.version || prior.state !== event.state) {
+          const duplicateInLedger = seenInLedger.get(event.operationId);
+          if (duplicateInLedger) {
+            if (!sameEvent(duplicateInLedger, event)) {
               record('IDEMPOTENCY_CONFLICT', { ledgerSequence: ledger.sequence, operationId: event.operationId });
               throw Object.assign(new Error('Idempotency conflict.'), { code: 'IDEMPOTENCY_CONFLICT' });
             }
             continue;
+          }
+          seenInLedger.set(event.operationId, event);
+          const priorEventId = operations.get(event.operationId);
+          if (priorEventId) {
+            const prior = events.get(priorEventId)!;
+            if (!sameEvent(prior, event)) {
+              record('IDEMPOTENCY_CONFLICT', { ledgerSequence: ledger.sequence, operationId: event.operationId });
+              throw Object.assign(new Error('Idempotency conflict.'), { code: 'IDEMPOTENCY_CONFLICT' });
+            }
+            continue;
+          }
+          const priorByEventId = events.get(event.eventId);
+          if (priorByEventId && !sameEvent(priorByEventId, event)) {
+            record('EVENT_ID_CONFLICT', { ledgerSequence: ledger.sequence, operationId: event.operationId });
+            throw Object.assign(new Error('Event identity conflict.'), { code: 'EVENT_ID_CONFLICT' });
           }
           const receiptEvents = [...events.values()].filter((candidate) => candidate.receiptId === event.receiptId && candidate.status !== 'unknown');
           const latestVersion = Math.max(0, ...receiptEvents.map((candidate) => candidate.version));

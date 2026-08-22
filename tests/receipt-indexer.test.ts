@@ -55,6 +55,35 @@ returned.state = 'revoked';
 assert.equal(indexer.getEvent('opaque_operation_0001')?.status, 'confirmed', 'getEvent must return a defensive copy');
 assert.equal(indexer.getEvent('opaque_operation_0001')?.state, 'issued', 'caller mutation must not alter indexed event');
 
+const identity = createSimulatedReceiptIndexer();
+identity.ingest(ledger(1, hash('c'), hash('0'), [event(1, 'issued', 'identity1')]));
+const identityCursor = identity.getCursor();
+const identityTimeline = identity.getReceiptTimeline(receiptId);
+const identityEvent = identity.getEvent('opaque_operation_identity1');
+const firstDuplicate = event(2, 'active', 'duplicate');
+assert.throws(
+  () => identity.ingest(ledger(2, hash('d'), hash('c'), [firstDuplicate, { ...firstDuplicate, eventId: 'opaque_event_conflict', state: 'revoked' }])),
+  (error: any) => error.code === 'IDEMPOTENCY_CONFLICT',
+);
+assert.deepEqual(identity.getCursor(), identityCursor, 'operation conflict must preserve cursor');
+assert.deepEqual(identity.getReceiptTimeline(receiptId), identityTimeline, 'operation conflict must preserve timeline');
+assert.deepEqual(identity.getEvent('opaque_operation_identity1'), identityEvent, 'operation conflict must preserve prior operation map');
+assert.equal(identity.getEvent('opaque_operation_duplicate'), undefined, 'staged operation must roll back');
+
+assert.throws(
+  () => identity.ingest(ledger(2, hash('e'), hash('c'), [{ ...event(2, 'active', 'event-reuse'), eventId: 'opaque_event_identity1' }])),
+  (error: any) => error.code === 'EVENT_ID_CONFLICT',
+);
+assert.deepEqual(identity.getCursor(), identityCursor, 'event ID conflict must preserve cursor');
+assert.deepEqual(identity.getReceiptTimeline(receiptId), identityTimeline, 'event ID conflict must preserve timeline');
+assert.deepEqual(identity.getEvent('opaque_operation_identity1'), identityEvent, 'event ID conflict must preserve prior event map');
+assert.equal(identity.getEvent('opaque_operation_event-reuse'), undefined, 'conflicting event ID operation must not be indexed');
+
+const exactDuplicate = createSimulatedReceiptIndexer();
+const repeated = event(1, 'issued', 'same-event');
+exactDuplicate.ingest(ledger(1, hash('f'), hash('0'), [repeated, { ...repeated }]));
+assert.equal(exactDuplicate.getReceiptTimeline(receiptId).length, 1, 'semantic duplicate in one ledger remains idempotent');
+
 const unsafe = JSON.stringify(indexer.getAudit());
 assert.equal(unsafe.includes('opaque_operation_'), false, 'audit must contain only redacted operation references');
 assert.ok(indexer.getAudit().some((entry) => entry.code === 'REORG_ROLLBACK'));
