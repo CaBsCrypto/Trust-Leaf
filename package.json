@@ -17,6 +17,8 @@
     "test:receipt-shared-e2e": "node --experimental-strip-types tests/receipt-shared-state-e2e.test.ts",
     "test:simulated-testnet-adapter": "node --experimental-strip-types tests/simulated-testnet-adapter.test.ts",
     "test:receipt-indexer": "node --experimental-strip-types tests/receipt-indexer.test.ts",
+    "test:server-auth-custody": "node --experimental-strip-types tests/server-auth-custody.test.ts",
+    "test:auth-custody-readiness": "node --experimental-strip-types tests/auth-custody-readiness.test.ts",
     "test:visual-qa-regressions": "node --experimental-strip-types tests/visual-qa-regressions.test.ts",
     "audit:medical-flow": "node tests/medical-flow-capabilities-audit.mjs",
     "preflight:config": "node tests/preflight-config.mjs",
