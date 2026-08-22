@@ -51,3 +51,38 @@ El rate limit del QR y el repositorio cifrado/KMS son adaptadores en memoria. Es
 ## Decisión antes de nuevas submissions
 
 No solicitar autorización de submission todavía. Primero deben cerrarse los dos P0, instalar/verificar dependencias de manera reproducible, completar preflight y E2E integrado por rol, y repetir esta auditoría. La evidencia es exclusivamente técnica y sintética; no acredita validez clínica ni legal.
+
+---
+
+## Addendum de remediación — integración `6c45cc6`
+
+Revisión read-only realizada sobre `integration/post-smoke-readonly-20260822` en `6c45cc6`, sin arrancar servidor ni efectuar tráfico de red.
+
+### Remediaciones confirmadas
+
+- **P0 original del flag global: remediado para el servidor Express actual.** El middleware intercepta las rutas POST mutantes Stellar, admin, passkeys y Defindex y exige `assertTestnetMutationEnabled()` antes de alcanzar sus handlers. La política exige conjuntamente `TRUSTLEAF_TESTNET_SUBMIT_ENABLED=true`, `TRUSTLEAF_ALLOW_TESTNET_MUTATIONS=true`, runtime `local-synthetic`, Testnet/passphrase/endpoints allowlisted, entorno no productivo y relayer local. Con el valor obligatorio del sprint (`false`) falla cerrado con `503 TESTNET_MUTATIONS_DISABLED`.
+- **Defensa en profundidad de bajo nivel confirmada.** Las nueve apariciones de `sendTransaction`/`submitTransaction` en `api/_lib/stellar.ts` tienen un `assertTestnetMutationEnabled()` inmediatamente anterior. El test estático inspecciona cada llamada con `txToSubmit` y la matriz negativa prueba default, producción, mainnet passphrase, RPC/Horizon ajenos, relayer público, runtime incorrecto y submissions deshabilitadas.
+- **Montaje del readiness admin confirmado.** `AdminReadinessPanel` sólo recibe `getIdToken` cuando `adminAuth.mode === 'authorized'` y existe `adminAuth.user`; una sesión demo puede ver la ruta admin, pero no monta el panel readiness autenticado. El panel sólo ejecuta GET con bearer real y no ofrece mutaciones.
+- Suites focalizadas verdes: `test:pilot-safety`, `test:admin-auth-readiness`, `test:readonly-ui-qr` y `test:durable-data-controls`.
+
+### Riesgos residuales
+
+#### P0 antes de autorizar cualquier nueva submission — RBAC operacional no integrado
+
+El gate ambiental evita writes durante este sprint, pero las rutas de issue, dispense, retain/release, submit XDR y registro/revocación administrativa aún no invocan el nuevo authorizer JWKS/allowlist/role/scope. Si posteriormente se cambian ambos flags a `true`, el gate de entorno por sí solo no autentica al caller; varias rutas siguen aceptando identidad o XDR desde el request.
+
+Gate: integrar autorización server-side por operación y añadir negativos por rol/scope/subject antes de solicitar autorización separada para submissions.
+
+#### P1 — transport RPC reutilizable sin guard propio
+
+`api/_lib/stellar-sdk-rpc-transport.ts` expone `submit()` y llama directamente `server.sendTransaction()` sin el gate ambiental. No se encontró consumidor de producción en esta revisión, por lo que no invalida el cierre del servidor actual, pero es una ruta reutilizable peligrosa si se conecta posteriormente.
+
+Gate: inyectar una capability/policy de submission fail-closed o aplicar el mismo guard en el límite del transport, con test que demuestre cero llamadas al servidor cuando está cerrado.
+
+#### P1 — evidencia del middleware principalmente estática
+
+La suite verifica exhaustivamente la función de política y los guards de bajo nivel, pero no hace una prueba HTTP que recorra cada ruta protegida y confirme que su handler/transport no fue invocado con el flag `false`. Tampoco hay aún E2E autenticado médico/paciente/dispensario/admin.
+
+### Veredicto actualizado
+
+**GO limitado para continuar desarrollo y pruebas locales read-only con `TRUSTLEAF_TESTNET_SUBMIT_ENABLED=false`. NO-GO para cambiar el flag a `true`, nuevas submissions o producción** hasta cerrar el P0 de autorización operacional y repetir preflight/E2E integrado.
