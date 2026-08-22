@@ -271,10 +271,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 1
                     }
                   },
                   {

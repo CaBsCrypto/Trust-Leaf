@@ -127,6 +127,32 @@ fn operation_id_reuse_with_changed_payload_fails() {
 }
 
 #[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn authorized_peer_cannot_reappropriate_operation_id() {
+    let env = Env::default();
+    let f = fixture(&env);
+    let other_doctor = Address::generate(&env);
+    f.client.set_doctor(&f.admin, &other_doctor, &true);
+    issue(&f, &env);
+
+    f.client
+        .issue(&other_doctor, &id(&env, 1), &id(&env, 11), &id(&env, 101));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn operation_id_cannot_cross_function_domain() {
+    let env = Env::default();
+    let f = fixture(&env);
+    issue(&f, &env);
+    f.client
+        .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+
+    f.client
+        .revoke(&f.doctor, &id(&env, 1), &2, &id(&env, 13), &id(&env, 102));
+}
+
+#[test]
 #[should_panic(expected = "Error(Contract, #6)")]
 fn stale_expected_version_blocks_concurrent_dispense() {
     let env = Env::default();

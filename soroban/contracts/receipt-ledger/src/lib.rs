@@ -38,11 +38,24 @@ pub struct Receipt {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[contracttype]
 struct OperationRecord {
+    actor: Address,
+    domain: OperationDomain,
     receipt_id: BytesN<32>,
     expected_version: u32,
     resulting_version: u32,
     target_state: ReceiptState,
     commitment: BytesN<32>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[contracttype]
+enum OperationDomain {
+    Issue = 1,
+    Activate = 2,
+    Partial = 3,
+    Dispense = 4,
+    Revoke = 5,
+    Expire = 6,
 }
 
 #[derive(Clone)]
@@ -74,6 +87,8 @@ pub struct IssuedEvent {
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
 }
 
 #[contractevent(topics = ["Active"], data_format = "vec")]
@@ -81,6 +96,8 @@ pub struct ActiveEvent {
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
 }
 
 #[contractevent(topics = ["Partial"], data_format = "vec")]
@@ -88,6 +105,8 @@ pub struct PartialEvent {
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
 }
 
 #[contractevent(topics = ["Dispensed"], data_format = "vec")]
@@ -95,6 +114,8 @@ pub struct DispensedEvent {
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
 }
 
 #[contractevent(topics = ["Revoked"], data_format = "vec")]
@@ -102,6 +123,8 @@ pub struct RevokedEvent {
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
 }
 
 #[contractevent(topics = ["Expired"], data_format = "vec")]
@@ -109,6 +132,8 @@ pub struct ExpiredEvent {
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
 }
 
 #[contractimpl]
@@ -148,6 +173,8 @@ impl ReceiptLedgerContract {
         require_doctor(&env, &doctor);
 
         let requested = OperationRecord {
+            actor: doctor.clone(),
+            domain: OperationDomain::Issue,
             receipt_id: receipt_id.clone(),
             expected_version: 0,
             resulting_version: 1,
@@ -176,6 +203,8 @@ impl ReceiptLedgerContract {
             receipt_id,
             version: 1,
             commitment,
+            operation_id,
+            actor: doctor,
         }
         .publish(&env);
         receipt
@@ -192,6 +221,8 @@ impl ReceiptLedgerContract {
         require_doctor(&env, &doctor);
         transition(
             &env,
+            doctor,
+            OperationDomain::Activate,
             receipt_id,
             expected_version,
             commitment,
@@ -211,6 +242,8 @@ impl ReceiptLedgerContract {
         require_dispensary(&env, &dispensary);
         transition(
             &env,
+            dispensary,
+            OperationDomain::Partial,
             receipt_id,
             expected_version,
             commitment,
@@ -230,6 +263,8 @@ impl ReceiptLedgerContract {
         require_dispensary(&env, &dispensary);
         transition(
             &env,
+            dispensary,
+            OperationDomain::Dispense,
             receipt_id,
             expected_version,
             commitment,
@@ -249,6 +284,8 @@ impl ReceiptLedgerContract {
         require_doctor(&env, &doctor);
         transition(
             &env,
+            doctor,
+            OperationDomain::Revoke,
             receipt_id,
             expected_version,
             commitment,
@@ -270,6 +307,8 @@ impl ReceiptLedgerContract {
         require_admin(&env, &admin);
         transition(
             &env,
+            admin,
+            OperationDomain::Expire,
             receipt_id,
             expected_version,
             commitment,
@@ -285,6 +324,8 @@ impl ReceiptLedgerContract {
 
 fn transition(
     env: &Env,
+    actor: Address,
+    domain: OperationDomain,
     receipt_id: BytesN<32>,
     expected_version: u32,
     commitment: BytesN<32>,
@@ -296,6 +337,8 @@ fn transition(
     }
     let resulting_version = expected_version.saturating_add(1);
     let requested = OperationRecord {
+        actor: actor.clone(),
+        domain,
         receipt_id: receipt_id.clone(),
         expected_version,
         resulting_version,
@@ -321,7 +364,15 @@ fn transition(
         version: resulting_version,
     };
     save_receipt_and_operation(env, &updated, &operation_id, &requested);
-    publish_transition(env, target_state, receipt_id, resulting_version, commitment);
+    publish_transition(
+        env,
+        target_state,
+        receipt_id,
+        resulting_version,
+        commitment,
+        operation_id,
+        actor,
+    );
     updated
 }
 
@@ -350,36 +401,48 @@ fn publish_transition(
     receipt_id: BytesN<32>,
     version: u32,
     commitment: BytesN<32>,
+    operation_id: BytesN<32>,
+    actor: Address,
 ) {
     match state {
         ReceiptState::Active => ActiveEvent {
             receipt_id,
             version,
             commitment,
+            operation_id,
+            actor,
         }
         .publish(env),
         ReceiptState::Partial => PartialEvent {
             receipt_id,
             version,
             commitment,
+            operation_id,
+            actor,
         }
         .publish(env),
         ReceiptState::Dispensed => DispensedEvent {
             receipt_id,
             version,
             commitment,
+            operation_id,
+            actor,
         }
         .publish(env),
         ReceiptState::Revoked => RevokedEvent {
             receipt_id,
             version,
             commitment,
+            operation_id,
+            actor,
         }
         .publish(env),
         ReceiptState::Expired => ExpiredEvent {
             receipt_id,
             version,
             commitment,
+            operation_id,
+            actor,
         }
         .publish(env),
         ReceiptState::Issued => panic_with_error!(env, ReceiptError::InvalidTransition),

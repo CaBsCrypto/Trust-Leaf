@@ -420,10 +420,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 1
                     }
                   },
                   {
@@ -488,10 +504,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 5
                     }
                   },
                   {
@@ -556,10 +588,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "1515151515151515151515151515151515151515151515151515151515151515"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 1
                     }
                   },
                   {
@@ -624,10 +672,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "1616161616161616161616161616161616161616161616161616161616161616"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 6
                     }
                   },
                   {
@@ -865,6 +929,12 @@
                 },
                 {
                   "bytes": "1616161616161616161616161616161616161616161616161616161616161616"
+                },
+                {
+                  "bytes": "cacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacaca"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
                 }
               ]
             }

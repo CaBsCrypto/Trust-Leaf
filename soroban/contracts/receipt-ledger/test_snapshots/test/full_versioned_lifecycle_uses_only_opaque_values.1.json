@@ -475,10 +475,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 1
                     }
                   },
                   {
@@ -543,10 +559,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 2
                     }
                   },
                   {
@@ -611,10 +643,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 3
                     }
                   },
                   {
@@ -679,10 +727,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 3
                     }
                   },
                   {
@@ -747,10 +811,26 @@
                 "map": [
                   {
                     "key": {
+                      "symbol": "actor"
+                    },
+                    "val": {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "commitment"
                     },
                     "val": {
                       "bytes": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "domain"
+                    },
+                    "val": {
+                      "u32": 4
                     }
                   },
                   {
