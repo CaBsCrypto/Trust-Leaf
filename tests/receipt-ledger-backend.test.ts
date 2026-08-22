@@ -37,7 +37,7 @@ assert.equal(boundedLedger.getReadCacheSize(), 8, 'operation cache must remain b
 
 const publicHandlerSource = readFileSync(new URL('../api/receipts/public-verify.ts', import.meta.url), 'utf8');
 assert.equal(publicHandlerSource.includes('x-operation-id'), false, 'client operation header must not control deduplication');
-assert.equal(publicHandlerSource.includes('crypto.randomUUID()'), true, 'operation IDs must be generated server-side');
+assert.equal(/submitTransaction|invokeContract/i.test(publicHandlerSource), false, 'public verifier must remain read-only');
 
 await assert.rejects(() => ledger.appendEvent(), (error: any) => error.code === 'RECEIPT_MUTATIONS_DISABLED');
 for (const env of [

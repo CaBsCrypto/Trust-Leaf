@@ -10,7 +10,8 @@ assert.match(envExample, /TRUSTLEAF_ALLOW_TESTNET_MUTATIONS=false/, 'example con
 assert.match(envExample, /^STELLAR_NETWORK=testnet$/m, 'receipt candidate example must remain Testnet-only');
 assert.match(envExample, /^STELLAR_RPC_URL=https:\/\/soroban-testnet\.stellar\.org$/m, 'receipt RPC must match the reviewed Testnet allowlist');
 assert.match(envExample, /^STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015$/m, 'Testnet passphrase must be explicit');
-assert.match(envExample, /^STELLAR_RECEIPT_CONTRACT_ID=$/m, 'receipt contract ID must remain blank before the deploy gate');
+assert.match(envExample, /^STELLAR_RECEIPT_CONTRACT_ID=CA7SCEMQM4VETVCDD6RKO5RE7TCFG2HJD3PKW6EPD325IRDXJWF5OSY3$/m, 'read-only receipt contract ID must match the reviewed Testnet deployment');
+assert.match(envExample, /^TRUSTLEAF_TESTNET_SUBMIT_ENABLED=false$/m, 'submission must remain explicitly closed');
 assert.match(envExample, /TRUSTLEAF_PILOT_RUNTIME=disabled/, 'example config must disable pilot runtime');
 assert.notEqual(process.env.TRUSTLEAF_ALLOW_TESTNET_MUTATIONS, 'true', 'preflight never runs with mutations enabled');
 

@@ -1,7 +1,7 @@
-import { createPublicKey, verify as verifySignature } from 'node:crypto';
+import { createPublicKey, verify as verifySignature, type JsonWebKey as NodeJsonWebKey } from 'node:crypto';
 import type { TokenVerifier, VerifiedTokenClaims } from './server-authorization.ts';
 
-interface JsonWebKeyWithKid extends JsonWebKey { kid?: string; alg?: string; use?: string }
+interface JsonWebKeyWithKid extends NodeJsonWebKey { kid?: string; alg?: string; use?: string }
 export interface JwksProvider { get(kid: string): Promise<JsonWebKeyWithKid | null> }
 
 export function createRemoteJwksProvider(input: {
