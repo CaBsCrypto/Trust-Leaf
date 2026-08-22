@@ -8,9 +8,9 @@ Desde `soroban/`:
 
 ```powershell
 cargo fmt --check -p receipt-ledger
-cargo test -p receipt-ledger
-cargo test --workspace
-cargo build --target wasm32v1-none --release -p receipt-ledger
+cargo test --locked -p receipt-ledger
+cargo test --locked --workspace
+cargo build --locked --target wasm32v1-none --release -p receipt-ledger
 Get-FileHash -Algorithm SHA256 .\target\wasm32v1-none\release\receipt_ledger.wasm
 ```
 
@@ -20,7 +20,7 @@ Desde la raíz web:
 npm run preflight
 ```
 
-El informe debe registrar commit, versiones Rust/Stellar CLI, 20 pruebas del receipt, total del workspace, hash y tamaño WASM, suite web y revisión independiente. El WASM no se versiona ni se publica desde este sprint.
+El informe debe registrar commit, estado limpio, versiones Rust/Cargo/Stellar CLI y Node/npm, 20 pruebas del receipt, total del workspace, hash y tamaño WASM, suite web y revisión independiente. El WASM no se versiona ni se publica desde este sprint. No ejecutar `npm ci` sobre una instalación compartida sin revisar antes el lockfile y autorizar su impacto.
 
 ## Gate humano antes de configurar Testnet
 
@@ -29,10 +29,12 @@ El informe debe registrar commit, versiones Rust/Stellar CLI, 20 pruebas del rec
 - [ ] Cuentas técnicas Testnet seudónimas, no asociadas a identidad personal, con propietario, custodia, rotación y revocación documentados.
 - [ ] Ninguna clave en repositorio, navegador, QR, logs o fixtures; mecanismo de secretos aprobado.
 - [ ] Contract ID y RPC allowlisted exclusivamente para Testnet; passphrase verificada.
+- [ ] `STELLAR_RECEIPT_CONTRACT_ID` continúa vacío antes del deploy y, después, coincide con el contrato efímero y hash aprobados; nunca reutilizar IDs legacy.
 - [ ] Mutaciones continúan deshabilitadas hasta la ventana aprobada.
 - [ ] Backend tiene autenticación real o arnés sintético aislado; jamás rol autoafirmado.
 - [ ] Rate limit, `no-store`, referrer policy y redacción de URL/logs definidos para verificador público.
 - [ ] Pausa/rollback lógico, TTL/storage, recuperación de RPC y teardown definidos.
+- [ ] Indexer/cursor, finality, reorg, reconciliación y estado `unknown` tienen owner, procedimiento y prueba.
 - [ ] Revisión jurídica, clínica y farmacéutica reconoce que la prueba es sintética y no una receta válida.
 
 ## Secuencia de smoke propuesta tras autorización específica

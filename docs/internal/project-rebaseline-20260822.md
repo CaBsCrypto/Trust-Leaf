@@ -2,6 +2,8 @@
 
 Estado: inventario interno sobre `integration/stellar-receipt-pilot-sprint-20260822`. No autoriza datos reales, producción, pagos, fondeo ni despliegue Testnet.
 
+Fuente operativa vigente de gates: [preparación y validación end-to-end](end-to-end-readiness.md).
+
 ## Base reconciliada
 
 - `main` permanece en `506417a` y no contiene el trabajo reciente.

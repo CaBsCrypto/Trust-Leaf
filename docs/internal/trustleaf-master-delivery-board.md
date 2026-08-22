@@ -2,6 +2,8 @@
 
 Estado: análisis interno en rama aislada. No autoriza datos reales, producción, mainnet, pagos, despliegues ni actos clínicos/farmacéuticos.
 
+Seguimiento operativo actualizado: [preparación y validación end-to-end](end-to-end-readiness.md).
+
 ## Objetivo del sprint de análisis
 
 Congelar un diseño implementable y verificable para una demostración sintética end-to-end: verificación operacional de actores, decisión clínica simulada bajo responsabilidad médica, receipt trazable en Stellar Testnet, persistencia privada separada y controles fail-closed. Ninguna capacidad se presenta como legalmente o clínicamente válida.
