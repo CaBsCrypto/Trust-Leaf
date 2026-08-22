@@ -958,6 +958,20 @@ function AppContent() {
       );
     }
 
+    if (hasRealAdminSession && adminAuth.user) {
+      return (
+        <main className="min-h-screen bg-brand-ivory px-6 py-10 text-brand-green-deep">
+          <div className="mx-auto max-w-3xl space-y-6">
+            <AdminReadinessPanel getIdToken={() => adminAuth.user!.getIdToken()} />
+            <div className="flex gap-3">
+              <button onClick={endSession} className="rounded-xl border border-brand-green-deep/10 bg-white px-4 py-2 text-sm font-bold">Salir</button>
+              <button onClick={() => navigate('/')} className="rounded-xl bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory">Volver al landing</button>
+            </div>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <AdminRoute
         onBack={() => navigate('/')}
@@ -974,7 +988,6 @@ function AppContent() {
         onRegisterDispensaryOnchain={registerDispensaryOnchain}
         onRevokeDoctorOnchain={revokeDoctorOnchain}
         onRevokeDispensaryOnchain={revokeDispensaryOnchain}
-        getAdminIdToken={hasRealAdminSession && adminAuth.user ? () => adminAuth.user!.getIdToken() : undefined}
       />
     );
   }
@@ -2114,7 +2127,6 @@ function AdminRoute({
   onRegisterDispensaryOnchain,
   onRevokeDoctorOnchain,
   onRevokeDispensaryOnchain,
-  getAdminIdToken,
 }: {
   onBack: () => void;
   session: TrustSession | null;
@@ -2130,7 +2142,6 @@ function AdminRoute({
   onRegisterDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
   onRevokeDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
   onRevokeDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
-  getAdminIdToken?: () => Promise<string>;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
@@ -2297,7 +2308,6 @@ function AdminRoute({
       </div>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        {getAdminIdToken ? <AdminReadinessPanel getIdToken={getAdminIdToken} /> : null}
         <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
