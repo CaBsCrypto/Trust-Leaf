@@ -10,11 +10,11 @@ Baseline: `3a7e636`, posterior al smoke técnico documentado. Rama Scrum: `integ
 
 | Frente | Rama / worktree | Responsable | Estado | Resultado esperado |
 |---|---|---|---|---|
-| Scrum e integración | `integration/post-smoke-readonly-20260822` / `wt-post-smoke-integration` | Scrum Master | EN CURSO | integración selectiva y gates |
-| Lectura UI/QR | `sprint/readonly-ui-qr-20260822` / `wt-readonly-ui-qr` | Backend + UX | EN CURSO | RPC/indexer read-only, QR mínimo |
-| Auth/admin | `sprint/auth-admin-minimal-20260822` / `wt-auth-admin-minimal` | Seguridad/identidad | EN CURSO | auth server-side y panel readiness fail-closed |
-| Datos/KMS/observabilidad | `sprint/durable-data-kms-observability-20260822` / `wt-durable-data-kms-observability` | Datos + seguridad/SRE | EN CURSO | ports durables, cifrado, redacción, rate limit |
-| QA E2E read-only | rama por crear tras freeze | QA independiente | PROGRAMADO | médico/paciente/QR/dispensario/admin sin writes |
+| Scrum e integración | `integration/post-smoke-readonly-20260822` / `wt-post-smoke-integration` | Scrum Master | CANDIDATA LOCAL | integración selectiva y gates |
+| Lectura UI/QR | `sprint/readonly-ui-qr-20260822` / `wt-readonly-ui-qr` | Backend + UX | INTEGRADO | RPC/indexer read-only, QR mínimo |
+| Auth/admin | `sprint/auth-admin-minimal-20260822` / `wt-auth-admin-minimal` | Seguridad/identidad | INTEGRADO | JWKS/RBAC para readiness y panel real aislado |
+| Datos/KMS/observabilidad | `sprint/durable-data-kms-observability-20260822` / `wt-durable-data-kms-observability` | Datos + seguridad/SRE | INTEGRADO, ADAPTER LOCAL | ports durables, cifrado, redacción, rate limit |
+| QA E2E read-only | `test/post-smoke-readonly-e2e-20260822` / `wt-post-smoke-qa` | QA independiente | GO READ-ONLY LIMITADO | revisión negativa independiente, sin writes |
 
 ## Definition of Done
 
@@ -41,3 +41,19 @@ Baseline: `3a7e636`, posterior al smoke técnico documentado. Rama Scrum: `integ
 7. Nueva autorización explícita, acotada y separada por operación Testnet.
 
 **Estado:** GO para desarrollo/read-only local; NO-GO para nuevas submissions y producción.
+
+## Evidencia de la candidata
+
+- `npm run preflight`: todas las suites, TypeScript y controles previos al build pasaron. El build dentro del sandbox falló únicamente al crear el proceso de `esbuild` (`spawn EPERM`).
+- `npm run build` ejecutado localmente fuera de esa restricción: PASS, 2.422 módulos; persiste sólo el warning histórico de chunk grande.
+- `test:pilot-safety`: exige simultáneamente `TRUSTLEAF_TESTNET_SUBMIT_ENABLED=true` y el gate de mutaciones, runtime sintético local, Testnet allowlisted y no producción. Con el valor de sprint `false`, los envíos quedan cerrados.
+- Las nueve llamadas legacy de envío y el transport RPC reutilizable tienen guard fail-closed inmediatamente antes del envío.
+- `test:admin-auth-readiness`: el panel real usa token del IdP y no comparte la superficie legacy con controles mutantes; la sesión demo no recibe ese panel.
+- Informe independiente: `post-smoke-readonly-independent-qa-20260822.md`.
+
+## Límites confirmados
+
+- El lector QR real requiere token opaco previamente emitido y secreto HMAC gestionado; el flujo de emisión durable no está habilitado.
+- JWKS/RBAC protege readiness, no las rutas operacionales legacy. Es gate obligatorio antes de cualquier nueva submission.
+- Postgres/Supabase, KMS/HSM, rate limit distribuido e indexer durable no están configurados; los adapters validados son locales.
+- Falta E2E HTTP autenticado completo por rol. No se declara GO de Testnet ni producción.
