@@ -19,7 +19,7 @@ assert.deepEqual(receipt.events.map(event => event.state), ['issued', 'active'])
 let publicView = await service.verifyPublic(SYNTHETIC_RECEIPT_TOKEN, 'active-read');
 assert.equal(publicView.status, 'active');
 assertMinimized(publicView);
-let detail = await service.getOperational(receipt.handle, { authenticated: true, role: 'doctor' });
+let detail = await service.getOperational(receipt.handle, { authenticated: true, actorId: 'doctor-e2e', roles: ['doctor'], receiptHandles: [receipt.handle] });
 assert.equal(detail.version, 2);
 assert.equal(detail.remainingUnits, 2);
 
@@ -28,7 +28,7 @@ assert.equal(receipt.state, 'partial');
 publicView = await service.verifyPublic(SYNTHETIC_RECEIPT_TOKEN, 'partial-read');
 assert.equal(publicView.status, 'active');
 assertMinimized(publicView);
-detail = await service.getOperational(receipt.handle, { authenticated: true, role: 'dispensary' });
+detail = await service.getOperational(receipt.handle, { authenticated: true, actorId: 'dispensary-e2e', roles: ['dispensary'], receiptHandles: [receipt.handle] });
 assert.equal(detail.state, 'partial');
 assert.equal(detail.remainingUnits, 1);
 assert.deepEqual(store.apply({ kind: 'dispense-partial', units: 1, operationId: 'partial-e2e' }), receipt);
