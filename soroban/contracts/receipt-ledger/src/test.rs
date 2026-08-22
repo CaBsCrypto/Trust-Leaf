@@ -34,8 +34,12 @@ fn fixture(env: &Env) -> Fixture<'_> {
 }
 
 fn issue(f: &Fixture<'_>, env: &Env) -> Receipt {
+    let receipt = f
+        .client
+        .issue(&f.doctor, &id(env, 1), &id(env, 11), &id(env, 101));
     f.client
-        .issue(&f.doctor, &id(env, 1), &id(env, 11), &id(env, 101))
+        .set_grant(&f.doctor, &id(env, 1), &f.dispensary, &true, &id(env, 110));
+    receipt
 }
 
 #[test]
@@ -45,6 +49,7 @@ fn full_versioned_lifecycle_uses_only_opaque_values() {
     let issued = issue(&f, &env);
     assert_eq!(issued.state, ReceiptState::Issued);
     assert_eq!(issued.version, 1);
+    assert_eq!(issued.issuer, f.doctor);
 
     let active = f
         .client
@@ -86,7 +91,9 @@ fn exact_operation_replay_is_idempotent() {
     let env = Env::default();
     let f = fixture(&env);
     let first = issue(&f, &env);
-    let replay = issue(&f, &env);
+    let replay = f
+        .client
+        .issue(&f.doctor, &id(&env, 1), &id(&env, 11), &id(&env, 101));
     assert_eq!(first, replay);
 
     let active = f
@@ -107,7 +114,9 @@ fn delayed_replay_returns_original_operation_result() {
     f.client
         .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
 
-    let replayed_issue = issue(&f, &env);
+    let replayed_issue = f
+        .client
+        .issue(&f.doctor, &id(&env, 1), &id(&env, 11), &id(&env, 101));
     assert_eq!(replayed_issue, originally_issued);
     assert_eq!(replayed_issue.state, ReceiptState::Issued);
     assert_eq!(
@@ -248,4 +257,152 @@ fn disabled_role_fails_closed() {
     f.client.set_doctor(&f.admin, &f.doctor, &false);
     f.client
         .issue(&f.doctor, &id(&env, 1), &id(&env, 11), &id(&env, 101));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
+fn other_doctor_cannot_activate_issuer_receipt() {
+    let env = Env::default();
+    let f = fixture(&env);
+    issue(&f, &env);
+    let other_doctor = Address::generate(&env);
+    f.client.set_doctor(&f.admin, &other_doctor, &true);
+    f.client.activate(
+        &other_doctor,
+        &id(&env, 1),
+        &1,
+        &id(&env, 12),
+        &id(&env, 102),
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
+fn other_doctor_cannot_revoke_issuer_receipt() {
+    let env = Env::default();
+    let f = fixture(&env);
+    issue(&f, &env);
+    let other_doctor = Address::generate(&env);
+    f.client.set_doctor(&f.admin, &other_doctor, &true);
+    f.client.revoke(
+        &other_doctor,
+        &id(&env, 1),
+        &1,
+        &id(&env, 12),
+        &id(&env, 102),
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
+fn ungranted_dispensary_cannot_record_partial() {
+    let env = Env::default();
+    let f = fixture(&env);
+    let other_dispensary = Address::generate(&env);
+    f.client.set_dispensary(&f.admin, &other_dispensary, &true);
+    issue(&f, &env);
+    f.client
+        .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+    f.client.record_partial(
+        &other_dispensary,
+        &id(&env, 1),
+        &2,
+        &id(&env, 13),
+        &id(&env, 103),
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
+fn ungranted_dispensary_cannot_mark_dispensed() {
+    let env = Env::default();
+    let f = fixture(&env);
+    let other_dispensary = Address::generate(&env);
+    f.client.set_dispensary(&f.admin, &other_dispensary, &true);
+    issue(&f, &env);
+    f.client
+        .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+    f.client.mark_dispensed(
+        &other_dispensary,
+        &id(&env, 1),
+        &2,
+        &id(&env, 13),
+        &id(&env, 103),
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #3)")]
+fn revoked_grant_blocks_dispense() {
+    let env = Env::default();
+    let f = fixture(&env);
+    issue(&f, &env);
+    f.client
+        .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+    f.client.set_grant(
+        &f.doctor,
+        &id(&env, 1),
+        &f.dispensary,
+        &false,
+        &id(&env, 111),
+    );
+    f.client.mark_dispensed(
+        &f.dispensary,
+        &id(&env, 1),
+        &2,
+        &id(&env, 13),
+        &id(&env, 103),
+    );
+}
+
+#[test]
+fn admin_can_control_receipt_and_grant() {
+    let env = Env::default();
+    let f = fixture(&env);
+    issue(&f, &env);
+    let active = f
+        .client
+        .activate(&f.admin, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+    assert_eq!(active.state, ReceiptState::Active);
+    f.client.set_grant(
+        &f.admin,
+        &id(&env, 1),
+        &f.dispensary,
+        &false,
+        &id(&env, 111),
+    );
+}
+
+#[test]
+fn delayed_grant_replay_returns_original_result() {
+    let env = Env::default();
+    let f = fixture(&env);
+    let issued = issue(&f, &env);
+    f.client
+        .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+    let replayed = f.client.set_grant(
+        &f.doctor,
+        &id(&env, 1),
+        &f.dispensary,
+        &true,
+        &id(&env, 110),
+    );
+    assert_eq!(replayed, issued);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn grant_operation_id_cannot_change_dispensary() {
+    let env = Env::default();
+    let f = fixture(&env);
+    issue(&f, &env);
+    let other_dispensary = Address::generate(&env);
+    f.client.set_dispensary(&f.admin, &other_dispensary, &true);
+    f.client.set_grant(
+        &f.doctor,
+        &id(&env, 1),
+        &other_dispensary,
+        &true,
+        &id(&env, 110),
+    );
 }

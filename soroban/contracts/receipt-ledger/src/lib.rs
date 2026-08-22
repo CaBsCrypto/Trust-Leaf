@@ -31,6 +31,8 @@ pub struct Receipt {
     pub receipt_id: BytesN<32>,
     /// Opaque commitment produced off-chain. No clinical fields are stored separately.
     pub commitment: BytesN<32>,
+    /// Pseudonymous technical issuer account. It must never be derived from clinical identity.
+    pub issuer: Address,
     pub state: ReceiptState,
     pub version: u32,
 }
@@ -45,6 +47,8 @@ struct OperationRecord {
     resulting_version: u32,
     target_state: ReceiptState,
     commitment: BytesN<32>,
+    issuer: Address,
+    grantee: Option<Address>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -56,6 +60,8 @@ enum OperationDomain {
     Dispense = 4,
     Revoke = 5,
     Expire = 6,
+    Grant = 7,
+    RevokeGrant = 8,
 }
 
 #[derive(Clone)]
@@ -66,6 +72,7 @@ enum DataKey {
     Dispensary(Address),
     Receipt(BytesN<32>),
     Operation(BytesN<32>),
+    Grant(BytesN<32>, Address),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -136,6 +143,15 @@ pub struct ExpiredEvent {
     pub actor: Address,
 }
 
+#[contractevent(topics = ["GrantChanged"], data_format = "vec")]
+pub struct GrantChangedEvent {
+    pub receipt_id: BytesN<32>,
+    pub dispensary: Address,
+    pub enabled: bool,
+    pub operation_id: BytesN<32>,
+    pub actor: Address,
+}
+
 #[contractimpl]
 impl ReceiptLedgerContract {
     pub fn init(env: Env, admin: Address) {
@@ -180,6 +196,8 @@ impl ReceiptLedgerContract {
             resulting_version: 1,
             target_state: ReceiptState::Issued,
             commitment: commitment.clone(),
+            issuer: doctor.clone(),
+            grantee: None,
         };
         if let Some(existing) = load_operation(&env, &operation_id) {
             return replay_or_reject(&env, existing, requested);
@@ -195,6 +213,7 @@ impl ReceiptLedgerContract {
         let receipt = Receipt {
             receipt_id: receipt_id.clone(),
             commitment: commitment.clone(),
+            issuer: doctor.clone(),
             state: ReceiptState::Issued,
             version: 1,
         };
@@ -218,7 +237,6 @@ impl ReceiptLedgerContract {
         commitment: BytesN<32>,
         operation_id: BytesN<32>,
     ) -> Receipt {
-        require_doctor(&env, &doctor);
         transition(
             &env,
             doctor,
@@ -239,7 +257,6 @@ impl ReceiptLedgerContract {
         commitment: BytesN<32>,
         operation_id: BytesN<32>,
     ) -> Receipt {
-        require_dispensary(&env, &dispensary);
         transition(
             &env,
             dispensary,
@@ -260,7 +277,6 @@ impl ReceiptLedgerContract {
         commitment: BytesN<32>,
         operation_id: BytesN<32>,
     ) -> Receipt {
-        require_dispensary(&env, &dispensary);
         transition(
             &env,
             dispensary,
@@ -281,7 +297,6 @@ impl ReceiptLedgerContract {
         commitment: BytesN<32>,
         operation_id: BytesN<32>,
     ) -> Receipt {
-        require_doctor(&env, &doctor);
         transition(
             &env,
             doctor,
@@ -298,16 +313,15 @@ impl ReceiptLedgerContract {
     /// No clinical duration or expiration timestamp is written to the ledger.
     pub fn expire(
         env: Env,
-        admin: Address,
+        actor: Address,
         receipt_id: BytesN<32>,
         expected_version: u32,
         commitment: BytesN<32>,
         operation_id: BytesN<32>,
     ) -> Receipt {
-        require_admin(&env, &admin);
         transition(
             &env,
-            admin,
+            actor,
             OperationDomain::Expire,
             receipt_id,
             expected_version,
@@ -315,6 +329,68 @@ impl ReceiptLedgerContract {
             operation_id,
             ReceiptState::Expired,
         )
+    }
+
+    pub fn set_grant(
+        env: Env,
+        actor: Address,
+        receipt_id: BytesN<32>,
+        dispensary: Address,
+        enabled: bool,
+        operation_id: BytesN<32>,
+    ) -> Receipt {
+        let receipt = load_receipt(&env, &receipt_id);
+        require_controller(&env, &actor, &receipt.issuer);
+        let domain = if enabled {
+            OperationDomain::Grant
+        } else {
+            OperationDomain::RevokeGrant
+        };
+        if let Some(existing) = load_operation(&env, &operation_id) {
+            if existing.actor != actor
+                || existing.domain != domain
+                || existing.receipt_id != receipt_id
+                || existing.issuer != receipt.issuer
+                || existing.grantee != Some(dispensary)
+            {
+                panic_with_error!(&env, ReceiptError::OperationConflict);
+            }
+            return receipt_from_operation(existing);
+        }
+        let grantee = dispensary.clone();
+        if enabled && !is_enabled_dispensary(&env, &grantee) {
+            panic_with_error!(&env, ReceiptError::Unauthorized);
+        }
+
+        let requested = OperationRecord {
+            actor: actor.clone(),
+            domain,
+            receipt_id: receipt_id.clone(),
+            expected_version: receipt.version,
+            resulting_version: receipt.version,
+            target_state: receipt.state,
+            commitment: receipt.commitment.clone(),
+            issuer: receipt.issuer.clone(),
+            grantee: Some(grantee),
+        };
+
+        let grant_key = DataKey::Grant(receipt_id.clone(), dispensary.clone());
+        env.storage().persistent().set(&grant_key, &enabled);
+        env.storage().persistent().extend_ttl(
+            &grant_key,
+            RECEIPT_LIFETIME_THRESHOLD,
+            RECEIPT_BUMP_AMOUNT,
+        );
+        save_operation(&env, &operation_id, &requested);
+        GrantChangedEvent {
+            receipt_id,
+            dispensary,
+            enabled,
+            operation_id,
+            actor,
+        }
+        .publish(&env);
+        receipt
     }
 
     pub fn get_receipt(env: Env, receipt_id: BytesN<32>) -> Receipt {
@@ -332,6 +408,18 @@ fn transition(
     operation_id: BytesN<32>,
     target_state: ReceiptState,
 ) -> Receipt {
+    let current = load_receipt(env, &receipt_id);
+    match domain {
+        OperationDomain::Activate | OperationDomain::Revoke | OperationDomain::Expire => {
+            require_controller(env, &actor, &current.issuer)
+        }
+        OperationDomain::Partial | OperationDomain::Dispense => {
+            require_granted_dispensary(env, &actor, &receipt_id)
+        }
+        OperationDomain::Issue | OperationDomain::Grant | OperationDomain::RevokeGrant => {
+            panic_with_error!(env, ReceiptError::InvalidTransition)
+        }
+    }
     if expected_version == u32::MAX {
         panic_with_error!(env, ReceiptError::VersionConflict);
     }
@@ -344,12 +432,13 @@ fn transition(
         resulting_version,
         target_state,
         commitment: commitment.clone(),
+        issuer: current.issuer.clone(),
+        grantee: None,
     };
     if let Some(existing) = load_operation(env, &operation_id) {
         return replay_or_reject(env, existing, requested);
     }
 
-    let current = load_receipt(env, &receipt_id);
     if current.version != expected_version {
         panic_with_error!(env, ReceiptError::VersionConflict);
     }
@@ -360,6 +449,7 @@ fn transition(
     let updated = Receipt {
         receipt_id: receipt_id.clone(),
         commitment: commitment.clone(),
+        issuer: current.issuer,
         state: target_state,
         version: resulting_version,
     };
@@ -453,9 +543,14 @@ fn replay_or_reject(env: &Env, existing: OperationRecord, requested: OperationRe
     if existing != requested {
         panic_with_error!(env, ReceiptError::OperationConflict);
     }
+    receipt_from_operation(existing)
+}
+
+fn receipt_from_operation(existing: OperationRecord) -> Receipt {
     Receipt {
         receipt_id: existing.receipt_id,
         commitment: existing.commitment,
+        issuer: existing.issuer,
         state: existing.target_state,
         version: existing.resulting_version,
     }
@@ -468,20 +563,24 @@ fn save_receipt_and_operation(
     operation: &OperationRecord,
 ) {
     let receipt_key = DataKey::Receipt(receipt.receipt_id.clone());
-    let operation_key = DataKey::Operation(operation_id.clone());
     env.storage().persistent().set(&receipt_key, receipt);
-    env.storage().persistent().set(&operation_key, operation);
     env.storage().persistent().extend_ttl(
         &receipt_key,
         RECEIPT_LIFETIME_THRESHOLD,
         RECEIPT_BUMP_AMOUNT,
     );
+    save_operation(env, operation_id, operation);
+    extend_instance_ttl(env);
+}
+
+fn save_operation(env: &Env, operation_id: &BytesN<32>, operation: &OperationRecord) {
+    let operation_key = DataKey::Operation(operation_id.clone());
+    env.storage().persistent().set(&operation_key, operation);
     env.storage().persistent().extend_ttl(
         &operation_key,
         RECEIPT_LIFETIME_THRESHOLD,
         RECEIPT_BUMP_AMOUNT,
     );
-    extend_instance_ttl(env);
 }
 
 fn load_receipt(env: &Env, receipt_id: &BytesN<32>) -> Receipt {
@@ -540,6 +639,46 @@ fn require_dispensary(env: &Env, account: &Address) {
         .storage()
         .persistent()
         .get(&DataKey::Dispensary(account.clone()))
+        .unwrap_or(false)
+    {
+        panic_with_error!(env, ReceiptError::Unauthorized);
+    }
+}
+
+fn is_enabled_dispensary(env: &Env, account: &Address) -> bool {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Dispensary(account.clone()))
+        .unwrap_or(false)
+}
+
+fn require_controller(env: &Env, actor: &Address, issuer: &Address) {
+    actor.require_auth();
+    let admin: Address = env
+        .storage()
+        .instance()
+        .get(&DataKey::Admin)
+        .unwrap_or_else(|| panic_with_error!(env, ReceiptError::NotInitialized));
+    if *actor == admin {
+        return;
+    }
+    if *actor != *issuer
+        || !env
+            .storage()
+            .persistent()
+            .get(&DataKey::Doctor(actor.clone()))
+            .unwrap_or(false)
+    {
+        panic_with_error!(env, ReceiptError::Unauthorized);
+    }
+}
+
+fn require_granted_dispensary(env: &Env, account: &Address, receipt_id: &BytesN<32>) {
+    require_dispensary(env, account);
+    if !env
+        .storage()
+        .persistent()
+        .get(&DataKey::Grant(receipt_id.clone(), account.clone()))
         .unwrap_or(false)
     {
         panic_with_error!(env, ReceiptError::Unauthorized);
