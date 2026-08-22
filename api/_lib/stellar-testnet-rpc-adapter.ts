@@ -13,6 +13,7 @@ export interface StellarRpcConfig {
   wasmSha256: string;
   allowedWasmSha256: readonly string[];
   submissionEnabled: boolean;
+  submissionAuthorization?: { operationId: string; expiresAt: number; maxSubmissions: 1 };
   timeoutMs?: number;
   confirmationLedgers?: number;
 }
@@ -21,7 +22,8 @@ export interface OpaqueContractInvocation {
   operationId: string;
   receiptHandle: string;
   expectedVersion: number;
-  functionName: 'issue' | 'activate' | 'dispense_partial' | 'dispense' | 'revoke' | 'expire';
+  actor: string;
+  functionName: 'issue' | 'activate' | 'record_partial' | 'mark_dispensed' | 'revoke' | 'expire';
   commitment: string;
 }
 
@@ -64,7 +66,7 @@ export function validateStellarRpcConfig(config: StellarRpcConfig): void {
   if (config.rpcUrl !== TESTNET_RPC || !config.allowedRpcUrls.includes(config.rpcUrl)) fail('RPC_URL_ALLOWLIST_REJECTED');
   if (!CONTRACT.test(config.contractId) || !config.allowedContractIds.includes(config.contractId)) fail('CONTRACT_ALLOWLIST_REJECTED');
   if (!HASH.test(wasm) || !config.allowedWasmSha256.map(value => value.toLowerCase()).includes(wasm)) fail('WASM_HASH_ALLOWLIST_REJECTED');
-  if (config.mode === 'testnet' && config.submissionEnabled) fail('TESTNET_SUBMISSION_GATE_CLOSED');
+  if (config.mode === 'testnet' && config.submissionEnabled && (!config.submissionAuthorization || config.submissionAuthorization.maxSubmissions !== 1 || !OPAQUE.test(config.submissionAuthorization.operationId) || config.submissionAuthorization.expiresAt <= Date.now())) fail('TESTNET_SUBMISSION_GATE_CLOSED');
 }
 
 export function createStellarRpcAdapter(input: { config: StellarRpcConfig; transport: StellarRpcTransport; signer: EnvelopeSigner }) {
@@ -74,6 +76,7 @@ export function createStellarRpcAdapter(input: { config: StellarRpcConfig; trans
   const timeoutMs = Math.max(1, Math.min(input.config.timeoutMs ?? 5_000, 15_000));
   const records = new Map<string, RpcOperationRecord>();
   const envelopes = new Map<string, UnsignedEnvelope | SignedEnvelope>();
+  let authorizedSubmissions = 0;
   const digest = (invocation: OpaqueContractInvocation) => createHash('sha256').update(JSON.stringify(invocation)).digest('hex');
 
   const prepare = (invocation: OpaqueContractInvocation): RpcOperationRecord => {
@@ -116,6 +119,9 @@ export function createStellarRpcAdapter(input: { config: StellarRpcConfig; trans
     if (prior.state === 'unknown') return confirm(operationId);
     if (prior.state !== 'signed') fail('OPERATION_NOT_SIGNED');
     if (!input.config.submissionEnabled) fail('SUBMISSION_GATE_CLOSED');
+    const authorization = input.config.submissionAuthorization;
+    if (input.config.mode === 'testnet' && (!authorization || authorization.operationId !== operationId || authorization.expiresAt <= Date.now() || authorizedSubmissions >= authorization.maxSubmissions)) fail('SUBMISSION_AUTHORIZATION_REJECTED');
+    authorizedSubmissions += 1;
     let result: SubmissionResult;
     try { result = await bounded(input.transport.submit(envelopes.get(operationId) as SignedEnvelope, timeoutMs), timeoutMs); }
     catch { return update(prior, { state: 'unknown', submitAttempts: prior.submitAttempts + 1, errorCode: 'RPC_TIMEOUT_UNKNOWN' }); }
@@ -140,7 +146,9 @@ export function createStellarRpcAdapter(input: { config: StellarRpcConfig; trans
 
 function assertInvocation(value: OpaqueContractInvocation) {
   if (!OPAQUE.test(value.operationId) || !OPAQUE.test(value.receiptHandle)) fail('INVALID_OPAQUE_IDENTIFIER');
+  if (!/^G[A-Z2-7]{55}$/.test(value.actor)) fail('INVALID_ACTOR');
   if (!Number.isSafeInteger(value.expectedVersion) || value.expectedVersion < 0 || !HASH.test(value.commitment.toLowerCase())) fail('INVALID_INVOCATION');
+  if ((value.functionName === 'issue' && value.expectedVersion !== 0) || (value.functionName !== 'issue' && value.expectedVersion < 1)) fail('INVALID_EXPECTED_VERSION');
 }
 function redact(value?: string) { return value && /^[A-Z0-9_]{1,64}$/.test(value) ? value : value ? 'RPC_ERROR_REDACTED' : undefined; }
 function fail(code: string): never { throw Object.assign(new Error('Stellar operation unavailable.'), { code }); }
