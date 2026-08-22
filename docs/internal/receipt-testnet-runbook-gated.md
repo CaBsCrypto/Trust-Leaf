@@ -34,7 +34,8 @@ El informe debe registrar commit, estado limpio, versiones Rust/Cargo/Stellar CL
 - [ ] Backend tiene autenticación real o arnés sintético aislado; jamás rol autoafirmado.
 - [ ] Rate limit, `no-store`, referrer policy y redacción de URL/logs definidos para verificador público.
 - [ ] Pausa/rollback lógico, TTL/storage, recuperación de RPC y teardown definidos.
-- [ ] Indexer/cursor, finality, reorg, reconciliación y estado `unknown` tienen owner, procedimiento y prueba.
+- [x] El simulador local cubre cursor, finality, fork/reorg lógico, gaps, deduplicación, reconciliación de `unknown`, retry acotado y errores redactados (`npm run test:receipt-indexer`).
+- [ ] Owner, persistencia durable, fuente RPC allowlisted, criterio final de Testnet y procedimiento operativo han sido aprobados y probados contra una red autorizada.
 - [ ] Revisión jurídica, clínica y farmacéutica reconoce que la prueba es sintética y no una receta válida.
 
 ## Secuencia de smoke propuesta tras autorización específica

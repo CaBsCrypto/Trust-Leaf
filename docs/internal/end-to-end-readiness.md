@@ -38,7 +38,8 @@ Leyenda: **CONFIRMADO** tiene evidencia reproducible; **PENDIENTE** requiere imp
 | Backend/QR/UI sintético | CONFIRMADO local | [backend](../../tests/receipt-ledger-backend.test.ts), [UI](../../tests/receipt-pilot-ui-flow.test.ts), [E2E inyectado](../../tests/receipt-shared-state-e2e.test.ts) | Backend, UX y QA |
 | Persistencia compartida entre procesos | PENDIENTE | el E2E comparte store por inyección; navegador y handlers no son durables | Arquitectura de datos |
 | Adapter RPC, signer y submission | PENDIENTE | adapter lanza `RECEIPT_TESTNET_GATE_CLOSED`; mutaciones deshabilitadas | Ingeniería Stellar + seguridad |
-| Indexación, finality y reconciliación | PENDIENTE | sin indexer/cursor/reorg/estado `unknown` implementado | Backend/SRE |
+| Indexación, finality y reconciliación simuladas | CONFIRMADO LOCAL | `api/_lib/receipt-indexer.ts`; `npm run test:receipt-indexer` valida cursor, profundidad, gaps, fork/reorg, deduplicación, `unknown`, retry acotado y auditoría redactada | Backend/SRE |
+| Indexación y reconciliación contra Stellar Testnet/RPC | BLOQUEADO | no existe conexión RPC ni persistencia durable; la submission real permanece deshabilitada | Backend/SRE + aprobación humana |
 | Auth real o arnés aislado | PENDIENTE | solo fixtures server-side con roles/scopes sintéticos | Seguridad/identidad |
 | Commitments y claves | PENDIENTE | falta especificación canónica, KMS/HSM, rotación y separación de dominios | Criptografía + privacidad |
 | Cuentas técnicas/custodia | BLOQUEADO por decisión | direcciones, grants, tiempos y secuencia son correlacionables | Owner seguridad + usuario |
@@ -68,7 +69,8 @@ Los snapshots o WASM regenerados por la prueba se guardan fuera del commit candi
 - [ ] Signer server-side con secret store/KMS/HSM; ninguna clave en repositorio, navegador, QR, URL o logs.
 - [ ] Auth real con claims verificados y scopes por receipt, o arnés sintético aislado y no accesible públicamente.
 - [ ] Adapter con `simulate → sign → submit → confirm`, timeout y estado `unknown`; mutaciones off por defecto.
-- [ ] Indexer con cursor, confirmaciones/finality, reorg, deduplicación y reconciliación contra estado off-chain.
+- [x] Indexer puramente simulado con cursor, finality configurable, fork/reorg lógico, gaps, deduplicación, estados ambiguos y retries acotados.
+- [ ] Persistencia durable, política Testnet definitiva y reconciliación contra RPC/estado off-chain real.
 - [ ] Commitments canónicos opacos con separación de dominio, nonce/salt y rotación; nunca hash directo de clínica.
 - [ ] Verificador con rate limit, respuesta uniforme, `no-store`, referrer policy y redacción de URL/logs en todos los paths.
 - [ ] Política TTL/rent para receipt, operaciones, grants y roles; alertas antes de expiración.
