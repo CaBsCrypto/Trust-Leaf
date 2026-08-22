@@ -198,4 +198,3 @@ En esta fase “paciente uno” solo puede ser una persona que opera un personaj
 7. ¿Cuál es la política de confirmación, reconciliación, pausa y recuperación TESTNET?
 8. ¿Cómo se gestionan retiro de consentimiento, rectificación, retención y borrado bajo revisión chilena?
 9. ¿Qué aprobación independiente se exige antes de introducir el primer dato real? La respuesta actual debe ser: ninguna introducción hasta cerrar todos los gates.
-
