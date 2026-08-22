@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle, QrCode, ShieldCheck, Stethoscope, UserRound, Store } from 'lucide-react';
-import { applyReceiptPilotOperation, createReceiptPilotFixture, publicReceiptProjection, type PilotRole } from '../lib/receiptPilotDemo';
-import { DEMO_PUBLIC_VERIFICATION_TOKENS } from '../lib/publicVerification';
+import { publicReceiptProjection, sharedSyntheticReceiptStore, SYNTHETIC_RECEIPT_TOKEN, type PilotRole } from '../lib/receiptPilotDemo';
 
 const ROLE_COPY: Record<PilotRole, { label: string; description: string }> = {
   doctor: { label: 'Médico', description: 'Emite una constancia demo tras gates sintéticos.' },
@@ -11,11 +10,11 @@ const ROLE_COPY: Record<PilotRole, { label: string; description: string }> = {
 
 export default function ReceiptPilotFlow({ onBack }: { onBack: () => void }) {
   const [role, setRole] = useState<PilotRole>('doctor');
-  const [receipt, setReceipt] = useState(createReceiptPilotFixture);
+  const [receipt, setReceipt] = useState(() => { sharedSyntheticReceiptStore.reset(); return sharedSyntheticReceiptStore.read(); });
   const publicProjection = useMemo(() => publicReceiptProjection(receipt), [receipt]);
-  const run = (kind: 'issue' | 'dispense-partial') => setReceipt(current => applyReceiptPilotOperation(current, kind === 'issue'
-    ? { kind, operationKey: 'issue-demo-1' }
-    : { kind, units: 1, operationKey: `dispense-demo-${current.version}` }));
+  const run = (kind: 'issue' | 'dispense-partial') => setReceipt(current => sharedSyntheticReceiptStore.apply(kind === 'issue'
+    ? { kind, operationId: 'issue-demo-1' }
+    : { kind, units: 1, operationId: `dispense-demo-${current.version}` }));
 
   return <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
     <header className="border-b border-brand-green-deep/10 bg-white"><div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
@@ -28,10 +27,10 @@ export default function ReceiptPilotFlow({ onBack }: { onBack: () => void }) {
       <div className="grid gap-6 lg:grid-cols-[1fr_.8fr]">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           {role === 'doctor' && <><Stethoscope/><h2 className="mt-3 text-2xl font-bold">Emisión demo</h2><p className="mt-2 text-sm">Profesional e identidad+consentimiento figuran verificados solo como fixtures.</p><button type="button" disabled={receipt.state !== 'draft'} onClick={() => run('issue')} className="mt-5 rounded-xl bg-brand-green-deep px-5 py-3 font-bold text-white disabled:opacity-40">Emitir constancia sintética</button></>}
-          {role === 'patient' && <><UserRound/><h2 className="mt-3 text-2xl font-bold">Estado mínimo</h2><dl className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-brand-neutral p-4"><dt>Constancia</dt><dd className="font-bold">{publicProjection.evidenceExists ? 'Existe' : 'Aún no emitida'}</dd></div><div className="rounded-xl bg-brand-neutral p-4"><dt>Estado público</dt><dd className="font-bold capitalize">{publicProjection.status}</dd></div></dl>{receipt.state !== 'draft' && <a href={`/verify/${encodeURIComponent(DEMO_PUBLIC_VERIFICATION_TOKENS[0])}`} className="mt-5 inline-flex items-center gap-2 rounded-xl border px-4 py-3 font-bold"><QrCode size={18}/> Abrir verificación pública demo</a>}</>}
+          {role === 'patient' && <><UserRound/><h2 className="mt-3 text-2xl font-bold">Estado mínimo</h2><dl className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-brand-neutral p-4"><dt>Constancia</dt><dd className="font-bold">{publicProjection.evidenceExists ? 'Existe' : 'Aún no emitida'}</dd></div><div className="rounded-xl bg-brand-neutral p-4"><dt>Estado público</dt><dd className="font-bold capitalize">{publicProjection.status}</dd></div></dl>{receipt.state !== 'draft' && <a href={`/verify/${encodeURIComponent(SYNTHETIC_RECEIPT_TOKEN)}`} className="mt-5 inline-flex items-center gap-2 rounded-xl border px-4 py-3 font-bold"><QrCode size={18}/> Abrir verificación pública demo</a>}</>}
           {role === 'dispensary' && <><Store/><h2 className="mt-3 text-2xl font-bold">Operación autorizada demo</h2><p className="mt-2 text-sm">El saldo sintético se muestra solo en esta superficie de rol y nunca en la vista pública.</p><div className="mt-4 rounded-xl bg-brand-neutral p-4"><span className="text-xs uppercase">Saldo operativo sintético</span><strong className="block text-3xl">{receipt.remainingUnits}</strong></div><button type="button" disabled={!['active','partial'].includes(receipt.state)} onClick={() => run('dispense-partial')} className="mt-5 rounded-xl bg-brand-green-deep px-5 py-3 font-bold text-white disabled:opacity-40">Registrar parcial demo</button></>}
         </section>
-        <aside className="rounded-3xl border border-brand-green-deep/10 bg-white p-6"><CheckCircle/><h2 className="mt-3 text-xl font-bold">Timeline versionado</h2><p className="mt-2 text-xs text-brand-green-mid">Handle opaco: {receipt.receiptHandle.slice(0, 16)}…</p><ol className="mt-5 space-y-3">{receipt.timeline.length === 0 ? <li className="text-sm text-brand-green-mid">Sin eventos emitidos.</li> : receipt.timeline.map(event => <li key={event.version} className="rounded-xl bg-brand-neutral p-3 text-sm"><strong>v{event.version}</strong> · {event.state}</li>)}</ol></aside>
+        <aside className="rounded-3xl border border-brand-green-deep/10 bg-white p-6"><CheckCircle/><h2 className="mt-3 text-xl font-bold">Timeline versionado</h2><p className="mt-2 text-xs text-brand-green-mid">Handle opaco: {receipt.handle.slice(0, 16)}…</p><ol className="mt-5 space-y-3">{receipt.events.length === 0 ? <li className="text-sm text-brand-green-mid">Sin eventos emitidos.</li> : receipt.events.map(event => <li key={event.version} className="rounded-xl bg-brand-neutral p-3 text-sm"><strong>v{event.version}</strong> · {event.state}</li>)}</ol></aside>
       </div>
     </main>
   </div>;

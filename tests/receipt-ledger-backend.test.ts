@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createSyntheticReceiptLedger, createTestnetReceiptLedger } from '../api/_lib/receipt-ledger.ts';
 import { createReceiptService, identityFromHeaders } from '../api/_lib/receipt-service.ts';
+import { SYNTHETIC_RECEIPT_TOKEN } from '../shared/receipt-demo-contract.ts';
 
 const ledger = createSyntheticReceiptLedger();
 const service = createReceiptService(ledger);
-const token = 'tl_demo_A7mQ2vJ9xK4pR8wN6yT3uF5zB1cD0eGhL.iNbZ8-2idR0rHqfXp-7YefpAq-svn1CjFmtUlXt2zbM';
+const token = SYNTHETIC_RECEIPT_TOKEN;
 const publicResult = await service.verifyPublic(token, 'read-1');
 assert.deepEqual(Object.keys(publicResult).sort(), ['demo', 'evidenceExists', 'proofMatches', 'status']);
 assert.equal(/patient|doctor|gram|quantity|balance|event|contract|address/i.test(JSON.stringify(publicResult)), false);
