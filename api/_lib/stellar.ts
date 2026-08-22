@@ -4,7 +4,7 @@ declare global {
 
 import { createHash } from 'crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { getPilotMutationSafety } from './pilot-safety.js';
+import { assertTestnetMutationEnabled, getPilotMutationSafety } from './pilot-safety.js';
 
 const DEFAULT_READONLY_ACCOUNT =
   'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6';
@@ -190,6 +190,7 @@ export async function fundTestnetAccount(input: {
   role?: 'admin' | 'doctor' | 'dispensary' | 'patient';
   address?: string;
 }) {
+  assertTestnetMutationEnabled();
   const address = resolveFaucetAddress(input).trim();
 
   if (!address) {
@@ -540,6 +541,7 @@ export async function issuePrescriptionForPatient(input: {
   transaction.sign(doctorKeypair);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -610,6 +612,7 @@ export async function issuePrescriptionForPatient(input: {
 
       classicTx.sign(doctorKeypair);
       const txToSubmit = sponsorTransactionIfNeeded(classicTx);
+      assertTestnetMutationEnabled();
       const submitResult = await serverHorizon.submitTransaction(txToSubmit);
       console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado con éxito! Hash: ${submitResult.hash}`);
     } catch (nftError: any) {
@@ -750,6 +753,7 @@ export async function retainPrescriptionForDispensary(input: {
   transaction.sign(dispensaryKeypair);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -837,6 +841,7 @@ export async function releasePrescriptionToPatient(input: {
   transaction.sign(callerKeypair);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -1064,6 +1069,7 @@ export async function dispensePrescriptionForPatient(input: {
         const clawbackTx = clawbackBuilder.setTimeout(30).build();
         clawbackTx.sign(doctorKeypair);
         const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+        assertTestnetMutationEnabled();
         const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
         clawbackTxHash = clawbackResult.hash;
         console.log(`[NFT Burn] Receta NFT ${assetCode} quemada (Clawback exitoso): ${clawbackTxHash}`);
@@ -1545,6 +1551,7 @@ async function submitSingleContractCall(
   transaction.sign(signer);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -1730,6 +1737,7 @@ export async function submitSignedTransaction(input: {
     txToSubmit = sponsorTransactionIfNeeded(parsedTx);
   }
 
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -1805,6 +1813,7 @@ export async function submitSignedTransaction(input: {
 
         classicTx.sign(doctorKeypair);
         const txToSubmit = sponsorTransactionIfNeeded(classicTx);
+        assertTestnetMutationEnabled();
         const submitResult = await serverHorizon.submitTransaction(txToSubmit);
         console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado! Hash: ${submitResult.hash}`);
       } catch (nftError: any) {
@@ -1883,6 +1892,7 @@ export async function submitSignedTransaction(input: {
           const clawbackTx = clawbackBuilder.setTimeout(30).build();
           clawbackTx.sign(doctorKeypair);
           const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+          assertTestnetMutationEnabled();
           const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
           clawbackTxHash = clawbackResult.hash;
           console.log(`[NFT Burn] Receta NFT ${assetCode} quemada: ${clawbackTxHash}`);

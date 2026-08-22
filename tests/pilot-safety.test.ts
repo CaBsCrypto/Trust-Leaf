@@ -3,6 +3,7 @@ import { getPilotMutationSafety } from '../api/_lib/pilot-safety.ts';
 
 const safeTestnet = {
   NODE_ENV: 'test',
+  TRUSTLEAF_TESTNET_SUBMIT_ENABLED: 'true',
   TRUSTLEAF_ALLOW_TESTNET_MUTATIONS: 'true',
   TRUSTLEAF_PILOT_RUNTIME: 'local-synthetic',
   STELLAR_NETWORK: 'testnet',
@@ -22,6 +23,7 @@ for (const [name, override] of Object.entries({
   foreignHorizon: { STELLAR_HORIZON_URL: 'https://example.com' },
   publicRelayer: { STELLAR_RELAYER_URL: 'https://relayer.example.com' },
   missingIsolationMode: { TRUSTLEAF_PILOT_RUNTIME: 'disabled' },
+  submissionsDisabled: { TRUSTLEAF_TESTNET_SUBMIT_ENABLED: 'false' },
 })) {
   assert.equal(
     getPilotMutationSafety({ ...safeTestnet, ...override }).enabled,
@@ -30,4 +32,12 @@ for (const [name, override] of Object.entries({
   );
 }
 
-console.log('pilot-safety: 8 checks passed');
+const stellarSource = await import('node:fs/promises').then(({ readFile }) =>
+  readFile(new URL('../api/_lib/stellar.ts', import.meta.url), 'utf8'),
+);
+for (const match of stellarSource.matchAll(/(?:sendTransaction|submitTransaction)\(txToSubmit\)/g)) {
+  const preceding = stellarSource.slice(Math.max(0, match.index - 120), match.index);
+  assert.match(preceding, /assertTestnetMutationEnabled\(\)/, 'every network submission must have an adjacent fail-closed guard');
+}
+
+console.log('pilot-safety: config matrix and low-level submission guards passed');

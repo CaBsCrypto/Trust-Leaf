@@ -31,4 +31,8 @@ const panel = await readFile(new URL('../src/components/AdminReadinessPanel.tsx'
 assert.equal(panel.includes("method: 'GET'"), true);
 assert.equal(/method:\s*['\"](?:POST|PUT|PATCH|DELETE)/.test(panel), false);
 assert.equal(/submit|mutation/i.test(panel), true);
+const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+assert.equal(app.includes("import { AdminReadinessPanel }"), true);
+assert.equal(app.includes('hasRealAdminSession && adminAuth.user ? () => adminAuth.user!.getIdToken() : undefined'), true);
+assert.equal(app.includes('getAdminIdToken ? <AdminReadinessPanel'), true);
 console.log('admin-auth-readiness: JWKS, claims, allowlist, IdP failure and read-only gates passed');

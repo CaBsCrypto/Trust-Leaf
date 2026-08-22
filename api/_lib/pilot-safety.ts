@@ -1,4 +1,5 @@
 const MUTATION_FLAG = 'TRUSTLEAF_ALLOW_TESTNET_MUTATIONS';
+const SUBMISSION_FLAG = 'TRUSTLEAF_TESTNET_SUBMIT_ENABLED';
 const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 const ALLOWED_RPC_URL = 'https://soroban-testnet.stellar.org';
 const ALLOWED_HORIZON_URL = 'https://horizon-testnet.stellar.org';
@@ -14,6 +15,7 @@ export function getPilotMutationSafety(env: PilotEnvironment = process.env) {
     relayerIsLocal = false;
   }
   const reasons = [
+    env[SUBMISSION_FLAG] !== 'true' && `${SUBMISSION_FLAG} no esta habilitado`,
     env[MUTATION_FLAG] !== 'true' && `${MUTATION_FLAG} no esta habilitado`,
     env.TRUSTLEAF_PILOT_RUNTIME !== 'local-synthetic' && 'TRUSTLEAF_PILOT_RUNTIME debe ser local-synthetic',
     env.NODE_ENV === 'production' && 'NODE_ENV=production nunca permite mutaciones piloto',

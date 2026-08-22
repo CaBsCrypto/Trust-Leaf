@@ -29,6 +29,7 @@ import { connectOrCreatePasskeyWallet, getPasskeyAvailability, connectPasskeyWal
 import { passkeyService } from './lib/stellar/passkeyService';
 import { validateRut, formatRut } from './lib/stellar/chileHelpers';
 import WalletOnboarding, { type WalletSetupState } from './components/WalletOnboarding';
+import { AdminReadinessPanel } from './components/AdminReadinessPanel';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
@@ -973,6 +974,7 @@ function AppContent() {
         onRegisterDispensaryOnchain={registerDispensaryOnchain}
         onRevokeDoctorOnchain={revokeDoctorOnchain}
         onRevokeDispensaryOnchain={revokeDispensaryOnchain}
+        getAdminIdToken={hasRealAdminSession && adminAuth.user ? () => adminAuth.user!.getIdToken() : undefined}
       />
     );
   }
@@ -2112,6 +2114,7 @@ function AdminRoute({
   onRegisterDispensaryOnchain,
   onRevokeDoctorOnchain,
   onRevokeDispensaryOnchain,
+  getAdminIdToken,
 }: {
   onBack: () => void;
   session: TrustSession | null;
@@ -2127,6 +2130,7 @@ function AdminRoute({
   onRegisterDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
   onRevokeDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
   onRevokeDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
+  getAdminIdToken?: () => Promise<string>;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
@@ -2293,6 +2297,7 @@ function AdminRoute({
       </div>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {getAdminIdToken ? <AdminReadinessPanel getIdToken={getAdminIdToken} /> : null}
         <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
