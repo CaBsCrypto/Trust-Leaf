@@ -9,6 +9,9 @@ const INSTANCE_BUMP_AMOUNT: u32 = 30 * 17_280;
 const INSTANCE_LIFETIME_THRESHOLD: u32 = INSTANCE_BUMP_AMOUNT - 100;
 const RECEIPT_BUMP_AMOUNT: u32 = 120 * 17_280;
 const RECEIPT_LIFETIME_THRESHOLD: u32 = RECEIPT_BUMP_AMOUNT - 100;
+/// Version of the public event payload schema. Increment only for a breaking
+/// event shape or semantic change; this is independent from `Receipt::version`.
+const EVENT_SCHEMA_VERSION: u32 = 1;
 
 #[contract]
 pub struct ReceiptLedgerContract;
@@ -91,6 +94,7 @@ pub enum ReceiptError {
 
 #[contractevent(topics = ["Issued"], data_format = "vec")]
 pub struct IssuedEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
@@ -100,6 +104,7 @@ pub struct IssuedEvent {
 
 #[contractevent(topics = ["Active"], data_format = "vec")]
 pub struct ActiveEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
@@ -109,6 +114,7 @@ pub struct ActiveEvent {
 
 #[contractevent(topics = ["Partial"], data_format = "vec")]
 pub struct PartialEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
@@ -118,6 +124,7 @@ pub struct PartialEvent {
 
 #[contractevent(topics = ["Dispensed"], data_format = "vec")]
 pub struct DispensedEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
@@ -127,6 +134,7 @@ pub struct DispensedEvent {
 
 #[contractevent(topics = ["Revoked"], data_format = "vec")]
 pub struct RevokedEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
@@ -136,6 +144,7 @@ pub struct RevokedEvent {
 
 #[contractevent(topics = ["Expired"], data_format = "vec")]
 pub struct ExpiredEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub version: u32,
     pub commitment: BytesN<32>,
@@ -145,6 +154,7 @@ pub struct ExpiredEvent {
 
 #[contractevent(topics = ["GrantChanged"], data_format = "vec")]
 pub struct GrantChangedEvent {
+    pub schema_version: u32,
     pub receipt_id: BytesN<32>,
     pub dispensary: Address,
     pub enabled: bool,
@@ -219,6 +229,7 @@ impl ReceiptLedgerContract {
         };
         save_receipt_and_operation(&env, &receipt, &operation_id, &requested);
         IssuedEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             version: 1,
             commitment,
@@ -383,6 +394,7 @@ impl ReceiptLedgerContract {
         );
         save_operation(&env, &operation_id, &requested);
         GrantChangedEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             dispensary,
             enabled,
@@ -496,6 +508,7 @@ fn publish_transition(
 ) {
     match state {
         ReceiptState::Active => ActiveEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             version,
             commitment,
@@ -504,6 +517,7 @@ fn publish_transition(
         }
         .publish(env),
         ReceiptState::Partial => PartialEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             version,
             commitment,
@@ -512,6 +526,7 @@ fn publish_transition(
         }
         .publish(env),
         ReceiptState::Dispensed => DispensedEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             version,
             commitment,
@@ -520,6 +535,7 @@ fn publish_transition(
         }
         .publish(env),
         ReceiptState::Revoked => RevokedEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             version,
             commitment,
@@ -528,6 +544,7 @@ fn publish_transition(
         }
         .publish(env),
         ReceiptState::Expired => ExpiredEvent {
+            schema_version: EVENT_SCHEMA_VERSION,
             receipt_id,
             version,
             commitment,

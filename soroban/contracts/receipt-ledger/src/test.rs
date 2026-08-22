@@ -43,6 +43,23 @@ fn issue(f: &Fixture<'_>, env: &Env) -> Receipt {
 }
 
 #[test]
+fn event_schema_version_is_explicit_and_independent() {
+    assert_eq!(EVENT_SCHEMA_VERSION, 1);
+
+    let env = Env::default();
+    let f = fixture(&env);
+    let issued = issue(&f, &env);
+    let active = f
+        .client
+        .activate(&f.doctor, &id(&env, 1), &1, &id(&env, 12), &id(&env, 102));
+
+    // Receipt revisions advance while the public event payload schema remains v1.
+    assert_eq!(issued.version, 1);
+    assert_eq!(active.version, 2);
+    assert_eq!(EVENT_SCHEMA_VERSION, 1);
+}
+
+#[test]
 fn full_versioned_lifecycle_uses_only_opaque_values() {
     let env = Env::default();
     let f = fixture(&env);

@@ -27,7 +27,9 @@ No crea un token transferible. No almacena paciente, RUT, diagnóstico, medicame
 - unión del `operation_id` a la cuenta actora y al dominio exacto (`issue`, `activate`, `partial`, `dispense`, `revoke` o `expire`);
 - rechazo de reapropiación por otra cuenta autorizada y de replay entre funciones;
 - rechazo de reutilización del mismo `operation_id` con parámetros distintos;
-- eventos versionados separados para los seis estados;
+- eventos separados para los seis estados, con `schema_version = 1` independiente
+  del contador monotónico `version` del receipt; `GrantChanged` usa el mismo
+  esquema versionado para que un indexador pueda rechazar payloads desconocidos;
 - expiración materializada por administrador, sin publicar duración ni fecha clínica;
 - pruebas de ciclo completo, repetición exacta, replay alterado, concurrencia, transición terminal y roles.
 
@@ -36,6 +38,10 @@ Comando de evidencia:
 ```text
 cargo test -p receipt-ledger
 ```
+
+El IDL autoritativo queda embebido en el WASM por los macros de Soroban. Debe
+extraerse del artefacto exacto que se pretenda desplegar y verificarse contra su
+SHA-256; no se mantiene una copia JSON manual que pueda divergir.
 
 ## Límites y gates pendientes
 
