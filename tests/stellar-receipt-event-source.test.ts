@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { createSimulatedReceiptIndexer } from '../api/_lib/receipt-indexer.ts';
+import { createReceiptEventSource } from '../api/_lib/stellar-receipt-event-source.ts';
+import { syntheticContractId } from '../api/_lib/simulated-testnet-adapter.ts';
+const contractId = syntheticContractId(), indexer = createSimulatedReceiptIndexer({ finalityDepth: 2 });
+const counts: Record<string, number> = {}; const metrics = { increment(name: string) { counts[name] = (counts[name] ?? 0) + 1; } } as any;
+const source = createReceiptEventSource({ mode: 'fixture', contractId, metrics, ingest: indexer.ingest, getCursor: indexer.getCursor, transport: { kind: 'fixture', async fetchNext() { return { status: 'ledger', contractId, schemaVersion: 1, ledger: { sequence: 1, hash: '1'.repeat(64), parentHash: '0'.repeat(64), closedAt: 1, events: [{ eventId: 'opaque_event_0001', receiptId: 'opaque_receipt_0001', operationId: 'opaque_operation_0001', version: 1, state: 'issued' }] } }; } } });
+assert.equal((await source.pollOnce()).status, 'ingested'); assert.equal(counts.ledger_ingested, 1); assert.equal(indexer.getCursor()?.sequence, 1);
+const rejected = createReceiptEventSource({ mode: 'fixture', contractId, metrics, ingest: indexer.ingest, getCursor: indexer.getCursor, transport: { kind: 'fixture', async fetchNext() { return { status: 'ledger', contractId: `C${'B'.repeat(55)}`, schemaVersion: 1, ledger: { sequence: 2, hash: '2'.repeat(64), parentHash: '1'.repeat(64), closedAt: 2, events: [] } }; } } });
+await assert.rejects(() => rejected.pollOnce(), (error: any) => error.code === 'EVENT_SOURCE_ALLOWLIST_REJECTED'); assert.equal(indexer.getCursor()?.sequence, 1);
+const timeout = createReceiptEventSource({ mode: 'fixture', contractId, timeoutMs: 2, metrics, ingest: indexer.ingest, getCursor: indexer.getCursor, transport: { kind: 'fixture', async fetchNext() { return new Promise(() => undefined); } } });
+assert.equal((await timeout.pollOnce()).status, 'unknown'); assert.equal(counts.source_unknown, 1);
+assert.throws(() => createReceiptEventSource({ mode: 'testnet', contractId, metrics, ingest: indexer.ingest, getCursor: indexer.getCursor, transport: { kind: 'fixture', async fetchNext() { return { status: 'caught_up' }; } } }), (error: any) => error.code === 'REAL_SOURCE_REQUIRED');
+console.log('stellar receipt event source passed');
