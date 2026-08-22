@@ -20,6 +20,8 @@ Desde la raíz web:
 npm run preflight
 ```
 
+El preflight incluye `test:simulated-testnet-adapter` y `test:receipt-indexer`. Estos arneses prueban lógica local; no sustituyen smoke RPC ni autorización de deploy.
+
 El informe debe registrar commit, estado limpio, versiones Rust/Cargo/Stellar CLI y Node/npm, 20 pruebas del receipt, total del workspace, hash y tamaño WASM, suite web y revisión independiente. El WASM no se versiona ni se publica desde este sprint. No ejecutar `npm ci` sobre una instalación compartida sin revisar antes el lockfile y autorizar su impacto.
 
 ## Gate humano antes de configurar Testnet

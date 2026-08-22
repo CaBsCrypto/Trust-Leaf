@@ -37,7 +37,8 @@ Leyenda: **CONFIRMADO** tiene evidencia reproducible; **PENDIENTE** requiere imp
 | WASM reproducible en entorno actual | CONFIRMADO | build `--release`; tamaño/hash se registran por corrida, no se versiona el artefacto | Release engineering |
 | Backend/QR/UI sintético | CONFIRMADO local | [backend](../../tests/receipt-ledger-backend.test.ts), [UI](../../tests/receipt-pilot-ui-flow.test.ts), [E2E inyectado](../../tests/receipt-shared-state-e2e.test.ts) | Backend, UX y QA |
 | Persistencia compartida entre procesos | PENDIENTE | el E2E comparte store por inyección; navegador y handlers no son durables | Arquitectura de datos |
-| Adapter RPC, signer y submission | PENDIENTE | adapter lanza `RECEIPT_TESTNET_GATE_CLOSED`; mutaciones deshabilitadas | Ingeniería Stellar + seguridad |
+| Adapter/signer/secret store simulados | CONFIRMADO LOCAL | `api/_lib/simulated-testnet-adapter.ts`; suite valida allowlists, rotación, timeout→`unknown`, no-resubmit, idempotencia y transporte marcado sintético | Ingeniería Stellar + seguridad |
+| Adapter RPC, signer y submission reales | BLOQUEADO | adapter productivo lanza `RECEIPT_TESTNET_GATE_CLOSED`; mutaciones deshabilitadas | Ingeniería Stellar + aprobación humana |
 | Indexación, finality y reconciliación simuladas | CONFIRMADO LOCAL | `api/_lib/receipt-indexer.ts`; `npm run test:receipt-indexer` valida cursor, profundidad, gaps, fork/reorg, deduplicación, `unknown`, retry acotado y auditoría redactada | Backend/SRE |
 | Indexación y reconciliación contra Stellar Testnet/RPC | BLOQUEADO | no existe conexión RPC ni persistencia durable; la submission real permanece deshabilitada | Backend/SRE + aprobación humana |
 | Auth real o arnés aislado | PENDIENTE | solo fixtures server-side con roles/scopes sintéticos | Seguridad/identidad |
@@ -69,6 +70,7 @@ Los snapshots o WASM regenerados por la prueba se guardan fuera del commit candi
 - [ ] Signer server-side con secret store/KMS/HSM; ninguna clave en repositorio, navegador, QR, URL o logs.
 - [ ] Auth real con claims verificados y scopes por receipt, o arnés sintético aislado y no accesible públicamente.
 - [ ] Adapter con `simulate → sign → submit → confirm`, timeout y estado `unknown`; mutaciones off por defecto.
+- [x] Arnés simulado exige transporte `kind: simulated`; timeout queda `unknown` y retries exactos sólo reconcilian, sin resubmit.
 - [x] Indexer puramente simulado con cursor, finality configurable, fork/reorg lógico, gaps, deduplicación, estados ambiguos y retries acotados.
 - [ ] Persistencia durable, política Testnet definitiva y reconciliación contra RPC/estado off-chain real.
 - [ ] Commitments canónicos opacos con separación de dominio, nonce/salt y rotación; nunca hash directo de clínica.
