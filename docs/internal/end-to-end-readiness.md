@@ -2,6 +2,8 @@
 
 Documento vivo. Actualizar fecha, responsable, evidencia y decisión en cada gate. No reemplaza revisión jurídica, clínica, farmacéutica o de seguridad.
 
+Sprint activo de preparación: [tablero on-chain Stellar Testnet](onchain-testnet-readiness-sprint.md).
+
 **Estado global:** `NO-GO TESTNET`.
 
 **Candidata local actual (2026-08-22):** `integration/simulated-testnet-gate-20260822`. La corrección QA `0b6405b` se integró por fast-forward desde `adf125a`, con árbol limpio, pruebas focales y `npm run preflight` combinados en verde. Esto constituye GO de integración local solamente; no autoriza merge a `main`, push, deploy ni Testnet.
