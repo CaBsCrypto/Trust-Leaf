@@ -36,6 +36,7 @@ Leyenda: **CONFIRMADO** tiene evidencia reproducible; **PENDIENTE** requiere imp
 | Workspace Soroban | CONFIRMADO | 45 tests locales | QA de contrato |
 | WASM reproducible en entorno actual | CONFIRMADO | build `--release`; tamaño/hash se registran por corrida, no se versiona el artefacto | Release engineering |
 | Backend/QR/UI sintético | CONFIRMADO local | [backend](../../tests/receipt-ledger-backend.test.ts), [UI](../../tests/receipt-pilot-ui-flow.test.ts), [E2E inyectado](../../tests/receipt-shared-state-e2e.test.ts) | Backend, UX y QA |
+| Navegación paciente → QR activo y gate admin no identificable | CONFIRMADO local | [regresión QA visual](../../tests/visual-qa-regressions.test.ts); navegación SPA conserva el fixture y el gate público no contiene correo autorizado | UX, seguridad y QA |
 | Persistencia compartida entre procesos | PENDIENTE | el E2E comparte store por inyección; navegador y handlers no son durables | Arquitectura de datos |
 | Adapter/signer/secret store simulados | CONFIRMADO LOCAL | `api/_lib/simulated-testnet-adapter.ts`; suite valida allowlists, rotación, timeout→`unknown`, no-resubmit, idempotencia y transporte marcado sintético | Ingeniería Stellar + seguridad |
 | Adapter RPC, signer y submission reales | BLOQUEADO | adapter productivo lanza `RECEIPT_TESTNET_GATE_CLOSED`; mutaciones deshabilitadas | Ingeniería Stellar + aprobación humana |
@@ -82,6 +83,8 @@ Los snapshots o WASM regenerados por la prueba se guardan fuera del commit candi
 ## Criterios de decisión
 
 **GO para preparación local:** suites verdes, diff revisado, adapter y mutaciones fail-closed, sin datos/secretos y revisión independiente.
+
+La corrección visual anterior no habilita autenticación, panel admin, persistencia clínica ni submission. Esas capacidades siguen pendientes o bloqueadas en la matriz y requieren evidencia independiente.
 
 **GO para smoke Testnet:** todas las precondiciones anteriores cerradas con responsable/evidencia, runbook ensayado offline, hash WASM aprobado y autorización específica registrada.
 

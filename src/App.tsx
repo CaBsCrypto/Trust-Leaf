@@ -982,7 +982,7 @@ function AppContent() {
   }
 
   if (path === '/demo/receipt-pilot') {
-    return <Suspense fallback={<div className="min-h-screen bg-[#edf2ee]" />}><ReceiptPilotFlow onBack={() => navigate('/')} /></Suspense>;
+    return <Suspense fallback={<div className="min-h-screen bg-[#edf2ee]" />}><ReceiptPilotFlow onBack={() => navigate('/')} onVerify={(token) => navigate(`/verify/${encodeURIComponent(token)}`)} /></Suspense>;
   }
 
   // Public demo verification: one high-entropy opaque token, never a person or clinical ID.
@@ -2043,7 +2043,7 @@ function AdminAuthGate({
                 {firebaseStatus.configured ? 'Firebase Activo' : 'Firebase en Modo Local'}
               </div>
               <p className="mt-1.5 text-brand-green-deep/80">
-                Email con permisos: <strong className="text-brand-green-deep font-semibold">cabscryptocontacto@gmail.com</strong>
+                El acceso requiere una cuenta autenticada incluida en la lista administrativa privada.
               </p>
             </div>
 
@@ -2057,9 +2057,6 @@ function AdminAuthGate({
                     const result = await signInWithGoogle();
                     if (!result || !result.user) {
                       throw new Error("Inicio de sesión cancelado o fallido.");
-                    }
-                    if (result.user.email?.toLowerCase() !== 'cabscryptocontacto@gmail.com') {
-                      throw new Error("Acceso denegado: Solo cabscryptocontacto@gmail.com está autorizado.");
                     }
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "Error al iniciar sesión con Google.");
@@ -2086,7 +2083,7 @@ function AdminAuthGate({
                 <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-red-700 leading-relaxed">
                   <p className="font-bold uppercase tracking-wider">Acceso denegado</p>
                   <p className="mt-1">
-                    {error || authState.error || 'Esta cuenta de correo no está autorizada como administrador (cabscryptocontacto@gmail.com).'}
+                    {error || authState.error || 'La cuenta autenticada no tiene autorización administrativa.'}
                   </p>
                 </div>
               )}
