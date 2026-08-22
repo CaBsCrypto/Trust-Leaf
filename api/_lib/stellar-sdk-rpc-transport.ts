@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import type { ConfirmationResult, OpaqueContractInvocation, SignedEnvelope, StellarRpcTransport } from './stellar-testnet-rpc-adapter.ts';
+import { assertTestnetMutationEnabled } from './pilot-safety.js';
 
 type RpcServer = InstanceType<typeof StellarSdk.rpc.Server>;
 
@@ -34,6 +35,7 @@ export function createStellarSdkRpcTransport(input: {
     },
     async submit(envelope: SignedEnvelope) {
       try {
+        assertTestnetMutationEnabled();
         const transaction = StellarSdk.TransactionBuilder.fromXDR(envelope.signedXdr, input.networkPassphrase);
         const result = await server.sendTransaction(transaction);
         if (result.hash.toLowerCase() !== envelope.transactionHash.toLowerCase()) return { status: 'failed', transactionHash: envelope.transactionHash, errorCode: 'TX_HASH_MISMATCH' };

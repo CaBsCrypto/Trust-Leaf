@@ -39,5 +39,12 @@ for (const match of stellarSource.matchAll(/(?:sendTransaction|submitTransaction
   const preceding = stellarSource.slice(Math.max(0, match.index - 120), match.index);
   assert.match(preceding, /assertTestnetMutationEnabled\(\)/, 'every network submission must have an adjacent fail-closed guard');
 }
+const rpcTransportSource = await import('node:fs/promises').then(({ readFile }) =>
+  readFile(new URL('../api/_lib/stellar-sdk-rpc-transport.ts', import.meta.url), 'utf8'),
+);
+const rpcSend = rpcTransportSource.indexOf('server.sendTransaction(transaction)');
+assert.notEqual(rpcSend, -1);
+assert.match(rpcTransportSource.slice(Math.max(0, rpcSend - 240), rpcSend), /assertTestnetMutationEnabled\(\)/,
+  'reusable RPC transport must fail closed before sending');
 
 console.log('pilot-safety: config matrix and low-level submission guards passed');
