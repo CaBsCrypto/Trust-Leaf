@@ -1,7 +1,8 @@
 # Threat model: receipt versionado en Stellar TESTNET
 
-**Estado:** diseño para revisión; no implementación.  
-**Ámbito:** demostración sintética con un médico, un paciente y un dispensario.  
+**Estado:** diseño para revisión; no implementación.
+
+**Ámbito:** demostración sintética con un médico, un paciente y un dispensario.
 **No demuestra:** validez de receta, seguridad clínica, cumplimiento jurídico, identidad profesional, dispensación farmacéutica ni preparación para mainnet.
 
 ## Límites inviolables

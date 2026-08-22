@@ -1,7 +1,8 @@
 # Arquitectura de datos clínicos y privacidad
 
-**Estado:** diseño para revisión; Supabase/Postgres no está configurado ni aprobado como repositorio clínico.  
-**Ámbito:** piloto sintético en Stellar TESTNET. No habilita datos reales, actos clínicos, recetas válidas ni dispensación farmacéutica.  
+**Estado:** diseño para revisión; Supabase/Postgres no está configurado ni aprobado como repositorio clínico.
+
+**Ámbito:** piloto sintético en Stellar TESTNET. No habilita datos reales, actos clínicos, recetas válidas ni dispensación farmacéutica.
 **Documento relacionado:** `stellar-testnet-threat-model.md` define amenazas, invariantes, QR anti-replay y límites de correlación.
 
 ## Principios y límites
