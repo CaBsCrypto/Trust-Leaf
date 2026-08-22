@@ -101,43 +101,60 @@ export function createSimulatedReceiptIndexer(options: { finalityDepth?: number;
           throw Object.assign(new Error('Invalid opaque receipt event.'), { code: 'INVALID_OPAQUE_EVENT' });
         }
       }
-      const sameHeight = ledgers.get(ledger.sequence);
-      if (sameHeight?.hash === ledger.hash) return;
-      if (sameHeight && sameHeight.hash !== ledger.hash) rollbackFrom(ledger.sequence);
-      if (cursor && ledger.sequence !== cursor.sequence + 1) {
-        record('LEDGER_GAP', { ledgerSequence: ledger.sequence });
-        throw Object.assign(new Error('Ledger sequence gap; reconciliation required.'), { code: 'LEDGER_GAP' });
-      }
-      if (cursor && ledger.parentHash !== cursor.hash) {
-        record('PARENT_HASH_MISMATCH', { ledgerSequence: ledger.sequence });
-        throw Object.assign(new Error('Ledger parent mismatch; reconciliation required.'), { code: 'PARENT_HASH_MISMATCH' });
-      }
-      const seenInLedger = new Set<string>();
-      for (const event of ledger.events) {
-        if (seenInLedger.has(event.operationId)) continue;
-        seenInLedger.add(event.operationId);
-        const priorEventId = operations.get(event.operationId);
-        if (priorEventId) {
-          const prior = events.get(priorEventId)!;
-          if (prior.eventId !== event.eventId || prior.receiptId !== event.receiptId || prior.version !== event.version || prior.state !== event.state) {
-            prior.status = 'anomalous';
-            record('IDEMPOTENCY_CONFLICT', { ledgerSequence: ledger.sequence, operationId: event.operationId });
-            throw Object.assign(new Error('Idempotency conflict.'), { code: 'IDEMPOTENCY_CONFLICT' });
+      const ledgerSnapshot = new Map(ledgers);
+      const eventSnapshot = new Map([...events].map(([key, value]) => [key, { ...value }]));
+      const operationSnapshot = new Map(operations);
+      const cursorSnapshot = cursor ? { ...cursor } : null;
+      const auditSnapshot = audit.map((entry) => ({ ...entry }));
+      try {
+        const sameHeight = ledgers.get(ledger.sequence);
+        if (sameHeight?.hash === ledger.hash) return;
+        if (sameHeight && sameHeight.hash !== ledger.hash) rollbackFrom(ledger.sequence);
+        if (cursor && ledger.sequence !== cursor.sequence + 1) {
+          record('LEDGER_GAP', { ledgerSequence: ledger.sequence });
+          throw Object.assign(new Error('Ledger sequence gap; reconciliation required.'), { code: 'LEDGER_GAP' });
+        }
+        if (cursor && ledger.parentHash !== cursor.hash) {
+          record('PARENT_HASH_MISMATCH', { ledgerSequence: ledger.sequence });
+          throw Object.assign(new Error('Ledger parent mismatch; reconciliation required.'), { code: 'PARENT_HASH_MISMATCH' });
+        }
+        const seenInLedger = new Set<string>();
+        for (const event of ledger.events) {
+          if (seenInLedger.has(event.operationId)) continue;
+          seenInLedger.add(event.operationId);
+          const priorEventId = operations.get(event.operationId);
+          if (priorEventId) {
+            const prior = events.get(priorEventId)!;
+            if (prior.eventId !== event.eventId || prior.receiptId !== event.receiptId || prior.version !== event.version || prior.state !== event.state) {
+              record('IDEMPOTENCY_CONFLICT', { ledgerSequence: ledger.sequence, operationId: event.operationId });
+              throw Object.assign(new Error('Idempotency conflict.'), { code: 'IDEMPOTENCY_CONFLICT' });
+            }
+            continue;
           }
-          continue;
+          const receiptEvents = [...events.values()].filter((candidate) => candidate.receiptId === event.receiptId && candidate.status !== 'unknown');
+          const latestVersion = Math.max(0, ...receiptEvents.map((candidate) => candidate.version));
+          if (event.version !== latestVersion + 1) {
+            record('EVENT_VERSION_GAP', { ledgerSequence: ledger.sequence, operationId: event.operationId });
+            throw Object.assign(new Error('Receipt event version is not contiguous.'), { code: 'EVENT_VERSION_GAP' });
+          }
+          events.set(event.eventId, { ...event, ledgerSequence: ledger.sequence, ledgerHash: ledger.hash, closedAt: ledger.closedAt, status: 'pending' });
+          operations.set(event.operationId, event.eventId);
         }
-        const receiptEvents = [...events.values()].filter((candidate) => candidate.receiptId === event.receiptId && candidate.status !== 'unknown');
-        const latestVersion = Math.max(0, ...receiptEvents.map((candidate) => candidate.version));
-        if (event.version !== latestVersion + 1) {
-          record('EVENT_VERSION_GAP', { ledgerSequence: ledger.sequence, operationId: event.operationId });
-          throw Object.assign(new Error('Receipt event version is not contiguous.'), { code: 'EVENT_VERSION_GAP' });
-        }
-        events.set(event.eventId, { ...event, ledgerSequence: ledger.sequence, ledgerHash: ledger.hash, closedAt: ledger.closedAt, status: 'pending' });
-        operations.set(event.operationId, event.eventId);
+        ledgers.set(ledger.sequence, { ...ledger, events: [...ledger.events] });
+        cursor = { sequence: ledger.sequence, hash: ledger.hash };
+        refreshFinality();
+      } catch (error) {
+        const errorAudit = audit.at(-1);
+        ledgers.clear(); for (const entry of ledgerSnapshot) ledgers.set(...entry);
+        events.clear(); for (const entry of eventSnapshot) events.set(...entry);
+        operations.clear(); for (const entry of operationSnapshot) operations.set(...entry);
+        cursor = cursorSnapshot;
+        audit.length = 0;
+        audit.push(...auditSnapshot);
+        if (errorAudit) audit.push(errorAudit);
+        while (audit.length > auditLimit) audit.shift();
+        throw error;
       }
-      ledgers.set(ledger.sequence, { ...ledger, events: [...ledger.events] });
-      cursor = { sequence: ledger.sequence, hash: ledger.hash };
-      refreshFinality();
     },
     resolveUnknown(operationId, outcome) {
       const match = [...events.values()].find((event) => event.operationId === operationId);
@@ -157,7 +174,7 @@ export function createSimulatedReceiptIndexer(options: { finalityDepth?: number;
         events.delete(match.eventId);
       }
     },
-    getEvent(operationId) { return [...events.values()].find((event) => event.operationId === operationId); },
+    getEvent(operationId) { const match = [...events.values()].find((event) => event.operationId === operationId); return match ? { ...match } : undefined; },
     getReceiptTimeline(receiptId) { return [...events.values()].filter((event) => event.receiptId === receiptId).sort((left, right) => left.version - right.version).map((event) => ({ ...event })); },
     getCursor() { return cursor ? { ...cursor } : null; },
     getAudit() { return audit.map((entry) => ({ ...entry })); },

@@ -36,8 +36,24 @@ indexer.resolveUnknown('opaque_operation_0003', 'absent');
 assert.equal(indexer.getEvent('opaque_operation_0003'), undefined);
 
 assert.throws(() => indexer.ingest(ledger(4, hash('4'), hash('a'), [{ ...event(4, 'dispensed'), operationId: 'opaque_operation_fork' }])), (error: any) => error.code === 'IDEMPOTENCY_CONFLICT');
-assert.equal(indexer.getEvent('opaque_operation_fork')?.status, 'anomalous');
+assert.equal(indexer.getEvent('opaque_operation_fork')?.status, 'pending', 'failed ingest must not mutate prior event');
 assert.throws(() => indexer.ingest(ledger(4, hash('4'), hash('a'), [event(7, 'dispensed', 'gap')])), (error: any) => error.code === 'EVENT_VERSION_GAP');
+
+const atomic = createSimulatedReceiptIndexer();
+assert.throws(
+  () => atomic.ingest(ledger(1, hash('b'), hash('0'), [event(1, 'issued', 'atomic1'), event(7, 'dispensed', 'atomic7')])),
+  (error: any) => error.code === 'EVENT_VERSION_GAP',
+);
+assert.equal(atomic.getCursor(), null, 'invalid ledger must not advance cursor');
+assert.equal(atomic.getReceiptTimeline(receiptId).length, 0, 'v1 must not leak from rejected v1+v7 ledger');
+assert.equal(atomic.getEvent('opaque_operation_atomic1'), undefined, 'operation index must commit atomically');
+
+const returned = indexer.getEvent('opaque_operation_0001');
+assert.ok(returned);
+returned.status = 'anomalous';
+returned.state = 'revoked';
+assert.equal(indexer.getEvent('opaque_operation_0001')?.status, 'confirmed', 'getEvent must return a defensive copy');
+assert.equal(indexer.getEvent('opaque_operation_0001')?.state, 'issued', 'caller mutation must not alter indexed event');
 
 const unsafe = JSON.stringify(indexer.getAudit());
 assert.equal(unsafe.includes('opaque_operation_'), false, 'audit must contain only redacted operation references');
