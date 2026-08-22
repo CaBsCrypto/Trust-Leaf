@@ -40,6 +40,8 @@ import { logAuditEvent } from '../lib/auditLogger';
 
 import { generateECDHKeypair, exportPublicKeyJWK, importPublicKeyJWK, exportPrivateKeyJWK, importPrivateKeyJWK, deriveSharedAESKey, encryptText, decryptText } from '../lib/stellar/cryptoHelpers';
 
+import { DEMO_PUBLIC_VERIFICATION_TOKENS } from '../lib/publicVerification';
+
 
 
 export type PortalView = 'overview' | 'doctors' | 'dispensaries' | 'profile' | 'prescriptions' | 'pickups' | 'history' | 'traveler';
@@ -4476,7 +4478,7 @@ export default function MockupPortal({
 
       // QR Code and Signatures Side by Side
 
-      const qrDataUrl = await QRCode.toDataURL(`https://www.trustleaf.org/verify/${prescriptionId}`);
+      const qrDataUrl = await QRCode.toDataURL(new URL(`/verify/${DEMO_PUBLIC_VERIFICATION_TOKENS[0]}`, window.location.origin).toString());
 
       doc.addImage(qrDataUrl, 'PNG', 15, signY, 35, 35);
 

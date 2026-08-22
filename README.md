@@ -7,6 +7,14 @@
 
 > 🛠️ **En Construcción Activa (WIP):** El portal operacional y el piloto interactivo se encuentran desplegados en el dominio oficial **[https://www.trustleaf.org](https://www.trustleaf.org)** como prototipo técnico y MVP en desarrollo. Puedes auditar el estado del entorno y la preparación de los contratos en tiempo real en la ruta de diagnóstico: **[/mvp](https://www.trustleaf.org/mvp)**.
 
+### Estado verificable del verificador QR local
+
+La rama de desarrollo incluye una página pública **exclusivamente de demo sintética**. Su respuesta está limitada a existencia del comprobante, coincidencia y estado (`vigente`, `revocado` o `expirado`). Usa handles opacos no secuenciales y pruebas negativas contra manipulación, enumeración, replay y exposición de campos prohibidos.
+
+No consulta Stellar, no contiene una receta válida y no publica identidad, ficha, diagnóstico, medicamento, dosis, gramaje, saldo ni historial. La firma incluida es un fixture local de prueba, no acredita autenticidad productiva ni cumplimiento legal. Firma server-side, KMS, roles, almacenamiento clínico y receipt Testnet siguen pendientes de gates separados.
+
+Evidencia local: `npm run test:public-verification` y `npm run preflight`.
+
 ---
 
 ## 🏗️ 1. Arquitectura Híbrida de Privacidad (Zero-Knowledge Compliance)

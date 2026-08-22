@@ -980,9 +980,8 @@ function AppContent() {
     return <MvpStatusRoute onBack={() => navigate('/')} onNavigate={navigate} />;
   }
 
-  // ── Public verification route — no auth required ──────────────────────────
-  // Matches /verify/123 or /verify/123/any-suffix
-  const verifyMatch = path.match(/^\/verify\/([\w-]+)/);
+  // Public demo verification: one high-entropy opaque token, never a person or clinical ID.
+  const verifyMatch = path.match(/^\/verify\/([^/]+)$/);
   if (verifyMatch) {
     const prescriptionId = verifyMatch[1];
     return (

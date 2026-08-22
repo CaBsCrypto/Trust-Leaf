@@ -15,8 +15,11 @@ Congelar un diseño implementable y verificable para una demostración sintétic
 | UX y contrato de estados | UX piloto | `analysis/stellar-pilot-ux-20260822` | ajuste en curso | responsabilidades y gates reflejados sin promesas |
 | Firestore y permisos | Auditor Firebase | `analysis/stellar-contract-architecture-20260822` (documentación aislada) | auditoría en curso | matriz allow/deny con evidencia y pruebas de emulador propuestas |
 | QA e integración documental | Scrum Master/QA | `analysis/stellar-testnet-pilot-integration-20260822` | en curso | diff documental limpio, contradicciones resueltas y decisiones listadas |
+| Verificador público QR demo | Scrum Master + revisores seguridad/QA | `integration/qr-public-verifier-demo-20260822` | implementación local en QA | preflight, Browser QA y revisión humana del DTO público |
 
 No se integrará nada a `main`. La integración actual es únicamente entre documentos internos de análisis mediante commits seleccionados y conserva las ramas fuente.
+
+Para el paquete QR, documentación, implementación y pruebas se consolidan excepcionalmente en una única rama aislada. Los frentes auxiliares solo aportan revisión read-only.
 
 ## Dependencias y orden
 
