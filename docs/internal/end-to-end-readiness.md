@@ -4,6 +4,8 @@ Documento vivo. Actualizar fecha, responsable, evidencia y decisión en cada gat
 
 **Estado global:** `NO-GO TESTNET`.
 
+**Candidata local actual (2026-08-22):** `integration/simulated-testnet-gate-20260822`. La corrección QA `0b6405b` se integró por fast-forward desde `adf125a`, con árbol limpio, pruebas focales y `npm run preflight` combinados en verde. Esto constituye GO de integración local solamente; no autoriza merge a `main`, push, deploy ni Testnet.
+
 **Alcance confirmado:** demostración local con identidades y contenido completamente sintéticos. No es una receta válida, no admite pacientes reales, no prueba elegibilidad clínica, no habilita dispensación farmacéutica, pagos, mainnet o producción.
 
 ## Flujo objetivo
@@ -31,7 +33,7 @@ Leyenda: **CONFIRMADO** tiene evidencia reproducible; **PENDIENTE** requiere imp
 
 | Gate | Estado | Evidencia actual | Valida / decide |
 |---|---|---|---|
-| QR incorporado a candidata | CONFIRMADO | `940deb8` es ancestro de la rama receipt; [suite QR](../../tests/public-verification.test.ts) | Integrador + QA |
+| QR incorporado a candidata | CONFIRMADO local | `0b6405b` integrado por fast-forward; [suite QR](../../tests/public-verification.test.ts), [regresión de navegación/admin](../../tests/visual-qa-regressions.test.ts) y preflight combinado verdes | Integrador + QA independiente |
 | Contrato Receipt V1 local | CONFIRMADO | 20 tests; [contrato](../../soroban/contracts/receipt-ledger/src/lib.rs), [tests](../../soroban/contracts/receipt-ledger/src/test.rs) | Ingeniería Soroban + seguridad |
 | Workspace Soroban | CONFIRMADO | 45 tests locales | QA de contrato |
 | WASM reproducible en entorno actual | CONFIRMADO | build `--release`; tamaño/hash se registran por corrida, no se versiona el artefacto | Release engineering |
