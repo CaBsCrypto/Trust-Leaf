@@ -17,7 +17,7 @@ export function createStellarRpcReceiptEventTransport(input: {
   const server = input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false });
   return { kind: 'stellar-rpc', async fetchNext(cursor) {
     const sequence = cursor ? cursor.sequence + 1 : input.startLedger;
-    const ledgers = await server.getLedgers({ startLedger: Math.max(1, sequence - 1), pagination: { limit: cursor ? 2 : 1 } });
+    const ledgers = await server.getLedgers({ startLedger: Math.max(1, sequence - 1), pagination: { limit: 2 } });
     const current = ledgers.ledgers.find(item => item.sequence === sequence);
     if (!current) return { status: 'caught_up' };
     // The initial checkpoint has no prior local cursor. Its parent is a sentinel;

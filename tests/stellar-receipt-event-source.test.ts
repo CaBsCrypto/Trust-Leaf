@@ -20,4 +20,11 @@ const rpcTransport = createStellarRpcReceiptEventTransport({ rpcUrl: 'https://so
 const decoded = await rpcTransport.fetchNext(null, 5_000);
 assert.equal(decoded.status, 'ledger');
 if (decoded.status === 'ledger') { assert.equal(decoded.schemaVersion, 1); assert.equal(decoded.ledger.events[0].state, 'issued'); assert.equal(decoded.ledger.events[0].receiptId, '01'.repeat(32)); }
+let ledgerRequest: any;
+const initialCheckpoint = createStellarRpcReceiptEventTransport({ rpcUrl: 'https://soroban-testnet.stellar.org', contractId, startLedger: 10, server: {
+  async getLedgers(request: any) { ledgerRequest = request; return { ledgers: [{ sequence: 9, hash: '9'.repeat(64), ledgerCloseTime: '2026-08-21T23:59:55Z' }, { sequence: 10, hash: 'a'.repeat(64), ledgerCloseTime: '2026-08-22T00:00:00Z' }], latestLedger: 10 }; },
+  async getEvents() { return { events: [] }; },
+} as any });
+assert.equal((await initialCheckpoint.fetchNext(null, 5_000)).status, 'ledger', 'initial checkpoint must not report caught_up when the requested ledger follows its parent');
+assert.equal(ledgerRequest.pagination.limit, 2, 'initial checkpoint must fetch parent and requested ledger');
 console.log('stellar receipt event source passed');

@@ -63,7 +63,7 @@ Tras autorización separada de deploy, inspeccionar primero la interfaz efectiva
 stellar contract invoke --id receipt-ledger-testnet --source trustleaf-admin --network testnet -- --help
 ```
 
-Construir cada invocación primero con `--build-only`. El orden es `init`, roles, `issue`, `activate`, `record_partial`, `mark_dispensed`; en receipts independientes ejecutar `revoke` y `expire`. Usar siempre el nombre y orden exactos que entregue `--help`/IDL del WASM, `expected_version` observado y un `operation_id` único por intención. No copiar una plantilla si diverge de la IDL.
+Construir cada invocación primero con `--build-only` para revisar el XDR y después ejecutar `--send no` para simularla contra el estado actual. `--build-only` por sí solo no valida versiones del ledger. El orden es `init`, roles, `issue`, `activate`, `record_partial`, `mark_dispensed`; en receipts independientes ejecutar `revoke` y `expire`. Usar siempre el nombre y orden exactos que entregue `--help`/IDL del WASM, `expected_version` observado y un `operation_id` único por intención. No copiar una plantilla si diverge de la IDL.
 
 ## QA y evidencia exigida
 

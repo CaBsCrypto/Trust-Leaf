@@ -43,7 +43,7 @@ Preparar una candidata verificable para solicitar después un gate humano separa
 7. Aceptación de correlación residual on-chain y revisión jurídica/clínica/farmacéutica del ejercicio sintético.
 8. Autorización explícita y separada para deploy/smoke Testnet. **RECIBIDA** para una ceremonia sintética acotada; permanece condicionada al resto de los gates y no implica mainnet ni producción.
 
-**Estado actual:** `NO-GO TESTNET` hasta cerrar todos los gates anteriores.
+**Estado actual:** smoke técnico sintético Testnet ejecutado; **NO-GO PRODUCCIÓN / USO CLÍNICO**. Ninguna submission adicional queda autorizada. Evidencia: [receipt-ledger Testnet 2026-08-22](testnet-receipt-smoke-evidence-20260822.md).
 
 ## Evidencia de pre-gate actual
 
