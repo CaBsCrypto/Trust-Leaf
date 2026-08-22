@@ -34,6 +34,7 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 const MockupPortal = lazy(() => import('./components/MockupPortal'));
 const PrescriptionVerifier = lazy(() => import('./components/PrescriptionVerifier'));
+const ReceiptPilotFlow = lazy(() => import('./components/ReceiptPilotFlow'));
 
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
@@ -978,6 +979,10 @@ function AppContent() {
 
   if (path === '/mvp') {
     return <MvpStatusRoute onBack={() => navigate('/')} onNavigate={navigate} />;
+  }
+
+  if (path === '/demo/receipt-pilot') {
+    return <Suspense fallback={<div className="min-h-screen bg-[#edf2ee]" />}><ReceiptPilotFlow onBack={() => navigate('/')} /></Suspense>;
   }
 
   // Public demo verification: one high-entropy opaque token, never a person or clinical ID.

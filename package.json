@@ -13,9 +13,10 @@
     "test:critical-static": "node tests/critical-demo-routes.mjs",
     "test:public-verification": "node --experimental-strip-types tests/public-verification.test.ts",
     "test:receipt-backend": "node --experimental-strip-types tests/receipt-ledger-backend.test.ts",
+    "test:receipt-pilot-ui": "node --experimental-strip-types tests/receipt-pilot-ui-flow.test.ts",
     "audit:medical-flow": "node tests/medical-flow-capabilities-audit.mjs",
     "preflight:config": "node tests/preflight-config.mjs",
-    "preflight": "npm run preflight:config && npm run test:pilot-safety && npm run test:critical-static && npm run test:public-verification && npm run test:receipt-backend && npm run lint && npm run build"
+    "preflight": "npm run preflight:config && npm run test:pilot-safety && npm run test:critical-static && npm run test:public-verification && npm run test:receipt-backend && npm run test:receipt-pilot-ui && npm run lint && npm run build"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
