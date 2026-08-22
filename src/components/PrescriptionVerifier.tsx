@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle, Clock, Leaf, ShieldCheck, XCircle } from 'lucide-react';
-import { demoPublicReceiptVerifier, type PublicVerificationResult } from '../lib/publicVerification';
+import { publicReceiptVerifier, type PublicVerificationResult } from '../lib/publicVerification';
 
 interface PrescriptionVerifierProps { id: string; onBack: () => void }
 
@@ -17,7 +17,7 @@ export default function PrescriptionVerifier({ id, onBack }: PrescriptionVerifie
 
   useEffect(() => {
     let active = true;
-    demoPublicReceiptVerifier.verify(id, operationKey).then(value => { if (active) setResult(value); });
+    publicReceiptVerifier.verify(id, operationKey).then(value => { if (active) setResult(value); });
     return () => { active = false; };
   }, [id, operationKey]);
 

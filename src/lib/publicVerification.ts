@@ -70,6 +70,7 @@ export const demoPublicReceiptVerifier: PublicReceiptVerifier = {
     return result;
   },
 };
+export const publicReceiptVerifier: PublicReceiptVerifier={async verify(token,operationKey){if(!token.startsWith('tl_testnet_'))return demoPublicReceiptVerifier.verify(token,operationKey);try{const response=await fetch('/api/receipts/public-verify',{method:'POST',cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});const value=await response.json();if(Object.keys(value).sort().join(',')!=='demo,evidenceExists,proofMatches,status'||value.demo!==true||typeof value.evidenceExists!=='boolean'||typeof value.proofMatches!=='boolean'||!['active','revoked','expired','unavailable'].includes(value.status))return UNAVAILABLE;return value;}catch{return UNAVAILABLE;}}};
 
 export function resetPublicVerificationDemoState(): void {
   operationCache.clear();
