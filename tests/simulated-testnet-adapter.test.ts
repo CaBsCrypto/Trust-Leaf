@@ -9,7 +9,7 @@ const secrets = createSimulatedSecretStore({ doctor: { version: 2, material: 'sy
 const errorCode = (run: () => unknown | Promise<unknown>) => Promise.resolve().then(run).then(() => '', error => error.code);
 
 let calls = 0;
-const confirmed: SimulatedTestnetTransport = { async submit() { calls += 1; return { state: 'confirmed', ledgerSequence: 42 }; }, async reconcile() { return { state: 'confirmed', ledgerSequence: 42 }; } };
+const confirmed: SimulatedTestnetTransport = { kind: 'simulated', async submit() { calls += 1; return { state: 'confirmed', ledgerSequence: 42 }; }, async reconcile() { return { state: 'confirmed', ledgerSequence: 42 }; } };
 const adapter = createSimulatedTestnetAdapter({ config, transport: confirmed, secrets, signerAlias: 'doctor', secretVersion: 2 });
 assert.equal((await adapter.submit(action)).state, 'confirmed');
 assert.equal((await adapter.submit(action)).state, 'confirmed');
@@ -20,20 +20,27 @@ assert.equal(await errorCode(() => createSimulatedTestnetAdapter({ config: { ...
 assert.equal(await errorCode(() => createSimulatedTestnetAdapter({ config: { ...config, allowedContractIds: [] }, transport: confirmed, secrets, signerAlias: 'doctor', secretVersion: 2 })), 'CONTRACT_ALLOWLIST_REJECTED');
 assert.equal(await errorCode(() => createSimulatedTestnetAdapter({ config: { ...config, allowedWasmSha256: [] }, transport: confirmed, secrets, signerAlias: 'doctor', secretVersion: 2 })), 'WASM_HASH_ALLOWLIST_REJECTED');
 assert.equal(await errorCode(() => createSimulatedTestnetAdapter({ config: { ...config, submissionEnabled: true as never }, transport: confirmed, secrets, signerAlias: 'doctor', secretVersion: 2 })), 'REAL_SUBMISSION_FORBIDDEN');
+assert.equal(await errorCode(() => createSimulatedTestnetAdapter({ config, transport: { ...confirmed, kind: 'real' } as never, secrets, signerAlias: 'doctor', secretVersion: 2 })), 'SIMULATED_TRANSPORT_REQUIRED');
+assert.equal(await errorCode(() => createSimulatedTestnetAdapter({ config, transport: { submit: confirmed.submit, reconcile: confirmed.reconcile } as never, secrets, signerAlias: 'doctor', secretVersion: 2 })), 'SIMULATED_TRANSPORT_REQUIRED');
 
 const missing = createSimulatedTestnetAdapter({ config, transport: confirmed, secrets, signerAlias: 'missing', secretVersion: 1 });
 assert.equal(await errorCode(() => missing.submit({ ...action, operationId: 'operation-fixture-0002' })), 'SIMULATED_SECRET_MISSING');
 const rotated = createSimulatedTestnetAdapter({ config, transport: confirmed, secrets, signerAlias: 'doctor', secretVersion: 1 });
 assert.equal(await errorCode(() => rotated.submit({ ...action, operationId: 'operation-fixture-0003' })), 'SIMULATED_SECRET_ROTATED');
 
-const delayed: SimulatedTestnetTransport = { async submit() { return new Promise(() => undefined); }, async reconcile() { return { state: 'unknown' }; } };
+let timeoutSubmitCalls = 0;
+let timeoutReconcileCalls = 0;
+const delayed: SimulatedTestnetTransport = { kind: 'simulated', async submit() { timeoutSubmitCalls += 1; return new Promise(() => undefined); }, async reconcile() { timeoutReconcileCalls += 1; return { state: 'unknown' }; } };
 const timeout = createSimulatedTestnetAdapter({ config, transport: delayed, secrets, signerAlias: 'doctor', secretVersion: 2, timeoutMs: 5 });
 assert.equal((await timeout.submit({ ...action, operationId: 'operation-fixture-0004' })).state, 'unknown');
 assert.equal(timeout.get('operation-fixture-0004')?.errorCode, 'RPC_TIMEOUT_UNKNOWN');
+assert.equal((await timeout.submit({ ...action, operationId: 'operation-fixture-0004' })).state, 'unknown');
+assert.equal(timeoutSubmitCalls, 1, 'unknown retry must reconcile instead of resubmitting');
+assert.equal(timeoutReconcileCalls, 1, 'unknown retry must use reconciliation');
 assert.equal((await timeout.reconcile('operation-fixture-0004')).state, 'unknown');
 
 let reconcileCount = 0;
-const reorg: SimulatedTestnetTransport = { async submit() { return { state: 'submitted', ledgerSequence: 100 }; }, async reconcile() { reconcileCount += 1; return reconcileCount === 1 ? { state: 'submitted', ledgerSequence: 101 } : { state: 'confirmed', ledgerSequence: 99 }; } };
+const reorg: SimulatedTestnetTransport = { kind: 'simulated', async submit() { return { state: 'submitted', ledgerSequence: 100 }; }, async reconcile() { reconcileCount += 1; return reconcileCount === 1 ? { state: 'submitted', ledgerSequence: 101 } : { state: 'confirmed', ledgerSequence: 99 }; } };
 const ordered = createSimulatedTestnetAdapter({ config, transport: reorg, secrets, signerAlias: 'doctor', secretVersion: 2 });
 await ordered.submit({ ...action, operationId: 'operation-fixture-0005' });
 await ordered.reconcile('operation-fixture-0005');
@@ -41,7 +48,7 @@ const reorgResult = await ordered.reconcile('operation-fixture-0005');
 assert.equal(reorgResult.state, 'unknown');
 assert.equal(reorgResult.errorCode, 'LEDGER_ORDER_VIOLATION');
 
-const unsafeError: SimulatedTestnetTransport = { async submit() { return { state: 'failed', errorCode: 'secret=leaked value' }; }, async reconcile() { return { state: 'failed' }; } };
+const unsafeError: SimulatedTestnetTransport = { kind: 'simulated', async submit() { return { state: 'failed', errorCode: 'secret=leaked value' }; }, async reconcile() { return { state: 'failed' }; } };
 const redacted = createSimulatedTestnetAdapter({ config, transport: unsafeError, secrets, signerAlias: 'doctor', secretVersion: 2 });
 assert.equal((await redacted.submit({ ...action, operationId: 'operation-fixture-0006' })).errorCode, 'SIMULATED_TRANSPORT_ERROR');
 

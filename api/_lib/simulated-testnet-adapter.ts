@@ -57,6 +57,7 @@ export interface SimulatedTransportResult {
 }
 
 export interface SimulatedTestnetTransport {
+  readonly kind: 'simulated';
   submit(envelope: { payloadDigest: string; signature: string }, timeoutMs: number): Promise<SimulatedTransportResult>;
   reconcile(payloadDigest: string, timeoutMs: number): Promise<SimulatedTransportResult>;
 }
@@ -84,6 +85,7 @@ export function createSimulatedTestnetAdapter(input: {
   timeoutMs?: number;
 }) {
   validateSimulatedTestnetConfig(input.config);
+  if (input.transport?.kind !== 'simulated') throw safeError('SIMULATED_TRANSPORT_REQUIRED');
   const records = new Map<string, SimulatedSubmission>();
   const timeoutMs = Math.max(1, Math.min(input.timeoutMs ?? 1_000, 10_000));
 
@@ -111,6 +113,7 @@ export function createSimulatedTestnetAdapter(input: {
     async submit(action: SimulatedReceiptAction): Promise<SimulatedSubmission> {
       const prepared = this.prepare(action);
       if (prepared.state === 'confirmed' || prepared.state === 'submitted') return prepared;
+      if (prepared.state === 'unknown') return this.reconcile(action.operationId);
       const signature = input.secrets.signDigest(input.signerAlias, input.secretVersion, prepared.payloadDigest);
       let result: SimulatedTransportResult;
       try {

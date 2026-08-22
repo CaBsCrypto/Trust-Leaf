@@ -6,8 +6,9 @@ Estado: **implementado y verificado localmente**. No realiza llamadas de red, no
 
 - Configuración cerrada a la passphrase y RPC canónicos de Testnet, más allowlists explícitas de contract ID y hash WASM.
 - `submissionEnabled` sólo acepta literalmente `false`; cualquier otro valor detiene la construcción del adaptador.
+- El transporte debe declarar la capacidad literal `kind: 'simulated'`; un transporte sin marcador o con otro tipo se rechaza antes de preparar u operar.
 - El signer usa material exclusivamente sintético y una versión esperada. Un secreto ausente o rotado falla de forma cerrada.
-- Una operación conserva un digest estable. Reutilizar el mismo `operationId` con otro payload es conflicto; repetir una operación confirmada no vuelve a someterla.
+- Una operación conserva un digest estable. Reutilizar el mismo `operationId` con otro payload es conflicto; repetir una operación confirmada o sometida no vuelve a invocar `submit`. Repetir una operación `unknown` deriva automáticamente a `reconcile`, nunca a una nueva submission.
 - Timeout, ausencia de confirmación o retroceso de secuencia producen `unknown`; nunca se interpretan como éxito.
 - Los códigos provenientes del transporte se reducen a una allowlist léxica y no incorporan mensajes, payloads ni secretos.
 - Fixtures y payloads contienen handles y commitments sintéticos, no PII/PHI ni contenido clínico.
@@ -18,7 +19,7 @@ Evidencia reproducible:
 npm run test:simulated-testnet-adapter
 ```
 
-La suite cubre configuración no permitida, contract/hash fuera de allowlist, submission real, secreto ausente/rotado, timeout, estado `unknown`, reintento idempotente, conflicto de idempotencia, orden/reorg simulado y redacción de errores.
+La suite cubre configuración no permitida, contract/hash fuera de allowlist, rechazo de transportes no simulados, submission real, secreto ausente/rotado, timeout, `unknown` sin resubmission, reintento idempotente, conflicto de idempotencia, orden/reorg simulado y redacción de errores.
 
 ## Pendiente y bloqueado
 
