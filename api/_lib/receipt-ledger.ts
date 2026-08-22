@@ -23,6 +23,10 @@ export interface ReceiptLedgerPort {
   appendEvent(): Promise<never>;
 }
 
+export interface SyntheticReceiptLedger extends ReceiptLedgerPort {
+  getReadCacheSize(): number;
+}
+
 const UNAVAILABLE: PublicReceiptProjection = {
   demo: true, evidenceExists: false, proofMatches: false, status: 'unavailable',
 };
@@ -44,8 +48,14 @@ function equal(left: string, right: string) {
   return difference === 0;
 }
 
-export function createSyntheticReceiptLedger(): ReceiptLedgerPort {
+export function createSyntheticReceiptLedger(options: { maxReadCacheEntries?: number } = {}): SyntheticReceiptLedger {
+  const maxReadCacheEntries = Math.max(1, Math.min(options.maxReadCacheEntries ?? 256, 1_024));
   const reads = new Map<string, { token: string; result: PublicReceiptProjection }>();
+  const cache = (operationId: string, value: { token: string; result: PublicReceiptProjection }) => {
+    if (reads.has(operationId)) reads.delete(operationId);
+    reads.set(operationId, value);
+    while (reads.size > maxReadCacheEntries) reads.delete(reads.keys().next().value as string);
+  };
   return {
     async verifyPublic(token, operationId) {
       const prior = reads.get(operationId);
@@ -55,7 +65,7 @@ export function createSyntheticReceiptLedger(): ReceiptLedgerPort {
       const result: PublicReceiptProjection = record
         ? { demo: true, evidenceExists: true, proofMatches: true, status: record.state }
         : UNAVAILABLE;
-      reads.set(operationId, { token, result });
+      cache(operationId, { token, result });
       return result;
     },
     async getOperational(handle, actor) {
@@ -76,6 +86,7 @@ export function createSyntheticReceiptLedger(): ReceiptLedgerPort {
       };
     },
     async appendEvent() { throw Object.assign(new Error('Receipt mutations are disabled.'), { code: 'RECEIPT_MUTATIONS_DISABLED' }); },
+    getReadCacheSize() { return reads.size; },
   };
 }
 
