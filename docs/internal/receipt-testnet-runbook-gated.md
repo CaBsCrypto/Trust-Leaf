@@ -20,7 +20,7 @@ Desde la raíz web:
 npm run preflight
 ```
 
-El informe debe registrar commit, versiones Rust/Stellar CLI, 12 pruebas del receipt, total del workspace, hash y tamaño WASM, suite web y revisión independiente. El WASM no se versiona ni se publica desde este sprint.
+El informe debe registrar commit, versiones Rust/Stellar CLI, 20 pruebas del receipt, total del workspace, hash y tamaño WASM, suite web y revisión independiente. El WASM no se versiona ni se publica desde este sprint.
 
 ## Gate humano antes de configurar Testnet
 

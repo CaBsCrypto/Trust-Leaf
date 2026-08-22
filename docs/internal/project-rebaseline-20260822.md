@@ -53,7 +53,7 @@ La representación NFT es visual y no transferible; no introduce token, balance,
 | RB-04 | UI médico→paciente→dispensario sintética | RB-02 | integrado | interacción/privacidad/build |
 | RB-05 | Integración QR con receipt mock | RB-02/RB-03 | integrada sintética | endpoint real sigue bloqueado |
 | RB-06 | Suite contrato/eventos/concurrencia/replay | RB-01 | integrada | cargo test verde |
-| RB-07 | QA integrada web + privacidad | RB-01..06 | re-audit en curso | preflight y revisión independiente |
+| RB-07 | QA integrada web + privacidad | RB-01..06 | verde local; gate deploy abierto | preflight y revisión independiente |
 | RB-08 | Runbook Testnet sin secretos | RB-01/RB-03/RB-07 | preparado no ejecutado | revisión humana; mutations off |
 | RB-09 | Deploy efímero Testnet | RB-08 | bloqueado | autorización específica posterior |
 | RB-10 | Persistencia clínica/RBAC real | ADR datos + legal | bloqueado | KMS, DB, Emulator/E2E y revisión profesional |
