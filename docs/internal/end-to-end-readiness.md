@@ -2,6 +2,8 @@
 
 Documento vivo. Actualizar fecha, responsable, evidencia y decisión en cada gate. No reemplaza revisión jurídica, clínica, farmacéutica o de seguridad.
 
+Sprint post-smoke activo: [lectura Testnet y gates operativos](post-smoke-readonly-sprint.md).
+
 Sprint activo de preparación: [tablero on-chain Stellar Testnet](onchain-testnet-readiness-sprint.md).
 
 **Estado global:** `NO-GO TESTNET`.
