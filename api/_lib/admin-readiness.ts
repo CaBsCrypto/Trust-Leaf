@@ -2,9 +2,12 @@ import { inspectAuthCustodyReadiness } from './auth-custody-readiness.ts';
 import { createRemoteJwksProvider, createRs256JwksTokenVerifier } from './jwks-token-verifier.ts';
 import { createServerAuthorizer, type AuthorizationPolicy, type ServerRole } from './server-authorization.ts';
 
-const ROLE_SCOPES: AuthorizationPolicy['roleScopes'] = {
-  admin: ['admin:readiness:read'], doctor: ['receipt:issue'], patient: ['receipt:read'],
-  dispensary: ['receipt:read', 'receipt:dispense'], relayer: ['receipt:submit'],
+export const ROLE_SCOPES: AuthorizationPolicy['roleScopes'] = {
+  admin: ['admin:readiness:read', 'receipt:read', 'actor:manage', 'actor:verify', 'testnet:faucet', 'finance:read', 'finance:write'],
+  doctor: ['receipt:read', 'receipt:issue'],
+  patient: ['receipt:read', 'patient:dashboard:read', 'wallet:derive', 'wallet:read', 'wallet:send', 'finance:read', 'finance:write'],
+  dispensary: ['receipt:read', 'receipt:dispense', 'receipt:retain', 'receipt:release'],
+  relayer: ['receipt:submit'],
 };
 
 export function createAdminReadinessController(env: Record<string, string | undefined>, dependencies: { fetcher?: typeof fetch; now?: () => number } = {}) {

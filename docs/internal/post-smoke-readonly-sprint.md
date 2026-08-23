@@ -50,6 +50,7 @@ Baseline: `3a7e636`, posterior al smoke técnico documentado. Rama Scrum: `integ
 - Las nueve llamadas legacy de envío y el transport RPC reutilizable tienen guard fail-closed inmediatamente antes del envío.
 - `test:admin-auth-readiness`: el panel real usa token del IdP y no comparte la superficie legacy con controles mutantes; la sesión demo no recibe ese panel.
 - Informe independiente: `post-smoke-readonly-independent-qa-20260822.md`.
+- Fase 1 de autorización legacy: `phase1-legacy-auth-rbac-20260822.md`.
 
 ## Límites confirmados
 

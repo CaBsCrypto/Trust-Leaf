@@ -42,6 +42,7 @@ import {
   displayToStroops,
 } from "./api/_lib/defindex";
 import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
+import { createLegacyAuthorizationMiddleware } from "./api/_lib/legacy-route-authorization";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,6 +101,7 @@ async function startServer() {
 
   // Middlewares
   app.use(express.json());
+  app.use(createLegacyAuthorizationMiddleware(process.env));
   app.use((req, res, next) => {
     const protectedMutation = req.method === "POST" && (
       req.path === "/api/stellar/faucet" ||
