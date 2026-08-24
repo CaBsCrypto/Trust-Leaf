@@ -2,6 +2,18 @@
 
 Baseline inspeccionada: `f7374d1`, 2026-08-24. Este backlog registra brechas observables; no afirma que infraestructura, auth o lectura live estén implementadas.
 
+## Revalidación de la candidata integrada
+
+En `integration/human-ui-candidate-20260824`, commit `0c370f0`, quedaron resueltos para la revisión humana local:
+
+- `UX-RO-001`: contrato y enlaces históricos Stellar Expert ahora son visibles y están etiquetados como evidencia read-only;
+- `UX-RO-002`: se eliminó de esta ruta la mezcla con el store mutable; cada estado visible se rotula como fixture;
+- `UX-RO-003`: Admin técnico muestra el panel fixture con acciones deshabilitadas sin eludir `/admin` autenticado;
+- `UX-RO-006`: selector allowlisted cubre ciclo completo, revocada, expirada y fuente no disponible;
+- `UX-RO-007`: rol y escenario quedan en query determinista, sin datos sensibles.
+
+Permanecen abiertos `UX-RO-004`, `UX-RO-005`, `UX-RO-008`, `UX-RO-009`, `UX-RO-010` y `UX-RO-011`. La UI no consume RPC/indexer live; los enlaces históricos no prueban que el fixture renderizado corresponda a un receipt individual.
+
 ## P0 — necesario para la revisión humana contra chain
 
 | ID | Hallazgo / reproducción | Impacto | Criterio de cierre |

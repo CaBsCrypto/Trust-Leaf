@@ -33,9 +33,9 @@ Abrir `http://localhost:3000/demo/receipt-pilot`. Si el puerto está ocupado, de
 
 | Superficie | Ruta/acción exacta | Fuente visible | Qué sí demuestra | Qué no demuestra |
 |---|---|---|---|---|
-| flujo consolidado | `http://localhost:3000/demo/receipt-pilot` | store sintético en memoria | navegación y transiciones locales de UI | lectura live ni escritura del contrato desplegado |
-| médico/paciente/dispensario | selector superior de la misma ruta | fixture mutable local | secuencia issue→active→partial→dispensed | identidad, consentimiento o acto clínico real |
-| lectura por rol, incluido admin | selector `Lectura técnica por rol` | fixture indexado local fijo en `partial` | minimización distinta por rol y mutaciones bloqueadas | autenticación real o panel administrativo completo |
+| flujo consolidado | `http://localhost:3000/demo/receipt-pilot?role=doctor&scenario=lifecycle` | fixtures sintéticos allowlisted | navegación por rol/estado y enlaces históricos Testnet | lectura live ni escritura del contrato desplegado |
+| médico/paciente/dispensario/admin | selectores de la misma ruta | fixture local por escenario | visibilidad por rol y mutaciones bloqueadas | identidad, consentimiento o acto clínico real |
+| panel admin técnico | seleccionar `Admin técnico` | colas/alertas sintéticas | superficie de revisión sin PHI y acciones disabled | autenticación o administración productiva |
 | QR público | botón `Abrir verificación pública demo` / `/verify/<token-opaco>` | verificador sintético local | respuesta pública de cuatro campos y rechazo de tamper | correlación live con el receipt desplegado |
 | admin autenticado | `http://localhost:3000/admin` | gate Firebase/allowlist | denegación por defecto sin sesión autorizada | una sesión admin disponible para esta revisión |
 | evidencia on-chain | enlaces Stellar Expert siguientes | ledger público Testnet, smoke del 2026-08-22 | existencia de contrato y transacciones técnicas sintéticas | validez de receta, identidad o entrega material |
@@ -44,14 +44,14 @@ Abrir `http://localhost:3000/demo/receipt-pilot`. Si el puerto está ocupado, de
 
 Ejecutar primero a `1440 × 900` y repetir los pasos 1–8 a `390 × 844`.
 
-1. Abrir `/demo/receipt-pilot`. Confirmar los rótulos `Demo sintética · no uso clínico` y `simulación local`.
-2. En `Médico`, confirmar estado inicial sin eventos y pulsar `Emitir constancia sintética` una vez. Esperado: timeline `v1 · issued`, `v2 · active`; el botón queda deshabilitado.
-3. Cambiar a `Paciente`. Esperado: `Constancia: Existe`, `Estado público: Active` y botón de verificación pública.
-4. Abrir la verificación. Esperado: sólo `Vigente`, `Comprobante existente: Sí`, `Coincidencia: Coincide` y el aviso de exclusión de datos.
-5. Volver al flujo sin recargar. Cambiar a `Dispensario`; registrar un parcial. Esperado: saldo sintético `1`, estado/timeline `partial`. Registrar el segundo parcial: saldo `0`, `dispensed` y botón deshabilitado.
-6. En `Lectura técnica por rol`, recorrer Médico, Paciente, Dispensario y Admin. Esperado común: `Operaciones: Bloqueadas`, referencia opaca y ninguna identidad. Médico/dispensario ven timeline; paciente ve `Ver constancia mínima`; admin no recibe timeline ni token público.
-7. Abrir `/admin` en una sesión sin autorización. Esperado: acceso cerrado o gate de autenticación; nunca las colas administrativas. No iniciar sesión durante esta revisión.
-8. Recargar `/demo/receipt-pilot`. Esperado: el flujo mutable vuelve a `draft`; esto confirma que no hay persistencia durable activa.
+1. Abrir `/demo/receipt-pilot?role=doctor&scenario=lifecycle`. Confirmar `Revisión local · sin submissions`, contract ID y botón `Abrir contrato en Stellar Expert`.
+2. En `Médico técnico`, confirmar escenario `Ciclo completo`, estado `dispensed`, finalidad `confirmed`, operaciones bloqueadas y enlaces Issued/Active.
+3. Cambiar a `Paciente sintético`. Confirmar que aparece `Abrir QR público demo`, que no aparece timeline operativo y que los enlaces visibles corresponden a estados públicos históricos.
+4. Abrir el QR. Esperado: sólo `Vigente`, existencia y coincidencia, más aviso de exclusión de datos; volver con el navegador.
+5. Cambiar a `Dispensario técnico`. Confirmar timeline local versionado y enlaces Partial/Dispensed, sin saldo, cantidad, identidad ni acción de escritura.
+6. Cambiar a `Admin técnico`. Confirmar colas sintéticas, receipt opaco, alertas y tres acciones disabled; ningún dato clínico.
+7. Recorrer escenarios `Revocada`, `Expirada` y `Fuente no disponible` para cada rol. Confirmar que query `role`/`scenario` cambia de forma determinista y que `unknown` no se presenta como confirmación.
+8. Abrir `/admin` sin sesión. Esperado: gate de autenticación; no reutilizar esta ruta para la revisión fixture.
 
 ## Negativas visibles
 
@@ -59,10 +59,10 @@ Ejecutar primero a `1440 × 900` y repetir los pasos 1–8 a `390 × 844`.
 |---|---|---|
 | QR manipulado | cambiar un carácter final de la URL `/verify/<token>` | `No disponible`, existencia no confirmada y coincidencia no confirmada; sin detalle adicional |
 | ruta pública enumerable | abrir `/verify/123`, email ficticio o handle corto | misma proyección no disponible, sin indicar si otro receipt existe |
-| replay de emisión | pulsar nuevamente el botón de emisión | control deshabilitado; no aparece otra versión |
-| transición indebida | intentar parcial antes de emitir o después de `dispensed` | botón deshabilitado y timeline intacto |
-| rol equivocado | seleccionar Admin en la lectura read-only | no token QR, timeline ni acciones |
-| pérdida de sesión local | recargar en mitad del flujo | vuelve al fixture inicial; registrar como límite, no como error de chain |
+| query manipulada | usar `?role=attacker&scenario=forged` | defaults seguros `doctor/lifecycle`; no error ni dato adicional |
+| transición indebida | buscar controles de issue/partial/submit | no existen en la ruta de revisión; `Operaciones: Bloqueadas` |
+| rol equivocado | seleccionar Admin técnico | no token QR ni acciones habilitadas |
+| recarga/deep link | recargar cualquier combinación allowlisted | conserva sólo rol/escenario sintéticos de la query |
 
 No ingresar nombres, RUT, correos, direcciones, información médica ni credenciales en ninguna superficie.
 

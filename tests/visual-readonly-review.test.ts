@@ -21,13 +21,16 @@ assert.match(app, /path === '\/demo\/receipt-pilot'/, 'the consolidated visual r
 assert.match(app, /path\.match\(\/\^\\\/verify\\\/\(\[\^\/\]\+\)\$\//, 'the opaque public verifier route must remain navigable');
 assert.match(app, /navigate\(`\/verify\/\$\{encodeURIComponent\(token\)\}`\)/, 'QR navigation must encode only its opaque token');
 
-for (const label of ['Médico', 'Paciente', 'Dispensario']) {
+for (const label of ['Médico técnico', 'Paciente sintético', 'Dispensario técnico', 'Admin técnico']) {
   assert.match(pilot, new RegExp(label), `pilot must expose the ${label} fixture role`);
 }
 for (const label of ['Médico', 'Paciente', 'Dispensario', 'Admin']) {
   assert.match(rolePanel, new RegExp(`${label}`), `read-only panel must expose the ${label} projection`);
 }
-assert.match(pilot, /Demo sintética · no uso clínico/);
+assert.match(pilot, /Revisión local · sin submissions/);
+assert.match(pilot, /Vista sintética y local/);
+assert.match(pilot, /Abrir contrato en Stellar Expert/);
+assert.match(pilot, /Escenario visible/);
 assert.match(rolePanel, /Operaciones<\/dt><dd className="font-bold">Bloqueadas/);
 assert.doesNotMatch(pilot + rolePanel, /submitTransaction|sendTransaction|invokeContract|signAndSubmit/i, 'visual review surfaces must not contain submission primitives');
 

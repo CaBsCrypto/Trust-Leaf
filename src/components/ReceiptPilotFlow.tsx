@@ -19,7 +19,7 @@ const ROLE_COPY: Record<ReadonlyRole, { label: string; description: string; icon
   dispensary: { label: 'Dispensario técnico', description: 'Revisa parcial y cierre sin operar el ledger.', icon: Store },
   admin: { label: 'Admin técnico', description: 'Inspecciona trazabilidad y gates bloqueados.', icon: Wrench },
 };
-const SCENARIO_COPY: Record<ReviewScenario, string> = { lifecycle: 'Ciclo completo', revoked: 'Revocada', expired: 'Expirada', unknown: 'Fuente no disponible' };
+const SCENARIO_COPY: Record<ReviewScenario, string> = { active: 'Activa', partial: 'Parcial', dispensed: 'Dispensada', revoked: 'Revocada', expired: 'Expirada', unknown: 'Fuente no disponible' };
 const ROLE_EVIDENCE: Record<ReadonlyRole, readonly string[]> = {
   doctor: ['issued', 'active'], patient: ['active', 'dispensed', 'revoked', 'expired'], dispensary: ['partial', 'dispensed'], admin: ['issued', 'active', 'partial', 'dispensed', 'revoked', 'expired'],
 };

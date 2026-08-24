@@ -12,11 +12,11 @@ Abrir `/demo/receipt-pilot`. La vista separa deliberadamente:
 
 Rutas reproducibles:
 
-- médico: `/demo/receipt-pilot?role=doctor&scenario=lifecycle`
-- paciente: `/demo/receipt-pilot?role=patient&scenario=lifecycle`
-- dispensario: `/demo/receipt-pilot?role=dispensary&scenario=lifecycle`
-- admin: `/demo/receipt-pilot?role=admin&scenario=lifecycle`
-- negativos visuales: cambiar `scenario` a `revoked`, `expired` o `unknown`.
+- médico: `/demo/receipt-pilot?role=doctor&scenario=active`
+- paciente: `/demo/receipt-pilot?role=patient&scenario=active`
+- dispensario: `/demo/receipt-pilot?role=dispensary&scenario=partial`
+- admin: `/demo/receipt-pilot?role=admin&scenario=dispensed`
+- estados alternos: `active`, `partial`, `dispensed`, `revoked`, `expired` o `unknown`.
 
 ## Guion humano
 
@@ -26,7 +26,7 @@ Rutas reproducibles:
 4. En Paciente, comprobar que no hay cantidades, identidad o historial. Abrir el QR demo y verificar que la respuesta pública sólo muestra existencia, coincidencia y estado.
 5. En Dispensario, abrir `Partial` y `Dispensed`; comprobar que no hay acción de ledger disponible.
 6. En Admin, revisar los seis enlaces históricos, las colas opacas y que todas las acciones sensibles están deshabilitadas.
-7. Recorrer `revoked`, `expired` y `unknown`; refrescar y comprobar que rol/escenario se conservan en la URL.
+7. Recorrer `active`, `partial`, `dispensed`, `revoked`, `expired` y `unknown`; refrescar y comprobar que rol/escenario se conservan en la URL. El QR de `partial` se minimiza públicamente a `active`; `dispensed` no ofrece un QR reutilizable.
 8. Revisar ancho móvil y navegación por teclado: selector de rol, escenario, enlaces y QR.
 
 ## Evidencia automatizada

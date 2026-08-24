@@ -13,14 +13,14 @@ import { projectReadonlyReceiptForRole } from '../src/lib/readonlyRoleReceipt.ts
 assert.equal(DEPLOYED_TESTNET_RECEIPT_CONTRACT_ID, 'CA7SCEMQM4VETVCDD6RKO5RE7TCFG2HJD3PKW6EPD325IRDXJWF5OSY3');
 assert.equal(STELLAR_EXPERT_CONTRACT_URL, `https://stellar.expert/explorer/testnet/contract/${DEPLOYED_TESTNET_RECEIPT_CONTRACT_ID}`);
 assert.deepEqual(parseReviewSelection('?role=patient&scenario=revoked'), { role: 'patient', scenario: 'revoked' });
-assert.deepEqual(parseReviewSelection('?role=attacker&scenario=forged'), { role: 'doctor', scenario: 'lifecycle' }, 'unknown URL input must fail to safe review defaults');
+assert.deepEqual(parseReviewSelection('?role=attacker&scenario=forged'), { role: 'doctor', scenario: 'active' }, 'unknown URL input must fail to safe review defaults');
 assert.equal(reviewSearch('dispensary', 'expired'), '?role=dispensary&scenario=expired');
 
-assert.deepEqual(Object.keys(REVIEW_SCENARIOS).sort(), ['expired', 'lifecycle', 'revoked', 'unknown']);
+assert.deepEqual(Object.keys(REVIEW_SCENARIOS).sort(), ['active', 'dispensed', 'expired', 'partial', 'revoked', 'unknown']);
 assert.deepEqual(TESTNET_EVIDENCE_LINKS.map(item => item.state), ['issued', 'active', 'partial', 'dispensed', 'revoked', 'expired']);
 for (const item of TESTNET_EVIDENCE_LINKS) assert.match(item.url, /^https:\/\/stellar\.expert\/explorer\/testnet\/tx\/[a-f0-9]{64}$/);
 for (const role of ['doctor', 'patient', 'dispensary', 'admin'] as const) {
-  const view = projectReadonlyReceiptForRole(role, REVIEW_SCENARIOS.lifecycle);
+  const view = projectReadonlyReceiptForRole(role, REVIEW_SCENARIOS.active);
   assert.equal(view.mutationsAvailable, false);
   assert.equal(view.operationalDetailVisible, false);
 }
