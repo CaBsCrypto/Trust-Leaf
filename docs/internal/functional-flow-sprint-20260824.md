@@ -17,10 +17,10 @@ Defaults obligatorios durante todo el sprint:
 
 | Frente | Rama / worktree | Responsable | Estado | Gate de integración |
 |---|---|---|---|---|
-| Scrum/integración | `integration/functional-flow-candidate-20260824` / `wt-functional-flow-integration` | Scrum Master | EN CURSO | cherry-picks revisados, preflight combinado |
-| autorización por objeto | `phase2/object-authorization-20260822` / `wt-phase2-object-auth` | Seguridad backend | EN CURSO | actor/receipt server-side, cross-tenant y replay negativos |
-| persistencia/QR | `sprint/durable-receipt-mapping-20260824` / `wt-durable-receipt-mapping` | Datos/privacidad | EN CURSO | cifrado, CAS, mapping opaco, adapter real cerrado |
-| indexer/UI/admin/E2E | `sprint/readonly-indexer-role-e2e-20260824` / `wt-readonly-indexer-role-e2e` | Lectura/UX/QA | EN CURSO | cero writes, estados, roles y panel admin cubiertos |
+| Scrum/integración | `integration/functional-flow-candidate-20260824` / `wt-functional-flow-integration` | Scrum Master | CANDIDATA LOCAL | cherry-picks revisados, preflight combinado |
+| autorización por objeto | `phase2/object-authorization-20260822` / `wt-phase2-object-auth` | Seguridad backend | INTEGRADO | actor/receipt server-side, cross-tenant y replay negativos |
+| persistencia/QR | `sprint/durable-receipt-mapping-20260824` / `wt-durable-receipt-mapping` | Datos/privacidad | INTEGRADO, ADAPTER LOCAL | cifrado, CAS, mapping opaco, adapter real cerrado |
+| indexer/UI/admin/E2E | `sprint/readonly-indexer-role-e2e-20260824` / `wt-readonly-indexer-role-e2e` | Lectura/UX/QA | INTEGRADO, READ-ONLY | cero writes, estados, roles y panel admin cubiertos |
 
 ## Dependencias y orden de integración
 
@@ -54,3 +54,19 @@ Defaults obligatorios durante todo el sprint:
 7. Autorización separada para cualquier nueva submission Testnet.
 
 **Estado inicial:** GO para desarrollo sintético local/read-only; NO-GO para submissions y producción.
+
+## Evidencia integrada
+
+- `test:legacy-object-auth`: PASS — propiedad subject→actor→receipt, grants, acceso cruzado, tamper de identidad/XDR y replay/conflict.
+- `test:durable-receipt-mapping`: PASS — envelope cifrado, IDs/QR opacos, CAS, ownership e idempotencia.
+- `test:readonly-indexer-role-e2e`: PASS — recuperación/cursor/reorg, todos los estados y roles, panel admin y forbidden-data scan.
+- `npm run preflight`: todas las suites y TypeScript pasaron. El build dentro del sandbox se detuvo únicamente por `spawn EPERM` al crear `esbuild`.
+- `npm run build` repetido fuera de esa restricción local: PASS, 2.426 módulos; sólo warning histórico de chunks mayores a 800 kB.
+
+## Límites confirmados de la candidata
+
+- El middleware Express usa actualmente fixtures sintéticos in-memory para subject→actor→receipt. El port cifrado está validado, pero no se conecta a Postgres/KMS ni debe describirse como persistencia externa activa.
+- El indexer implementa CAS/recovery mediante un port, pero el adapter incluido es `durable:false` en memoria; no hay RPC/indexer live configurado.
+- Los handlers serverless separados todavía no comparten la cadena completa de autorización por objeto; no deben exponerse como equivalentes al servidor Express.
+- El panel admin sólo muestra fixtures operacionales y mantiene acciones sensibles deshabilitadas; no constituye administración productiva.
+- Ninguna submission fue ejecutada o habilitada. El estado final continúa NO-GO para nuevas transacciones Testnet y producción.
