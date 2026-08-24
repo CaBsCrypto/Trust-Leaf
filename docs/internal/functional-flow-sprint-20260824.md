@@ -70,3 +70,14 @@ Defaults obligatorios durante todo el sprint:
 - Los handlers serverless separados todavía no comparten la cadena completa de autorización por objeto; no deben exponerse como equivalentes al servidor Express.
 - El panel admin sólo muestra fixtures operacionales y mantiene acciones sensibles deshabilitadas; no constituye administración productiva.
 - Ninguna submission fue ejecutada o habilitada. El estado final continúa NO-GO para nuevas transacciones Testnet y producción.
+
+## Revisión independiente
+
+Veredicto: **GO limitado para demo local aislada/read-only; NO-GO como candidata desplegable**. No se encontró P0 mientras ambos kill-switches permanezcan en `false`.
+
+Hallazgos obligatorios antes de cualquier despliegue o submission:
+
+- las funciones serverless en `api/stellar/*` no comparten todavía toda la cadena JWT/RBAC/object-auth de Express;
+- los adapters de mapping/indexer durables permanecen en memoria y no coordinan reinicios o múltiples instancias;
+- los builders y contrato clínico legacy usan addresses/cantidades y payload clínico, incompatibles con el receipt opaco nuevo; deben aislarse o retirarse antes de exposición;
+- `submitDefindexSigned` y `signAndSubmitDefindex` recibieron un kill-switch interno adicional durante la integración; las rutas ya respondían 503.

@@ -46,5 +46,14 @@ const rpcSend = rpcTransportSource.indexOf('server.sendTransaction(transaction)'
 assert.notEqual(rpcSend, -1);
 assert.match(rpcTransportSource.slice(Math.max(0, rpcSend - 240), rpcSend), /assertTestnetMutationEnabled\(\)/,
   'reusable RPC transport must fail closed before sending');
+const defindexSource = await import('node:fs/promises').then(({ readFile }) =>
+  readFile(new URL('../api/_lib/defindex.ts', import.meta.url), 'utf8'),
+);
+for (const functionName of ['submitDefindexSigned', 'signAndSubmitDefindex']) {
+  const start = defindexSource.indexOf(`function ${functionName}`);
+  assert.notEqual(start, -1);
+  assert.match(defindexSource.slice(start, start + 420), /assertTestnetMutationEnabled\(\)/,
+    `${functionName} must fail closed before signing or sending`);
+}
 
 console.log('pilot-safety: config matrix and low-level submission guards passed');

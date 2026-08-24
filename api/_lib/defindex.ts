@@ -4,6 +4,7 @@ import {
   getAdminSecret,
   getAdminAddress,
 } from './stellar';
+import { assertTestnetMutationEnabled } from './pilot-safety';
 
 const DEFINDEX_API_BASE = 'https://api.defindex.io';
 const DEFINDEX_XLM_VAULT_TESTNET =
@@ -253,6 +254,7 @@ export async function getDefindexShares(
 }
 
 export async function submitDefindexSigned(signedXdr: string): Promise<string> {
+  assertTestnetMutationEnabled();
   const network = getDefindexNetwork();
   const payload = await callDefindexApi<DefindexSendResponse>(
     `/send?network=${network}`,
@@ -278,6 +280,7 @@ export interface SignAndSubmitOptions {
 export async function signAndSubmitDefindex(
   opts: SignAndSubmitOptions,
 ): Promise<{ txHash: string; signedXdr: string }> {
+  assertTestnetMutationEnabled();
   const passphrase = getNetworkPassphrase();
   const parsed = StellarSdk.TransactionBuilder.fromXDR(
     opts.unsignedXdr,
