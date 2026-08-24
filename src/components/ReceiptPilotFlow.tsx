@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle, QrCode, ShieldCheck, Stethoscope, UserRound, Store } from 'lucide-react';
 import { publicReceiptProjection, sharedSyntheticReceiptStore, SYNTHETIC_RECEIPT_TOKEN, type PilotRole } from '../lib/receiptPilotDemo';
+import { ReadonlyRoleReceiptPanel } from './ReadonlyRoleReceiptPanel';
 
 const ROLE_COPY: Record<PilotRole, { label: string; description: string }> = {
   doctor: { label: 'Médico', description: 'Emite una constancia demo tras gates sintéticos.' },
@@ -32,6 +33,7 @@ export default function ReceiptPilotFlow({ onBack, onVerify }: { onBack: () => v
         </section>
         <aside className="rounded-3xl border border-brand-green-deep/10 bg-white p-6"><CheckCircle/><h2 className="mt-3 text-xl font-bold">Timeline versionado</h2><p className="mt-2 text-xs text-brand-green-mid">Handle opaco: {receipt.handle.slice(0, 16)}…</p><ol className="mt-5 space-y-3">{receipt.events.length === 0 ? <li className="text-sm text-brand-green-mid">Sin eventos emitidos.</li> : receipt.events.map(event => <li key={event.version} className="rounded-xl bg-brand-neutral p-3 text-sm"><strong>v{event.version}</strong> · {event.state}</li>)}</ol></aside>
       </div>
+      <ReadonlyRoleReceiptPanel onVerify={onVerify} />
     </main>
   </div>;
 }

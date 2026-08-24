@@ -21,6 +21,7 @@
     "test:auth-custody-readiness": "node --experimental-strip-types tests/auth-custody-readiness.test.ts",
     "test:admin-auth-readiness": "node --experimental-strip-types tests/admin-auth-readiness.test.ts",
     "test:legacy-route-auth": "node --experimental-strip-types tests/legacy-route-authorization.test.ts",
+    "test:readonly-indexer-role-e2e": "node --experimental-strip-types tests/readonly-indexer-role-e2e.test.ts",
     "test:stellar-rpc-prep": "node --experimental-strip-types tests/stellar-testnet-rpc-adapter.test.ts",
     "test:stellar-event-source": "node --experimental-strip-types tests/stellar-receipt-event-source.test.ts",
     "test:readonly-ui-qr": "node --experimental-strip-types tests/readonly-ui-qr.test.ts",
@@ -30,7 +31,7 @@
     "test:durable-receipt-mapping": "node --experimental-strip-types tests/durable-receipt-mapping.test.ts",
     "audit:medical-flow": "node tests/medical-flow-capabilities-audit.mjs",
     "preflight:config": "node tests/preflight-config.mjs",
-    "preflight": "npm run preflight:config && npm run test:pilot-safety && npm run test:critical-static && npm run test:public-verification && npm run test:receipt-backend && npm run test:receipt-pilot-ui && npm run test:receipt-shared-e2e && npm run test:simulated-testnet-adapter && npm run test:receipt-indexer && npm run test:server-auth-custody && npm run test:auth-custody-readiness && npm run test:admin-auth-readiness && npm run test:legacy-route-auth && npm run test:stellar-rpc-prep && npm run test:stellar-event-source && npm run test:readonly-ui-qr && npm run test:testnet-e2e-data-qa && npm run test:durable-data-controls && npm run test:durable-receipt-mapping && npm run test:visual-qa-regressions && npm run lint && npm run build"
+    "preflight": "npm run preflight:config && npm run test:pilot-safety && npm run test:critical-static && npm run test:public-verification && npm run test:receipt-backend && npm run test:receipt-pilot-ui && npm run test:receipt-shared-e2e && npm run test:simulated-testnet-adapter && npm run test:receipt-indexer && npm run test:server-auth-custody && npm run test:auth-custody-readiness && npm run test:admin-auth-readiness && npm run test:legacy-route-auth && npm run test:readonly-indexer-role-e2e && npm run test:stellar-rpc-prep && npm run test:stellar-event-source && npm run test:readonly-ui-qr && npm run test:testnet-e2e-data-qa && npm run test:durable-data-controls && npm run test:durable-receipt-mapping && npm run test:visual-qa-regressions && npm run lint && npm run build"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

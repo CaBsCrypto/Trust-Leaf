@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TechnicalAdminOversightPanel } from './TechnicalAdminOversightPanel';
 
 type AdminReadiness = {
   mode: 'read-only';
@@ -26,10 +27,11 @@ export function AdminReadinessPanel({ getIdToken }: { getIdToken: () => Promise<
 
   if (error) return <section aria-live="polite"><h2>Admin read-only</h2><p>{error}</p></section>;
   if (!state) return <section aria-busy="true"><h2>Admin read-only</h2><p>Verificando autorizacion…</p></section>;
-  return <section>
+  return <section className="space-y-6">
     <h2>Admin read-only</h2>
     <p>Submissions Testnet: deshabilitadas</p>
     <p>Estado: {state.readiness.ready ? 'preparado para revision' : 'bloqueado'}</p>
     <ul>{state.readiness.blockers.map(code => <li key={code}>{code}</li>)}</ul>
+    <TechnicalAdminOversightPanel access={{ authenticated: true, roles: ['admin'], scopes: ['admin:readiness:read'] }} />
   </section>;
 }

@@ -53,7 +53,7 @@ function opaqueBytes(value: unknown) {
 
 export function createReceiptEventSource(input: {
   mode: 'fixture' | 'testnet'; transport: ReceiptEventSourceTransport; timeoutMs?: number; metrics: IndexerMetricSink;
-  contractId: string; ingest: (ledger: SimulatedLedger) => void; getCursor: () => LedgerCursor | null;
+  contractId: string; ingest: (ledger: SimulatedLedger) => void | Promise<void>; getCursor: () => LedgerCursor | null;
 }) {
   if (input.mode === 'testnet' && input.transport.kind !== 'stellar-rpc') throw safe('REAL_SOURCE_REQUIRED');
   if (input.mode === 'fixture' && input.transport.kind !== 'fixture') throw safe('FIXTURE_SOURCE_REQUIRED');
@@ -67,7 +67,7 @@ export function createReceiptEventSource(input: {
       input.metrics.increment('ingest_rejected', { code: 'EVENT_SOURCE_ALLOWLIST_REJECTED' });
       throw safe('EVENT_SOURCE_ALLOWLIST_REJECTED');
     }
-    try { input.ingest(response.ledger); }
+    try { await input.ingest(response.ledger); }
     catch (error) { input.metrics.increment('ingest_rejected', { code: safeCode(error) }); throw error; }
     input.metrics.increment('ledger_ingested');
     return { status: 'ingested', cursor: input.getCursor() };
