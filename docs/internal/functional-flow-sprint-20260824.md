@@ -71,6 +71,12 @@ Defaults obligatorios durante todo el sprint:
 - El panel admin sólo muestra fixtures operacionales y mantiene acciones sensibles deshabilitadas; no constituye administración productiva.
 - Ninguna submission fue ejecutada o habilitada. El estado final continúa NO-GO para nuevas transacciones Testnet y producción.
 
+## Revisión visual reproducible
+
+- Guion operativo: `docs/internal/visual-readonly-e2e-runbook-20260824.md`.
+- Backlog de hallazgos UX: `docs/internal/visual-readonly-ux-backlog-20260824.md`.
+- Gate automatizado complementario: `npm run test:visual-readonly-review`.
+
 ## Revisión independiente
 
 Veredicto: **GO limitado para demo local aislada/read-only; NO-GO como candidata desplegable**. No se encontró P0 mientras ambos kill-switches permanezcan en `false`.
