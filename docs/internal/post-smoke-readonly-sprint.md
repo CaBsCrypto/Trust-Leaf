@@ -51,6 +51,7 @@ Baseline: `3a7e636`, posterior al smoke técnico documentado. Rama Scrum: `integ
 - `test:admin-auth-readiness`: el panel real usa token del IdP y no comparte la superficie legacy con controles mutantes; la sesión demo no recibe ese panel.
 - Informe independiente: `post-smoke-readonly-independent-qa-20260822.md`.
 - Fase 1 de autorización legacy: `phase1-legacy-auth-rbac-20260822.md`.
+- Sprint funcional integrado: `functional-flow-sprint-20260824.md`.
 
 ## Límites confirmados
 
