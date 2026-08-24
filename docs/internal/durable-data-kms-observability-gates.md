@@ -31,3 +31,6 @@ Status: local preparation only (2026-08-22). No cloud adapter is connected and n
 - The in-memory adapter is test evidence, not durable storage. The fixture custody provider is not suitable for deployment.
 - No clinical/legal validity, real patient validation, production readiness or regulatory compliance is claimed.
 - `TRUSTLEAF_TESTNET_SUBMIT_ENABLED=false` remains mandatory; this sprint creates no transaction.
+
+The synthetic object-authorization mapping built on this port is documented in
+[`durable-receipt-mapping-phase2.md`](./durable-receipt-mapping-phase2.md).

@@ -17,7 +17,9 @@ await assert.rejects(store.put(id, 0, { fixture: true, state: 'partial' }), /REV
 await assert.rejects(store.put(createOpaqueMappingId(namespace, 'synthetic-case-0002'), null, { fixture: true, patientName: 'not-allowed' }), /FORBIDDEN_DATA_FIELD/);
 await assert.rejects(store.put(createOpaqueMappingId(namespace, 'synthetic-case-0002b'), null, { fixture: true, nested: { medication: 'not-allowed' } }), /FORBIDDEN_DATA_FIELD/);
 
-const tampered = { ...row1, tag: `${row1.tag.slice(0, -1)}${row1.tag.endsWith('A') ? 'B' : 'A'}` };
+// Change a fully significant base64url character. Mutating the final character
+// can alter only unused padding bits and intermittently decode to the same tag.
+const tampered = { ...row1, tag: `${row1.tag.startsWith('A') ? 'B' : 'A'}${row1.tag.slice(1)}` };
 await repository.compareAndSwap(id, 1, tampered); await assert.rejects(store.get(id)); await repository.compareAndSwap(id, 1, row1);
 const otherId = createOpaqueMappingId(namespace, 'synthetic-case-0003');
 await repository.compareAndSwap(otherId, null, { ...row1, opaqueId: otherId });
