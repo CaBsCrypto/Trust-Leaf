@@ -15,7 +15,7 @@ assert.deepEqual(publicResult, { demo: true, evidenceExists: true, proofMatches:
 assert.deepEqual(Object.keys(publicResult).sort(), ['demo', 'evidenceExists', 'proofMatches', 'status']);
 
 assert.match(pilot, /onVerify: \(token: string\) => void/, 'pilot must use SPA navigation supplied by App');
-assert.match(pilot, /onVerify\(SYNTHETIC_RECEIPT_TOKEN\)/, 'patient action must pass only the opaque token');
+assert.match(pilot, /onVerify\(view\.publicToken!\)/, 'patient action must pass only the opaque token');
 assert.doesNotMatch(pilot, /href=\{`\/verify\//, 'patient QR action must not reload and reset the in-memory fixture');
 assert.match(app, /onVerify=\{\(token\) => navigate\(`\/verify\//, 'App must preserve shared state during verifier navigation');
 
