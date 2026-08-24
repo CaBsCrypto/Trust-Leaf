@@ -20,7 +20,7 @@ Defaults obligatorios durante todo el sprint:
 | Scrum/integración | `integration/functional-flow-candidate-20260824` / `wt-functional-flow-integration` | Scrum Master | EN CURSO | cherry-picks revisados, preflight combinado |
 | autorización por objeto | `phase2/object-authorization-20260822` / `wt-phase2-object-auth` | Seguridad backend | EN CURSO | actor/receipt server-side, cross-tenant y replay negativos |
 | persistencia/QR | `sprint/durable-receipt-mapping-20260824` / `wt-durable-receipt-mapping` | Datos/privacidad | EN CURSO | cifrado, CAS, mapping opaco, adapter real cerrado |
-| indexer/UI/E2E | `sprint/readonly-indexer-role-e2e-20260824` / `wt-readonly-indexer-role-e2e` | Lectura/UX/QA | EN CURSO | cero writes, estados y roles cubiertos |
+| indexer/UI/admin/E2E | `sprint/readonly-indexer-role-e2e-20260824` / `wt-readonly-indexer-role-e2e` | Lectura/UX/QA | EN CURSO | cero writes, estados, roles y panel admin cubiertos |
 
 ## Dependencias y orden de integración
 
@@ -39,6 +39,7 @@ Defaults obligatorios durante todo el sprint:
 - QR contiene únicamente handle opaco y la respuesta pública permanece minimizada;
 - stores, indexer y rate limits tienen ports durables; sólo fixtures memory están activos;
 - vistas por médico, paciente, dispensario y admin no amplían permisos;
+- panel admin mínimo muestra sólo colas operacionales, estados, trazabilidad técnica y alertas sintéticas; no incluye PHI ni acciones activas;
 - todas las rutas mutantes permanecen cerradas incluso para un principal válido;
 - documentación separa implementado de infraestructura pendiente.
 
