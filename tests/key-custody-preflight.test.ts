@@ -93,6 +93,7 @@ assert.doesNotMatch(JSON.stringify(unavailable), /do-not-return|S[B]{55}/);
 
 for (const malicious of [
   { ...safe, providerConfig: 'synthetic-sensitive-value' },
+  { ...safe, checks: { ...safe.checks, unexpectedProbeValue: true } },
   { ...safe, blockers: [`G${'A'.repeat(55)}`] },
   { ...safe, blockers: [`S${'B'.repeat(55)}`] },
   { ...safe, blockers: ['https://rpc.invalid'] },

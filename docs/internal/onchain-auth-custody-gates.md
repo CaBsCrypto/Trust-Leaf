@@ -6,6 +6,10 @@ Diseño operativo asociado: [threat model de claves y custodia](key-custody-thre
 y [runbook de ceremonia Testnet](testnet-key-ceremony-runbook.md). Estos artefactos
 no autorizan provisión, deploy ni submission.
 
+Evidencia local adicional: [gate KMS/HSM mock sin secretos](../../tests/key-custody-gate.test.ts)
+y [preflight de inventario sanitizado](key-custody-preflight-qa.md). Ambos son
+fixtures locales, mantienen las mutaciones cerradas y no prueban un proveedor real.
+
 ## Controles implementados y verificados
 
 - Autorización exclusivamente server-side mediante un puerto `TokenVerifier`; headers de rol no otorgan autoridad.
@@ -14,6 +18,11 @@ no autorizan provisión, deploy ni submission.
 - El proveedor firma dentro de su interfaz: el orquestador no solicita ni recibe material secreto.
 - Auditoría limitada a alias, versión y resultado/código seguro; no registra token, digest, firma, payload ni mensajes del proveedor.
 - `submissionEnabled` sólo admite `false`; este frente no incluye RPC, envío de transacciones, cuentas, secretos ni proveedor KMS.
+- El gate local separa admin M-de-N, deployer, operator, doctor-service y
+  dispensary-service; exige versiones fijadas, ciclo de vida, allowlists exactas y
+  devuelve un proof marcado como no utilizable en Stellar.
+- El preflight expone sólo booleanos, conteos, roles aprobados y códigos estables;
+  rechaza campos extra, URL, direcciones, seeds y hashes en su salida.
 - Pruebas con identidades, tokens y material exclusivamente sintéticos: `npm run test:server-auth-custody`.
 - Inspección sanitizada por presencia/formato público mediante `inspectAuthCustodyReadiness`; sólo devuelve booleans y códigos estables. En este checkout sólo existe `.env.example`: no hay configuración local de identidad/KMS, el receipt contract ID está vacío y los campos legacy de secretos están vacíos.
 

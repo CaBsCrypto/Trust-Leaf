@@ -69,6 +69,31 @@ const STELLAR_ADDRESS = /\b[GCMA][A-Z2-7]{55}\b/;
 const STELLAR_SEED = /\bS[A-Z2-7]{55}\b/;
 const URL_VALUE = /https?:\/\//i;
 const HEX_DIGEST = /\b[a-f0-9]{64}\b/i;
+const GLOBAL_CHECK_KEYS = [
+  'submissionDisabled',
+  'mutationsDisabled',
+  'networkAllowlisted',
+  'passphraseAllowlisted',
+  'rpcAllowlisted',
+  'contractAllowlisted',
+  'artifactHashAllowlisted',
+  'adminMultisigConfigured',
+  'adminQuorumConfigured',
+  'adminHasNoSingleSigner',
+  'noRealAliasLookup',
+  'requiredRolesInspected',
+  'separationOfDuties',
+] as const;
+const ROLE_CHECK_SUFFIXES = [
+  'providerPresent',
+  'aliasPresent',
+  'balanceSufficient',
+  'versionPinned',
+  'rotationReady',
+  'revocationReady',
+  'recoveryReady',
+  'signingDisabled',
+] as const;
 
 export async function runKeyCustodyPreflight(input: {
   config: KeyCustodyPreflightConfig;
@@ -142,6 +167,7 @@ export function assertSafeCustodyReport(report: KeyCustodyPreflightReport): void
   assertExactKeys(report as unknown as Record<string, unknown>, ['ready', 'mode', 'checks', 'counts', 'roles', 'blockers']);
   if (typeof report.ready !== 'boolean' || !['synthetic-fixture', 'sanitized-provider'].includes(report.mode)) throw unsafeReport();
   assertBooleanRecord(report.checks);
+  assertExactKeys(report.checks as unknown as Record<string, unknown>, expectedCheckKeys());
   assertExactKeys(report.counts as unknown as Record<string, unknown>, ['requiredRoles', 'inspectedRoles', 'readyRoles', 'blockers']);
   if (Object.values(report.counts).some(value => !Number.isSafeInteger(value) || value < 0)) throw unsafeReport();
   if (!Array.isArray(report.roles) || report.roles.some(item => {
@@ -185,6 +211,12 @@ function unavailableFinding(role: KeyCustodyRole): CustodyRoleFinding {
 }
 
 function roleKey(role: KeyCustodyRole) { return role.replace(/-/g, '_'); }
+function expectedCheckKeys() {
+  return [
+    ...GLOBAL_CHECK_KEYS,
+    ...KEY_CUSTODY_ROLES.flatMap(role => ROLE_CHECK_SUFFIXES.map(suffix => `${roleKey(role)}_${suffix}`)),
+  ];
+}
 function toCode(value: string) { return value.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/-/g, '_').toUpperCase(); }
 function unsafeReport() { return Object.assign(new Error('Custody preflight output rejected.'), { code: 'UNSAFE_CUSTODY_REPORT' }); }
 

@@ -79,7 +79,14 @@ digests, receipt IDs, operation IDs y valores de configuración.
 Si en una sesión posterior se valida un alias Testnet existente, la comprobación
 debe consumir el alias desde un input local no registrado y emitir únicamente
 `present`, `balanceSufficient` y un código estable. No debe imprimir alias,
-dirección ni saldo. En esta fase no se ejecuta esa comprobación.
+dirección ni saldo.
+
+Evidencia sanitizada de integración, 2026-08-24: Stellar CLI disponible; los tres
+roles técnicos históricos esperados reportaron alias presente y cuenta Testnet
+presente. Se emitieron sólo etiquetas de rol y estados booleanos, sin direcciones,
+montos, secretos ni stdout del proveedor; submissions ejecutadas: `0`. Esta
+comprobación no acredita propiedad, custodia, versión activa, multisig, IAM ni
+idoneidad para deploy.
 
 ## 4. Fase A — preflight local sin secretos
 

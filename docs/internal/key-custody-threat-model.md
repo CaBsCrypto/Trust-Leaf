@@ -31,9 +31,11 @@ copiar, mover, revelar ni almacenar claves privadas, ni habilitar flags de mutac
 
 - No se ha seleccionado ni conectado un KMS/HSM, identidad de workload, política
   IAM, servicio de firma, multisig o almacenamiento durable de auditoría.
-- No se consultaron alias locales, direcciones, saldos ni material de claves para
-  producir este documento. Su existencia y correspondencia con roles no están
-  confirmadas.
+- Este documento se produjo sin consultar alias, direcciones, saldos ni material
+  de claves. Durante la integración se hizo una comprobación separada y read-only:
+  los roles técnicos esperados existen y cada cuenta Testnet consultada existe,
+  informando sólo booleanos. No se verificaron custodia, owner, IAM, versión,
+  procedencia, quorum ni correspondencia criptográfica; esos gates siguen abiertos.
 - El camino legacy `api/_lib/stellar.ts` todavía acepta secretos inline, crea
   keypairs en proceso y firma directamente. Aunque las mutaciones están cerradas,
   ese camino **no es elegible** para el próximo deploy y debe permanecer aislado.
