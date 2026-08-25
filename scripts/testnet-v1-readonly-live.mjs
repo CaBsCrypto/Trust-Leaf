@@ -1,7 +1,6 @@
-import { createLocalFileDurableReceiptIndexerStore } from '../api/_lib/durable-readonly-receipt-indexer.ts';
 import {
   DEPLOYED_RECEIPT_EVIDENCE_THROUGH_LEDGER,
-  createStellarV1RpcDurableReader,
+  createDeployedStellarV1RpcDurableReader,
   loadDeployedV1ReaderConfig,
 } from '../api/_lib/stellar-v1-durable-reader.ts';
 
@@ -23,13 +22,9 @@ try {
     throw Object.assign(new Error('Read-only live configuration unavailable.'), { code: 'LIVE_READ_CONFIG_REJECTED' });
   }
   const config = loadDeployedV1ReaderConfig(process.env);
-  const service = createStellarV1RpcDurableReader({
+  const service = createDeployedStellarV1RpcDurableReader({
     config,
-    store: createLocalFileDurableReceiptIndexerStore({
-      stateDirectory,
-      fileName: 'receipt-indexer-v1.json',
-    }),
-    metrics: { increment() {} },
+    stateDirectory,
   });
   let report = await service.start();
   let evidenceWindowComplete = false;

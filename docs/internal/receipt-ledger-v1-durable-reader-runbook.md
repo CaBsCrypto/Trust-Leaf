@@ -23,6 +23,9 @@ Cambiar un valor para acomodar una discrepancia es **NO-GO**.
 ## Controles implementados y cubiertos
 
 - Construcción lazy: instanciar el servicio no accede a red.
+- La fábrica oficial construye internamente RPC, transporte, métricas y journal;
+  rechaza propiedades `server`, `transport`, `attest` o `store` inyectadas. El
+  arnés inyectable separado siempre reporta `mode=fixture`.
 - Attestation previa: compara passphrase, contract ID y hash del bytecode
   retornado por RPC antes del primer poll. La ejecución acotada termina al
   recuperar el ledger `4282756`, último ledger de evidencia documentado; no
@@ -41,6 +44,8 @@ Cambiar un valor para acomodar una discrepancia es **NO-GO**.
 - El reporte contiene sólo modo/red, booleanos, contadores y códigos cerrados.
   No imprime URL, contract/receipt/event ID, cursor/hash, XDR, identidad,
   secreto ni payload de eventos.
+- `ready=true` exige attestation, store durable y cursor ya persistido. Un
+  fixture en memoria o `caught-up` sin cursor permanece NO-GO.
 
 Evidencia local sin red:
 

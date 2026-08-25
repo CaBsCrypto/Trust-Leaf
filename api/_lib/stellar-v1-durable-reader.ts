@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import {
+  createLocalFileDurableReceiptIndexerStore,
   createDurableReadonlyReceiptIndexer,
   type DurableReceiptIndexerStorePort,
 } from './durable-readonly-receipt-indexer.ts';
@@ -34,7 +35,7 @@ const SAFE_CODES = new Set([
 type RpcServer = InstanceType<typeof StellarSdk.rpc.Server>;
 
 export interface StellarV1DurableReaderConfig {
-  mode: 'testnet-readonly';
+  mode: 'fixture' | 'testnet-readonly';
   network: 'testnet';
   networkPassphrase: string;
   rpcUrl: string;
@@ -52,7 +53,7 @@ export interface StellarV1DurableReaderConfig {
 }
 
 export interface SanitizedV1ReaderReport {
-  mode: 'testnet-readonly';
+  mode: 'fixture' | 'testnet-readonly';
   network: 'testnet';
   ready: boolean;
   durable: boolean;
@@ -103,7 +104,7 @@ export function loadDeployedV1ReaderConfig(env: NodeJS.ProcessEnv): StellarV1Dur
 
 export function validateStellarV1DurableReaderConfig(config: StellarV1DurableReaderConfig): void {
   const wasmSha256 = config.receiptWasmSha256.toLowerCase();
-  if (config.mode !== 'testnet-readonly' || config.network !== 'testnet'
+  if (!['fixture', 'testnet-readonly'].includes(config.mode) || config.network !== 'testnet'
     || config.networkPassphrase !== STELLAR_TESTNET_PASSPHRASE) fail('NETWORK_ALLOWLIST_REJECTED');
   if (!HTTPS_RPC.test(config.rpcUrl) || !config.allowedRpcUrls.includes(config.rpcUrl)) fail('RPC_ALLOWLIST_REJECTED');
   if (!CONTRACT.test(config.receiptContractId) || !config.allowedContractIds.includes(config.receiptContractId)) fail('CONTRACT_ALLOWLIST_REJECTED');
@@ -115,23 +116,30 @@ export function validateStellarV1DurableReaderConfig(config: StellarV1DurableRea
   if (config.submissionEnabled !== false || config.mutationsAllowed !== false) fail('READONLY_FLAGS_REQUIRED');
 }
 
-/** Builds the V1 transport and reader lazily. Network access begins at start(). */
-export function createStellarV1RpcDurableReader(input: {
+/**
+ * Official local V1 evidence reader. Dependencies that determine chain truth
+ * are deliberately not injectable. Network access begins only at start().
+ */
+export function createDeployedStellarV1RpcDurableReader(input: {
   config: StellarV1DurableReaderConfig;
-  store: DurableReceiptIndexerStorePort;
-  metrics: IndexerMetricSink;
-  server?: RpcServer;
-  wait?: (delayMs: number) => Promise<void>;
+  stateDirectory: string;
 }) {
-  const server = input.server ?? new StellarSdk.rpc.Server(input.config.rpcUrl, { allowHttp: false });
+  rejectInjectedOfficialDependencies(input);
+  validateOfficialDeployedConfig(input.config);
+  const server = new StellarSdk.rpc.Server(input.config.rpcUrl, { allowHttp: false });
   const transport = createStellarRpcReceiptEventTransport({
     rpcUrl: input.config.rpcUrl,
     contractId: input.config.receiptContractId,
     startLedger: input.config.startLedger,
     server,
   });
-  return createStellarV1DurableReader({
-    ...input,
+  return createStellarV1DurableReaderCore({
+    config: input.config,
+    store: createLocalFileDurableReceiptIndexerStore({
+      stateDirectory: input.stateDirectory,
+      fileName: 'receipt-indexer-v1.json',
+    }),
+    metrics: { increment() {} },
     transport,
     attest: async () => {
       const [network, wasm] = await Promise.all([
@@ -147,7 +155,45 @@ export function createStellarV1RpcDurableReader(input: {
   });
 }
 
-export function createStellarV1DurableReader(input: {
+/**
+ * Explicit fixture-only harness. Its report is permanently labelled fixture
+ * and cannot be confused with the official deployed reader.
+ */
+export function createStellarV1FixtureDurableReader(input: {
+  config: StellarV1DurableReaderConfig;
+  store: DurableReceiptIndexerStorePort;
+  metrics: IndexerMetricSink;
+  server: RpcServer;
+  wait?: (delayMs: number) => Promise<void>;
+}) {
+  if (input.config.mode !== 'fixture') fail('FIXTURE_MODE_REQUIRED');
+  const transport = createStellarRpcReceiptEventTransport({
+    rpcUrl: input.config.rpcUrl,
+    contractId: input.config.receiptContractId,
+    startLedger: input.config.startLedger,
+    server: input.server,
+  });
+  return createStellarV1DurableReaderCore({
+    config: input.config,
+    store: input.store,
+    metrics: input.metrics,
+    transport,
+    wait: input.wait,
+    attest: async () => {
+      const [network, wasm] = await Promise.all([
+        input.server.getNetwork(),
+        input.server.getContractWasmByContractId(input.config.receiptContractId),
+      ]);
+      return {
+        networkPassphrase: network.passphrase,
+        contractId: input.config.receiptContractId,
+        wasmSha256: createHash('sha256').update(wasm).digest('hex'),
+      };
+    },
+  });
+}
+
+function createStellarV1DurableReaderCore(input: {
   config: StellarV1DurableReaderConfig;
   store: DurableReceiptIndexerStorePort;
   metrics: IndexerMetricSink;
@@ -178,9 +224,10 @@ export function createStellarV1DurableReader(input: {
   const report = (): SanitizedV1ReaderReport => {
     const health = indexer.getHealth();
     const result: SanitizedV1ReaderReport = {
-      mode: 'testnet-readonly',
+      mode: input.config.mode,
       network: 'testnet',
-      ready: recovered && attested && (status === 'ingested' || status === 'caught-up'),
+      ready: recovered && attested && health.durable && indexer.getCursor() !== null
+        && (status === 'ingested' || status === 'caught-up'),
       durable: health.durable,
       recovered,
       attested,
@@ -259,6 +306,23 @@ function assertSanitizedReport(report: SanitizedV1ReaderReport) {
     || /https?:\/\/|\bC[A-Z2-7]{55}\b|\bG[A-Z2-7]{55}\b|\bS[A-Z2-7]{55}\b|\b[a-f0-9]{64}\b|@/i.test(serialized)
     || /secret|seed|private.?key|xdr|signature|contract.?id|receipt.?id|event.?id|event.?body/i.test(serialized)
     || report.submissionAttempts !== 0 || report.mutationsAllowed !== false) fail('UNSAFE_READER_REPORT');
+}
+
+function rejectInjectedOfficialDependencies(input: object) {
+  const allowed = new Set(['config', 'stateDirectory']);
+  if (Object.keys(input).some(key => !allowed.has(key))) fail('OFFICIAL_DEPENDENCY_INJECTION_REJECTED');
+}
+
+function validateOfficialDeployedConfig(config: StellarV1DurableReaderConfig) {
+  validateStellarV1DurableReaderConfig(config);
+  if (config.mode !== 'testnet-readonly'
+    || config.rpcUrl !== STELLAR_TESTNET_RPC_URL
+    || config.allowedRpcUrls.length !== 1 || config.allowedRpcUrls[0] !== STELLAR_TESTNET_RPC_URL
+    || config.receiptContractId !== DEPLOYED_RECEIPT_CONTRACT_ID
+    || config.allowedContractIds.length !== 1 || config.allowedContractIds[0] !== DEPLOYED_RECEIPT_CONTRACT_ID
+    || config.receiptWasmSha256 !== DEPLOYED_RECEIPT_WASM_SHA256
+    || config.allowedWasmSha256.length !== 1 || config.allowedWasmSha256[0] !== DEPLOYED_RECEIPT_WASM_SHA256
+    || config.startLedger !== DEPLOYED_RECEIPT_START_LEDGER) fail('ATTESTATION_ALLOWLIST_REJECTED');
 }
 
 function parseBoundedInteger(raw: string, minimum: number, maximum: number, code: string) {

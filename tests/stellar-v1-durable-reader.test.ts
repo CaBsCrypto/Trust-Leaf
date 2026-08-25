@@ -10,8 +10,8 @@ import {
   DEPLOYED_RECEIPT_WASM_SHA256,
   STELLAR_TESTNET_PASSPHRASE,
   STELLAR_TESTNET_RPC_URL,
-  createStellarV1DurableReader,
-  createStellarV1RpcDurableReader,
+  createDeployedStellarV1RpcDurableReader,
+  createStellarV1FixtureDurableReader,
   loadDeployedV1ReaderConfig,
   validateStellarV1DurableReaderConfig,
   type StellarV1DurableReaderConfig,
@@ -43,7 +43,7 @@ const rpcUrl = STELLAR_TESTNET_RPC_URL;
 const wasm = Buffer.from('synthetic ReceiptLedger V1 bytecode fixture');
 const wasmSha256 = createHash('sha256').update(wasm).digest('hex');
 const config: StellarV1DurableReaderConfig = {
-  mode: 'testnet-readonly', network: 'testnet', networkPassphrase: STELLAR_TESTNET_PASSPHRASE,
+  mode: 'fixture', network: 'testnet', networkPassphrase: STELLAR_TESTNET_PASSPHRASE,
   rpcUrl, allowedRpcUrls: [rpcUrl], receiptContractId: contractId, allowedContractIds: [contractId],
   receiptWasmSha256: wasmSha256, allowedWasmSha256: [wasmSha256], startLedger: 10,
   timeoutMs: 100, retryAttempts: 3, finalityDepth: 2,
@@ -89,11 +89,12 @@ const server = {
 const stateDirectory = await mkdtemp(join(tmpdir(), 'trustleaf-v1-reader-'));
 try {
   const store = createLocalFileDurableReceiptIndexerStore({ stateDirectory, fileName: 'receipt-indexer-v1.json', lockDelayMs: 1 });
-  const reader = createStellarV1RpcDurableReader({ config, store, server: server as never, metrics: { increment() {} }, wait: async () => undefined });
+  const reader = createStellarV1FixtureDurableReader({ config, store, server: server as never, metrics: { increment() {} }, wait: async () => undefined });
   assert.equal(networkCalls, 0, 'construction must remain lazy');
   assert.equal((await reader.start()).attested, true);
   assert.equal(networkCalls, 2);
   assert.equal((await reader.pollOnce()).pollStatus, 'ingested');
+  assert.equal(reader.getReport().mode, 'fixture', 'injected dependencies must remain visibly fixture-only');
   assert.equal(reader.getCursor()?.hash, 'a'.repeat(64));
   const reorg = await reader.pollOnce();
   assert.equal(reorg.code, 'REORG_REPLACED');
@@ -104,7 +105,7 @@ try {
   for (const forbidden of [rpcUrl, contractId, receipt.toString('hex'), 'event-', 'http', '@', 'secret', 'xdr']) {
     assert.equal(report.toLowerCase().includes(forbidden.toLowerCase()), false);
   }
-  const restarted = createStellarV1RpcDurableReader({
+  const restarted = createStellarV1FixtureDurableReader({
     config,
     store: createLocalFileDurableReceiptIndexerStore({ stateDirectory, fileName: 'receipt-indexer-v1.json' }),
     server: server as never,
@@ -119,18 +120,16 @@ try {
 }
 
 let retryAttempts = 0;
-const retryReader = createStellarV1DurableReader({
+const retryReader = createStellarV1FixtureDurableReader({
   config,
   store: createMemoryDurableReceiptIndexerStore(),
   metrics: { increment() {} },
-  transport: {
-    kind: 'stellar-rpc',
-    async fetchNext() {
-      retryAttempts += 1;
-      throw Object.assign(new Error('patient@example.test secret xdr'), { code: 'SOURCE_TIMEOUT' });
-    },
-  },
-  async attest() { return { networkPassphrase: STELLAR_TESTNET_PASSPHRASE, contractId, wasmSha256 }; },
+  server: {
+    async getNetwork() { return { passphrase: STELLAR_TESTNET_PASSPHRASE }; },
+    async getContractWasmByContractId() { return wasm; },
+    async getLedgers() { retryAttempts += 1; throw Object.assign(new Error('patient@example.test secret xdr'), { code: 'SOURCE_TIMEOUT' }); },
+    async getEvents() { throw new Error('unreachable'); },
+  } as never,
   wait: async () => undefined,
 });
 await retryReader.start();
@@ -140,22 +139,56 @@ assert.equal(retryAttempts, 3);
 const unknownReport = JSON.stringify(unknown);
 for (const forbidden of ['patient', '@', 'secret', 'xdr', contractId, rpcUrl]) assert.equal(unknownReport.includes(forbidden), false);
 
-const rejectedReader = createStellarV1DurableReader({
-  config,
-  store: createMemoryDurableReceiptIndexerStore(),
-  metrics: { increment() {} },
-  transport: {
-    kind: 'stellar-rpc',
-    async fetchNext() {
-      return { status: 'ledger', contractId: `C${'B'.repeat(55)}`, schemaVersion: 1, ledger: {
-        sequence: 10, hash: 'a'.repeat(64), parentHash: '9'.repeat(64), closedAt: 1, events: [],
-      } };
-    },
-  },
-  async attest() { return { networkPassphrase: STELLAR_TESTNET_PASSPHRASE, contractId, wasmSha256 }; },
+const caughtUpServer = {
+  async getNetwork() { return { passphrase: STELLAR_TESTNET_PASSPHRASE }; },
+  async getContractWasmByContractId() { return wasm; },
+  async getLedgers() { return { latestLedger: 9, ledgers: [{ sequence: 9, hash: '9'.repeat(64), ledgerCloseTime: '2026-08-25T11:59:55Z' }] }; },
+  async getEvents() { throw new Error('events must not be requested without a ledger'); },
+};
+const memoryNoCursor = createStellarV1FixtureDurableReader({
+  config, store: createMemoryDurableReceiptIndexerStore(), metrics: { increment() {} }, server: caughtUpServer as never,
 });
-await rejectedReader.start();
-assert.equal((await rejectedReader.pollOnce()).code, 'EVENT_SOURCE_ALLOWLIST_REJECTED');
+await memoryNoCursor.start();
+const memoryCaughtUp = await memoryNoCursor.pollOnce();
+assert.equal(memoryCaughtUp.pollStatus, 'caught-up');
+assert.equal(memoryCaughtUp.durable, false);
+assert.equal(memoryCaughtUp.cursorPresent, false);
+assert.equal(memoryCaughtUp.ready, false, 'memory/caught_up without a persisted cursor must never be ready');
+
+const noCursorDirectory = await mkdtemp(join(tmpdir(), 'trustleaf-v1-no-cursor-'));
+try {
+  const durableNoCursor = createStellarV1FixtureDurableReader({
+    config,
+    store: createLocalFileDurableReceiptIndexerStore({ stateDirectory: noCursorDirectory, fileName: 'receipt-indexer-v1.json' }),
+    metrics: { increment() {} },
+    server: caughtUpServer as never,
+  });
+  await durableNoCursor.start();
+  const durableCaughtUp = await durableNoCursor.pollOnce();
+  assert.equal(durableCaughtUp.durable, true);
+  assert.equal(durableCaughtUp.cursorPresent, false);
+  assert.equal(durableCaughtUp.ready, false, 'durable/caught_up without a persisted cursor must never be ready');
+} finally {
+  await rm(noCursorDirectory, { recursive: true, force: true });
+}
+
+const officialConfig = loadDeployedV1ReaderConfig(deployedEnv);
+for (const injected of [
+  { transport: { kind: 'stellar-rpc', async fetchNext() { return { status: 'caught_up' }; } } },
+  { server: caughtUpServer },
+  { store: createMemoryDurableReceiptIndexerStore() },
+]) {
+  assert.throws(
+    () => createDeployedStellarV1RpcDurableReader({ config: officialConfig, stateDirectory, ...injected } as never),
+    (error: any) => error.code === 'OFFICIAL_DEPENDENCY_INJECTION_REJECTED',
+    'official factory must reject transport/server/store lookalikes',
+  );
+}
+assert.throws(
+  () => createDeployedStellarV1RpcDurableReader({ config, stateDirectory }),
+  (error: any) => error.code === 'ATTESTATION_ALLOWLIST_REJECTED',
+  'fixture configuration cannot be presented as the official deployed reader',
+);
 
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 assert.equal(packageJson.scripts.preflight.includes('live:testnet-v1:readonly'), false, 'live RPC must never run in preflight');
