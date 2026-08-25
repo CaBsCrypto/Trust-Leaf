@@ -3,6 +3,7 @@ import {
   buildManifest,
   canonicalJson,
   CONTRACT_PROFILES,
+  normalizeEvidenceText,
   sha256,
   validateContractEvidence,
   validateManifestSafety,
@@ -64,5 +65,6 @@ for (const unsafe of [
 ]) assert.throws(() => validateManifestSafety(unsafe));
 
 assert.equal(canonicalJson(manifest), canonicalJson(buildManifest(evidence, profiles)), 'manifest must be deterministic');
+assert.equal(normalizeEvidenceText(canonicalJson(manifest).replace(/\n/g, '\r\n')), canonicalJson(manifest), 'line endings must not invalidate Windows checkouts');
 assert.equal(canonicalJson(manifest).includes(new Date().toISOString()), false);
 console.log('testnet-v2-predeploy-manifest: 12 positive/negative deterministic and sanitization checks passed');

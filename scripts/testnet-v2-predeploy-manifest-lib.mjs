@@ -45,6 +45,10 @@ export function canonicalJson(value) {
   return `${JSON.stringify(canonicalize(value), null, 2)}\n`;
 }
 
+export function normalizeEvidenceText(value) {
+  return value.replace(/\r\n/g, '\n');
+}
+
 export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }

@@ -5,6 +5,7 @@ import {
   buildManifest,
   canonicalJson,
   CONTRACT_PROFILES,
+  normalizeEvidenceText,
   readEvidence,
 } from './testnet-v2-predeploy-manifest-lib.mjs';
 
@@ -22,7 +23,7 @@ async function emit(relativeName, contents) {
   const destination = path.join(outputDir, relativeName);
   if (check) {
     const current = await readFile(destination, 'utf8').catch(() => '');
-    if (current !== contents) throw new Error(`CHECKED_IN_EVIDENCE_MISMATCH:${relativeName}`);
+    if (normalizeEvidenceText(current) !== normalizeEvidenceText(contents)) throw new Error(`CHECKED_IN_EVIDENCE_MISMATCH:${relativeName}`);
   } else {
     await writeFile(destination, contents, 'utf8');
   }
