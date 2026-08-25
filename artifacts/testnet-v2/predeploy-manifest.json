@@ -1,0 +1,131 @@
+{
+  "approvals": [
+    {
+      "duty": "confirm-wasm-and-interface-fingerprints",
+      "role": "artifact-reviewer"
+    },
+    {
+      "duty": "confirm-privacy-allowlists-and-fail-closed-flags",
+      "role": "security-reviewer"
+    },
+    {
+      "duty": "approve-initialization-authority-and-kill-switch",
+      "role": "admin-quorum"
+    },
+    {
+      "duty": "execute-only-inside-separately-authorized-window",
+      "role": "deployment-operator"
+    }
+  ],
+  "contracts": [
+    {
+      "artifact": {
+        "buildOutput": "trust_registry.wasm",
+        "bytes": 14022,
+        "sha256": "43830be9fc0013f8361f24727e80f74be39c7f230f482e3e20d834e0f8078936"
+      },
+      "interface": {
+        "functions": [
+          "expire",
+          "get_admin",
+          "get_credential",
+          "init",
+          "is_active",
+          "issue_actor",
+          "issue_eligibility",
+          "renew",
+          "set_state"
+        ],
+        "sha256": "f5d5e74f36f500cb19941f159eb7c5a7a58d779925ae1ef206854752e5870c34",
+        "specOutput": "trust_registry.spec.json"
+      },
+      "logicalName": "TrustRegistry",
+      "packageName": "trust-registry"
+    },
+    {
+      "artifact": {
+        "buildOutput": "receipt_ledger_v2.wasm",
+        "bytes": 14980,
+        "sha256": "93eade96ebbf63881aa691cbbc107da871607bbed78be8d539aea264b88b3e14"
+      },
+      "interface": {
+        "functions": [
+          "activate",
+          "authorization_chain",
+          "expire",
+          "get_receipt",
+          "get_registry",
+          "init",
+          "issue",
+          "mark_dispensed",
+          "record_partial",
+          "revoke",
+          "set_grant"
+        ],
+        "sha256": "89b34529f68f24aaedbcca844601c3c0a6e1735610f20108fb57d760feb0e108",
+        "specOutput": "receipt_ledger_v2.spec.json"
+      },
+      "logicalName": "ReceiptLedgerV2",
+      "packageName": "receipt-ledger-v2"
+    }
+  ],
+  "dataClassification": "synthetic-only-no-pii-no-phi",
+  "deploymentAuthorization": "not-granted",
+  "executable": false,
+  "initialization": [
+    {
+      "args": [
+        {
+          "name": "admin",
+          "placeholder": "<APPROVED_ADMIN_QUORUM_ADDRESS>",
+          "type": "Address"
+        }
+      ],
+      "contract": "TrustRegistry",
+      "entrypoint": "init",
+      "order": 1
+    },
+    {
+      "args": [
+        {
+          "name": "admin",
+          "placeholder": "<APPROVED_ADMIN_QUORUM_ADDRESS>",
+          "type": "Address"
+        },
+        {
+          "name": "registry",
+          "placeholder": "<DEPLOYED_TRUST_REGISTRY_CONTRACT_ADDRESS>",
+          "type": "Address"
+        }
+      ],
+      "contract": "ReceiptLedgerV2",
+      "entrypoint": "init",
+      "order": 2
+    }
+  ],
+  "purpose": "predeploy-evidence-only",
+  "safetyFlags": {
+    "TRUSTLEAF_ALLOW_TESTNET_MUTATIONS": false,
+    "TRUSTLEAF_TESTNET_SUBMIT_ENABLED": false
+  },
+  "schemaVersion": "trustleaf.testnet.predeploy-manifest/v1",
+  "target": {
+    "mainnetAllowed": false,
+    "network": "testnet",
+    "networkPassphraseAllowlist": [
+      "stellar-testnet-exact-match"
+    ],
+    "rpcOriginAllowlist": [
+      "approved-testnet-rpc-origin"
+    ]
+  },
+  "toolchain": {
+    "buildTarget": "wasm32v1-none",
+    "cargo": "1.95.0",
+    "cargoLocked": true,
+    "rustc": "1.95.0",
+    "sorobanSdkCargoLock": "25.3.1",
+    "stellarCli": "26.0.0",
+    "stellarXdr": "26.0.0"
+  }
+}

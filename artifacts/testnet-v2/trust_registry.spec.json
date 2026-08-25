@@ -1,0 +1,668 @@
+[
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "Doctor credential authorizing a patient eligibility; self for actor credentials.",
+          "name": "authority_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "Technical signer for this credential. Patient addresses are never stored.",
+          "name": "controller",
+          "type_": "address"
+        },
+        {
+          "doc": "Random high-entropy identifier. It must not encode a person or clinical record.",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "Technical Unix expiry. The private system must avoid clinical meaning in this value.",
+          "name": "expires_at",
+          "type_": "u64"
+        },
+        {
+          "doc": "Admin for actor credentials, doctor for patient eligibility credentials.",
+          "name": "issuer",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "kind",
+          "type_": {
+            "udt": {
+              "name": "CredentialKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "state",
+          "type_": {
+            "udt": {
+              "name": "CredentialState"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "version",
+          "type_": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "Credential"
+    }
+  },
+  {
+    "udt_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "Doctor",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "Dispensary",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "PatientEligibility",
+          "value": 3
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "CredentialKind"
+    }
+  },
+  {
+    "udt_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "Active",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "Suspended",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "Revoked",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "Expired",
+          "value": 4
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "CredentialState"
+    }
+  },
+  {
+    "udt_error_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "AlreadyInitialized",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "NotInitialized",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "Unauthorized",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "CredentialMissing",
+          "value": 4
+        },
+        {
+          "doc": "",
+          "name": "CredentialAlreadyExists",
+          "value": 5
+        },
+        {
+          "doc": "",
+          "name": "VersionConflict",
+          "value": 6
+        },
+        {
+          "doc": "",
+          "name": "InvalidState",
+          "value": 7
+        },
+        {
+          "doc": "",
+          "name": "OperationConflict",
+          "value": 8
+        },
+        {
+          "doc": "",
+          "name": "InvalidExpiry",
+          "value": 9
+        },
+        {
+          "doc": "",
+          "name": "InvalidKind",
+          "value": 10
+        },
+        {
+          "doc": "",
+          "name": "CredentialInactive",
+          "value": 11
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "TrustRegistryError"
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type_": "address"
+        }
+      ],
+      "name": "init",
+      "outputs": []
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "actor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "new_expires_at",
+          "type_": "u64"
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "renew",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Credential"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "Materializes an already elapsed expiry. Derived `is_active` fails closed even before this call.",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "actor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "expire",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Credential"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "vec",
+      "doc": "",
+      "lib": "",
+      "name": "CredentialIssuedEvent",
+      "params": [
+        {
+          "doc": "",
+          "location": "data",
+          "name": "schema_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "kind",
+          "type_": {
+            "udt": {
+              "name": "CredentialKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "state",
+          "type_": {
+            "udt": {
+              "name": "CredentialState"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "expires_at",
+          "type_": "u64"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "actor",
+          "type_": "address"
+        }
+      ],
+      "prefix_topics": [
+        "CredentialIssued"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "vec",
+      "doc": "",
+      "lib": "",
+      "name": "CredentialChangedEvent",
+      "params": [
+        {
+          "doc": "",
+          "location": "data",
+          "name": "schema_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "kind",
+          "type_": {
+            "udt": {
+              "name": "CredentialKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "state",
+          "type_": {
+            "udt": {
+              "name": "CredentialState"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "expires_at",
+          "type_": "u64"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "actor",
+          "type_": "address"
+        }
+      ],
+      "prefix_topics": [
+        "CredentialChanged"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "get_admin",
+      "outputs": [
+        "address"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "Fail-closed primitive consumed cross-contract by ReceiptLedgerV2.",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "controller",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "kind",
+          "type_": "u32"
+        }
+      ],
+      "name": "is_active",
+      "outputs": [
+        "bool"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "actor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "target_state",
+          "type_": {
+            "udt": {
+              "name": "CredentialState"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "set_state",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Credential"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "Admin issues opaque doctor or dispensary credentials only.",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "controller",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "kind",
+          "type_": {
+            "udt": {
+              "name": "CredentialKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expires_at",
+          "type_": "u64"
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "issue_actor",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Credential"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "get_credential",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Credential"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "A currently active doctor issues an opaque patient eligibility reference.\\nNo patient address or clinical content is accepted by this ABI.",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "doctor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expires_at",
+          "type_": "u64"
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "issue_eligibility",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Credential"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,899 @@
+[
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "eligibility_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "issuer",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "state",
+          "type_": {
+            "udt": {
+              "name": "ReceiptState"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "version",
+          "type_": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "Receipt"
+    }
+  },
+  {
+    "udt_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "Issued",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "Active",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "Partial",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "Dispensed",
+          "value": 4
+        },
+        {
+          "doc": "",
+          "name": "Revoked",
+          "value": 5
+        },
+        {
+          "doc": "",
+          "name": "Expired",
+          "value": 6
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "ReceiptState"
+    }
+  },
+  {
+    "udt_error_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "AlreadyInitialized",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "NotInitialized",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "Unauthorized",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "ReceiptMissing",
+          "value": 4
+        },
+        {
+          "doc": "",
+          "name": "ReceiptAlreadyExists",
+          "value": 5
+        },
+        {
+          "doc": "",
+          "name": "VersionConflict",
+          "value": 6
+        },
+        {
+          "doc": "",
+          "name": "InvalidTransition",
+          "value": 7
+        },
+        {
+          "doc": "",
+          "name": "OperationConflict",
+          "value": 8
+        },
+        {
+          "doc": "",
+          "name": "CredentialInactive",
+          "value": 9
+        },
+        {
+          "doc": "",
+          "name": "GrantMissing",
+          "value": 10
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "ReceiptV2Error"
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "vec",
+      "doc": "",
+      "lib": "",
+      "name": "GrantChangedEvent",
+      "params": [
+        {
+          "doc": "",
+          "location": "data",
+          "name": "schema_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "dispensary_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "enabled",
+          "type_": "bool"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "actor",
+          "type_": "address"
+        }
+      ],
+      "prefix_topics": [
+        "GrantChanged"
+      ]
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "dispensary_active",
+          "type_": "bool"
+        },
+        {
+          "doc": "",
+          "name": "dispensary_credential_id",
+          "type_": {
+            "option": {
+              "value_type": {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "doctor_active",
+          "type_": "bool"
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "eligibility_active",
+          "type_": "bool"
+        },
+        {
+          "doc": "",
+          "name": "eligibility_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "grant_enabled",
+          "type_": "bool"
+        },
+        {
+          "doc": "",
+          "name": "registry",
+          "type_": "address"
+        }
+      ],
+      "lib": "",
+      "name": "AuthorizationChain"
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "vec",
+      "doc": "",
+      "lib": "",
+      "name": "ReceiptChangedEvent",
+      "params": [
+        {
+          "doc": "",
+          "location": "data",
+          "name": "schema_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "state",
+          "type_": {
+            "udt": {
+              "name": "ReceiptState"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "eligibility_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "actor",
+          "type_": "address"
+        }
+      ],
+      "prefix_topics": [
+        "ReceiptChanged"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "registry",
+          "type_": "address"
+        }
+      ],
+      "name": "init",
+      "outputs": []
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "doctor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "eligibility_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "issue",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "Safety terminal transition. Admin auth is required; inactive credentials cannot enable activity.",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "expire",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "doctor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "revoke",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "doctor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "activate",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "doctor",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "doctor_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "dispensary",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "dispensary_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "enabled",
+          "type_": "bool"
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "set_grant",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "get_receipt",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "get_registry",
+      "outputs": [
+        "address"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "dispensary",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "dispensary_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "mark_dispensed",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "dispensary",
+          "type_": "address"
+        },
+        {
+          "doc": "",
+          "name": "dispensary_credential_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expected_version",
+          "type_": "u32"
+        },
+        {
+          "doc": "",
+          "name": "commitment",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "operation_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "record_partial",
+      "outputs": [
+        {
+          "udt": {
+            "name": "Receipt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "receipt_id",
+          "type_": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "dispensary",
+          "type_": {
+            "option": {
+              "value_type": "address"
+            }
+          }
+        }
+      ],
+      "name": "authorization_chain",
+      "outputs": [
+        {
+          "udt": {
+            "name": "AuthorizationChain"
+          }
+        }
+      ]
+    }
+  }
+]
