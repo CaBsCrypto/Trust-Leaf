@@ -4,13 +4,14 @@ Baseline inspeccionada: `f7374d1`, 2026-08-24. Este backlog registra brechas obs
 
 ## Revalidación de la candidata integrada
 
-En `integration/human-ui-candidate-20260824`, commit `0c370f0`, quedaron resueltos para la revisión humana local:
+En `integration/human-ui-candidate-20260824` quedaron resueltos para la revisión humana local:
 
 - `UX-RO-001`: contrato y enlaces históricos Stellar Expert ahora son visibles y están etiquetados como evidencia read-only;
 - `UX-RO-002`: se eliminó de esta ruta la mezcla con el store mutable; cada estado visible se rotula como fixture;
 - `UX-RO-003`: Admin técnico muestra el panel fixture con acciones deshabilitadas sin eludir `/admin` autenticado;
-- `UX-RO-006`: selector allowlisted cubre ciclo completo, revocada, expirada y fuente no disponible;
+- `UX-RO-006`: selector allowlisted cubre activa, parcial, dispensada, revocada, expirada y fuente no disponible;
 - `UX-RO-007`: rol y escenario quedan en query determinista, sin datos sensibles.
+- `UX-RO-012`: la lista de transacciones externas sigue el timeline del escenario visible para todos los roles y no muestra evidencia falsa en `unknown`.
 
 Permanecen abiertos `UX-RO-004`, `UX-RO-005`, `UX-RO-008`, `UX-RO-009`, `UX-RO-010` y `UX-RO-011`. La UI no consume RPC/indexer live; los enlaces históricos no prueban que el fixture renderizado corresponda a un receipt individual.
 
@@ -46,6 +47,15 @@ Permanecen abiertos `UX-RO-004`, `UX-RO-005`, `UX-RO-008`, `UX-RO-009`, `UX-RO-0
 - PASS: emisión local produce `issued` y `active`; paciente obtiene existencia/estado y navegación QR por SPA.
 - PASS: QR manipulado responde `No disponible`, sin consola de error ni campos adicionales.
 - PASS: a `390 × 844` no se observó overflow horizontal (`scrollWidth === clientWidth`).
-- PASS parcial de teclado: nueve controles interactivos detectados, semánticos, habilitación coherente y `aria-pressed` en selectores; el recorrido/foco visible requiere confirmación humana.
-- LÍMITE: la UI usa fixtures locales; la evidencia Stellar Expert está documentada por separado y no alimenta esta pantalla.
+- PASS parcial de teclado: controles semánticos, habilitación coherente, `aria-pressed` y outline `:focus-visible` confirmado en el selector probado; el recorrido completo requiere confirmación humana.
+- PASS: el enlace del contrato abrió en Stellar Expert como contrato WASM de Testnet con el contract ID esperado.
+- PASS: la evidencia `Issued/Active/Partial/Dispensed/Revoked/Expired` visible se acota al timeline del escenario; `unknown` no presenta transacciones como confirmadas.
+- LÍMITE: la UI usa fixtures locales; los enlaces Stellar Expert permiten contraste manual, pero no alimentan la pantalla mediante RPC/indexer live.
 - LÍMITE: no se ejecutó login, RPC live, submission, deploy, persistencia ni datos reales.
+
+## Seguimiento de QA y siguiente iteración
+
+| ID | Hallazgo / reproducción | Impacto | Criterio de cierre |
+|---|---|---|---|
+| UX-RO-012 | Resuelto durante QA: `Paciente/Parcial` omitía `Partial` y mezclaba eventos posteriores por un filtro basado sólo en rol. | La evidencia podía contradecir el estado visible. | suite estática y Browser confirman `Issued → Active → Partial`; admin/revoked muestra `Issued → Revoked`; `unknown` queda vacío |
+| UX-RO-013 | El estado renderizado sigue siendo fixture y no incluye cursor/timestamp firmado por el lector real. | El revisor puede confundir contraste histórico con lectura viva. | conectar un puerto read-only autenticado al indexer durable en otro sprint, sin introducirlo en este paquete de UI |

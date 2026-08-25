@@ -20,10 +20,6 @@ const ROLE_COPY: Record<ReadonlyRole, { label: string; description: string; icon
   admin: { label: 'Admin técnico', description: 'Inspecciona trazabilidad y gates bloqueados.', icon: Wrench },
 };
 const SCENARIO_COPY: Record<ReviewScenario, string> = { active: 'Activa', partial: 'Parcial', dispensed: 'Dispensada', revoked: 'Revocada', expired: 'Expirada', unknown: 'Fuente no disponible' };
-const ROLE_EVIDENCE: Record<ReadonlyRole, readonly string[]> = {
-  doctor: ['issued', 'active'], patient: ['active', 'dispensed', 'revoked', 'expired'], dispensary: ['partial', 'dispensed'], admin: ['issued', 'active', 'partial', 'dispensed', 'revoked', 'expired'],
-};
-
 export default function ReceiptPilotFlow({ onBack, onVerify }: { onBack: () => void; onVerify: (token: string) => void }) {
   const initial = useMemo(() => parseReviewSelection(window.location.search), []);
   const [role, setRole] = useState<ReadonlyRole>(initial.role);
@@ -32,7 +28,8 @@ export default function ReceiptPilotFlow({ onBack, onVerify }: { onBack: () => v
   const view = useMemo(() => projectReadonlyReceiptForRole(role, fixture), [fixture, role]);
   useEffect(() => { resetPublicVerificationDemoState(); }, []);
   useEffect(() => { window.history.replaceState({}, '', `/demo/receipt-pilot${reviewSearch(role, scenario)}`); }, [role, scenario]);
-  const evidence = TESTNET_EVIDENCE_LINKS.filter(item => ROLE_EVIDENCE[role].includes(item.state));
+  const visibleStates = new Set(fixture.timeline.map(event => event.state));
+  const evidence = TESTNET_EVIDENCE_LINKS.filter(item => visibleStates.has(item.state));
   const RoleIcon = ROLE_COPY[role].icon;
 
   return <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">

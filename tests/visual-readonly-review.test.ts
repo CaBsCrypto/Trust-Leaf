@@ -63,7 +63,7 @@ for (const state of ['Issued', 'Active', 'Partial', 'Dispensed', 'Revoked', 'Exp
 }
 
 for (const required of [
-  'http://localhost:3000/demo/receipt-pilot',
+  'http://127.0.0.1:5196/demo/receipt-pilot',
   '1440 × 900',
   '390 × 844',
   'teclado',

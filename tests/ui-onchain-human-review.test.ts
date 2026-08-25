@@ -31,6 +31,8 @@ assert.match(ui, /Abrir contrato en Stellar Expert/);
 assert.match(ui, /Revisión local · sin submissions/);
 assert.match(ui, /onVerify\(view\.publicToken!\)/, 'patient QR navigation must pass only the opaque fixture token');
 assert.match(ui, /window\.history\.replaceState/, 'role/scenario changes must produce a reproducible review URL');
+assert.match(ui, /fixture\.timeline\.map\(event => event\.state\)/, 'external evidence must follow the selected scenario timeline for every role');
+assert.match(ui, /visibleStates\.has\(item\.state\)/, 'external evidence must not mix later or unrelated receipt states');
 assert.doesNotMatch(ui, /fetch\(|submitTransaction|sendTransaction|invokeContract|simulateTransaction|TRUSTLEAF_TESTNET_SUBMIT_ENABLED\s*=\s*true/i);
 for (const forbidden of ['diagnóstico:', 'dosis:', 'gramaje:', 'privatekey', 'secret key']) assert.equal(ui.toLowerCase().includes(forbidden), false);
 

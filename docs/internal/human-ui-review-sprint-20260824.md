@@ -15,9 +15,9 @@ La evidencia de red prueba existencia técnica del contrato/eventos, no identida
 
 | Frente | Rama | Estado | Gate |
 |---|---|---|---|
-| UI/evidencia on-chain | `sprint/ui-onchain-review-20260824` | EN CURSO | vistas por rol, enlace correcto, cero writes |
-| guion visual/E2E/backlog | `test/visual-readonly-qa-20260824` | EN CURSO | rutas y negativos reproducibles |
-| Scrum/integración/browser QA | `integration/human-ui-candidate-20260824` | EN CURSO | preflight + revisión Browser |
+| UI/evidencia on-chain | `sprint/ui-onchain-review-20260824` | COMPLETADO | vistas por rol, enlaces correctos, cero writes |
+| guion visual/E2E/backlog | `test/visual-readonly-qa-20260824` | COMPLETADO | rutas y negativos reproducibles |
+| Scrum/integración/browser QA | `integration/human-ui-candidate-20260824` | COMPLETADO PARA REVISIÓN LOCAL | suite combinada + Browser desktop/móvil |
 
 ## Límites
 
@@ -26,4 +26,14 @@ La evidencia de red prueba existencia técnica del contrato/eventos, no identida
 - no RPC writes, deploy, push, main ni datos reales;
 - no mezclar IdP, Postgres/Supabase, KMS/HSM o adapters durables con este paquete de interfaz.
 
-**Estado inicial:** NO-GO hasta integrar y ejecutar QA visual local.
+## Candidata y evidencia reproducible
+
+- preview local activa: `http://127.0.0.1:5196/demo/receipt-pilot?role=doctor&scenario=active`;
+- el contrato abrió en Stellar Expert como `WASM contract`, red `testnet`, con el mismo contract ID;
+- Browser: PASS en los cuatro roles, escenarios `active`, `partial`, `dispensed`, `revoked`, `expired` y `unknown`, QR público mínimo, query manipulada con defaults seguros y admin con tres acciones deshabilitadas;
+- responsive: PASS a `390 × 844`, `scrollWidth === clientWidth`, sin texto clínico, identidad o secretos;
+- foco: el control seleccionado expone `:focus-visible` y outline nativo; el recorrido completo por teclado queda como verificación humana P1;
+- la evidencia externa se limita al timeline del escenario visible; `unknown` no enlaza una transacción como confirmada;
+- todas las suites de `preflight` y TypeScript pasaron. El build encontró `spawn EPERM` dentro del sandbox y pasó al repetir `npm run build` fuera de esa restricción: 2.425 módulos.
+
+**Estado final:** GO sólo para revisión humana local/read-only. NO-GO para merge a `main`, nuevas submissions Testnet, deploy o producción.
