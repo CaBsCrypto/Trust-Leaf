@@ -33,9 +33,12 @@ export interface StellarV2ReadonlyIndexerConfig {
   allowedRpcUrls: readonly string[];
   receiptContractId: string;
   allowedContractIds: readonly string[];
+  registryContractId: string;
+  allowedRegistryContractIds: readonly string[];
   receiptWasmSha256: string;
   allowedWasmSha256: readonly string[];
   startLedger: number;
+  deploymentLedger: number;
   timeoutMs?: number;
   retryAttempts?: number;
   finalityDepth?: number;
@@ -47,9 +50,12 @@ export interface StellarV2Attestation {
   networkPassphrase: string;
   contractId: string;
   wasmSha256: string;
+  initialized: boolean;
+  registryContractId?: string;
 }
 
 export interface StellarV2ReadonlyTransport extends ReceiptEventSourceTransport {
+  readonly binding: { rpcUrl: string; contractId: string; startLedger: number };
   attest(timeoutMs: number): Promise<StellarV2Attestation>;
 }
 
@@ -76,8 +82,10 @@ export function validateStellarV2ReadonlyIndexerConfig(config: StellarV2Readonly
   if (config.network !== TESTNET || config.networkPassphrase !== TESTNET_PASSPHRASE) fail('NETWORK_ALLOWLIST_REJECTED');
   if (!HTTPS_RPC.test(config.rpcUrl) || !config.allowedRpcUrls.includes(config.rpcUrl)) fail('RPC_ALLOWLIST_REJECTED');
   if (!CONTRACT.test(config.receiptContractId) || !config.allowedContractIds.includes(config.receiptContractId)) fail('CONTRACT_ALLOWLIST_REJECTED');
+  if (!CONTRACT.test(config.registryContractId) || !config.allowedRegistryContractIds.includes(config.registryContractId)) fail('REGISTRY_ALLOWLIST_REJECTED');
   if (!SHA256.test(hash) || !config.allowedWasmSha256.map(value => value.toLowerCase()).includes(hash)) fail('WASM_ALLOWLIST_REJECTED');
   if (!Number.isSafeInteger(config.startLedger) || config.startLedger < 1) fail('START_LEDGER_REJECTED');
+  if (!Number.isSafeInteger(config.deploymentLedger) || config.deploymentLedger !== config.startLedger) fail('DEPLOYMENT_LEDGER_REJECTED');
   if (config.submissionEnabled !== false || config.mutationsAllowed !== false) fail('READONLY_FLAGS_REQUIRED');
   if (config.timeoutMs !== undefined && (!Number.isSafeInteger(config.timeoutMs) || config.timeoutMs < 50 || config.timeoutMs > 15_000)) fail('TIMEOUT_POLICY_REJECTED');
   if (config.retryAttempts !== undefined && (!Number.isSafeInteger(config.retryAttempts) || config.retryAttempts < 1 || config.retryAttempts > 5)) fail('RETRY_POLICY_REJECTED');
@@ -91,20 +99,25 @@ export function createStellarV2RpcReadonlyTransport(input: {
   startLedger: number;
   maxEventPages?: number;
   server?: RpcServer;
+  readInitialization: (server: RpcServer, contractId: string) => Promise<{ initialized: boolean; registryContractId?: string }>;
 }): StellarV2ReadonlyTransport {
   const server = input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false });
   const maxEventPages = Math.max(1, Math.min(input.maxEventPages ?? 4, 10));
   return {
     kind: 'stellar-rpc',
+    binding: { rpcUrl: input.rpcUrl, contractId: input.contractId, startLedger: input.startLedger },
     async attest() {
-      const [network, wasm] = await Promise.all([
+      const [network, wasm, initialization] = await Promise.all([
         server.getNetwork(),
         server.getContractWasmByContractId(input.contractId),
+        input.readInitialization(server, input.contractId),
       ]);
       return {
         networkPassphrase: network.passphrase,
         contractId: input.contractId,
         wasmSha256: createHash('sha256').update(wasm).digest('hex'),
+        initialized: initialization.initialized,
+        registryContractId: initialization.registryContractId,
       };
     },
     async fetchNext(cursor) {
@@ -140,6 +153,28 @@ export function createStellarV2RpcReadonlyTransport(input: {
   };
 }
 
+/**
+ * Builds a read-only get_registry simulation. It never signs or submits the
+ * transaction; callers must still bind and allowlist the technical read account.
+ */
+export function createStellarV2SimulationInitializationReader(input: {
+  sourcePublicKey: string;
+  networkPassphrase: string;
+  baseFee?: string;
+}) {
+  return async (server: RpcServer, contractId: string) => {
+    const account = await server.getAccount(input.sourcePublicKey);
+    const transaction = new StellarSdk.TransactionBuilder(account, {
+      fee: input.baseFee ?? StellarSdk.BASE_FEE,
+      networkPassphrase: input.networkPassphrase,
+    }).addOperation(new StellarSdk.Contract(contractId).call('get_registry')).setTimeout(30).build();
+    const simulation = await server.simulateTransaction(transaction);
+    if (!StellarSdk.rpc.Api.isSimulationSuccess(simulation) || !simulation.result) return { initialized: false };
+    const registryContractId = String(StellarSdk.scValToNative(simulation.result.retval));
+    return CONTRACT.test(registryContractId) ? { initialized: true, registryContractId } : { initialized: false };
+  };
+}
+
 export function createStellarV2ReadonlyIndexer(input: {
   config: StellarV2ReadonlyIndexerConfig;
   transport: StellarV2ReadonlyTransport;
@@ -150,6 +185,9 @@ export function createStellarV2ReadonlyIndexer(input: {
   validateStellarV2ReadonlyIndexerConfig(input.config);
   if (input.config.mode === 'testnet-readonly' && input.transport.kind !== 'stellar-rpc') fail('REAL_SOURCE_REQUIRED');
   if (input.config.mode === 'fixture' && input.transport.kind !== 'fixture') fail('FIXTURE_SOURCE_REQUIRED');
+  if (input.transport.binding.rpcUrl !== input.config.rpcUrl
+    || input.transport.binding.contractId !== input.config.receiptContractId
+    || input.transport.binding.startLedger !== input.config.startLedger) fail('TRANSPORT_BINDING_REJECTED');
   const timeoutMs = input.config.timeoutMs ?? 5_000;
   const retryAttempts = input.config.retryAttempts ?? 3;
   const wait = input.wait ?? (delay => new Promise(resolve => setTimeout(resolve, delay)));
@@ -174,7 +212,8 @@ export function createStellarV2ReadonlyIndexer(input: {
     const result: SanitizedV2IndexerReport = {
       mode: input.config.mode,
       network: TESTNET,
-      ready: recovered && attested && (pollStatus === 'ingested' || pollStatus === 'caught-up'),
+      ready: recovered && attested && health.durable && indexer.getCursor() !== null
+        && (pollStatus === 'ingested' || pollStatus === 'caught-up'),
       durable: health.durable,
       recovered,
       attested,
@@ -203,7 +242,9 @@ export function createStellarV2ReadonlyIndexer(input: {
       }
       if (attestation.networkPassphrase !== input.config.networkPassphrase
         || attestation.contractId !== input.config.receiptContractId
-        || attestation.wasmSha256.toLowerCase() !== input.config.receiptWasmSha256.toLowerCase()) {
+        || attestation.wasmSha256.toLowerCase() !== input.config.receiptWasmSha256.toLowerCase()
+        || attestation.initialized !== true
+        || attestation.registryContractId !== input.config.registryContractId) {
         code = 'ATTESTATION_ALLOWLIST_REJECTED';
         pollStatus = 'rejected';
         return report();
