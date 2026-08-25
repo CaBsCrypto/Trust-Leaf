@@ -178,6 +178,12 @@ códigos, y revocar fixtures técnicos sólo bajo la autorización mutante vigen
 
 ## Decisiones humanas mínimas
 
+La selección previa de provider/IdP, sus alternativas y la configuración no
+secreta requerida se congelan en el
+[ADR de custodia e identidad](adr-testnet-v2-custody-and-idp.md) y su
+[checklist de decisión](testnet-v2-provider-decision-checklist.md). Ese ADR no
+autoriza provisión: exige PoC Ed25519/JWKS, owners y pruebas de rotación/outage.
+
 Para reducir rondas sin eliminar separación de duties se necesitan **dos
 aprobaciones**:
 

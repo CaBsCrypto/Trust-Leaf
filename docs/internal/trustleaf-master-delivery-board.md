@@ -17,6 +17,12 @@ produjeron sin consultar material de claves. Una validación read-only posterior
 confirmó únicamente presencia de los roles técnicos esperados y cuenta Testnet
 existente por rol mediante booleanos; no mostró alias, direcciones, montos o secretos.
 
+Decisión técnica siguiente: [ADR de provider KMS/HSM + IdP](adr-testnet-v2-custody-and-idp.md)
+y [checklist humana](testnet-v2-provider-decision-checklist.md). El ADR recomienda
+condicionalmente GCP KMS HSM Ed25519 + Firebase Auth para el PoC sintético, deja
+AWS KMS Ed25519 como alternativa y mantiene Azure/custodio especializado en
+NO-GO hasta demostrar compatibilidad. No se aprovisionó ningún recurso.
+
 ## Objetivo del sprint de análisis
 
 Congelar un diseño implementable y verificable para una demostración sintética end-to-end: verificación operacional de actores, decisión clínica simulada bajo responsabilidad médica, receipt trazable en Stellar Testnet, persistencia privada separada y controles fail-closed. Ninguna capacidad se presenta como legalmente o clínicamente válida.
@@ -34,6 +40,7 @@ Congelar un diseño implementable y verificable para una demostración sintétic
 | Credenciales revocables + ReceiptLedgerV2 | Arquitectura/contrato local | `feature/trust-registry-local-20260824` | implementación local, sin deploy | contrato/E2E/IDL/WASM/privacidad/Browser verdes; autorización Testnet separada |
 | Custodia y ceremonia de claves | Seguridad/plataforma + QA + Scrum | `integration/key-custody-prep-20260825` | threat model/runbook, gate mock sin secretos y preflight sanitizado integrados localmente; inventario read-only limitado verde | ADR KMS/HSM, quorum, PoC de firma, IAM, drills y autorización separados |
 | Candidata predeploy TrustRegistry + ReceiptLedgerV2 | Scrum Master + QA independiente | `integration/testnet-v2-predeploy-gate-20260825` | manifiesto/WASM/IDL, smoke local, contratos y 12 escenarios UI integrados; submissions 0 | adapter RPC read-only real, provider/IAM/quorum, pasada humana reduced-motion y aprobación deployment separada |
+| Decisión KMS/HSM + IdP | Arquitectura seguridad/identidad | `analysis/v2-kms-idp-options-20260825` | matriz oficial, ADR y checklist sin secretos; validación estática local | decisión cloud/owners, PoC Ed25519/JWKS-revocación y autorización de provisión separada |
 
 No se integrará nada a `main`. La integración actual es únicamente entre documentos internos de análisis mediante commits seleccionados y conserva las ramas fuente.
 
