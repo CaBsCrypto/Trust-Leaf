@@ -191,6 +191,12 @@ por defecto. El transporte real permanece sin configurar porque ReceiptLedgerV2
 no tiene contract ID/deployment ledger Testnet; esa ausencia debe seguir visible
 como `pending/unknown`, nunca sustituirse con la evidencia schema v1 existente.
 
+La evidencia sintética ya existente de ReceiptLedger V1 tiene un camino separado
+en el [runbook del lector durable V1](receipt-ledger-v1-durable-reader-runbook.md).
+Su ejecución live es explícita, acotada y cerrada por defecto; un resultado V1
+no constituye evidencia de TrustRegistry ni ReceiptLedgerV2 y no cambia el NO-GO
+de deployment V2.
+
 Para reducir rondas sin eliminar separación de duties se necesitan **dos
 aprobaciones**:
 
