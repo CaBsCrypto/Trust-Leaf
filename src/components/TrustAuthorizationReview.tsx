@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, ArrowLeft, Ban, CheckCircle2, Clock3, FileKey2, Link2, ShieldCheck, Stethoscope, Store, UserRound } from 'lucide-react';
+import { Activity, ArrowLeft, Ban, CheckCircle2, Clock3, DatabaseZap, FileKey2, Link2, RefreshCcw, ShieldCheck, Stethoscope, Store, UserRound } from 'lucide-react';
 import {
   TRUST_CHAIN_SCENARIOS,
   parseTrustChainScenario,
@@ -7,6 +7,11 @@ import {
   type TrustChainScenario,
   type TrustCredentialFixture,
 } from '../lib/trustRegistryReview';
+import {
+  LOCAL_V2_READONLY_EVIDENCE_PORT,
+  readV2Evidence,
+  type V2ReadonlyEvidencePort,
+} from '../lib/v2ReadonlyEvidence';
 
 const SCENARIO_LABELS: Record<TrustChainScenario, string> = {
   active: 'Cadena activa (compatibilidad)',
@@ -15,6 +20,7 @@ const SCENARIO_LABELS: Record<TrustChainScenario, string> = {
   'dispensary-validated': 'Dispensario · validado',
   'dispensary-expired': 'Dispensario · expirado',
   'patient-eligible': 'Paciente · elegibilidad activa',
+  'patient-readonly': 'Paciente · consulta read-only',
   'eligibility-revoked': 'Paciente · elegibilidad revocada',
   'receipt-issued': 'Receipt · emitido',
   'receipt-active': 'Receipt · activo',
@@ -30,10 +36,20 @@ const CREDENTIAL_COPY: Record<TrustCredentialFixture['kind'], { label: string; i
   dispensary: { label: 'Credencial técnica de dispensario', icon: Store },
 };
 
-export default function TrustAuthorizationReview({ onBack }: { onBack: () => void }) {
+export default function TrustAuthorizationReview({
+  onBack,
+  evidencePort = LOCAL_V2_READONLY_EVIDENCE_PORT,
+}: {
+  onBack: () => void;
+  evidencePort?: V2ReadonlyEvidencePort;
+}) {
   const initial = useMemo(() => parseTrustChainScenario(window.location.search), []);
   const [scenario, setScenario] = useState<TrustChainScenario>(initial);
   const fixture = TRUST_CHAIN_SCENARIOS[scenario];
+  const evidence = useMemo(
+    () => readV2Evidence(evidencePort, scenario, fixture.actorRole),
+    [evidencePort, fixture.actorRole, scenario],
+  );
 
   useEffect(() => {
     window.history.replaceState({}, '', `/demo/trust-registry${trustChainSearch(scenario)}`);
@@ -91,15 +107,35 @@ export default function TrustAuthorizationReview({ onBack }: { onBack: () => voi
         </div>
       </section>
 
+      <section className="rounded-3xl bg-white p-6 shadow-sm" aria-labelledby="reader-title" data-reader-health={evidence.health}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex gap-3"><DatabaseZap aria-hidden="true"/><div><p className="text-xs font-bold uppercase tracking-[.18em] text-brand-green-mid">Puerto read-only sanitizado</p><h2 id="reader-title" className="mt-1 text-xl font-bold">Estado del lector / indexador</h2></div></div>
+          <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${evidence.health === 'current' ? 'bg-emerald-100 text-emerald-900' : evidence.health === 'stale' ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-900'}`}>{evidence.health}</span>
+        </div>
+        <dl className="mt-5 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-xl bg-brand-neutral p-3"><dt className="text-brand-green-mid">Fuente</dt><dd className="mt-1 font-bold">{evidence.source}</dd></div>
+          <div className="rounded-xl bg-brand-neutral p-3"><dt className="text-brand-green-mid">Freshness</dt><dd className="mt-1 font-bold">{evidence.freshnessLabel}</dd></div>
+          <div className="rounded-xl bg-brand-neutral p-3"><dt className="text-brand-green-mid">Cursor</dt><dd className="mt-1 font-bold">{evidence.cursorLabel}</dd></div>
+          <div className="rounded-xl bg-brand-neutral p-3"><dt className="text-brand-green-mid">Finality</dt><dd className="mt-1 font-bold">{evidence.finality}</dd></div>
+          <div className="rounded-xl bg-brand-neutral p-3"><dt className="text-brand-green-mid">Reorg</dt><dd className="mt-1 font-bold">{evidence.reorgState}</dd></div>
+        </dl>
+        <div className={`mt-4 flex gap-3 rounded-xl p-4 text-xs ${evidence.blockedReason ? 'bg-amber-50 text-amber-950' : 'bg-emerald-50 text-emerald-950'}`} role="status">
+          <RefreshCcw className="shrink-0" size={18} aria-hidden="true"/>
+          <p><strong>Estado observado:</strong> {evidence.observedState}. {evidence.blockedReason ?? 'Snapshot finalizado y sin reconciliación pendiente.'}</p>
+        </div>
+      </section>
+
       <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
         <section className="rounded-3xl bg-white p-6" aria-labelledby="audit-title">
           <Activity/><h2 id="audit-title" className="mt-3 text-xl font-bold">Auditoría técnica mínima</h2>
           <ol className="mt-4 space-y-2">{fixture.audit.map(event => <li key={event.eventRef} className="grid gap-2 rounded-xl bg-brand-neutral p-3 text-xs sm:grid-cols-4"><span className="font-mono font-bold">{event.eventRef}</span><span>{event.actorRole}</span><span>{event.action}</span><span className="font-bold">{event.result} · v{event.version}</span></li>)}</ol>
         </section>
-        <aside id="testnet-evidence-gate" className="rounded-3xl border border-amber-300 bg-amber-50 p-6" aria-labelledby="evidence-title">
-          <Link2/><p className="mt-3 text-xs font-bold uppercase tracking-[.18em] text-amber-900">Evidencia Testnet V2 · pendiente</p><h2 id="evidence-title" className="mt-2 text-xl font-bold">Cotejo post-deploy bloqueado</h2>
-          <dl className="mt-4 space-y-3 text-xs"><div><dt>Red esperada</dt><dd className="font-bold">Stellar Testnet</dd></div><div><dt>Evento esperado</dt><dd className="font-mono font-bold">{fixture.expectedEvent}</dd></div><div><dt>Contract / transacción</dt><dd className="font-bold">No configurados; validar contra manifest aprobado.</dd></div></dl>
-          <p className="mt-4 text-xs text-amber-950">No se muestra un enlace hasta que contract ID, hash WASM y evidencia read-only estén allowlisted. Esta ausencia es un gate, no una prueba on-chain.</p>
+        <aside id="testnet-evidence-gate" className={`rounded-3xl border p-6 ${evidence.evidence ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}`} aria-labelledby="evidence-title">
+          <Link2/><p className="mt-3 text-xs font-bold uppercase tracking-[.18em] text-amber-900">{evidence.evidence ? 'Evidencia Testnet V2 · allowlisted' : 'Evidencia Testnet V2 · pendiente'}</p><h2 id="evidence-title" className="mt-2 text-xl font-bold">{evidence.evidence ? 'Cotejo técnico disponible' : 'Cotejo post-deploy bloqueado'}</h2>
+          <dl className="mt-4 space-y-3 text-xs"><div><dt>Red esperada</dt><dd className="font-bold">Stellar Testnet</dd></div><div><dt>Evento esperado</dt><dd className="font-mono font-bold">{fixture.expectedEvent}</dd></div><div><dt>Contract / evento</dt><dd className="font-bold">{evidence.evidence ? `${evidence.evidence.contractRef} · ${evidence.evidence.eventRef}` : 'No configurados; validar contra manifest aprobado.'}</dd></div></dl>
+          {evidence.evidence
+            ? <a className="mt-4 inline-flex rounded-xl bg-brand-green-deep px-4 py-2 text-xs font-bold text-white" href={evidence.evidence.explorerUrl} target="_blank" rel="noreferrer">{evidence.evidence.label}</a>
+            : <p className="mt-4 text-xs text-amber-950">No se muestra un enlace hasta que contract ID, hash WASM y evidencia read-only estén allowlisted. Esta ausencia es un gate, no una prueba on-chain.</p>}
         </aside>
       </div>
 

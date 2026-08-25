@@ -5,6 +5,7 @@ export type TrustChainScenario =
   | 'dispensary-validated'
   | 'dispensary-expired'
   | 'patient-eligible'
+  | 'patient-readonly'
   | 'eligibility-revoked'
   | 'receipt-issued'
   | 'receipt-active'
@@ -86,6 +87,7 @@ export const TRUST_CHAIN_SCENARIOS: Record<TrustChainScenario, TrustAuthorizatio
   'dispensary-validated': fixture({ scenario: 'dispensary-validated', actorRole: 'admin', stepLabel: 'Validar dispensario técnico', outcomeLabel: 'Credencial de dispensario activa', expectedEvent: 'ActorCredentialIssued', receiptState: 'not-issued', receiptVersion: 0, chainAllowed: true, audit: audit('admin', 'ActorCredentialIssued', 'accepted', 1) }),
   'dispensary-expired': fixture({ scenario: 'dispensary-expired', actorRole: 'admin', stepLabel: 'Materializar expiry de dispensario', outcomeLabel: 'Dispensación bloqueada', expectedEvent: 'ActorCredentialExpired', receiptState: 'blocked', receiptVersion: 2, chainAllowed: false, credentials: credentialFixtures({ dispensary: 'expired' }) }),
   'patient-eligible': fixture({ scenario: 'patient-eligible', actorRole: 'doctor', stepLabel: 'Registrar elegibilidad operativa', outcomeLabel: 'Elegibilidad opaca activa', expectedEvent: 'EligibilityIssued', receiptState: 'not-issued', receiptVersion: 0, chainAllowed: true, audit: audit('doctor', 'EligibilityIssued', 'accepted', 1) }),
+  'patient-readonly': fixture({ scenario: 'patient-readonly', actorRole: 'patient', stepLabel: 'Consultar estado mínimo', outcomeLabel: 'Receipt activo en vista read-only', expectedEvent: 'ReceiptChanged:Active', receiptState: 'active', receiptVersion: 2, chainAllowed: true, audit: audit('patient', 'ReceiptRead:Active', 'accepted', 2) }),
   'eligibility-revoked': fixture({ scenario: 'eligibility-revoked', actorRole: 'doctor', stepLabel: 'Revocar elegibilidad operativa', outcomeLabel: 'Emisión y dispensación bloqueadas', expectedEvent: 'EligibilityRevoked', receiptState: 'blocked', receiptVersion: 2, chainAllowed: false, credentials: credentialFixtures({ 'patient-eligibility': 'revoked' }) }),
   'receipt-issued': fixture({ scenario: 'receipt-issued', actorRole: 'doctor', stepLabel: 'Emitir receipt técnico', outcomeLabel: 'Receipt emitido', expectedEvent: 'ReceiptChanged:Issued', receiptState: 'issued', receiptVersion: 1, chainAllowed: true }),
   'receipt-active': fixture({ scenario: 'receipt-active', actorRole: 'doctor', stepLabel: 'Activar receipt técnico', outcomeLabel: 'Receipt activo', expectedEvent: 'ReceiptChanged:Active', receiptState: 'active', receiptVersion: 2, chainAllowed: true }),

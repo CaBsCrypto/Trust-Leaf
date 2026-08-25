@@ -17,6 +17,8 @@ Ruta base:
 
 La prueba automatizada valida 12 escenarios obligatorios, normalización de query no allowlisted, ausencia de llamadas de red/firma/envío, fixtures sin PII/PHI, foco visible, reduced-motion, TypeScript y build. No reemplaza la revisión Browser.
 
+El bloque read-only añadido consume un puerto de snapshots sanitizados y muestra freshness, cursor, finality, reorg y salud del lector. El fixture local permanece sin red y fail-closed. El guion detallado y los negativos están en [`v2-readonly-ui-e2e-runbook.md`](./v2-readonly-ui-e2e-runbook.md).
+
 ## Matriz visible obligatoria
 
 | Paso | Rol visible | Query | Estado mínimo esperado | Evento futuro para cotejo |
