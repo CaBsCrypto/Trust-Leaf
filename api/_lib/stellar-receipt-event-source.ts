@@ -16,13 +16,26 @@ export function createStellarRpcReceiptEventTransport(input: {
 }): ReceiptEventSourceTransport {
   const server = input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false });
   return { kind: 'stellar-rpc', async fetchNext(cursor) {
-    const sequence = cursor ? cursor.sequence + 1 : input.startLedger;
-    const ledgers = await server.getLedgers({ startLedger: Math.max(1, sequence - 1), pagination: { limit: 2 } });
+    const wanted = cursor ? cursor.sequence + 1 : input.startLedger;
+    const queryStart = Math.max(1, cursor ? cursor.sequence - 1 : wanted - 1);
+    const ledgers = await server.getLedgers({ startLedger: queryStart, pagination: { limit: cursor ? 3 : 2 } });
+    const storedTip = cursor ? ledgers.ledgers.find(item => item.sequence === cursor.sequence) : undefined;
+    // Re-read the stored tip on every poll. If its hash changed, return the
+    // replacement ledger at the same height so the durable indexer can perform
+    // a conservative canonical rewrite before advancing.
+    const sequence = cursor && storedTip && storedTip.hash.toLowerCase() !== cursor.hash.toLowerCase()
+      ? cursor.sequence
+      : wanted;
     const current = ledgers.ledgers.find(item => item.sequence === sequence);
-    if (!current) return { status: 'caught_up' };
+    if (!current) {
+      if (ledgers.latestLedger >= sequence) throw safe('LEDGER_GAP');
+      return { status: 'caught_up' };
+    }
     // The initial checkpoint has no prior local cursor. Its parent is a sentinel;
     // every subsequent poll is cryptographically linked to the stored cursor.
-    const parent = cursor?.hash ?? ledgers.ledgers.find(item => item.sequence === sequence - 1)?.hash ?? '0'.repeat(64);
+    const parent = ledgers.ledgers.find(item => item.sequence === sequence - 1)?.hash
+      ?? (sequence === wanted ? cursor?.hash : undefined)
+      ?? '0'.repeat(64);
     const response = await server.getEvents({ startLedger: sequence, endLedger: sequence + 1, filters: [{ type: 'contract', contractIds: [input.contractId] }], limit: 100 });
     if (response.events.some(event => event.contractId?.contractId() !== input.contractId)) throw safe('EVENT_CONTRACT_REJECTED');
     const events = response.events.map(decodeEvent).filter((event): event is NonNullable<typeof event> => event !== null);
