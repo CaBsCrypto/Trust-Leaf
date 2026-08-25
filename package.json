@@ -34,6 +34,7 @@
     "test:durable-receipt-mapping": "node --experimental-strip-types tests/durable-receipt-mapping.test.ts",
     "test:key-custody-gate": "node --experimental-strip-types tests/key-custody-gate.test.ts",
     "test:trust-registry-ui": "node --experimental-strip-types tests/trust-registry-ui.test.ts",
+    "qa:visual-role-gate": "npm run test:trust-registry-ui && npm run lint && npm run build",
     "test:key-custody-preflight": "node --experimental-strip-types tests/key-custody-preflight.test.ts",
     "test:testnet-v2-readonly-smoke": "node --experimental-strip-types tests/testnet-v2-readonly-smoke.test.ts",
     "preflight:key-custody": "node --experimental-strip-types scripts/key-custody-preflight.mjs",
