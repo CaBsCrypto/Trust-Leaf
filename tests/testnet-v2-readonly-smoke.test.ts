@@ -65,6 +65,8 @@ function manifest(): TestnetV2ReadonlySmokeManifest {
       expectedState: state,
       doctorCredentialRef: doctor,
       eligibilityCredentialRef: eligibility,
+      expectDoctorActive: true,
+      expectEligibilityActive: true,
       dispensaryCredentialRef: dispensary,
       expectDispensaryActive: true,
       expectGrantEnabled: state !== 'issued',
@@ -78,6 +80,8 @@ function adapter(overrides: {
   omitCredential?: string;
   omitReceipt?: string;
   chainRegistryRef?: string;
+  doctorActive?: boolean;
+  eligibilityActive?: boolean;
   delayMs?: number;
 } = {}) {
   const expected = manifest();
@@ -100,9 +104,9 @@ function adapter(overrides: {
     chains: Object.fromEntries(expected.receipts.map(item => [item.ref, {
       registryRef: overrides.chainRegistryRef ?? registryRef,
       doctorCredentialRef: doctor,
-      doctorActive: true,
+      doctorActive: overrides.doctorActive ?? true,
       eligibilityCredentialRef: eligibility,
-      eligibilityActive: true,
+      eligibilityActive: overrides.eligibilityActive ?? true,
       dispensaryCredentialRef: dispensary,
       dispensaryActive: true,
       grantEnabled: item.expectedState !== 'issued',
@@ -133,6 +137,13 @@ assert.ok(linkMismatch.blockers.includes('REGISTRY_LINK_MISMATCH'));
 const chainMismatch = await runTestnetV2ReadonlySmoke({ manifest: manifest(), adapter: adapter({ chainRegistryRef: 'registry-other' }) });
 assert.equal(chainMismatch.ready, false);
 assert.ok(chainMismatch.blockers.includes('AUTHORIZATION_CHAIN_MISMATCH'));
+
+for (const inactive of [adapter({ doctorActive: false }), adapter({ eligibilityActive: false })]) {
+  const inactiveChain = await runTestnetV2ReadonlySmoke({ manifest: manifest(), adapter: inactive });
+  assert.equal(inactiveChain.ready, false);
+  assert.equal(inactiveChain.checks.authorizationChainsMatched, false);
+  assert.ok(inactiveChain.blockers.includes('AUTHORIZATION_CHAIN_MISMATCH'));
+}
 
 const unknown = await runTestnetV2ReadonlySmoke({ manifest: manifest(), adapter: adapter({ omitCredential: doctor, omitReceipt: 'receipt-active' }) });
 assert.equal(unknown.ready, false);
@@ -184,6 +195,7 @@ for (const unsafe of [
   { ...pass, blockers: [`C${'A'.repeat(55)}`] },
   { ...pass, blockers: [`G${'B'.repeat(55)}`] },
   { ...pass, blockers: ['a'.repeat(64)] },
+  { ...pass, blockers: ['UNREVIEWED_ADAPTER_CODE'] },
   { ...pass, secret: 'fixture' },
   { ...pass, submissionAttempts: 1 },
 ]) assert.throws(() => assertSafeV2ReadonlySmokeReport(unsafe as never), (error: unknown) => (error as { code?: string }).code === 'UNSAFE_SMOKE_REPORT');

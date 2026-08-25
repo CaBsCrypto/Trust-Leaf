@@ -147,8 +147,12 @@ Guion humano compacto:
 5. confirmar ausencia de PHI y claims legales;
 6. marcar PASS/NO-GO sin ejecutar acciones de red.
 
-Este gate está **pendiente** hasta que QA Browser independiente deje evidencia de
-todos los escenarios; la existencia del smoke de backend no lo satisface.
+Evidencia local integrada al 2026-08-25: QA Browser cubrió 12/12 escenarios en
+desktop y cuatro checkpoints móviles, sin overflow, errores de consola, PII/PHI
+ni enlaces V2 prematuros; foco visible PASS. La regla reduced-motion está cargada
+y probada por la suite, pero queda pendiente una pasada humana con la preferencia
+del sistema activada. Este pendiente mantiene el gate visual en **NO-GO** para el
+deployment; la existencia del smoke de backend no lo sustituye.
 
 ## Kill switch, rollback y teardown
 
@@ -188,5 +192,5 @@ aprobaciones**:
 
 Antes de la decisión 1 todavía faltan configuración real de provider/IAM/quorum,
 adapter RPC read-only, referencias finales de contratos (obtenidas al desplegar),
-evidencia visual por rol y revisión independiente del paquete completo. Un solo
+la pasada humana reduced-motion y cierre de revisión independiente del paquete. Un solo
 pendiente mantiene el estado **NO-GO**.

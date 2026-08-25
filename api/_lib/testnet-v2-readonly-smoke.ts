@@ -4,6 +4,14 @@ const SHA256 = /^[a-f0-9]{64}$/i;
 const SAFE_REF = /^[a-z][a-z0-9-]{2,63}$/;
 const CONTRACT_ID = /^C[A-Z2-7]{55}$/;
 const SAFE_CODE = /^[A-Z0-9_]{1,64}$/;
+const SAFE_BLOCKER_CODES = new Set([
+  'AUTHORIZATION_CHAIN_MISMATCH', 'AUTHORIZATION_CHAIN_TIMEOUT', 'AUTHORIZATION_CHAIN_UNAVAILABLE', 'AUTHORIZATION_CHAIN_UNKNOWN',
+  'CREDENTIAL_SCHEMA_MISMATCH', 'CREDENTIAL_STATE_MISMATCH', 'CREDENTIAL_TIMEOUT', 'CREDENTIAL_UNAVAILABLE', 'CREDENTIAL_UNKNOWN',
+  'FLAGS_NOT_CLOSED', 'MANIFEST_INVALID', 'MANIFEST_SCHEMA_INVALID', 'READONLY_SMOKE_UNAVAILABLE',
+  'RECEIPT_ARTIFACT_MISMATCH', 'RECEIPT_SCHEMA_MISMATCH', 'RECEIPT_STATE_MISMATCH', 'RECEIPT_TIMEOUT', 'RECEIPT_UNAVAILABLE', 'RECEIPT_UNKNOWN',
+  'RECEIPT_LEDGER_V2_TIMEOUT', 'RECEIPT_LEDGER_V2_UNAVAILABLE', 'REGISTRY_ARTIFACT_MISMATCH', 'REGISTRY_LINK_MISMATCH',
+  'REGISTRY_TIMEOUT', 'REGISTRY_UNAVAILABLE', 'TIMEOUT_POLICY_INVALID', 'UNSAFE_ADAPTER_PAYLOAD',
+]);
 
 export type CredentialKind = 'doctor' | 'dispensary' | 'patient-eligibility';
 export type CredentialState = 'active' | 'suspended' | 'revoked' | 'expired';
@@ -72,6 +80,8 @@ export interface TestnetV2ReadonlySmokeManifest {
     expectedState: ReceiptV2State;
     doctorCredentialRef: string;
     eligibilityCredentialRef: string;
+    expectDoctorActive: boolean;
+    expectEligibilityActive: boolean;
     dispensaryCredentialRef?: string;
     expectDispensaryActive?: boolean;
     expectGrantEnabled?: boolean;
@@ -213,7 +223,9 @@ export async function runTestnetV2ReadonlySmoke(input: {
     if (!isAuthorizationChain(chain)
       || chain.registryRef !== input.manifest.contracts.registry.ref
       || chain.doctorCredentialRef !== expected.doctorCredentialRef
+      || chain.doctorActive !== expected.expectDoctorActive
       || chain.eligibilityCredentialRef !== expected.eligibilityCredentialRef
+      || chain.eligibilityActive !== expected.expectEligibilityActive
       || (expected.dispensaryCredentialRef !== undefined && chain.dispensaryCredentialRef !== expected.dispensaryCredentialRef)
       || (expected.expectDispensaryActive !== undefined && chain.dispensaryActive !== expected.expectDispensaryActive)
       || (expected.expectGrantEnabled !== undefined && chain.grantEnabled !== expected.expectGrantEnabled)) {
@@ -253,11 +265,17 @@ export function createLocalV2ReadonlyFixture(input: {
 
 export function assertSafeV2ReadonlySmokeReport(report: TestnetV2ReadonlySmokeReport) {
   const serialized = JSON.stringify(report);
-  if (serialized.length > 8192
+  if (!hasExactKeys(report, ['schema', 'mode', 'network', 'ready', 'submissionAttempts', 'checks', 'counts', 'observed', 'blockers'])
+    || !hasExactKeys(report.checks, ['flagsClosed', 'registryArtifactMatched', 'receiptArtifactMatched', 'registryLinkMatched', 'credentialsMatched', 'receiptsMatched', 'authorizationChainsMatched', 'privacySafe'])
+    || !hasExactKeys(report.counts, ['contractsChecked', 'credentialsChecked', 'receiptsChecked', 'authorizationChainsChecked'])
+    || !hasExactKeys(report.observed, ['credentialStates', 'receiptStates'])
+    || !hasExactKeys(report.observed.credentialStates, ['active', 'suspended', 'revoked', 'expired'])
+    || !hasExactKeys(report.observed.receiptStates, ['issued', 'active', 'partial', 'dispensed', 'revoked', 'expired'])
+    || serialized.length > 8192
     || /https?:\/\/|\bC[A-Z2-7]{55}\b|\bG[A-Z2-7]{55}\b|\bS[A-Z2-7]{55}\b|\b[a-f0-9]{64}\b|@/i.test(serialized)
     || /secret|seed|private.?key|xdr|signature|address|contract.?id|receipt.?id|credential.?id/i.test(serialized)
     || report.submissionAttempts !== 0
-    || report.blockers.some(code => !SAFE_CODE.test(code))) {
+    || report.blockers.some(code => !SAFE_CODE.test(code) || !SAFE_BLOCKER_CODES.has(code))) {
     throw smokeError('UNSAFE_SMOKE_REPORT');
   }
 }
@@ -288,6 +306,8 @@ function validateManifest(manifest: TestnetV2ReadonlySmokeManifest) {
       || !['issued', 'active', 'partial', 'dispensed', 'revoked', 'expired'].includes(item.expectedState)
       || !validRef(item.doctorCredentialRef) || kinds.get(item.doctorCredentialRef) !== 'doctor'
       || !validRef(item.eligibilityCredentialRef) || kinds.get(item.eligibilityCredentialRef) !== 'patient-eligibility'
+      || typeof item.expectDoctorActive !== 'boolean'
+      || typeof item.expectEligibilityActive !== 'boolean'
       || (item.dispensaryCredentialRef !== undefined
         && (!validRef(item.dispensaryCredentialRef) || kinds.get(item.dispensaryCredentialRef) !== 'dispensary'))
       || (item.expectDispensaryActive !== undefined && typeof item.expectDispensaryActive !== 'boolean')
@@ -382,7 +402,7 @@ function buildReport(
     },
     counts: { ...counts },
     observed: { credentialStates: { ...credentials }, receiptStates: { ...receipts } },
-    blockers: [...blockers].map(code => SAFE_CODE.test(code) ? code : 'READONLY_SMOKE_UNAVAILABLE').sort(),
+    blockers: [...blockers].map(code => SAFE_BLOCKER_CODES.has(code) ? code : 'READONLY_SMOKE_UNAVAILABLE').sort(),
   };
   assertSafeV2ReadonlySmokeReport(report);
   return report;
@@ -390,6 +410,6 @@ function buildReport(
 
 function errorCode(error: unknown, fallback = 'READONLY_SMOKE_UNAVAILABLE') {
   const code = (error as { code?: unknown })?.code;
-  return typeof code === 'string' && SAFE_CODE.test(code) ? code : fallback;
+  return typeof code === 'string' && SAFE_BLOCKER_CODES.has(code) ? code : fallback;
 }
 function smokeError(code: string) { return Object.assign(new Error('Read-only Testnet V2 smoke unavailable.'), { code }); }

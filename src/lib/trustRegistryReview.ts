@@ -73,14 +73,16 @@ function fixture(input: Omit<TrustAuthorizationFixture, 'receiptRef' | 'credenti
     ...input,
     receiptRef: RECEIPT_REF,
     credentials: input.credentials ?? credentialFixtures(),
-    audit: input.audit ?? audit(input.actorRole, input.expectedEvent, input.chainAllowed ? 'accepted' : 'blocked', input.receiptVersion),
+    // The transition shown by a fixture is accepted; chainAllowed describes
+    // whether a later business action remains permitted after that transition.
+    audit: input.audit ?? audit(input.actorRole, input.expectedEvent, 'accepted', input.receiptVersion),
   };
 }
 
 export const TRUST_CHAIN_SCENARIOS: Record<TrustChainScenario, TrustAuthorizationFixture> = {
   active: fixture({ scenario: 'active', actorRole: 'doctor', stepLabel: 'Cadena activa (compatibilidad)', outcomeLabel: 'Receipt activo', expectedEvent: 'ReceiptChanged:Active', receiptState: 'active', receiptVersion: 2, chainAllowed: true }),
   'doctor-validated': fixture({ scenario: 'doctor-validated', actorRole: 'admin', stepLabel: 'Validar médico técnico', outcomeLabel: 'Credencial médica activa', expectedEvent: 'ActorCredentialIssued', receiptState: 'not-issued', receiptVersion: 0, chainAllowed: true, audit: audit('admin', 'ActorCredentialIssued', 'accepted', 1) }),
-  'doctor-suspended': fixture({ scenario: 'doctor-suspended', actorRole: 'admin', stepLabel: 'Suspender médico técnico', outcomeLabel: 'Acciones médicas bloqueadas', expectedEvent: 'ActorCredentialSuspended', receiptState: 'blocked', receiptVersion: 0, chainAllowed: false, credentials: credentialFixtures({ doctor: 'suspended' }), audit: audit('admin', 'ActorCredentialSuspended', 'blocked', 2) }),
+  'doctor-suspended': fixture({ scenario: 'doctor-suspended', actorRole: 'admin', stepLabel: 'Suspender médico técnico', outcomeLabel: 'Acciones médicas bloqueadas', expectedEvent: 'ActorCredentialSuspended', receiptState: 'blocked', receiptVersion: 0, chainAllowed: false, credentials: credentialFixtures({ doctor: 'suspended' }), audit: audit('admin', 'ActorCredentialSuspended', 'accepted', 2) }),
   'dispensary-validated': fixture({ scenario: 'dispensary-validated', actorRole: 'admin', stepLabel: 'Validar dispensario técnico', outcomeLabel: 'Credencial de dispensario activa', expectedEvent: 'ActorCredentialIssued', receiptState: 'not-issued', receiptVersion: 0, chainAllowed: true, audit: audit('admin', 'ActorCredentialIssued', 'accepted', 1) }),
   'dispensary-expired': fixture({ scenario: 'dispensary-expired', actorRole: 'admin', stepLabel: 'Materializar expiry de dispensario', outcomeLabel: 'Dispensación bloqueada', expectedEvent: 'ActorCredentialExpired', receiptState: 'blocked', receiptVersion: 2, chainAllowed: false, credentials: credentialFixtures({ dispensary: 'expired' }) }),
   'patient-eligible': fixture({ scenario: 'patient-eligible', actorRole: 'doctor', stepLabel: 'Registrar elegibilidad operativa', outcomeLabel: 'Elegibilidad opaca activa', expectedEvent: 'EligibilityIssued', receiptState: 'not-issued', receiptVersion: 0, chainAllowed: true, audit: audit('doctor', 'EligibilityIssued', 'accepted', 1) }),

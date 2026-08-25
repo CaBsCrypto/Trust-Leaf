@@ -23,6 +23,8 @@ const receiptEntries = ['issued', 'active', 'partial', 'dispensed', 'revoked', '
   expectedState: state,
   doctorCredentialRef: doctor,
   eligibilityCredentialRef: eligibility,
+  expectDoctorActive: true,
+  expectEligibilityActive: true,
   dispensaryCredentialRef: dispensary,
   expectDispensaryActive: true,
   expectGrantEnabled: index > 0,

@@ -49,6 +49,7 @@ for (const state of receiptStates) {
 
 for (const scenario of ['doctor-suspended', 'dispensary-expired', 'eligibility-revoked', 'receipt-revoked'] as const) {
   assert.equal(TRUST_CHAIN_SCENARIOS[scenario].chainAllowed, false);
+  assert.equal(TRUST_CHAIN_SCENARIOS[scenario].audit[0].result, 'accepted', 'control transition is accepted while subsequent chain actions are blocked');
 }
 
 assert.deepEqual(TRUST_CHAIN_SCENARIOS['admin-audit'].audit.map(event => event.version), [1, 2, 3]);
