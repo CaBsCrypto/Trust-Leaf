@@ -147,5 +147,6 @@ assert.doesNotMatch(serializedAudit, new RegExp(payloadDigest));
 assert.doesNotMatch(serializedAudit, /soroban-testnet|authorizationProof|contractId|wasmSha256|rpcUrl/i);
 assert.doesNotMatch(serializedAudit, /secret|private|seed|S[A-Z2-7]{55}/i);
 assert.equal((audit as Array<{ outcome: string }>).filter(event => event.outcome === 'authorized-local-only').length >= roles.length, true);
+assert.equal((audit as Array<{ reason?: string }>).some(event => event.reason === 'QUORUM_INTENT_MISMATCH'), true);
 
 console.log('key-custody-gate: no-secret mock, duties, quorum, lifecycle, allowlists and redaction passed');

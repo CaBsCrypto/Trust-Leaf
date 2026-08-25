@@ -176,6 +176,10 @@ export function assertSafeCustodyReport(report: KeyCustodyPreflightReport): void
   const roleNames = report.roles.map(item => item.role);
   if (roleNames.length !== KEY_CUSTODY_ROLES.length || new Set(roleNames).size !== KEY_CUSTODY_ROLES.length
     || KEY_CUSTODY_ROLES.some(role => !roleNames.includes(role))) throw unsafeReport();
+  if (report.roles.some(item => item.ready !== ROLE_CHECK_SUFFIXES.every(suffix => report.checks[`${roleKey(item.role)}_${suffix}`] === true))) throw unsafeReport();
+  const expectedBlockers = Object.entries(report.checks).filter(([, passed]) => !passed).map(([name]) => `KEY_CUSTODY_${toCode(name)}`).sort();
+  const actualBlockers = [...report.blockers].sort();
+  if (expectedBlockers.length !== actualBlockers.length || expectedBlockers.some((value, index) => value !== actualBlockers[index])) throw unsafeReport();
   const computedReadyRoles = report.roles.filter(item => item.ready).length;
   const computedReady = Object.values(report.checks).every(Boolean) && computedReadyRoles === KEY_CUSTODY_ROLES.length && report.blockers.length === 0;
   if (report.counts.requiredRoles !== KEY_CUSTODY_ROLES.length || report.counts.inspectedRoles !== KEY_CUSTODY_ROLES.length

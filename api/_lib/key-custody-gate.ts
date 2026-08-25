@@ -141,6 +141,18 @@ export function createKeyCustodyGate(input: {
       keyVersion: Number.isSafeInteger(request.keyVersion) ? request.keyVersion : 0,
     });
   };
+  const denyQuorum = (requests: readonly CustodyAuthorizationRequest[], reason: string): never => {
+    const first = requests[0];
+    input.audit?.write({
+      component: 'key-custody-gate',
+      outcome: 'denied',
+      role: first && KEY_CUSTODY_ROLES.includes(first.role) ? first.role : 'invalid-role',
+      alias: 'quorum',
+      reason: safeCode(reason),
+      keyVersion: first && Number.isSafeInteger(first.keyVersion) ? first.keyVersion : 0,
+    });
+    throw custodyError(reason);
+  };
 
   const authorizeOne = async (request: CustodyAuthorizationRequest): Promise<LocalOnlyAuthorization> => {
     try {
@@ -182,15 +194,15 @@ export function createKeyCustodyGate(input: {
   return {
     authorize: authorizeOne,
     async authorizeQuorum(requests: readonly CustodyAuthorizationRequest[]): Promise<readonly LocalOnlyAuthorization[]> {
-      if (requests.length === 0) throw custodyError('QUORUM_EMPTY');
+      if (requests.length === 0) return denyQuorum(requests, 'QUORUM_EMPTY');
       const role = requests[0].role;
-      if (requests.some(request => request.role !== role)) throw custodyError('QUORUM_ROLE_MISMATCH');
-      if (new Set(requests.map(request => request.alias)).size !== requests.length) throw custodyError('QUORUM_ALIAS_DUPLICATE');
-      requests.forEach(request => validateRequest(request, input.policy));
+      if (requests.some(request => request.role !== role)) return denyQuorum(requests, 'QUORUM_ROLE_MISMATCH');
+      if (new Set(requests.map(request => request.alias)).size !== requests.length) return denyQuorum(requests, 'QUORUM_ALIAS_DUPLICATE');
+      try { requests.forEach(request => validateRequest(request, input.policy)); } catch (error) { return denyQuorum(requests, errorCode(error)); }
       const intentIds = requests.map(canonicalIntentId);
-      if (new Set(intentIds).size !== 1) throw custodyError('QUORUM_INTENT_MISMATCH');
+      if (new Set(intentIds).size !== 1) return denyQuorum(requests, 'QUORUM_INTENT_MISMATCH');
       const required = input.policy.quorumByRole[role];
-      if (!Number.isSafeInteger(required) || required < 1 || requests.length < required) throw custodyError('QUORUM_NOT_MET');
+      if (!Number.isSafeInteger(required) || required < 1 || requests.length < required) return denyQuorum(requests, 'QUORUM_NOT_MET');
       return Promise.all(requests.map(authorizeOne));
     },
   };

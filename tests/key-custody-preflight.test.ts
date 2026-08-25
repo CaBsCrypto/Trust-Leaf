@@ -98,6 +98,8 @@ for (const malicious of [
   { ...safe, deployReady: true },
   { ...safe, ready: false },
   { ...safe, counts: { ...safe.counts, readyRoles: 0 } },
+  { ...safe, blockers: ['KEY_CUSTODY_SUBMISSION_DISABLED'] },
+  { ...safe, roles: safe.roles.map((item, index) => index === 0 ? { ...item, ready: false } : item) },
   { ...safe, roles: safe.roles.slice(1) },
   { ...safe, roles: safe.roles.map(item => ({ ...item, role: 'deployer' })) },
   { ...safe, blockers: [`G${'A'.repeat(55)}`] },
