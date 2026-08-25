@@ -3,27 +3,30 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { nativeToScVal } from '@stellar/stellar-sdk';
+import { Account, Address, Keypair, StrKey, nativeToScVal } from '@stellar/stellar-sdk';
 import { createLocalFileDurableReceiptIndexerStore, createMemoryDurableReceiptIndexerStore } from '../api/_lib/durable-readonly-receipt-indexer.ts';
-import { createStellarV2ReadonlyIndexer, createStellarV2RpcReadonlyTransport, validateStellarV2ReadonlyIndexerConfig, type StellarV2ReadonlyIndexerConfig, type StellarV2ReadonlyTransport } from '../api/_lib/stellar-v2-readonly-indexer.ts';
+import { computeStellarV2DeploymentBindingSha256, createStellarV2ReadonlyIndexer, createStellarV2RpcReadonlyTransport, createStellarV2SimulationInitializationReader, validateStellarV2ReadonlyIndexerConfig, type StellarV2ReadonlyIndexerConfig, type StellarV2ReadonlyTransport } from '../api/_lib/stellar-v2-readonly-indexer.ts';
 
-const contractId = `C${'A'.repeat(55)}`;
-const registryContractId = `C${'B'.repeat(55)}`;
+const contractId = StrKey.encodeContract(Buffer.alloc(32, 1));
+const registryContractId = StrKey.encodeContract(Buffer.alloc(32, 2));
 const rpcUrl = 'https://soroban-testnet.stellar.org';
 const wasm = Buffer.from('synthetic receipt ledger v2 wasm fixture');
 const wasmSha256 = createHash('sha256').update(wasm).digest('hex');
-const config: StellarV2ReadonlyIndexerConfig = {
+const configCore = {
   mode: 'testnet-readonly', network: 'testnet', networkPassphrase: 'Test SDF Network ; September 2015',
   rpcUrl, allowedRpcUrls: [rpcUrl], receiptContractId: contractId, allowedContractIds: [contractId],
   registryContractId, allowedRegistryContractIds: [registryContractId],
   receiptWasmSha256: wasmSha256, allowedWasmSha256: [wasmSha256], startLedger: 10, deploymentLedger: 10,
   timeoutMs: 100, retryAttempts: 3, finalityDepth: 2, submissionEnabled: false, mutationsAllowed: false,
-};
+} as const;
+const deploymentManifestSha256 = computeStellarV2DeploymentBindingSha256(configCore);
+const config: StellarV2ReadonlyIndexerConfig = { ...configCore, deploymentManifestSha256, allowedDeploymentManifestSha256: [deploymentManifestSha256] };
 validateStellarV2ReadonlyIndexerConfig(config);
 for (const candidate of [
   { ...config, rpcUrl: 'https://evil.invalid' }, { ...config, receiptContractId: `C${'B'.repeat(55)}` },
   { ...config, receiptWasmSha256: 'f'.repeat(64) }, { ...config, networkPassphrase: 'Public Global Stellar Network ; September 2015' },
   { ...config, registryContractId: `C${'D'.repeat(55)}` }, { ...config, deploymentLedger: 9 },
+  { ...config, deploymentManifestSha256: 'f'.repeat(64) },
   { ...config, submissionEnabled: true as false }, { ...config, mutationsAllowed: true as false },
 ]) assert.throws(() => validateStellarV2ReadonlyIndexerConfig(candidate));
 
@@ -51,10 +54,13 @@ const server = {
   },
 };
 const transport = createStellarV2RpcReadonlyTransport({
-  rpcUrl, contractId, startLedger: 10, server: server as never,
-  readInitialization: async () => ({ initialized: true, registryContractId }),
+  rpcUrl, contractId, registryContractId, startLedger: 10, deploymentManifestSha256,
+  sourcePublicKey: Keypair.fromRawEd25519Seed(Buffer.alloc(32, 8)).publicKey(), networkPassphrase: config.networkPassphrase,
+  server: server as never, testInitializationReader: async () => ({ initialized: true, registryContractId }),
 });
 assert.equal(networkCalls, 0, 'transport construction must be lazy');
+assert.equal(Object.isFrozen(transport), true); assert.equal(Object.isFrozen(transport.binding), true);
+assert.throws(() => { (transport as any).binding = { ...transport.binding, rpcUrl: 'https://mutated.invalid' }; }, TypeError);
 const stateDirectory = await mkdtemp(join(tmpdir(), 'trustleaf-v2-indexer-'));
 try {
   const store = createLocalFileDurableReceiptIndexerStore({ stateDirectory, lockDelayMs: 1 });
@@ -77,9 +83,9 @@ try {
   assert.equal(restarted.getCursor()?.sequence, 11, 'durable cursor must recover after restart');
 } finally { await rm(stateDirectory, { recursive: true, force: true }); }
 
-const binding = { rpcUrl, contractId, startLedger: 10 };
+const binding = { rpcUrl, contractId, registryContractId, startLedger: 10, deploymentManifestSha256 };
 const fixture: StellarV2ReadonlyTransport = { kind: 'fixture', binding, async attest() { return { networkPassphrase: config.networkPassphrase, contractId, wasmSha256, initialized: true, registryContractId }; }, async fetchNext() { return { status: 'caught_up' }; } };
-assert.throws(() => createStellarV2ReadonlyIndexer({ config, transport: fixture, store: createMemoryDurableReceiptIndexerStore(), metrics: { increment() {} } }), (error: any) => error.code === 'REAL_SOURCE_REQUIRED');
+assert.throws(() => createStellarV2ReadonlyIndexer({ config, transport: { ...fixture, kind: 'stellar-rpc' }, store: createMemoryDurableReceiptIndexerStore(), metrics: { increment() {} } }), (error: any) => error.code === 'UNTRUSTED_TESTNET_TRANSPORT');
 let attempts = 0;
 const retryTransport: StellarV2ReadonlyTransport = { kind: 'fixture', binding, async attest() { return { networkPassphrase: config.networkPassphrase, contractId, wasmSha256, initialized: true, registryContractId }; }, async fetchNext() { attempts += 1; throw Object.assign(new Error('patient@example.test secret'), { code: 'RPC_UNAVAILABLE' }); } };
 const retry = createStellarV2ReadonlyIndexer({ config: { ...config, mode: 'fixture' }, transport: retryTransport, store: createMemoryDurableReceiptIndexerStore(), metrics: { increment() {} }, wait: async () => undefined });
@@ -96,7 +102,9 @@ await assert.rejects(() => rejected.pollOnce(), (error: any) => error.code === '
 for (const badBinding of [
   { ...binding, rpcUrl: 'https://other-rpc.invalid' },
   { ...binding, contractId: `C${'D'.repeat(55)}` },
+  { ...binding, registryContractId: `C${'D'.repeat(55)}` },
   { ...binding, startLedger: 11 },
+  { ...binding, deploymentManifestSha256: 'f'.repeat(64) },
 ]) assert.throws(
   () => createStellarV2ReadonlyIndexer({ config: { ...config, mode: 'fixture' }, transport: { ...fixture, binding: badBinding }, store: createMemoryDurableReceiptIndexerStore(), metrics: { increment() {} } }),
   (error: any) => error.code === 'TRANSPORT_BINDING_REJECTED',
@@ -119,4 +127,19 @@ const noCursor = createStellarV2ReadonlyIndexer({ config: { ...config, mode: 'fi
 await noCursor.start();
 const noCursorReport = await noCursor.pollOnce();
 assert.equal(noCursorReport.pollStatus, 'caught-up'); assert.equal(noCursorReport.durable, false); assert.equal(noCursorReport.cursorPresent, false); assert.equal(noCursorReport.ready, false);
+
+const readSource = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 9)).publicKey();
+let simulated = 0;
+const initializationReader = createStellarV2SimulationInitializationReader({ sourcePublicKey: readSource, networkPassphrase: config.networkPassphrase });
+const initialized = await initializationReader({
+  async getAccount(key: string) { assert.equal(key, readSource); return new Account(readSource, '1'); },
+  async simulateTransaction(transaction: any) {
+    simulated += 1; assert.equal(transaction.operations[0].type, 'invokeHostFunction');
+    return { transactionData: {}, result: { retval: new Address(registryContractId).toScVal() } };
+  },
+} as any, contractId);
+assert.deepEqual(initialized, { initialized: true, registryContractId }); assert.equal(simulated, 1);
+const implementation = await readFile(new URL('../api/_lib/stellar-v2-readonly-indexer.ts', import.meta.url), 'utf8');
+assert.match(implementation, /simulateTransaction/);
+assert.doesNotMatch(implementation, /sendTransaction|submitTransaction|\.sign\(/);
 console.log('stellar-v2-readonly-indexer: allowlists, attestation, durable cursor, V2 decode, tip reorg, retry and redaction passed');

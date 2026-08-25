@@ -24,6 +24,15 @@ const REPORT_CODES = new Set([
   'INDEXER_STORAGE_UNAVAILABLE', 'LEDGER_GAP', 'LEDGER_PARENT_UNAVAILABLE', 'LEDGER_TIMESTAMP_REJECTED',
   'PARENT_HASH_MISMATCH', 'REORG_REWIND', 'RPC_TIMEOUT', 'RPC_UNAVAILABLE', 'SOURCE_TIMEOUT', 'SOURCE_UNKNOWN',
 ]);
+const OFFICIAL_TESTNET_BINDINGS = new WeakMap<object, StellarV2TransportBinding>();
+
+export interface StellarV2TransportBinding {
+  rpcUrl: string;
+  contractId: string;
+  registryContractId: string;
+  startLedger: number;
+  deploymentManifestSha256: string;
+}
 
 export interface StellarV2ReadonlyIndexerConfig {
   mode: 'fixture' | 'testnet-readonly';
@@ -39,6 +48,8 @@ export interface StellarV2ReadonlyIndexerConfig {
   allowedWasmSha256: readonly string[];
   startLedger: number;
   deploymentLedger: number;
+  deploymentManifestSha256: string;
+  allowedDeploymentManifestSha256: readonly string[];
   timeoutMs?: number;
   retryAttempts?: number;
   finalityDepth?: number;
@@ -55,7 +66,7 @@ export interface StellarV2Attestation {
 }
 
 export interface StellarV2ReadonlyTransport extends ReceiptEventSourceTransport {
-  readonly binding: { rpcUrl: string; contractId: string; startLedger: number };
+  readonly binding: StellarV2TransportBinding;
   attest(timeoutMs: number): Promise<StellarV2Attestation>;
 }
 
@@ -86,31 +97,67 @@ export function validateStellarV2ReadonlyIndexerConfig(config: StellarV2Readonly
   if (!SHA256.test(hash) || !config.allowedWasmSha256.map(value => value.toLowerCase()).includes(hash)) fail('WASM_ALLOWLIST_REJECTED');
   if (!Number.isSafeInteger(config.startLedger) || config.startLedger < 1) fail('START_LEDGER_REJECTED');
   if (!Number.isSafeInteger(config.deploymentLedger) || config.deploymentLedger !== config.startLedger) fail('DEPLOYMENT_LEDGER_REJECTED');
+  const manifestDigest = computeStellarV2DeploymentBindingSha256(config);
+  if (!SHA256.test(config.deploymentManifestSha256)
+    || manifestDigest !== config.deploymentManifestSha256.toLowerCase()
+    || !config.allowedDeploymentManifestSha256.map(value => value.toLowerCase()).includes(manifestDigest)) fail('DEPLOYMENT_MANIFEST_REJECTED');
   if (config.submissionEnabled !== false || config.mutationsAllowed !== false) fail('READONLY_FLAGS_REQUIRED');
   if (config.timeoutMs !== undefined && (!Number.isSafeInteger(config.timeoutMs) || config.timeoutMs < 50 || config.timeoutMs > 15_000)) fail('TIMEOUT_POLICY_REJECTED');
   if (config.retryAttempts !== undefined && (!Number.isSafeInteger(config.retryAttempts) || config.retryAttempts < 1 || config.retryAttempts > 5)) fail('RETRY_POLICY_REJECTED');
   if (config.finalityDepth !== undefined && (!Number.isSafeInteger(config.finalityDepth) || config.finalityDepth < 1 || config.finalityDepth > 32)) fail('FINALITY_POLICY_REJECTED');
 }
 
+export function computeStellarV2DeploymentBindingSha256(input: Pick<StellarV2ReadonlyIndexerConfig,
+  'network' | 'networkPassphrase' | 'rpcUrl' | 'receiptContractId' | 'registryContractId' | 'receiptWasmSha256' | 'deploymentLedger'>) {
+  return createHash('sha256').update(JSON.stringify({
+    schema: 'trustleaf.stellar-v2-deployment-binding.v1',
+    network: input.network,
+    networkPassphrase: input.networkPassphrase,
+    rpcUrl: input.rpcUrl,
+    receiptContractId: input.receiptContractId,
+    registryContractId: input.registryContractId,
+    receiptWasmSha256: input.receiptWasmSha256.toLowerCase(),
+    deploymentLedger: input.deploymentLedger,
+  })).digest('hex');
+}
+
 /** Creates a lazy, read-only RPC transport. No network request happens here. */
 export function createStellarV2RpcReadonlyTransport(input: {
   rpcUrl: string;
   contractId: string;
+  registryContractId: string;
   startLedger: number;
+  deploymentManifestSha256: string;
+  sourcePublicKey: string;
+  networkPassphrase: string;
   maxEventPages?: number;
   server?: RpcServer;
-  readInitialization: (server: RpcServer, contractId: string) => Promise<{ initialized: boolean; registryContractId?: string }>;
+  testInitializationReader?: (server: RpcServer, contractId: string) => Promise<{ initialized: boolean; registryContractId?: string }>;
 }): StellarV2ReadonlyTransport {
+  if (!/^G[A-Z2-7]{55}$/.test(input.sourcePublicKey)) fail('READ_SOURCE_REJECTED');
+  if (!CONTRACT.test(input.registryContractId) || !SHA256.test(input.deploymentManifestSha256)) fail('TRANSPORT_BINDING_REJECTED');
+  if (input.testInitializationReader && !input.server) fail('TEST_INITIALIZATION_READER_REJECTED');
   const server = input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false });
   const maxEventPages = Math.max(1, Math.min(input.maxEventPages ?? 4, 10));
-  return {
+  const binding = Object.freeze({
+    rpcUrl: input.rpcUrl,
+    contractId: input.contractId,
+    registryContractId: input.registryContractId,
+    startLedger: input.startLedger,
+    deploymentManifestSha256: input.deploymentManifestSha256.toLowerCase(),
+  });
+  const readInitialization = input.testInitializationReader ?? createStellarV2SimulationInitializationReader({
+    sourcePublicKey: input.sourcePublicKey,
+    networkPassphrase: input.networkPassphrase,
+  });
+  const transport: StellarV2ReadonlyTransport = {
     kind: 'stellar-rpc',
-    binding: { rpcUrl: input.rpcUrl, contractId: input.contractId, startLedger: input.startLedger },
+    binding,
     async attest() {
       const [network, wasm, initialization] = await Promise.all([
         server.getNetwork(),
         server.getContractWasmByContractId(input.contractId),
-        input.readInitialization(server, input.contractId),
+        readInitialization(server, input.contractId),
       ]);
       return {
         networkPassphrase: network.passphrase,
@@ -151,6 +198,8 @@ export function createStellarV2RpcReadonlyTransport(input: {
       };
     },
   };
+  OFFICIAL_TESTNET_BINDINGS.set(transport, binding);
+  return Object.freeze(transport);
 }
 
 /**
@@ -183,11 +232,15 @@ export function createStellarV2ReadonlyIndexer(input: {
   wait?: (delayMs: number) => Promise<void>;
 }) {
   validateStellarV2ReadonlyIndexerConfig(input.config);
-  if (input.config.mode === 'testnet-readonly' && input.transport.kind !== 'stellar-rpc') fail('REAL_SOURCE_REQUIRED');
+  const officialBinding = OFFICIAL_TESTNET_BINDINGS.get(input.transport);
+  if (input.config.mode === 'testnet-readonly' && (input.transport.kind !== 'stellar-rpc' || !officialBinding)) fail('UNTRUSTED_TESTNET_TRANSPORT');
   if (input.config.mode === 'fixture' && input.transport.kind !== 'fixture') fail('FIXTURE_SOURCE_REQUIRED');
-  if (input.transport.binding.rpcUrl !== input.config.rpcUrl
-    || input.transport.binding.contractId !== input.config.receiptContractId
-    || input.transport.binding.startLedger !== input.config.startLedger) fail('TRANSPORT_BINDING_REJECTED');
+  const effectiveBinding = officialBinding ?? input.transport.binding;
+  if (effectiveBinding.rpcUrl !== input.config.rpcUrl
+    || effectiveBinding.contractId !== input.config.receiptContractId
+    || effectiveBinding.registryContractId !== input.config.registryContractId
+    || effectiveBinding.startLedger !== input.config.startLedger
+    || effectiveBinding.deploymentManifestSha256 !== input.config.deploymentManifestSha256.toLowerCase()) fail('TRANSPORT_BINDING_REJECTED');
   const timeoutMs = input.config.timeoutMs ?? 5_000;
   const retryAttempts = input.config.retryAttempts ?? 3;
   const wait = input.wait ?? (delay => new Promise(resolve => setTimeout(resolve, delay)));

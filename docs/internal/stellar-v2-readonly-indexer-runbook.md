@@ -7,9 +7,10 @@ This service is a server-side, read-only evidence reader. It cannot submit, simu
 ## Verified controls
 
 - Exact allowlists cover Stellar Testnet, its network passphrase, HTTPS RPC URL, ReceiptLedgerV2 contract ID, expected TrustRegistry contract ID and deployed ReceiptLedgerV2 WASM SHA-256. The configured start ledger must equal the reviewed deployment ledger. Both mutation flags must be literal `false`.
-- The service compares the transport's effective RPC URL, contract ID and start ledger with configuration before recovery or RPC access. Endpoint, contract or start-ledger substitution is rejected.
+- Testnet mode accepts only a transport created by the module's official factory. A private `WeakMap` brand records its effective binding and the visible binding/transport are frozen. The service compares the private binding's RPC URL, ReceiptLedgerV2 ID, TrustRegistry ID, start ledger and approved deployment-manifest digest before recovery or RPC access. A custom lookalike, mutated binding, endpoint, contract or ledger substitution is rejected.
+- `deploymentManifestSha256` is the canonical SHA-256 binding of network/passphrase, RPC URL, ReceiptLedgerV2 ID, TrustRegistry ID, V2 WASM hash and deployment ledger. It must match its explicit allowlist, so changing any member invalidates the deployment packet.
 - The RPC transport is lazy and dependency-injected. Constructing it makes no network request; the fixture path is the default test path.
-- Startup attests the RPC network passphrase, hashes the bytecode returned for the exact contract and performs an unsigned/read-only `get_registry` simulation. ReceiptLedgerV2 must be initialized and return the exact allowlisted TrustRegistry ID before any event poll. A mismatch or uninitialized contract remains fail-closed.
+- Startup attests the RPC network passphrase, hashes the bytecode returned for the exact contract and calls `simulateTransaction` for `get_registry`. That simulation is unsigned and read-only: it never signs, submits or invokes a mutation. ReceiptLedgerV2 must be initialized and return the exact allowlisted TrustRegistry ID before any event poll. A mismatch or uninitialized contract remains fail-closed.
 - Event decoding accepts only successful `ReceiptChanged` events from the exact contract, schema version `2`, known receipt states, 32-byte opaque receipt/operation IDs and monotonic positive versions. `GrantChanged` and unrelated events are ignored.
 - Ledgers are read in order with hash/parent linkage. Same-ledger replay is idempotent; a changed tip is replaced; parent mismatch triggers a conservative durable rewind and bounded refetch. Gaps, bad parents, schema drift and page-limit exhaustion stop advancement.
 - Event pagination, RPC timeout, retry count, finality depth and local journal retention are bounded. Exhausted reads become `unknown`; no optimistic state is emitted.
@@ -25,13 +26,13 @@ npm run test:readonly-indexer-role-e2e
 npm run lint
 ```
 
-The focal suite injects a synthetic RPC server and proves passphrase/WASM/registry initialization attestation, exact runtime binding, manifest-bound deployment ledger, V2 decoding, durable restart, tip reorg, retry exhaustion, strict redaction and closed allowlists. Negative cases cover substituted RPC/contract/start ledger, wrong TrustRegistry, uninitialized V2, and memory/caught-up without a cursor. It does not contact Stellar.
+The focal suite injects a synthetic RPC server and proves the real `get_registry` simulation helper, passphrase/WASM/registry initialization attestation, private transport branding, frozen runtime binding, canonical deployment-manifest binding, V2 decoding, durable restart, tip reorg, retry exhaustion, strict redaction and closed allowlists. Negative cases cover custom/mutated transports, substituted RPC/contract/start ledger/manifest digest, wrong TrustRegistry, uninitialized V2, and memory/caught-up without a cursor. It does not contact Stellar.
 
 ## Server-only live-read configuration gate
 
 Do not enable a live poll until an operator supplies and a reviewer independently compares this complete packet:
 
-1. Exact ReceiptLedgerV2 and TrustRegistry Testnet contract IDs plus the ReceiptLedgerV2 deployment ledger. The reader start ledger must be that exact ledger.
+1. Exact ReceiptLedgerV2 and TrustRegistry Testnet contract IDs plus the ReceiptLedgerV2 deployment ledger and approved canonical deployment-manifest SHA-256. The reader start ledger must be that exact ledger.
 2. SHA-256 of the approved V2 WASM, matching the deployment manifest and RPC bytecode attestation.
 3. Exact HTTPS RPC endpoint and Testnet passphrase allowlist.
 4. Durable database adapter and retention/backup/restore owner. The local file adapter is not the production choice.
