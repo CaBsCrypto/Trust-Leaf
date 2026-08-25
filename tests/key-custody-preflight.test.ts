@@ -50,6 +50,7 @@ function config(): KeyCustodyPreflightConfig {
 
 const safe = await runKeyCustodyPreflight({ config: config(), probe: createSyntheticCustodyProbe(findings()) });
 assert.equal(safe.ready, true);
+assert.equal(safe.deployReady, false);
 assert.equal(safe.counts.readyRoles, KEY_CUSTODY_ROLES.length);
 assert.deepEqual(safe.roles.map(item => item.role), KEY_CUSTODY_ROLES);
 assert.doesNotMatch(JSON.stringify(safe), /https?:\/\/|\b[GCMA][A-Z2-7]{55}\b|\b[a-f0-9]{64}\b/i);
@@ -70,7 +71,7 @@ assert.equal(blockedAllowlist.checks.rpcAllowlisted, false);
 assert.equal(blockedAllowlist.checks.contractAllowlisted, false);
 
 const sharedDuty = findings();
-sharedDuty.operator.dutyBoundary = sharedDuty.deployer.dutyBoundary;
+sharedDuty['submission-operator'].dutyBoundary = sharedDuty.deployer.dutyBoundary;
 const noSeparation = await runKeyCustodyPreflight({ config: config(), probe: createSyntheticCustodyProbe(sharedDuty) });
 assert.equal(noSeparation.ready, false);
 assert.equal(noSeparation.checks.separationOfDuties, false);
@@ -83,17 +84,22 @@ assert.equal(blockedLifecycle.roles.find(item => item.role === 'doctor-service')
 
 const throwingProbe = createSyntheticCustodyProbe(findings());
 throwingProbe.inspectRole = async role => {
-  if (role === 'operator') throw new Error(`do-not-return-${'S'}${'B'.repeat(55)}`);
+  if (role === 'submission-operator') throw new Error(`do-not-return-${'S'}${'B'.repeat(55)}`);
   return safeFinding(role);
 };
 const unavailable = await runKeyCustodyPreflight({ config: config(), probe: throwingProbe });
 assert.equal(unavailable.ready, false);
-assert.equal(unavailable.roles.find(item => item.role === 'operator')?.ready, false);
+assert.equal(unavailable.roles.find(item => item.role === 'submission-operator')?.ready, false);
 assert.doesNotMatch(JSON.stringify(unavailable), /do-not-return|S[B]{55}/);
 
 for (const malicious of [
   { ...safe, providerConfig: 'synthetic-sensitive-value' },
   { ...safe, checks: { ...safe.checks, unexpectedProbeValue: true } },
+  { ...safe, deployReady: true },
+  { ...safe, ready: false },
+  { ...safe, counts: { ...safe.counts, readyRoles: 0 } },
+  { ...safe, roles: safe.roles.slice(1) },
+  { ...safe, roles: safe.roles.map(item => ({ ...item, role: 'deployer' })) },
   { ...safe, blockers: [`G${'A'.repeat(55)}`] },
   { ...safe, blockers: [`S${'B'.repeat(55)}`] },
   { ...safe, blockers: ['https://rpc.invalid'] },

@@ -57,7 +57,7 @@ public keys. El artefacto compartible de este repositorio sólo admite:
   "environment": "stellar-testnet",
   "roles": [
     {
-      "role": "registry-admin",
+      "role": "admin-quorum",
       "present": false,
       "providerConfigured": false,
       "activeVersionPresent": false,
@@ -114,7 +114,7 @@ Responsables: seguridad + plataforma + owners humanos.
 - [ ] ADR de proveedor KMS/HSM aprobada;
 - [ ] compatibilidad exacta de firma Stellar/Soroban demostrada con fixture;
 - [ ] admin M-de-N, custodios y break-glass definidos;
-- [ ] deployer, operator, doctor-service y dispensary-service separados;
+- [ ] `deployer`, `submission-operator`, `doctor-service` y `dispensary-service` separados;
 - [ ] workload identities no humanas y expiración de sesión definidas;
 - [ ] IAM deny-by-default revisada mediante permisos efectivos;
 - [ ] allowlists de red, RPC, WASM, contratos, métodos y versiones congeladas;
@@ -175,7 +175,7 @@ red, ventana, roles y alcance. El orden futuro es:
 4. quorum admin inicializa ledger con el registry exacto;
 5. observador verifica read-only IDs, vínculos y estados;
 6. una segunda autorización habilita un smoke mutante sintético acotado;
-7. operator transporta envelopes ya autorizados; nunca firma actores;
+7. `submission-operator` transporta envelopes ya autorizados; nunca firma actores;
 8. indexador reconcilia eventos y cualquier `unknown` antes de continuar;
 9. cerrar inmediatamente flags y ventana al terminar.
 
@@ -232,7 +232,7 @@ allowlists, simulación o reconciliación.
 
 - restaurar y verificar ambos flags en `false`;
 - invalidar sesiones/credenciales temporales de workload;
-- retirar deployer/operator de ventanas y allowlists temporales;
+- retirar `deployer`/`submission-operator` de ventanas y allowlists temporales;
 - conservar claves deshabilitadas según la política de evidencia; no destruir sin
   aprobación y análisis de recuperación;
 - confirmar que servicios sólo responden read-only o fail-closed;

@@ -12,11 +12,11 @@ import {
 const contractId = `C${'A'.repeat(55)}`;
 const wasmSha256 = 'b'.repeat(64);
 const payloadDigest = 'a'.repeat(64);
-const roles: readonly SigningRole[] = ['admin-quorum', 'deployer', 'receipt-operator', 'doctor-service', 'dispensary-service'];
+const roles: readonly SigningRole[] = ['admin-quorum', 'deployer', 'submission-operator', 'doctor-service', 'dispensary-service'];
 const aliasesByRole = {
   'admin-quorum': ['admin-a', 'admin-b'],
   deployer: ['deployer-fixture'],
-  'receipt-operator': ['operator-fixture'],
+  'submission-operator': ['operator-fixture'],
   'doctor-service': ['doctor-fixture'],
   'dispensary-service': ['dispensary-fixture'],
 } as const;
@@ -32,7 +32,7 @@ const policy: KeyCustodyPolicy = {
   allowedWasmSha256: [wasmSha256],
   allowedAliasesByRole: aliasesByRole,
   pinnedVersions,
-  quorumByRole: { 'admin-quorum': 2, deployer: 1, 'receipt-operator': 1, 'doctor-service': 1, 'dispensary-service': 1 },
+  quorumByRole: { 'admin-quorum': 2, deployer: 1, 'submission-operator': 1, 'doctor-service': 1, 'dispensary-service': 1 },
   allowedProviderKinds: ['local-mock-no-secret'],
 };
 
@@ -78,8 +78,37 @@ const quorum = await gate.authorizeQuorum([
   request('admin-quorum', 'admin-b'),
 ]);
 assert.equal(quorum.length, 2);
+assert.equal(quorum[0].intentId, quorum[1].intentId);
 assert.equal(await code(() => gate.authorizeQuorum([request('admin-quorum', 'admin-a')])), 'QUORUM_NOT_MET');
 assert.equal(await code(() => gate.authorizeQuorum([request('admin-quorum', 'admin-a'), request('admin-quorum', 'admin-a')])), 'QUORUM_ALIAS_DUPLICATE');
+for (const changed of [
+  { operationId: 'fixture-operation-admin-quorum-changed' },
+  { payloadDigest: 'c'.repeat(64) },
+  { keyVersion: 2 },
+]) {
+  assert.equal(await code(() => gate.authorizeQuorum([
+    request('admin-quorum', 'admin-a'),
+    { ...request('admin-quorum', 'admin-b'), ...changed },
+  ])), 'QUORUM_INTENT_MISMATCH');
+}
+
+const alternateTargetPolicy: KeyCustodyPolicy = {
+  ...policy,
+  allowedRpcOrigins: [...policy.allowedRpcOrigins, 'https://alternate-rpc.invalid'],
+  allowedContractIds: [...policy.allowedContractIds, `C${'B'.repeat(55)}`],
+  allowedWasmSha256: [...policy.allowedWasmSha256, 'c'.repeat(64)],
+};
+const alternateTargetGate = createKeyCustodyGate({ provider: createNoSecretLocalCustodyProvider(descriptors), policy: alternateTargetPolicy });
+for (const changed of [
+  { rpcUrl: 'https://alternate-rpc.invalid' },
+  { contractId: `C${'B'.repeat(55)}` },
+  { wasmSha256: 'c'.repeat(64) },
+]) {
+  assert.equal(await code(() => alternateTargetGate.authorizeQuorum([
+    request('admin-quorum', 'admin-a'),
+    { ...request('admin-quorum', 'admin-b'), ...changed },
+  ])), 'QUORUM_INTENT_MISMATCH');
+}
 
 assert.equal(await code(() => gate.authorize(request('doctor-service', 'dispensary-fixture'))), 'KEY_ROLE_MISMATCH');
 assert.equal(await code(() => gate.authorize({ ...request('doctor-service', 'doctor-fixture'), keyVersion: 2 })), 'KEY_VERSION_STALE');

@@ -1,20 +1,15 @@
 import { createHash } from 'node:crypto';
+import { KEY_CUSTODY_ROLES, type KeyCustodyRole } from './key-custody-roles.ts';
 
 const DIGEST = /^[a-f0-9]{64}$/i;
 const ALIAS = /^[a-z][a-z0-9-]{2,63}$/;
 const OPERATION_ID = /^[A-Za-z0-9_-]{16,128}$/;
 const CONTRACT_ID = /^C[A-Z2-7]{55}$/;
-const SIGNING_ROLES = ['admin-quorum', 'deployer', 'receipt-operator', 'doctor-service', 'dispensary-service'] as const;
 const KEY_STATES = ['active', 'rotating', 'revoked', 'recovery-locked'] as const;
 
 export const STELLAR_TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 
-export type SigningRole =
-  | 'admin-quorum'
-  | 'deployer'
-  | 'receipt-operator'
-  | 'doctor-service'
-  | 'dispensary-service';
+export type SigningRole = KeyCustodyRole;
 
 export type KeyLifecycleState = 'active' | 'rotating' | 'revoked' | 'recovery-locked';
 export type KeyCustodyProviderKind = 'local-mock-no-secret' | 'kms' | 'hsm';
@@ -83,6 +78,7 @@ export interface LocalOnlyAuthorization {
   keyVersion: number;
   authorizationProof: string;
   providerKind: 'local-mock-no-secret';
+  intentId: string;
   submissionEnabled: false;
   usableOnStellar: false;
 }
@@ -94,7 +90,7 @@ export interface LocalOnlyAuthorization {
 export function createNoSecretLocalCustodyProvider(descriptors: readonly KeyDescriptor[]): KeyCustodyProviderPort {
   const inventory = new Map<string, KeyDescriptor>();
   for (const descriptor of descriptors) {
-    if (!ALIAS.test(descriptor.alias) || !SIGNING_ROLES.includes(descriptor.role) || !KEY_STATES.includes(descriptor.state)
+    if (!ALIAS.test(descriptor.alias) || !KEY_CUSTODY_ROLES.includes(descriptor.role) || !KEY_STATES.includes(descriptor.state)
       || !Number.isSafeInteger(descriptor.version) || descriptor.version < 1) {
       throw custodyError('MOCK_DESCRIPTOR_INVALID');
     }
@@ -139,7 +135,7 @@ export function createKeyCustodyGate(input: {
     input.audit?.write({
       component: 'key-custody-gate',
       outcome,
-      role: SIGNING_ROLES.includes(request.role) ? request.role : 'invalid-role',
+      role: KEY_CUSTODY_ROLES.includes(request.role) ? request.role : 'invalid-role',
       alias: ALIAS.test(request.alias) ? request.alias : 'invalid-alias',
       reason: safeCode(reason),
       keyVersion: Number.isSafeInteger(request.keyVersion) ? request.keyVersion : 0,
@@ -173,6 +169,7 @@ export function createKeyCustodyGate(input: {
         keyVersion: request.keyVersion,
         authorizationProof: result.authorizationProof,
         providerKind: 'local-mock-no-secret',
+        intentId: canonicalIntentId(request),
         submissionEnabled: false,
         usableOnStellar: false,
       };
@@ -189,6 +186,9 @@ export function createKeyCustodyGate(input: {
       const role = requests[0].role;
       if (requests.some(request => request.role !== role)) throw custodyError('QUORUM_ROLE_MISMATCH');
       if (new Set(requests.map(request => request.alias)).size !== requests.length) throw custodyError('QUORUM_ALIAS_DUPLICATE');
+      requests.forEach(request => validateRequest(request, input.policy));
+      const intentIds = requests.map(canonicalIntentId);
+      if (new Set(intentIds).size !== 1) throw custodyError('QUORUM_INTENT_MISMATCH');
       const required = input.policy.quorumByRole[role];
       if (!Number.isSafeInteger(required) || required < 1 || requests.length < required) throw custodyError('QUORUM_NOT_MET');
       return Promise.all(requests.map(authorizeOne));
@@ -205,9 +205,9 @@ function validatePolicy(policy: KeyCustodyPolicy) {
   }
   if (policy.allowedPassphrases.length !== 1 || policy.allowedPassphrases[0] !== STELLAR_TESTNET_PASSPHRASE) throw custodyError('CUSTODY_POLICY_INVALID');
   const configuredRoles = Object.keys(policy.allowedAliasesByRole);
-  if (configuredRoles.length !== SIGNING_ROLES.length || SIGNING_ROLES.some(role => !configuredRoles.includes(role))) throw custodyError('CUSTODY_POLICY_INVALID');
+  if (configuredRoles.length !== KEY_CUSTODY_ROLES.length || KEY_CUSTODY_ROLES.some(role => !configuredRoles.includes(role))) throw custodyError('CUSTODY_POLICY_INVALID');
   const allAliases: string[] = [];
-  for (const role of SIGNING_ROLES) {
+  for (const role of KEY_CUSTODY_ROLES) {
     const aliases = policy.allowedAliasesByRole[role];
     if (!aliases.length || aliases.some(alias => !ALIAS.test(alias) || policy.pinnedVersions[alias] < 1)) throw custodyError('CUSTODY_POLICY_INVALID');
     allAliases.push(...aliases);
@@ -222,7 +222,7 @@ function validatePolicy(policy: KeyCustodyPolicy) {
 
 function validateRequest(request: CustodyAuthorizationRequest, policy: KeyCustodyPolicy) {
   if (policy.submissionEnabled !== false) throw custodyError('SUBMISSION_MUST_REMAIN_DISABLED');
-  if (!SIGNING_ROLES.includes(request.role)) throw custodyError('KEY_ROLE_MISMATCH');
+  if (!KEY_CUSTODY_ROLES.includes(request.role)) throw custodyError('KEY_ROLE_MISMATCH');
   if (request.network !== 'testnet' || !policy.allowedPassphrases.includes(request.passphrase)) throw custodyError('NETWORK_ALLOWLIST_MISMATCH');
   if (!policy.allowedRpcOrigins.includes(safeOrigin(request.rpcUrl))) throw custodyError('RPC_ALLOWLIST_MISMATCH');
   if (!CONTRACT_ID.test(request.contractId) || !policy.allowedContractIds.includes(request.contractId)) throw custodyError('CONTRACT_ALLOWLIST_MISMATCH');
@@ -232,6 +232,21 @@ function validateRequest(request: CustodyAuthorizationRequest, policy: KeyCustod
   if (!ALIAS.test(request.alias) || !policy.allowedAliasesByRole[request.role]?.includes(request.alias)) throw custodyError('KEY_ROLE_MISMATCH');
   if (!Number.isSafeInteger(request.keyVersion) || request.keyVersion < 1) throw custodyError('KEY_VERSION_INVALID');
   if (!OPERATION_ID.test(request.operationId) || !DIGEST.test(request.payloadDigest)) throw custodyError('AUTHORIZATION_REQUEST_INVALID');
+}
+
+function canonicalIntentId(request: CustodyAuthorizationRequest) {
+  return createHash('sha256').update([
+    'trustleaf-custody-intent-v1',
+    request.role,
+    request.keyVersion.toString(),
+    request.operationId,
+    request.payloadDigest.toLowerCase(),
+    request.network,
+    request.passphrase,
+    safeOrigin(request.rpcUrl),
+    request.contractId,
+    request.wasmSha256.toLowerCase(),
+  ].join('\u0000')).digest('hex');
 }
 
 function safeOrigin(value: string) {

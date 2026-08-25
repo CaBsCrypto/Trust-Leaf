@@ -1,12 +1,6 @@
-export const KEY_CUSTODY_ROLES = [
-  'admin-approval',
-  'deployer',
-  'operator',
-  'doctor-service',
-  'dispensary-service',
-] as const;
+import { KEY_CUSTODY_ROLES, type KeyCustodyRole } from './key-custody-roles.ts';
 
-export type KeyCustodyRole = (typeof KEY_CUSTODY_ROLES)[number];
+export { KEY_CUSTODY_ROLES, type KeyCustodyRole } from './key-custody-roles.ts';
 
 export interface CustodyRoleFinding {
   providerPresent: boolean;
@@ -51,6 +45,7 @@ export interface KeyCustodyPreflightConfig {
 
 export interface KeyCustodyPreflightReport {
   ready: boolean;
+  deployReady: false;
   mode: KeyCustodyInventoryProbe['mode'];
   checks: Readonly<Record<string, boolean>>;
   counts: {
@@ -147,6 +142,7 @@ export async function runKeyCustodyPreflight(input: {
     .map(([name]) => `KEY_CUSTODY_${toCode(name)}`);
   const report: KeyCustodyPreflightReport = {
     ready: blockers.length === 0,
+    deployReady: false,
     mode: input.probe.mode,
     checks,
     counts: {
@@ -164,8 +160,8 @@ export async function runKeyCustodyPreflight(input: {
 
 /** Enforces the public output schema and rejects values that could expose custody material. */
 export function assertSafeCustodyReport(report: KeyCustodyPreflightReport): void {
-  assertExactKeys(report as unknown as Record<string, unknown>, ['ready', 'mode', 'checks', 'counts', 'roles', 'blockers']);
-  if (typeof report.ready !== 'boolean' || !['synthetic-fixture', 'sanitized-provider'].includes(report.mode)) throw unsafeReport();
+  assertExactKeys(report as unknown as Record<string, unknown>, ['ready', 'deployReady', 'mode', 'checks', 'counts', 'roles', 'blockers']);
+  if (typeof report.ready !== 'boolean' || report.deployReady !== false || !['synthetic-fixture', 'sanitized-provider'].includes(report.mode)) throw unsafeReport();
   assertBooleanRecord(report.checks);
   assertExactKeys(report.checks as unknown as Record<string, unknown>, expectedCheckKeys());
   assertExactKeys(report.counts as unknown as Record<string, unknown>, ['requiredRoles', 'inspectedRoles', 'readyRoles', 'blockers']);
@@ -177,6 +173,13 @@ export function assertSafeCustodyReport(report: KeyCustodyPreflightReport): void
     } catch { return true; }
   })) throw unsafeReport();
   if (!Array.isArray(report.blockers) || report.blockers.some(value => typeof value !== 'string' || !BLOCKER.test(value))) throw unsafeReport();
+  const roleNames = report.roles.map(item => item.role);
+  if (roleNames.length !== KEY_CUSTODY_ROLES.length || new Set(roleNames).size !== KEY_CUSTODY_ROLES.length
+    || KEY_CUSTODY_ROLES.some(role => !roleNames.includes(role))) throw unsafeReport();
+  const computedReadyRoles = report.roles.filter(item => item.ready).length;
+  const computedReady = Object.values(report.checks).every(Boolean) && computedReadyRoles === KEY_CUSTODY_ROLES.length && report.blockers.length === 0;
+  if (report.counts.requiredRoles !== KEY_CUSTODY_ROLES.length || report.counts.inspectedRoles !== KEY_CUSTODY_ROLES.length
+    || report.counts.readyRoles !== computedReadyRoles || report.counts.blockers !== report.blockers.length || report.ready !== computedReady) throw unsafeReport();
 
   const serialized = JSON.stringify(report);
   if (STELLAR_ADDRESS.test(serialized) || STELLAR_SEED.test(serialized) || URL_VALUE.test(serialized) || HEX_DIGEST.test(serialized)) throw unsafeReport();

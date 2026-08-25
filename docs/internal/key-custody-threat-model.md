@@ -70,7 +70,7 @@ estado y códigos estables.
 
 | Etiqueta de rol | Uso exacto | Autoridad permitida | Prohibiciones | Estado |
 |---|---|---|---|---|
-| `registry-admin` | Inicializar y gobernar credenciales de médico/dispensario; materializar expiración de seguridad | métodos admin allowlisted de `TrustRegistry`; init aprobada de ambos contratos | emitir elegibilidad de paciente, emitir/dispensar receipts, operar transporte diario | pendiente de diseño multisig |
+| `admin-quorum` | Inicializar y gobernar credenciales de médico/dispensario; materializar expiración de seguridad | métodos admin allowlisted de `TrustRegistry`; init aprobada de ambos contratos | emitir elegibilidad de paciente, emitir/dispensar receipts, operar transporte diario | pendiente de diseño multisig |
 | `contract-deployer` | Publicar los WASM aprobados y pagar fees Testnet | deploy de hashes allowlisted durante una ventana aprobada | ser admin persistente, operar receipts, rotar claves de otros roles | no provisionado/validado |
 | `submission-operator` | Simular, transportar y reconciliar envelopes ya autorizados | RPC allowlisted, envío idempotente durante ventana aprobada | introducir autoridad de actor, firmar payload distinto, cambiar red/contrato/hash | adapter real no habilitado |
 | `doctor-service` | Autorizar credencial de elegibilidad sintética y acciones del issuer | `issue_eligibility`, `issue`, `activate`, `set_grant`, `revoke` conforme a scopes | admin de registry, parcial/dispense, datos clínicos en payload | proveedor real pendiente |
@@ -88,8 +88,8 @@ se presenta como identidad, wallet personal, NFT transferible ni receta válida.
 | Congelar WASM/IDL/hash | ingeniería contrato | seguridad + release | build reproducible | QA independiente |
 | Proveer/rotar signer admin | plataforma custodia | dos aprobadores designados | operador KMS/HSM distinto | seguridad + auditoría |
 | Deploy de contrato | release | owner técnico + seguridad | `contract-deployer` | observador read-only |
-| Inicializar admin/registry | release | quorum admin | `registry-admin` | QA de contract ID/estado |
-| Emitir credencial de actor | operaciones TrustLeaf | revisor operacional | `registry-admin` | auditor independiente |
+| Inicializar admin/registry | release | quorum admin | `admin-quorum` | QA de contract ID/estado |
+| Emitir credencial de actor | operaciones TrustLeaf | revisor operacional | `admin-quorum` | auditor independiente |
 | Acción de médico | servicio médico autenticado | policy engine server-side | `doctor-service`; operador sólo transporta | reconciliador/indexador |
 | Acción de dispensario | servicio dispensario autenticado | policy engine server-side | `dispensary-service`; operador sólo transporta | reconciliador/indexador |
 | Pausa por incidente | seguridad | quorum break-glass | plataforma | auditoría + release |
@@ -210,7 +210,7 @@ ADR aprobada que resuelva:
 
 1. proveedor y región/entorno no productivo;
 2. patrón exacto de admin M-de-N y nombres de los roles aprobadores;
-3. quién es owner de deployer, operator, doctor-service y dispensary-service;
+3. quién es owner de `deployer`, `submission-operator`, `doctor-service` y `dispensary-service`;
 4. si las cuentas se generan dentro del proveedor o se usa otro mecanismo no
    exportable, siempre en una ceremonia posterior autorizada;
 5. IAM, workload identity, cuotas y método de attestation;
