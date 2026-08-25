@@ -2,6 +2,10 @@
 
 Estado: **preparación local con fixtures sintéticos; NO-GO para deploy o submission**.
 
+Diseño operativo asociado: [threat model de claves y custodia](key-custody-threat-model.md)
+y [runbook de ceremonia Testnet](testnet-key-ceremony-runbook.md). Estos artefactos
+no autorizan provisión, deploy ni submission.
+
 ## Controles implementados y verificados
 
 - Autorización exclusivamente server-side mediante un puerto `TokenVerifier`; headers de rol no otorgan autoridad.

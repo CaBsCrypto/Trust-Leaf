@@ -6,6 +6,10 @@ Seguimiento operativo actualizado: [preparación y validación end-to-end](end-t
 
 Paquete local posterior: [arquitectura TrustRegistry v1](trust-registry-credential-architecture-v1.md), [IDL congelada](trust-registry-idl-v1.md), [guion de revisión local](trust-registry-local-review-runbook.md) y [gate de redeploy Testnet](trust-registry-testnet-migration-gate.md).
 
+Preparación de custodia pendiente de decisión humana: [threat model de claves](key-custody-threat-model.md)
+y [runbook de ceremonia](testnet-key-ceremony-runbook.md). No se consultaron ni
+aprovisionaron claves, alias o cuentas para producir esos documentos.
+
 ## Objetivo del sprint de análisis
 
 Congelar un diseño implementable y verificable para una demostración sintética end-to-end: verificación operacional de actores, decisión clínica simulada bajo responsabilidad médica, receipt trazable en Stellar Testnet, persistencia privada separada y controles fail-closed. Ninguna capacidad se presenta como legalmente o clínicamente válida.
@@ -21,6 +25,7 @@ Congelar un diseño implementable y verificable para una demostración sintétic
 | QA e integración documental | Scrum Master/QA | `analysis/stellar-testnet-pilot-integration-20260822` | en curso | diff documental limpio, contradicciones resueltas y decisiones listadas |
 | Verificador público QR demo | Scrum Master + revisores seguridad/QA | `integration/qr-public-verifier-demo-20260822` | implementación local en QA | preflight, Browser QA y revisión humana del DTO público |
 | Credenciales revocables + ReceiptLedgerV2 | Arquitectura/contrato local | `feature/trust-registry-local-20260824` | implementación local, sin deploy | contrato/E2E/IDL/WASM/privacidad/Browser verdes; autorización Testnet separada |
+| Custodia y ceremonia de claves | Seguridad/plataforma | `analysis/key-ceremony-threat-model-20260825` | diseño documentado; sin inspección o provisión | ADR KMS/HSM, quorum, PoC de firma, IAM, drills y autorización separados |
 
 No se integrará nada a `main`. La integración actual es únicamente entre documentos internos de análisis mediante commits seleccionados y conserva las ramas fuente.
 
