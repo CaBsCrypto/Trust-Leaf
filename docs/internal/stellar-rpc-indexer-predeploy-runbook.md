@@ -1,5 +1,7 @@
 # Stellar Testnet RPC + indexer pre-deploy runbook
 
+ReceiptLedgerV2 has a separate, read-only durable reader and operational gate in [stellar-v2-readonly-indexer-runbook.md](./stellar-v2-readonly-indexer-runbook.md). V1 submission preparation described below remains closed and must not be confused with the V2 read-only path.
+
 Status: **NO-GO until the bounded deployment/submission ceremony is explicitly approved**. The SDK/RPC path is implemented but no network action is performed by this branch.
 
 ## Fixed safety boundary
