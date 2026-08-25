@@ -36,6 +36,7 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 const MockupPortal = lazy(() => import('./components/MockupPortal'));
 const PrescriptionVerifier = lazy(() => import('./components/PrescriptionVerifier'));
 const ReceiptPilotFlow = lazy(() => import('./components/ReceiptPilotFlow'));
+const TrustAuthorizationReview = lazy(() => import('./components/TrustAuthorizationReview'));
 
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
@@ -998,6 +999,10 @@ function AppContent() {
 
   if (path === '/demo/receipt-pilot') {
     return <Suspense fallback={<div className="min-h-screen bg-[#edf2ee]" />}><ReceiptPilotFlow onBack={() => navigate('/')} onVerify={(token) => navigate(`/verify/${encodeURIComponent(token)}`)} /></Suspense>;
+  }
+
+  if (path === '/demo/trust-registry') {
+    return <Suspense fallback={<div className="min-h-screen bg-[#edf2ee]" />}><TrustAuthorizationReview onBack={() => navigate('/demo/receipt-pilot')} /></Suspense>;
   }
 
   // Public demo verification: one high-entropy opaque token, never a person or clinical ID.
