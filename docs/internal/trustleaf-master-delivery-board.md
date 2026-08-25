@@ -41,6 +41,7 @@ Congelar un diseño implementable y verificable para una demostración sintétic
 | Custodia y ceremonia de claves | Seguridad/plataforma + QA + Scrum | `integration/key-custody-prep-20260825` | threat model/runbook, gate mock sin secretos y preflight sanitizado integrados localmente; inventario read-only limitado verde | ADR KMS/HSM, quorum, PoC de firma, IAM, drills y autorización separados |
 | Candidata predeploy TrustRegistry + ReceiptLedgerV2 | Scrum Master + QA independiente | `integration/testnet-v2-predeploy-gate-20260825` | manifiesto/WASM/IDL, smoke local, contratos y 12 escenarios UI integrados; submissions 0 | adapter RPC read-only real, provider/IAM/quorum, pasada humana reduced-motion y aprobación deployment separada |
 | Decisión KMS/HSM + IdP | Arquitectura seguridad/identidad | `analysis/v2-kms-idp-options-20260825` | matriz oficial, ADR y checklist sin secretos; validación estática local | decisión cloud/owners, PoC Ed25519/JWKS-revocación y autorización de provisión separada |
+| Lector durable + UI read-only V2 | RPC/indexer + UX/QA + Scrum | `integration/testnet-v2-readonly-durable-20260825` | transporte RPC lazy, attestation, journal local durable, port UI sanitizado y E2E integrados; fixture por defecto | contract ID/deployment ledger V2, DB durable/segunda fuente, adapter server-side autenticado y QA final |
 
 No se integrará nada a `main`. La integración actual es únicamente entre documentos internos de análisis mediante commits seleccionados y conserva las ramas fuente.
 

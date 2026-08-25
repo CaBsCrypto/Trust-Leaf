@@ -184,6 +184,13 @@ secreta requerida se congelan en el
 [checklist de decisión](testnet-v2-provider-decision-checklist.md). Ese ADR no
 autoriza provisión: exige PoC Ed25519/JWKS, owners y pruebas de rotación/outage.
 
+El lector y la proyección visual siguientes se describen en el
+[runbook RPC/indexer V2](stellar-v2-readonly-indexer-runbook.md) y el
+[runbook UI read-only](v2-readonly-ui-e2e-runbook.md). Ambos operan con fixtures
+por defecto. El transporte real permanece sin configurar porque ReceiptLedgerV2
+no tiene contract ID/deployment ledger Testnet; esa ausencia debe seguir visible
+como `pending/unknown`, nunca sustituirse con la evidencia schema v1 existente.
+
 Para reducir rondas sin eliminar separación de duties se necesitan **dos
 aprobaciones**:
 
