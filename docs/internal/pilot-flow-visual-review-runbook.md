@@ -45,3 +45,19 @@ En cada fase, seleccionar el rol requerido por el botón. Verificar que un rol d
 ## GO / NO-GO
 
 GO sólo para revisión humana local si pruebas, build, responsive, teclado y privacidad están verdes. Continúa NO-GO para personas reales, práctica clínica, persistencia, Testnet V2 o producción. El enlace a evidencia Stellar se habilita únicamente cuando un lector sanitizado y un manifest allowlisted demuestren evidencia finalizada; esta candidata no lo hace.
+
+## Evidencia ejecutada — 2026-08-26
+
+- `npm run preflight`: PASS, incluidas 13 pruebas TrustRegistry, 11 pruebas
+  ReceiptLedgerV2, TypeScript y build.
+- Browser desktop: recorrido completo y negativos de default-deny,
+  consentimiento/elegibilidad faltantes, QR manipulado, reintento, parcial,
+  total, replay y reset por rol: PASS; consola sin errores.
+- Browser móvil `390 × 844`: sin overflow horizontal; tarjetas de médico y
+  dispensario, proyección pública mínima y controles utilizables: PASS.
+- Foco visible en controles interactivos: PASS. La regla
+  `prefers-reduced-motion: reduce` fue detectada; la pasada manual con la
+  preferencia real del sistema sigue como verificación humana pendiente.
+- La ruta inicial cargada para revisión es
+  `http://127.0.0.1:5201/demo/pilot-flow`. Es un preview local efímero, no un
+  deploy.
