@@ -4,6 +4,8 @@ Estado: análisis interno en rama aislada. No autoriza datos reales, producción
 
 Seguimiento operativo actualizado: [preparación y validación end-to-end](end-to-end-readiness.md).
 
+Gobernanza de piloto real al corte 2026-08-26: [tablero por dependencias y Definition of Done](real-pilot-readiness-board-20260826.md). La evaluación de plataforma está en [ADR Supabase](adr-005-supabase-test-platform-20260826.md); no representa provisioning ni autorización para datos reales.
+
 Paquete local posterior: [arquitectura TrustRegistry v1](trust-registry-credential-architecture-v1.md), [IDL congelada](trust-registry-idl-v1.md), [guion de revisión local](trust-registry-local-review-runbook.md) y [gate de redeploy Testnet](trust-registry-testnet-migration-gate.md).
 
 Candidata predeploy local: [manifiesto reproducible V2](testnet-v2-predeploy-manifest.md),
