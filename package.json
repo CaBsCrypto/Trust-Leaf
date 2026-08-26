@@ -36,7 +36,7 @@
     "test:trust-registry-ui": "node --experimental-strip-types tests/trust-registry-ui.test.ts",
     "test:v2-readonly-ui-e2e": "node --experimental-strip-types tests/v2-readonly-ui-e2e.test.ts",
     "test:pilot-flow-demo": "node --experimental-strip-types tests/pilot-flow-demo-e2e.test.ts",
-    "qa:pilot-flow-demo": "npm run test:pilot-flow-demo && npm run lint && npm run build",
+    "qa:pilot-flow-demo": "npm run test:pilot-flow-demo && npm run test:public-verification && npm run test:receipt-shared-e2e && npm run lint && npm run build",
     "qa:v2-readonly-ui": "npm run test:trust-registry-ui && npm run test:v2-readonly-ui-e2e && npm run lint && npm run build",
     "qa:visual-role-gate": "npm run qa:v2-readonly-ui",
     "test:key-custody-preflight": "node --experimental-strip-types tests/key-custody-preflight.test.ts",

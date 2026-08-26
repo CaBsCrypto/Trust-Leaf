@@ -6,7 +6,7 @@ import {
   type PilotAction,
   type PilotFlowState,
 } from '../src/features/pilot-flow/pilotFlowMachine.ts';
-import { PILOT_PHASES, PILOT_QR_HANDLE } from '../src/features/pilot-flow/pilotFlowFixtures.ts';
+import { PILOT_PHASES, PILOT_QR_HANDLE, pilotPublicProjection } from '../src/features/pilot-flow/pilotFlowFixtures.ts';
 
 const journey: PilotAction[] = [
   { type: 'doctor-request-access', actor: 'doctor' },
@@ -69,8 +69,13 @@ assert.deepEqual(advancePilotFlow(complete, { type: 'reset', actor: 'admin' }), 
 
 assert.equal(PILOT_PHASES.length, 11, 'step 9 deliberately has partial and total snapshots');
 assert.deepEqual([...new Set(PILOT_PHASES.map(item => item.journeyStep))], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+assert.deepEqual(pilotPublicProjection('directory-enabled', PILOT_QR_HANDLE), { demo: true, evidenceExists: true, proofMatches: true, status: 'active' });
+assert.deepEqual(pilotPublicProjection('dispense-partial', PILOT_QR_HANDLE), { demo: true, evidenceExists: true, proofMatches: true, status: 'active' });
+assert.deepEqual(pilotPublicProjection('dispense-complete', PILOT_QR_HANDLE), { demo: true, evidenceExists: true, proofMatches: true, status: 'unavailable' });
+assert.deepEqual(pilotPublicProjection('directory-enabled', `${PILOT_QR_HANDLE}.altered`), { demo: true, evidenceExists: false, proofMatches: false, status: 'unavailable' });
 
 const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+const entry = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/features/pilot-flow/PilotFlowPage.tsx', import.meta.url), 'utf8');
 const model = readFileSync(new URL('../src/features/pilot-flow/pilotFlowMachine.ts', import.meta.url), 'utf8');
 const fixtures = readFileSync(new URL('../src/features/pilot-flow/pilotFlowFixtures.ts', import.meta.url), 'utf8');
@@ -78,13 +83,27 @@ const globalStyles = readFileSync(new URL('../src/index.css', import.meta.url), 
 const runbook = readFileSync(new URL('../docs/internal/pilot-flow-visual-review-runbook.md', import.meta.url), 'utf8');
 const blueprint = readFileSync(new URL('../docs/internal/pilot-flow-visual-blueprint.md', import.meta.url), 'utf8');
 
-assert.match(app, /window\.location\.pathname === '\/demo\/pilot-flow'/);
-assert.ok(app.indexOf("window.location.pathname === '/demo/pilot-flow'") < app.indexOf('<LanguageProvider>'), 'isolated demo route must short-circuit legacy app effects');
+assert.doesNotMatch(app, /PilotFlowPage|\/demo\/pilot-flow/);
+assert.doesNotMatch(entry, /import\s+App\s+from/);
+assert.match(entry, /lazy\(\(\) => import\('\.\/App\.tsx'\)\)/);
+assert.match(entry, /lazy\(\(\) => import\('\.\/features\/pilot-flow\/PilotFlowPage'\)\)/);
+assert.ok(entry.indexOf("window.location.pathname === PILOT_FLOW_ROUTE") < entry.indexOf('<LegacyApp />'), 'entrypoint must select the isolated route before rendering legacy app');
 assert.match(ui, /aria-label="Rol activo"/);
 assert.match(ui, /role="progressbar"/);
 assert.match(ui, /role="alert"/);
 assert.match(ui, /Reiniciar fixtures/);
-assert.match(ui, /Sin identidad, detalle, cantidad o historial/);
+assert.match(ui, /disabled=\{activeRole !== 'admin'\}/);
+assert.match(ui, /dispatch\(\{ type: 'reset', actor: activeRole \}\)/);
+assert.match(ui, /Consentimiento demo confirmado/);
+assert.match(ui, /Decisión sintética marcada/);
+assert.match(ui, /Manipulado · prueba negativa/);
+assert.match(ui, /Reintentar verificación/);
+assert.match(ui, /Intentar reutilizar QR · negativo/);
+assert.match(ui, /data-public-verification-status/);
+assert.match(ui, /actor_doc_A7k…R2/);
+assert.match(ui, /actor_store_Q4m…T8/);
+assert.match(ui, /aria-live="polite"/);
+assert.match(ui, /proyección pública existente devuelve únicamente existencia, coincidencia y estado/);
 assert.match(ui, /ReceiptLedger V1/);
 assert.match(ui, /Evidencia histórica separada/);
 assert.match(ui, /ReceiptLedgerV2/);
@@ -97,6 +116,8 @@ assert.match(globalStyles, /prefers-reduced-motion:\s*reduce/);
 for (const productSurface of [ui, fixtures]) {
   assert.doesNotMatch(productSurface, /\bRUT\b|e-?mail|wallet|diagn[oó]stico|dosis|gram(?:o|os|aje)|legalmente v[aá]lid|autenticidad inmutable/i);
 }
+
+assert.doesNotMatch(fixtures, /from '\.\/pilotFlowMachine/);
 
 for (const source of [ui, model, fixtures, runbook, blueprint]) {
   assert.doesNotMatch(source, /fetch\(|XMLHttpRequest|WebSocket|sendTransaction|signTransaction|secret.?key|seed phrase/i);

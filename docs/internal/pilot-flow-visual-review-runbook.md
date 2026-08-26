@@ -19,10 +19,10 @@ En cada fase, seleccionar el rol requerido por el botón. Verificar que un rol d
 3. Admin: aprobar para la demo.
 4. Médico: publicar disponibilidad abstracta.
 5. Paciente: reservar el bloque.
-6. Médico: registrar consentimiento y decisión sintéticos.
+6. Médico: pulsar primero sin marcar los controles y comprobar el rechazo; luego marcar consentimiento y decisión sintéticos y avanzar.
 7. Médico: preparar receipt simulado; comprobar la advertencia de que no existe envío ni prueba Testnet nueva.
 8. Paciente: abrir el directorio condicionado.
-9. Dispensario: verificar el handle opaco, registrar parcial y después total. Confirmar que no aparece cantidad.
+9. Dispensario: seleccionar primero el fixture QR manipulado y comprobar el rechazo sin avance. Cambiar a coincidencia válida, reintentar, registrar parcial y después total. Pulsar el intento de reutilización y comprobar el rechazo antes de cambiar a Admin.
 10. Admin: abrir la auditoría y comprobar diez eventos ordenados.
 11. Pulsar “Reiniciar fixtures” y confirmar que vuelve al panel vacío.
 
@@ -38,11 +38,10 @@ En cada fase, seleccionar el rol requerido por el botón. Verificar que un rol d
 
 - En el inicio, seleccionar Paciente e intentar avanzar: el botón debe permanecer deshabilitado y pedir rol Médico.
 - Tras solicitar acceso, mantener Médico: el botón debe pedir rol Admin.
-- El QR completo no se presenta; sólo un handle truncado y explícitamente sintético.
+- El QR completo no se presenta; sólo un handle truncado y explícitamente sintético. La constancia pública queda limitada a existencia, coincidencia y estado.
 - No debe aparecer identidad, contacto, ficha, diagnóstico, indicación, dosis, cantidad, dirección, wallet, secreto o claim de validez.
 - No debe haber requests de red causadas por esta ruta. El QA Browser debe revisar consola y red.
 
 ## GO / NO-GO
 
 GO sólo para revisión humana local si pruebas, build, responsive, teclado y privacidad están verdes. Continúa NO-GO para personas reales, práctica clínica, persistencia, Testnet V2 o producción. El enlace a evidencia Stellar se habilita únicamente cuando un lector sanitizado y un manifest allowlisted demuestren evidencia finalizada; esta candidata no lo hace.
-

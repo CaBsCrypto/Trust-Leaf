@@ -49,12 +49,14 @@ Las transiciones rechazan rol incorrecto, orden inválido, consentimiento/decisi
 - Se reutilizan tokens visuales, tipografía y reglas globales de foco/reduced-motion ya presentes.
 - Se conserva la separación conceptual de `TrustRegistry` para credenciales y `ReceiptLedgerV2` para receipts/eventos.
 - No se reutilizan sesiones legacy, Firebase, wallets, localStorage, handlers mutantes ni copies clínicos.
-- La ruta corta el árbol legacy antes de montar sus efectos. Por ello, abrir la demo no inicia autenticación, lectura de perfil, billetera ni conexión RPC.
+- El entrypoint decide la ruta antes de importar dinámicamente la aplicación legacy. Por ello, abrir la demo no evalúa sus módulos de autenticación, perfil, custodia o conexión RPC.
+- La landing 3D revisada no se incorpora a esta candidata: es una superficie de descubrimiento separada y no aporta evidencia a las transiciones operativas. Su integración futura debe conservar el componente visual puro, sin acoplar rutas o estado legacy.
+- La constancia pública usa la proyección pura ya existente (`publicProjection` + coincidencia de token sintético). La UI sólo renderiza existencia, coincidencia y estado; no llama al verificador con red.
 
 ## Evidencia reproducible
 
 - Máquina de estados y negativos: `npm run test:pilot-flow-demo`.
+- Contrato público minimizado y estado compartido: incluidos por `npm run qa:pilot-flow-demo`.
 - Tipos y accesibilidad estática: `npm run lint`.
 - Empaquetado: `npm run build`.
 - Revisión visual humana: `docs/internal/pilot-flow-visual-review-runbook.md`.
-
