@@ -98,6 +98,7 @@ assert.match(ui, /Consentimiento demo confirmado/);
 assert.match(ui, /Decisión sintética marcada/);
 assert.match(ui, /Manipulado · prueba negativa/);
 assert.match(ui, /Reintentar verificación/);
+assert.match(ui, /qrAttempted && state\.lastError/);
 assert.match(ui, /Intentar reutilizar QR · negativo/);
 assert.match(ui, /data-public-verification-status/);
 assert.match(ui, /actor_doc_A7k…R2/);
