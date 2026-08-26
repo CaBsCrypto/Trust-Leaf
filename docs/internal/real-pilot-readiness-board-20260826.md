@@ -13,7 +13,8 @@ Cada frente exige: alcance cerrado; fixtures sin PHI/PII; pruebas positivas y ne
 |---|---|---|---|
 | UX E2E sintética por roles | HECHO para revisión local | Scrum / `integration/testnet-v2-readonly-durable-20260825` | preflight + QA Browser previos; no persistencia real |
 | Lector V1 Testnet read-only | HECHO acotado | Scrum / candidata técnica | smoke bounded; V2 no desplegado |
-| ADR/puertos Supabase | EN CURSO | Scrum / `analysis/supabase-clinical-platform-readiness-20260826` | `qa:supabase-readiness` y revisión independiente pendientes |
+| ADR/puertos/baseline Supabase | HECHO LOCAL | Scrum / `analysis/supabase-clinical-platform-readiness-20260826` | commit `176fe83`; `qa:supabase-readiness` verde; no aplicado |
+| Inspección MCP + lint/dry-run remoto | BLOQUEADO EN ESTA SESIÓN | Scrum / misma rama | MCP habilitado, pero herramientas no expuestas a la tarea preexistente; aplicación prohibida |
 | RLS/Auth/KMS/restore reales | BLOQUEADO | Seguridad + plataforma | requiere proyecto, región/plan, IdP y KMS aprobados |
 | TrustRegistry + ReceiptLedgerV2 | BLOQUEADO para deploy | Contratos | ceremonia/secretos/autorización Testnet separada |
 
@@ -40,7 +41,8 @@ Cada frente exige: alcance cerrado; fixtures sin PHI/PII; pruebas positivas y ne
 
 | Decisión | Estado | Responsable | Efecto |
 |---|---|---|---|
-| Supabase región/plan/DPA | BLOQUEADO | Usuario + legal/seguridad | habilita sólo provisioning sintético |
+| Proyecto Supabase dev vacío + OAuth MCP | HECHO EXTERNO MÍNIMO | Usuario | no implica schema, migración ni autorización de datos |
+| Supabase región/plan/DPA | BLOQUEADO | Usuario + legal/seguridad | requisito previo a cualquier evaluación con datos reales |
 | KMS/HSM e IdP/JWKS | BLOQUEADO | Usuario + seguridad | habilita adapter durable y auth real |
 | Revisores abogado/médico/QF | BLOQUEADO | Usuario | requisito para siquiera evaluar piloto real |
 | Deploy Testnet V2 | BLOQUEADO | Usuario + ceremonia técnica | requiere autorización específica posterior |
