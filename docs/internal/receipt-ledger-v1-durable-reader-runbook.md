@@ -60,6 +60,14 @@ La suite focalizada prueba allowlists, flags cerrados, lazy RPC, attestation,
 cursor/restart, reemplazo de tip/reorg, retry `unknown`, store y redacción. Usa
 fixtures inyectados; no consulta Testnet.
 
+Evidencia live sanitizada del **2026-08-26**: una ejecución única con directorio
+temporal nuevo, máximo 64 polls y ambos flags mutantes en `false` devolvió
+`ready=true`, `durable=true`, `attested=true`, `cursorPresent=true`,
+`submissionAttempts=0`, `mutationsAllowed=false` y
+`evidenceWindowComplete=true`. El resultado confirma que el lector V1 recupera
+la ventana sintética revisada; no acredita V2, validez clínica o aptitud para
+datos reales.
+
 ## Ejecución live-read explícita
 
 El comando `npm run live:testnet-v1:readonly` **no forma parte de `preflight`**.
@@ -67,6 +75,11 @@ Un operador debe revisar primero la configuración server-side de `.env.example`
 elegir un directorio absoluto privado y temporal para el journal, y habilitar
 sólo `TRUSTLEAF_V1_READONLY_LIVE_ENABLED=true` durante esa lectura. Ambos flags
 de mutación deben continuar literalmente en `false`.
+
+El directorio debe ser **nuevo y vacío para cada ejecución**. El snapshot local
+actual aún no vincula su procedencia a red/contract en metadata y el script hace
+un poll antes de evaluar un cursor recuperado. Por ello, reanudar o reutilizar un
+journal es NO-GO hasta agregar ese binding y el pre-check del cursor.
 
 Salida esperada: un único JSON sanitizado. `ready=true` y
 `evidenceWindowComplete=true` exigen attestation y recuperación de toda la
