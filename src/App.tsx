@@ -37,6 +37,7 @@ const MockupPortal = lazy(() => import('./components/MockupPortal'));
 const PrescriptionVerifier = lazy(() => import('./components/PrescriptionVerifier'));
 const ReceiptPilotFlow = lazy(() => import('./components/ReceiptPilotFlow'));
 const TrustAuthorizationReview = lazy(() => import('./components/TrustAuthorizationReview'));
+const PilotFlowPage = lazy(() => import('./features/pilot-flow/PilotFlowPage'));
 
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
@@ -99,6 +100,9 @@ const PATIENT_ROUTE_VIEWS: Record<string, PortalView> = {
 };
 
 export default function App() {
+  if (window.location.pathname === '/demo/pilot-flow') {
+    return <Suspense fallback={<div className="min-h-screen bg-[#f2f5f1]" />}><PilotFlowPage onBack={() => window.history.back()} /></Suspense>;
+  }
   return (
     <LanguageProvider>
       <AppContent />
