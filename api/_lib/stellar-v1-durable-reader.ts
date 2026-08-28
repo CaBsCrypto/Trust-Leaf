@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdkRuntime from '@stellar/stellar-sdk';
+import type * as LegacyStellarSdk from 'stellar-sdk';
+const StellarSdk = StellarSdkRuntime as unknown as typeof LegacyStellarSdk;
 import {
   createLocalFileDurableReceiptIndexerStore,
   createDurableReadonlyReceiptIndexer,

@@ -1,6 +1,8 @@
 import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdkRuntime from '@stellar/stellar-sdk';
+import type * as LegacyStellarSdk from 'stellar-sdk';
+const StellarSdk = StellarSdkRuntime as unknown as typeof LegacyStellarSdk;
 import {
   createDurableReadonlyReceiptIndexer,
   type DurableReceiptIndexerStorePort,
@@ -137,7 +139,7 @@ export function createStellarV2RpcReadonlyTransport(input: {
   if (!/^G[A-Z2-7]{55}$/.test(input.sourcePublicKey)) fail('READ_SOURCE_REJECTED');
   if (!CONTRACT.test(input.registryContractId) || !SHA256.test(input.deploymentManifestSha256)) fail('TRANSPORT_BINDING_REJECTED');
   if (input.testInitializationReader && !input.server) fail('TEST_INITIALIZATION_READER_REJECTED');
-  const server = input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false });
+  const server = (input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false })) as InstanceType<typeof StellarSdk.rpc.Server> & { getLedgers(input: unknown): Promise<any> };
   const maxEventPages = Math.max(1, Math.min(input.maxEventPages ?? 4, 10));
   const binding = Object.freeze({
     rpcUrl: input.rpcUrl,
@@ -365,7 +367,7 @@ async function readEventPages(server: RpcServer, contractId: string, sequence: n
   return fail('EVENT_PAGE_LIMIT');
 }
 
-function decodeV2ReceiptEvent(event: StellarSdk.rpc.Api.EventResponse) {
+function decodeV2ReceiptEvent(event: LegacyStellarSdk.rpc.Api.EventResponse) {
   if (!event.inSuccessfulContractCall) return null;
   if (String(StellarSdk.scValToNative(event.topic[0])) !== 'ReceiptChanged') return null;
   const value = StellarSdk.scValToNative(event.value);

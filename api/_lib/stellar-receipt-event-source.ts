@@ -1,7 +1,9 @@
 import type { SimulatedLedger } from './receipt-indexer.ts';
 import { createHash } from 'node:crypto';
 import { Buffer } from 'node:buffer';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdkRuntime from '@stellar/stellar-sdk';
+import type * as LegacyStellarSdk from 'stellar-sdk';
+const StellarSdk = StellarSdkRuntime as unknown as typeof LegacyStellarSdk;
 
 export interface LedgerCursor { sequence: number; hash: string }
 export interface ReceiptEventSourceTransport {
@@ -14,7 +16,7 @@ export function createStellarRpcReceiptEventTransport(input: {
   rpcUrl: string; contractId: string; startLedger: number;
   server?: InstanceType<typeof StellarSdk.rpc.Server>;
 }): ReceiptEventSourceTransport {
-  const server = input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false });
+  const server = (input.server ?? new StellarSdk.rpc.Server(input.rpcUrl, { allowHttp: false })) as InstanceType<typeof StellarSdk.rpc.Server> & { getLedgers(input: unknown): Promise<any> };
   return { kind: 'stellar-rpc', async fetchNext(cursor) {
     const wanted = cursor ? cursor.sequence + 1 : input.startLedger;
     const queryStart = Math.max(1, cursor ? cursor.sequence - 1 : wanted - 1);
@@ -46,7 +48,7 @@ export function createStellarRpcReceiptEventTransport(input: {
 }
 
 const EVENT_STATES = new Map<string, 'issued' | 'active' | 'partial' | 'dispensed' | 'revoked' | 'expired'>([['Issued', 'issued'], ['Active', 'active'], ['Partial', 'partial'], ['Dispensed', 'dispensed'], ['Revoked', 'revoked'], ['Expired', 'expired']]);
-function decodeEvent(event: StellarSdk.rpc.Api.EventResponse) {
+function decodeEvent(event: LegacyStellarSdk.rpc.Api.EventResponse) {
   if (!event.inSuccessfulContractCall) return null;
   const topic = StellarSdk.scValToNative(event.topic[0]);
   const state = EVENT_STATES.get(String(topic));

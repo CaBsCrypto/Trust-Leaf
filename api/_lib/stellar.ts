@@ -3,7 +3,13 @@ declare global {
 }
 
 import { createHash } from 'crypto';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdkRuntime from '@stellar/stellar-sdk';
+import type * as LegacyStellarSdk from 'stellar-sdk';
+
+// Vercel's function type-checker does not follow the SDK's Stellar Base
+// re-exports. Keep the modern runtime and use the compatible declaration
+// surface only for compile-time validation.
+const StellarSdk = StellarSdkRuntime as unknown as typeof LegacyStellarSdk;
 import { assertTestnetMutationEnabled, getPilotMutationSafety } from './pilot-safety.js';
 
 const DEFAULT_READONLY_ACCOUNT =
@@ -25,7 +31,7 @@ const DEFAULT_DEMO_DISPENSARY_ADDRESS =
 
 import * as crypto from 'crypto';
 
-export function getDeterministicKeypair(email: string): StellarSdk.Keypair {
+export function getDeterministicKeypair(email: string): LegacyStellarSdk.Keypair {
   const normalized = email.toLowerCase().trim();
 
   if (normalized === 'medico@trustleaf.test') {
@@ -490,7 +496,7 @@ export async function issuePrescriptionForPatient(input: {
     throw new Error('La cantidad total autorizada debe ser mayor o igual a 1.');
   }
 
-  let doctorKeypair: StellarSdk.Keypair;
+  let doctorKeypair: LegacyStellarSdk.Keypair;
   if (input.doctorEmail) {
     doctorKeypair = getDeterministicKeypair(input.doctorEmail);
   } else {
@@ -721,7 +727,7 @@ export async function retainPrescriptionForDispensary(input: {
     throw new Error('prescriptionId debe ser un número válido.');
   }
 
-  let dispensaryKeypair: StellarSdk.Keypair;
+  let dispensaryKeypair: LegacyStellarSdk.Keypair;
   if (input.dispensaryEmail) {
     dispensaryKeypair = getDeterministicKeypair(input.dispensaryEmail);
   } else {
@@ -796,7 +802,7 @@ export async function releasePrescriptionToPatient(input: {
   const patientAddress = String(prescription.patient);
   const doctorAddress = String(prescription.doctor);
 
-  let callerKeypair: StellarSdk.Keypair;
+  let callerKeypair: LegacyStellarSdk.Keypair;
   let callerAddress: string;
 
   if (input.dispensaryEmail) {
@@ -885,7 +891,7 @@ export async function dispensePrescriptionForPatient(input: {
     throw new Error('quantity debe ser un numero mayor o igual a 1.');
   }
 
-  let dispensaryKeypair: StellarSdk.Keypair;
+  let dispensaryKeypair: LegacyStellarSdk.Keypair;
   if (input.dispensaryEmail) {
     dispensaryKeypair = getDeterministicKeypair(input.dispensaryEmail);
   } else {
@@ -1027,7 +1033,7 @@ export async function dispensePrescriptionForPatient(input: {
 
   if (isFullyUsed) {
     try {
-      let doctorKeypair: StellarSdk.Keypair;
+      let doctorKeypair: LegacyStellarSdk.Keypair;
       if (input.doctorEmail) {
         doctorKeypair = getDeterministicKeypair(input.doctorEmail);
       } else {
@@ -1284,7 +1290,7 @@ async function getPatientDispenseRecords(
 }
 
 function decodePrescriptionIssuedEvent(
-  event: StellarSdk.rpc.Api.EventResponse,
+  event: LegacyStellarSdk.rpc.Api.EventResponse,
 ) {
   const values = event.value.vec();
   if (!values || values.length < 3) {
@@ -1302,7 +1308,7 @@ function decodePrescriptionIssuedEvent(
 }
 
 function decodeDispenseRecordedEvent(
-  event: StellarSdk.rpc.Api.EventResponse,
+  event: LegacyStellarSdk.rpc.Api.EventResponse,
 ) {
   const values = event.value.vec();
   if (!values || values.length < 4) {
@@ -1475,7 +1481,7 @@ function buildContractArgs(method: string, args: Record<string, unknown>) {
   }
 }
 
-function decodeContractResult(method: string, value: StellarSdk.xdr.ScVal) {
+function decodeContractResult(method: string, value: LegacyStellarSdk.xdr.ScVal) {
   const native = StellarSdk.scValToNative(value);
 
   if (method === 'get_last_record_for_prescription' && native === undefined) {
@@ -1502,8 +1508,8 @@ function bytes32ToScVal(value: Buffer) {
 }
 
 function sponsorTransactionIfNeeded(
-  transaction: StellarSdk.Transaction
-): StellarSdk.Transaction | StellarSdk.FeeBumpTransaction {
+  transaction: LegacyStellarSdk.Transaction
+): LegacyStellarSdk.Transaction | LegacyStellarSdk.FeeBumpTransaction {
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
     return transaction;
@@ -1533,10 +1539,10 @@ function sponsorTransactionIfNeeded(
 
 async function submitSingleContractCall(
   server: InstanceType<typeof StellarSdk.rpc.Server>,
-  signer: StellarSdk.Keypair,
-  contract: StellarSdk.Contract,
+  signer: LegacyStellarSdk.Keypair,
+  contract: LegacyStellarSdk.Contract,
   method: string,
-  args: StellarSdk.xdr.ScVal[],
+  args: LegacyStellarSdk.xdr.ScVal[],
 ) {
   const sourceAccount = await server.getAccount(signer.publicKey());
   let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
