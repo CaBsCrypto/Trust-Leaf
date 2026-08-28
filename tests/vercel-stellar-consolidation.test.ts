@@ -19,8 +19,8 @@ for (const route of ['derive-wallet', 'faucet']) {
 
   const { res, output } = response();
   await handler({ method: 'POST', query: { __trustleaf_route: route }, headers: {}, body: {} }, res);
-  assert.equal(output.statusCode, 503, `${route} must deny without server auth configuration`);
-  assert.deepEqual(output.body, { code: 'AUTH_CONFIGURATION_MISSING' });
+  assert.equal(output.statusCode, 503, `${route} must deny in the public synthetic demo`);
+  assert.deepEqual(output.body, { message: 'La operación no está disponible en la demo sintética.' });
 }
 
-console.log('vercel-stellar-consolidation: protected consolidated routes deny by default before any mutation');
+console.log('vercel-stellar-consolidation: public consolidated routes deny by default before any mutation');

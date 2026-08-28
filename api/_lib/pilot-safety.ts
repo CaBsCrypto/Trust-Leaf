@@ -15,6 +15,7 @@ export function getPilotMutationSafety(env: PilotEnvironment = process.env) {
     relayerIsLocal = false;
   }
   const reasons = [
+    (env.NODE_ENV === 'production' || env.VERCEL === '1') && 'el runtime público sólo permite lectura demo',
     env[SUBMISSION_FLAG] !== 'true' && `${SUBMISSION_FLAG} no esta habilitado`,
     env[MUTATION_FLAG] !== 'true' && `${MUTATION_FLAG} no esta habilitado`,
     env.TRUSTLEAF_PILOT_RUNTIME !== 'local-synthetic' && 'TRUSTLEAF_PILOT_RUNTIME debe ser local-synthetic',

@@ -1,21 +1,3 @@
-import { getPatientDashboard } from '../../../_lib/stellar.js';
-
-export default async function handler(req: any, res: any) {
-  try {
-    const address = String(req.query.address || '');
-    if (!address) {
-      res.status(400).json({ message: 'Falta la dirección del paciente.' });
-      return;
-    }
-
-    const data = await getPatientDashboard(address);
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({
-      message:
-        error instanceof Error
-          ? error.message
-          : 'No fue posible consultar el dashboard del paciente en testnet.',
-    });
-  }
+export default async function handler(_req: any, res: any) {
+  return res.status(503).json({ code: 'PUBLIC_DEMO_DISABLED', message: 'La consulta de dashboards legacy está deshabilitada en la demo sintética.' });
 }
