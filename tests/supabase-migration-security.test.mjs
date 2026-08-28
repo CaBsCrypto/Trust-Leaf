@@ -3,9 +3,12 @@ import { readFile, readdir } from 'node:fs/promises';
 
 const migrationDir = new URL('../supabase/migrations/', import.meta.url);
 const migrationFiles = (await readdir(migrationDir)).filter(name => name.endsWith('.sql')).sort();
-assert.deepEqual(migrationFiles, ['20260826060000_trustleaf_synthetic_security_baseline.sql']);
+assert.deepEqual(migrationFiles, [
+  '20260826060000_trustleaf_synthetic_security_baseline.sql',
+  '20260826150000_trustleaf_auth_rbac_minimum.sql',
+]);
 
-const sql = (await readFile(new URL(`../supabase/migrations/${migrationFiles[0]}`, import.meta.url), 'utf8')).toLowerCase();
+const sql = (await readFile(new URL('../supabase/migrations/20260826060000_trustleaf_synthetic_security_baseline.sql', import.meta.url), 'utf8')).toLowerCase();
 const config = (await readFile(new URL('../supabase/config.toml', import.meta.url), 'utf8')).toLowerCase();
 const tables = [
   'actor_bindings',

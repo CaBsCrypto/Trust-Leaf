@@ -32,16 +32,36 @@ export function createRemoteJwksProvider(input: {
 }
 
 export function createRs256JwksTokenVerifier(provider: JwksProvider): TokenVerifier {
+  return createAsymmetricJwksTokenVerifier(provider, ['RS256']);
+}
+
+export function createAsymmetricJwksTokenVerifier(
+  provider: JwksProvider,
+  acceptedAlgorithms: readonly ('RS256' | 'ES256')[] = ['RS256', 'ES256'],
+): TokenVerifier {
+  if (!acceptedAlgorithms.length) throw new Error('JWT_ALGORITHM_POLICY_INVALID');
   return {
-    kind: 'jwks-rs256',
+    kind: `jwks-${acceptedAlgorithms.join('-').toLowerCase()}`,
     async verify(token): Promise<VerifiedTokenClaims> {
       const segments = token.split('.');
       if (segments.length !== 3) throw new Error('JWT_MALFORMED');
       const header = decodeJson(segments[0]) as { alg?: string; kid?: string; typ?: string };
-      if (header.alg !== 'RS256' || !header.kid) throw new Error('JWT_ALGORITHM_FORBIDDEN');
+      if (!acceptedAlgorithms.includes(header.alg as 'RS256' | 'ES256') || !header.kid) throw new Error('JWT_ALGORITHM_FORBIDDEN');
       const key = await provider.get(header.kid);
-      if (!key || (key.alg && key.alg !== 'RS256')) throw new Error('JWT_KEY_NOT_FOUND');
-      const valid = verifySignature('RSA-SHA256', Buffer.from(`${segments[0]}.${segments[1]}`), createPublicKey({ key, format: 'jwk' }), decodeBase64Url(segments[2]));
+      if (!key || (key.alg && key.alg !== header.alg)) throw new Error('JWT_KEY_NOT_FOUND');
+      if ((header.alg === 'RS256' && key.kty !== 'RSA') || (header.alg === 'ES256' && (key.kty !== 'EC' || key.crv !== 'P-256'))) {
+        throw new Error('JWT_KEY_TYPE_FORBIDDEN');
+      }
+      const publicKey = createPublicKey({ key, format: 'jwk' });
+      const keyOptions = header.alg === 'ES256'
+        ? { key: publicKey, dsaEncoding: 'ieee-p1363' as const }
+        : publicKey;
+      const valid = verifySignature(
+        header.alg === 'RS256' ? 'RSA-SHA256' : 'sha256',
+        Buffer.from(`${segments[0]}.${segments[1]}`),
+        keyOptions,
+        decodeBase64Url(segments[2]),
+      );
       if (!valid) throw new Error('JWT_SIGNATURE_INVALID');
       const payload = decodeJson(segments[1]) as Record<string, unknown>;
       return {

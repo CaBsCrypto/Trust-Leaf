@@ -1,6 +1,8 @@
 # Gate de aplicación Supabase — baseline sintética
 
-**Estado:** diff local preparado; **NO APLICAR**. Fecha de corte: 2026-08-26.
+**Estado:** **APLICADO Y VERIFICADO** sólo en el proyecto Supabase de desarrollo
+sintético. Fecha de corte: 2026-08-26. No autoriza policies funcionales, usuarios,
+datos reales ni producción.
 
 ## Alcance del diff
 
@@ -22,24 +24,30 @@ No contiene PII/PHI, receta, diagnóstico, dosis, gramaje, RUT, email, wallet, d
 - `npm run qa:supabase-readiness`: puertos locales, cifrado/rotation/CAS/audit, mapping opaco, typecheck y build.
 - `git diff --check` y diff humano deben pasar antes de gate.
 
-## Evidencia aún requerida
+## Evidencia remota cerrada
 
-El MCP Supabase está registrado en Codex para el proyecto autorizado, pero esta tarea preexistente no recibió sus herramientas. Por tanto aún faltan, y no deben inferirse:
+La baseline se aplicó exactamente una vez mediante el MCP oficial. Supabase la
+registró con nombre `trustleaf_synthetic_security_baseline` y versión remota
+`20260826055213`; el archivo local aprobado conserva el prefijo
+`20260826060000`. La diferencia corresponde al versionado administrativo del
+MCP, no a un segundo diff aplicado.
 
-1. inspección remota read-only de schemas, extensiones, versión Postgres y migraciones;
-2. lint oficial contra entorno local/linked;
-3. dry-run remoto que liste exactamente los statements pendientes;
-4. revisión independiente del SQL y confirmación de rollback;
-5. aprobación humana explícita del diff/dry-run.
+- schema `trustleaf_private` y 7 tablas vacías;
+- RLS habilitado y forzado 7/7, cero policies;
+- roles técnicos `NOLOGIN/NOINHERIT/NOBYPASSRLS`;
+- cero grants no deseados a roles API/PUBLIC;
+- trigger append-only activo;
+- QA local de baseline verde.
 
-Hasta cerrar los cinco puntos, el estado es **NO-GO para aplicar**.
+Los avisos `rls_enabled_no_policy` son esperados en este baseline de denegación
+total. Los índices de FK sugeridos por el advisor quedan para una migración
+separada y no deben añadirse silenciosamente.
 
-## Secuencia autorizable posterior
+## Próximo gate, separado
 
-1. Reabrir una tarea que exponga el MCP Supabase autenticado y ejecutar sólo inspección read-only.
-2. Comparar Postgres remoto con `major_version` local y corregir sólo el config local si difiere.
-3. Ejecutar lint y dry-run oficial; guardar salida sanitizada sin secretos.
-4. Presentar diff, riesgos y rollback al usuario.
-5. Sólo con nueva aprobación, aplicar esta única migración y verificar que todas las lecturas `anon/authenticated/service_role` están denegadas.
+La migración RBAC/Auth posterior se revisa en
+`supabase-auth-rbac-application-gate-20260826.md`. Requiere diff, QA, dry-run y
+autorización humana nuevos. No se encadena automáticamente con esta baseline.
 
-La posterior creación de policies funcionales, usuarios sintéticos, KMS, datos o adapters es otro gate separado.
+Sigue **NO-GO** para personas/datos reales, API pública, Storage, Edge,
+producción o integración clínica.
