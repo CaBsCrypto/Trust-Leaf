@@ -28,4 +28,3 @@ for (const forbidden of [
 ]) assert.doesNotMatch(combined, forbidden, `sensitive-looking material in decision docs: ${forbidden}`);
 
 console.log('testnet-v2-provider-decision-docs: provider matrix, gates, sources and no-secret constraints passed');
-

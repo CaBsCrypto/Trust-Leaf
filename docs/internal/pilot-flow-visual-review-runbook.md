@@ -1,6 +1,6 @@
 # Runbook de revisión visual — flujo piloto sintético
 
-Fecha: 2026-08-26  
+Fecha: 2026-08-26
 Ruta: `/demo/pilot-flow`
 
 ## Precondiciones

@@ -224,4 +224,3 @@ Consulta: 2026-08-25. Las capacidades deben reconfirmarse al ejecutar el PoC.
   <https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html>
 - Clerk, verificación backend/JWKS:
   <https://clerk.com/docs/reference/backend/verify-token>
-

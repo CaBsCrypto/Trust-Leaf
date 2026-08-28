@@ -1,6 +1,6 @@
 # Blueprint visual E2E sintético
 
-Fecha de revisión: 2026-08-26  
+Fecha de revisión: 2026-08-26
 Estado: candidata local, sin infraestructura externa
 
 ## Objetivo y límites

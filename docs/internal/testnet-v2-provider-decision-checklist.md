@@ -53,4 +53,3 @@ Resultado: permite solicitar el paquete de deploy; no lo autoriza.
 - [ ] Aprobación explícita separada registrada.
 
 Si una casilla es falsa, desconocida o no tiene responsable: **NO-GO**.
-
