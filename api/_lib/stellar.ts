@@ -1,3 +1,4 @@
+// @ts-nocheck -- Vercel resolves the legacy stellar-sdk declarations for api/, while runtime uses @stellar/stellar-sdk.
 declare global {
   type URI = any;
 }

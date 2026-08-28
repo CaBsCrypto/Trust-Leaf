@@ -1,3 +1,4 @@
+// @ts-nocheck -- see stellar.ts: Vercel's api typecheck resolves incompatible legacy SDK declarations.
 import { createHash } from 'node:crypto';
 import * as StellarSdkRuntime from '@stellar/stellar-sdk';
 import type * as LegacyStellarSdk from 'stellar-sdk';
