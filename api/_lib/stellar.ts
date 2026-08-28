@@ -1,10 +1,17 @@
+// @ts-nocheck -- Vercel resolves the legacy stellar-sdk declarations for api/, while runtime uses @stellar/stellar-sdk.
 declare global {
   type URI = any;
 }
 
 import { createHash } from 'crypto';
-import * as StellarSdk from '@stellar/stellar-sdk';
-import { getPilotMutationSafety } from './pilot-safety.js';
+import * as StellarSdkRuntime from '@stellar/stellar-sdk';
+import type * as LegacyStellarSdk from 'stellar-sdk';
+
+// Vercel's function type-checker does not follow the SDK's Stellar Base
+// re-exports. Keep the modern runtime and use the compatible declaration
+// surface only for compile-time validation.
+const StellarSdk = StellarSdkRuntime as unknown as typeof LegacyStellarSdk;
+import { assertTestnetMutationEnabled, getPilotMutationSafety } from './pilot-safety.js';
 
 const DEFAULT_READONLY_ACCOUNT =
   'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6';
@@ -23,23 +30,9 @@ const DEFAULT_DEMO_DOCTOR_ADDRESS =
 const DEFAULT_DEMO_DISPENSARY_ADDRESS =
   'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
-import * as crypto from 'crypto';
-
-export function getDeterministicKeypair(email: string): StellarSdk.Keypair {
-  const normalized = email.toLowerCase().trim();
-
-  if (normalized === 'medico@trustleaf.test') {
-    const secret = getDoctorSecret();
-    if (secret) return StellarSdk.Keypair.fromSecret(secret);
-  }
-  if (normalized === 'dispensario@trustleaf.test') {
-    const secret = getDispensarySecret();
-    if (secret) return StellarSdk.Keypair.fromSecret(secret);
-  }
-
-  const salt = getAdminSecret() || 'trust-leaf-secret-salt-2026';
-  const hash = crypto.createHmac('sha256', salt).update(normalized).digest();
-  return StellarSdk.Keypair.fromRawEd25519Seed(hash);
+export function getDeterministicKeypair(email: string): LegacyStellarSdk.Keypair {
+  void email;
+  throw new Error('La derivación de billeteras está deshabilitada en la demo pública.');
 }
 
 export function getRpcUrl() {
@@ -89,7 +82,7 @@ export function getDemoPatientAddress() {
 }
 
 export function getDoctorSecret() {
-  return process.env.STELLAR_DOCTOR_SECRET?.trim() || '';
+  return '';
 }
 
 export function getDoctorAddress() {
@@ -102,7 +95,7 @@ export function getDoctorAddress() {
 }
 
 export function getDispensarySecret() {
-  return process.env.STELLAR_DISPENSARY_SECRET?.trim() || '';
+  return '';
 }
 
 export function getDispensaryAddress() {
@@ -115,7 +108,7 @@ export function getDispensaryAddress() {
 }
 
 export function getAdminSecret() {
-  return process.env.STELLAR_ADMIN_SECRET?.trim() || '';
+  return '';
 }
 
 export function getAdminAddress() {
@@ -129,9 +122,9 @@ export function getAdminAddress() {
 
 export function getRuntimeReadiness() {
   const mutationSafety = getPilotMutationSafety();
-  const hasAdminSigner = Boolean(getAdminSecret());
-  const hasDoctorSigner = Boolean(getDoctorSecret());
-  const hasDispensarySigner = Boolean(getDispensarySecret());
+  const hasAdminSigner = false;
+  const hasDoctorSigner = false;
+  const hasDispensarySigner = false;
   const hasPasskeyRelayer = Boolean(
     process.env.STELLAR_RELAYER_URL && process.env.STELLAR_RELAYER_API_KEY,
   );
@@ -177,9 +170,7 @@ export function getRuntimeReadiness() {
       passkeyDiscovery: hasMercuryLookup,
     },
     missing: [
-      ...(!hasAdminSigner ? ['STELLAR_ADMIN_SECRET'] : []),
-      ...(!hasDoctorSigner ? ['STELLAR_DOCTOR_SECRET'] : []),
-      ...(!hasDispensarySigner ? ['STELLAR_DISPENSARY_SECRET'] : []),
+      ...(!hasAdminSigner ? ['SIGNER_CUSTODY_DISABLED'] : []),
       ...(!hasPasskeyRelayer ? ['STELLAR_RELAYER_URL', 'STELLAR_RELAYER_API_KEY'] : []),
       ...(!hasMercuryLookup ? ['STELLAR_MERCURY_URL', 'STELLAR_MERCURY_JWT or STELLAR_MERCURY_KEY'] : []),
     ],
@@ -190,6 +181,7 @@ export async function fundTestnetAccount(input: {
   role?: 'admin' | 'doctor' | 'dispensary' | 'patient';
   address?: string;
 }) {
+  assertTestnetMutationEnabled();
   const address = resolveFaucetAddress(input).trim();
 
   if (!address) {
@@ -259,7 +251,7 @@ export async function registerDoctorOnTestnet(input: { doctorAddress: string }) 
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('Falta STELLAR_ADMIN_SECRET para registrar medicos en DoctorRegistry Testnet.');
+    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
   }
 
   const server = getSorobanServer();
@@ -292,7 +284,7 @@ export async function registerDispensaryOnTestnet(input: { dispensaryAddress: st
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('Falta STELLAR_ADMIN_SECRET para registrar dispensarios en DispensaryRegistry Testnet.');
+    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
   }
 
   const server = getSorobanServer();
@@ -325,7 +317,7 @@ export async function revokeDoctorOnTestnet(input: { doctorAddress: string }) {
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('Falta STELLAR_ADMIN_SECRET para revocar medicos en DoctorRegistry Testnet.');
+    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
   }
 
   const server = getSorobanServer();
@@ -358,7 +350,7 @@ export async function revokeDispensaryOnTestnet(input: { dispensaryAddress: stri
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('Falta STELLAR_ADMIN_SECRET para revocar dispensarios en DispensaryRegistry Testnet.');
+    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
   }
 
   const server = getSorobanServer();
@@ -489,14 +481,14 @@ export async function issuePrescriptionForPatient(input: {
     throw new Error('La cantidad total autorizada debe ser mayor o igual a 1.');
   }
 
-  let doctorKeypair: StellarSdk.Keypair;
+  let doctorKeypair: LegacyStellarSdk.Keypair;
   if (input.doctorEmail) {
     doctorKeypair = getDeterministicKeypair(input.doctorEmail);
   } else {
     const doctorSecret = getDoctorSecret();
     if (!doctorSecret) {
       throw new Error(
-        'Falta STELLAR_DOCTOR_SECRET para emitir recetas reales desde el POV médico.',
+        'La custodia de firmas está deshabilitada en la demo pública.',
       );
     }
     doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
@@ -540,6 +532,7 @@ export async function issuePrescriptionForPatient(input: {
   transaction.sign(doctorKeypair);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -610,6 +603,7 @@ export async function issuePrescriptionForPatient(input: {
 
       classicTx.sign(doctorKeypair);
       const txToSubmit = sponsorTransactionIfNeeded(classicTx);
+      assertTestnetMutationEnabled();
       const submitResult = await serverHorizon.submitTransaction(txToSubmit);
       console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado con éxito! Hash: ${submitResult.hash}`);
     } catch (nftError: any) {
@@ -718,7 +712,7 @@ export async function retainPrescriptionForDispensary(input: {
     throw new Error('prescriptionId debe ser un número válido.');
   }
 
-  let dispensaryKeypair: StellarSdk.Keypair;
+  let dispensaryKeypair: LegacyStellarSdk.Keypair;
   if (input.dispensaryEmail) {
     dispensaryKeypair = getDeterministicKeypair(input.dispensaryEmail);
   } else {
@@ -750,6 +744,7 @@ export async function retainPrescriptionForDispensary(input: {
   transaction.sign(dispensaryKeypair);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -792,7 +787,7 @@ export async function releasePrescriptionToPatient(input: {
   const patientAddress = String(prescription.patient);
   const doctorAddress = String(prescription.doctor);
 
-  let callerKeypair: StellarSdk.Keypair;
+  let callerKeypair: LegacyStellarSdk.Keypair;
   let callerAddress: string;
 
   if (input.dispensaryEmail) {
@@ -837,6 +832,7 @@ export async function releasePrescriptionToPatient(input: {
   transaction.sign(callerKeypair);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -880,14 +876,14 @@ export async function dispensePrescriptionForPatient(input: {
     throw new Error('quantity debe ser un numero mayor o igual a 1.');
   }
 
-  let dispensaryKeypair: StellarSdk.Keypair;
+  let dispensaryKeypair: LegacyStellarSdk.Keypair;
   if (input.dispensaryEmail) {
     dispensaryKeypair = getDeterministicKeypair(input.dispensaryEmail);
   } else {
     const dispensarySecret = getDispensarySecret();
     if (!dispensarySecret) {
       throw new Error(
-        'Falta STELLAR_DISPENSARY_SECRET para dispensar recetas reales desde el POV dispensario.',
+        'La custodia de firmas está deshabilitada en la demo pública.',
       );
     }
     dispensaryKeypair = StellarSdk.Keypair.fromSecret(dispensarySecret);
@@ -1022,7 +1018,7 @@ export async function dispensePrescriptionForPatient(input: {
 
   if (isFullyUsed) {
     try {
-      let doctorKeypair: StellarSdk.Keypair;
+      let doctorKeypair: LegacyStellarSdk.Keypair;
       if (input.doctorEmail) {
         doctorKeypair = getDeterministicKeypair(input.doctorEmail);
       } else {
@@ -1030,7 +1026,7 @@ export async function dispensePrescriptionForPatient(input: {
         if (doctorSecret) {
           doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
         } else {
-          throw new Error('Falta STELLAR_DOCTOR_SECRET para quemar el NFT de la receta.');
+          throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
         }
       }
       console.log(`[NFT Burn] Receta completamente consumida. Preparando transacción clásica de quema para el asset ${assetCode}...`);
@@ -1064,6 +1060,7 @@ export async function dispensePrescriptionForPatient(input: {
         const clawbackTx = clawbackBuilder.setTimeout(30).build();
         clawbackTx.sign(doctorKeypair);
         const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+        assertTestnetMutationEnabled();
         const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
         clawbackTxHash = clawbackResult.hash;
         console.log(`[NFT Burn] Receta NFT ${assetCode} quemada (Clawback exitoso): ${clawbackTxHash}`);
@@ -1278,7 +1275,7 @@ async function getPatientDispenseRecords(
 }
 
 function decodePrescriptionIssuedEvent(
-  event: StellarSdk.rpc.Api.EventResponse,
+  event: LegacyStellarSdk.rpc.Api.EventResponse,
 ) {
   const values = event.value.vec();
   if (!values || values.length < 3) {
@@ -1296,7 +1293,7 @@ function decodePrescriptionIssuedEvent(
 }
 
 function decodeDispenseRecordedEvent(
-  event: StellarSdk.rpc.Api.EventResponse,
+  event: LegacyStellarSdk.rpc.Api.EventResponse,
 ) {
   const values = event.value.vec();
   if (!values || values.length < 4) {
@@ -1469,7 +1466,7 @@ function buildContractArgs(method: string, args: Record<string, unknown>) {
   }
 }
 
-function decodeContractResult(method: string, value: StellarSdk.xdr.ScVal) {
+function decodeContractResult(method: string, value: LegacyStellarSdk.xdr.ScVal) {
   const native = StellarSdk.scValToNative(value);
 
   if (method === 'get_last_record_for_prescription' && native === undefined) {
@@ -1496,8 +1493,8 @@ function bytes32ToScVal(value: Buffer) {
 }
 
 function sponsorTransactionIfNeeded(
-  transaction: StellarSdk.Transaction
-): StellarSdk.Transaction | StellarSdk.FeeBumpTransaction {
+  transaction: LegacyStellarSdk.Transaction
+): LegacyStellarSdk.Transaction | LegacyStellarSdk.FeeBumpTransaction {
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
     return transaction;
@@ -1527,10 +1524,10 @@ function sponsorTransactionIfNeeded(
 
 async function submitSingleContractCall(
   server: InstanceType<typeof StellarSdk.rpc.Server>,
-  signer: StellarSdk.Keypair,
-  contract: StellarSdk.Contract,
+  signer: LegacyStellarSdk.Keypair,
+  contract: LegacyStellarSdk.Contract,
   method: string,
-  args: StellarSdk.xdr.ScVal[],
+  args: LegacyStellarSdk.xdr.ScVal[],
 ) {
   const sourceAccount = await server.getAccount(signer.publicKey());
   let transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
@@ -1545,6 +1542,7 @@ async function submitSingleContractCall(
   transaction.sign(signer);
 
   const txToSubmit = sponsorTransactionIfNeeded(transaction);
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -1730,6 +1728,7 @@ export async function submitSignedTransaction(input: {
     txToSubmit = sponsorTransactionIfNeeded(parsedTx);
   }
 
+  assertTestnetMutationEnabled();
   const sendResult = await server.sendTransaction(txToSubmit);
   const txHash = sendResult.hash;
   if (!txHash) {
@@ -1805,6 +1804,7 @@ export async function submitSignedTransaction(input: {
 
         classicTx.sign(doctorKeypair);
         const txToSubmit = sponsorTransactionIfNeeded(classicTx);
+        assertTestnetMutationEnabled();
         const submitResult = await serverHorizon.submitTransaction(txToSubmit);
         console.log(`[NFT Mint] ¡Claimable Balance del NFT ${assetCode} creado! Hash: ${submitResult.hash}`);
       } catch (nftError: any) {
@@ -1883,6 +1883,7 @@ export async function submitSignedTransaction(input: {
           const clawbackTx = clawbackBuilder.setTimeout(30).build();
           clawbackTx.sign(doctorKeypair);
           const txToSubmit = sponsorTransactionIfNeeded(clawbackTx);
+          assertTestnetMutationEnabled();
           const clawbackResult = await serverHorizon.submitTransaction(txToSubmit);
           clawbackTxHash = clawbackResult.hash;
           console.log(`[NFT Burn] Receta NFT ${assetCode} quemada: ${clawbackTxHash}`);

@@ -1,0 +1,50 @@
+{
+  "schema": "trustleaf.testnet-v2-deployment-manifest.v1",
+  "status": "LOCAL_DRY_RUN_ONLY",
+  "network": "testnet",
+  "submissionEnabled": false,
+  "mutationsAllowed": false,
+  "artifacts": {
+    "trustRegistry": {
+      "path": "soroban/target/wasm32v1-none/release/trust_registry.wasm",
+      "sha256": "43830be9fc0013f8361f24727e80f74be39c7f230f482e3e20d834e0f8078936",
+      "schemaVersion": 1,
+      "init": {
+        "method": "init",
+        "args": ["admin"]
+      },
+      "readonlyMethods": ["get_admin", "get_credential", "is_active"],
+      "mutatingMethods": ["issue_actor", "issue_eligibility", "set_state", "renew", "expire"]
+    },
+    "receiptLedgerV2": {
+      "path": "soroban/target/wasm32v1-none/release/receipt_ledger_v2.wasm",
+      "sha256": "93eade96ebbf63881aa691cbbc107da871607bbed78be8d539aea264b88b3e14",
+      "schemaVersion": 2,
+      "init": {
+        "method": "init",
+        "args": ["admin", "registry"]
+      },
+      "readonlyMethods": ["get_registry", "get_receipt", "authorization_chain"],
+      "mutatingMethods": ["issue", "activate", "set_grant", "record_partial", "mark_dispensed", "revoke", "expire"]
+    }
+  },
+  "deploymentOrder": [
+    "deploy-trust-registry",
+    "initialize-trust-registry-with-admin-quorum",
+    "read-only-verify-trust-registry",
+    "deploy-receipt-ledger-v2",
+    "initialize-receipt-ledger-v2-with-registry-reference",
+    "read-only-verify-registry-link"
+  ],
+  "approvals": {
+    "deploymentPacket": "PENDING_HUMAN_APPROVAL",
+    "mutationSmokeWindow": "SEPARATE_PENDING_HUMAN_APPROVAL"
+  },
+  "unresolvedRuntimeReferences": [
+    "rpc-allowlist-entry",
+    "admin-quorum-provider-reference",
+    "deployer-provider-reference",
+    "future-registry-contract-reference",
+    "future-receipt-v2-contract-reference"
+  ]
+}

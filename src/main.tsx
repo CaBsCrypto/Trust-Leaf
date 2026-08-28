@@ -1,8 +1,9 @@
-import {StrictMode} from 'react';
+import { StrictMode } from 'react';
 import {createRoot} from 'react-dom/client';
 import { Buffer } from 'buffer';
-import App from './App.tsx';
 import './index.css';
+
+import PublicDemoApp from './PublicDemoApp';
 
 if (typeof window !== 'undefined' && !window.Buffer) {
   window.Buffer = Buffer;
@@ -10,6 +11,6 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <PublicDemoApp />
   </StrictMode>,
 );

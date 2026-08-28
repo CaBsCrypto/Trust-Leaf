@@ -18,32 +18,11 @@ export async function signInWithGoogle() {
   
   if (result.user) {
     const userRef = doc(db, 'users', result.user.uid);
-    let userSnap = await getDoc(userRef);
+    const userSnap = await getDoc(userRef);
     const exists = userSnap.exists();
-    let userData = exists ? userSnap.data() : null;
+    const userData = exists ? userSnap.data() : null;
 
     if (!exists) {
-      const isAdmin = result.user.email?.toLowerCase() === 'cabscryptocontacto@gmail.com';
-      
-      if (isAdmin) {
-        console.log('[Auth Real] Detectado usuario administrador. Registrando sin Passkey...');
-        await registerUserWithWallet(
-          result.user.uid,
-          result.user.displayName || 'Administrador',
-          result.user.email || '',
-          'GB2PFKB24QPIEB3VIKYTIEG7M4KRH5I4KBPV26LUC6KOE2YAWSCPXKZ6', // Cuenta readonly por defecto
-          'freighter', // Admin no requiere passkey
-          'admin'
-        );
-        userSnap = await getDoc(userRef);
-        userData = userSnap.data();
-        return {
-          user: result.user,
-          exists: true,
-          userData
-        };
-      }
-
       // Return exists: false so frontend prompts for role selection
       return {
         user: result.user,
@@ -153,14 +132,6 @@ export function listenAdminAuth(callback: (state: AdminAuthState) => void) {
   return onAuthStateChanged(auth, async (user) => {
     if (!user) {
       callback({ mode: 'signed-out', user: null });
-      return;
-    }
-
-    if (user.email?.toLowerCase() === 'cabscryptocontacto@gmail.com') {
-      callback({
-        mode: 'authorized',
-        user,
-      });
       return;
     }
 

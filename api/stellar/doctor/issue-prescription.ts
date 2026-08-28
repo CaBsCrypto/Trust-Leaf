@@ -1,4 +1,3 @@
-import { issuePrescriptionForPatient } from '../../_lib/stellar.js';
 import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../../_lib/pilot-safety.js';
 
 export default async function handler(req: any, res: any) {
@@ -7,54 +6,7 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  try {
-    assertTestnetMutationEnabled();
-    const {
-      patientAddress,
-      treatment,
-      dosage,
-      notes,
-      durationDays,
-      totalQuantity,
-      totalQuantityGrams,
-      doctorEmail,
-    } = req.body ?? {};
-
-    if (!patientAddress || !treatment || !dosage || !durationDays) {
-      res.status(400).json({
-        message:
-          'Faltan datos para emitir la receta: patientAddress, treatment, dosage y durationDays.',
-      });
-      return;
-    }
-
-    const normalizedDurationDays = Number(durationDays);
-    const normalizedTotalQuantity = Number(totalQuantity ?? totalQuantityGrams ?? 30);
-    if (!Number.isFinite(normalizedDurationDays) || normalizedDurationDays < 1) {
-      res.status(400).json({
-        message: 'durationDays debe ser un numero mayor o igual a 1.',
-      });
-      return;
-    }
-    if (!Number.isFinite(normalizedTotalQuantity) || normalizedTotalQuantity < 1) {
-      res.status(400).json({
-        message: 'totalQuantity debe ser un numero mayor o igual a 1.',
-      });
-      return;
-    }
-
-    const result = await issuePrescriptionForPatient({
-      patientAddress: String(patientAddress),
-      treatment: String(treatment),
-      dosage: String(dosage),
-      notes: notes ? String(notes) : '',
-      durationDays: normalizedDurationDays,
-      totalQuantity: normalizedTotalQuantity,
-      doctorEmail: doctorEmail ? String(doctorEmail) : undefined,
-    });
-
-    res.status(200).json(result);
-  } catch (error) {
-    sendPilotSafetyError(res, error, 'No fue posible emitir la receta en testnet.');
-  }
+  try { assertTestnetMutationEnabled(); }
+  catch (error) { return sendPilotSafetyError(res, error, 'Operación no disponible.'); }
+  return res.status(503).json({ code: 'PUBLIC_DEMO_DISABLED', message: 'La emisión no está disponible en la demo sintética.' });
 }

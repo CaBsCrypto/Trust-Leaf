@@ -6,6 +6,18 @@
   },
   "rewrites": [
     {
+      "source": "/api/stellar/contracts",
+      "destination": "/api/stellar/readiness?__trustleaf_route=contracts"
+    },
+    {
+      "source": "/api/stellar/derive-wallet",
+      "destination": "/api/stellar/readiness?__trustleaf_route=derive-wallet"
+    },
+    {
+      "source": "/api/stellar/faucet",
+      "destination": "/api/stellar/readiness?__trustleaf_route=faucet"
+    },
+    {
       "source": "/paciente",
       "destination": "/index.html"
     },
