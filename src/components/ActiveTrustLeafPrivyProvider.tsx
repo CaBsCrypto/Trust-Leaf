@@ -34,10 +34,8 @@ export function ActiveTrustLeafPrivyProvider({ config, children }: ActiveTrustLe
     <PrivyProvider
       {...providerProps}
       config={{
-        // Google keeps sign-in familiar for most patients; email OTP remains
-        // available for people who do not want to use a social provider.
-        loginMethods: ['google', 'email', 'passkey'],
-        appearance: { theme: 'light', accentColor: '#1e4437' },
+        // Keep the SDK bootstrap minimal; login methods remain configured in Privy's dashboard.
+        loginMethods: ['email', 'google', 'passkey'],
       }}
     >
       <PrivyIdentityBridge>{children}</PrivyIdentityBridge>
