@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react';
 import { readPrivyRuntimeConfig } from '../lib/privyConfig';
 import { disabledPrivyIdentity, loadingPrivyIdentity, TrustLeafPrivyContext } from './privyIdentityContext';
 
@@ -9,6 +9,32 @@ const ActiveTrustLeafPrivyProvider = lazy(async () => {
 
 interface TrustLeafPrivyProviderProps {
   children: ReactNode;
+}
+
+interface PrivyBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
+interface PrivyBoundaryState {
+  hasError: boolean;
+}
+
+/** Keep an SDK configuration/runtime failure from blanking the whole portal. */
+class PrivyBoundary extends Component<PrivyBoundaryProps, PrivyBoundaryState> {
+  state: PrivyBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): PrivyBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
+    console.error('Privy initialization failed; continuing without Privy.', error);
+  }
+
+  render() {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
 }
 
 export { useTrustLeafPrivyIdentity } from './privyIdentityContext';
@@ -26,7 +52,11 @@ export function TrustLeafPrivyProvider({ children }: TrustLeafPrivyProviderProps
 
   return (
     <Suspense fallback={<TrustLeafPrivyContext.Provider value={loadingPrivyIdentity}>{children}</TrustLeafPrivyContext.Provider>}>
-      <ActiveTrustLeafPrivyProvider config={config}>{children}</ActiveTrustLeafPrivyProvider>
+      <PrivyBoundary
+        fallback={<TrustLeafPrivyContext.Provider value={disabledPrivyIdentity}>{children}</TrustLeafPrivyContext.Provider>}
+      >
+        <ActiveTrustLeafPrivyProvider config={config}>{children}</ActiveTrustLeafPrivyProvider>
+      </PrivyBoundary>
     </Suspense>
   );
 }
