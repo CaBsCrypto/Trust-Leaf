@@ -33,10 +33,6 @@ export function ActiveTrustLeafPrivyProvider({ config, children }: ActiveTrustLe
   return (
     <PrivyProvider
       {...providerProps}
-      config={{
-        // Keep the SDK bootstrap minimal; login methods remain configured in Privy's dashboard.
-        loginMethods: ['email', 'google', 'passkey'],
-      }}
     >
       <PrivyIdentityBridge>{children}</PrivyIdentityBridge>
     </PrivyProvider>
