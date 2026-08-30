@@ -30,6 +30,7 @@ import { passkeyService } from './lib/stellar/passkeyService';
 import { validateRut, formatRut } from './lib/stellar/chileHelpers';
 import WalletOnboarding, { type WalletSetupState } from './components/WalletOnboarding';
 import { AdminReadinessPanel } from './components/AdminReadinessPanel';
+import { useTrustLeafPrivyIdentity, type TrustLeafPrivyIdentity } from './components/TrustLeafPrivyProvider';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
@@ -108,6 +109,7 @@ export default function App() {
 
 function AppContent() {
   const { t } = useLanguage();
+  const privyIdentity = useTrustLeafPrivyIdentity();
   const [path, setPath] = useState(() => window.location.pathname);
   const [dispensaryRegistrations, setDispensaryRegistrations] = useState<DispensaryRegistration[]>(() => {
     const saved = localStorage.getItem('trust_dispensary_registrations');
@@ -381,6 +383,14 @@ function AppContent() {
     }
     localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
+  };
+
+  const startPrivyAdminSession = () => {
+    startSession('admin', {
+      email: 'admin@trustleaf.org',
+      name: 'Administrador Trust Leaf',
+      mode: 'email',
+    });
   };
 
   const endSession = () => {
@@ -932,7 +942,9 @@ function AppContent() {
 
   if (path === '/admin') {
     const hasDemoAdminSession = session?.role === 'admin' && session.mode === 'demo';
-    const hasRealAdminSession = adminAuth.mode === 'authorized';
+    const hasPrivyAdminSession = session?.role === 'admin' && session.mode === 'email'
+      && privyIdentity.enabled && privyIdentity.authenticated;
+    const hasRealAdminSession = adminAuth.mode === 'authorized' || hasPrivyAdminSession;
     const adminRouteSession: TrustSession | null = hasRealAdminSession
       ? {
           role: 'admin',
@@ -947,7 +959,9 @@ function AppContent() {
       return (
         <AdminAuthGate
           authState={adminAuth}
+          privyIdentity={privyIdentity}
           onBack={() => navigate('/')}
+          onPrivyAuthorized={startPrivyAdminSession}
           onDemo={() =>
             startSession('admin', {
               email: 'admin@trustleaf.test',
@@ -1985,18 +1999,55 @@ function OperationalPendingRoute({
 
 function AdminAuthGate({
   authState,
+  privyIdentity,
   onBack,
   onDemo,
+  onPrivyAuthorized,
 }: {
   authState: AdminAuthState;
+  privyIdentity: TrustLeafPrivyIdentity;
   onBack: () => void;
   onDemo: () => void;
+  onPrivyAuthorized: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firebaseStatus = getFirebaseRuntimeStatus();
+  const usingPrivy = privyIdentity.enabled;
+
+  useEffect(() => {
+    if (!usingPrivy || !privyIdentity.authenticated) return;
+    let cancelled = false;
+    void (async () => {
+      setBusy(true);
+      setError(null);
+      try {
+        const token = await privyIdentity.getIdentityToken();
+        if (!token) throw new Error('No fue posible confirmar la sesión de Privy.');
+        const response = await fetch('/api/auth/privy/session', { headers: { 'privy-id-token': token } });
+        const payload = await response.json() as { authorized?: boolean; role?: string; code?: string };
+        if (!response.ok) throw new Error('No fue posible validar la identidad en el servidor.');
+        if (payload.authorized && payload.role === 'admin') {
+          if (!cancelled) onPrivyAuthorized();
+          return;
+        }
+        if (!cancelled) setError('Esta cuenta existe, pero aún no tiene autorización administrativa.');
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'No fue posible validar la identidad.');
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [privyIdentity.authenticated, privyIdentity.enabled]);
   const authStatusText =
-    authState.mode === 'checking'
+    usingPrivy
+      ? privyIdentity.authenticated
+        ? 'Identidad Privy confirmada'
+        : privyIdentity.ready
+          ? 'Privy listo para iniciar sesión'
+          : 'Inicializando Privy'
+      : authState.mode === 'checking'
       ? 'Verificando sesion'
       : firebaseStatus.configured
         ? 'Firebase Auth configurado'
@@ -2029,7 +2080,9 @@ function AdminAuthGate({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso protegido</p>
           <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">Admin aprueba actores antes de tocar Testnet.</h1>
           <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">
-            El panel admin real usa Firebase Auth y allowlist en `appAdministrators`. El acceso de grabacion queda disponible solo para revisar el flujo completo.
+            {usingPrivy
+              ? 'Privy confirma la identidad. Supabase decide si esa identidad tiene autorización administrativa antes de aprobar actores.'
+              : 'El panel admin actual usa Firebase Auth durante la transición. El acceso de grabación queda disponible solo para revisar el flujo completo.'}
           </p>
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
@@ -2050,20 +2103,22 @@ function AdminAuthGate({
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Sesión Protegida</p>
             <h2 className="mt-2 text-2xl font-serif text-brand-green-deep">Administrador de Red</h2>
             <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
-              Este portal requiere autenticación federada con Google. Solo la cuenta autorizada de administrador tiene privilegios de firma y aprobación.
+              {usingPrivy
+                ? 'Inicia sesión con Privy. Una cuenta autenticada no recibe privilegios hasta que Supabase valide su rol administrativo.'
+                : 'Este portal usa la autenticación transitoria actual. Solo la cuenta autorizada de administrador tiene privilegios de firma y aprobación.'}
             </p>
 
             <div className={`mt-5 rounded-2xl border p-4 text-xs leading-relaxed ${
-              firebaseStatus.configured
+              usingPrivy || firebaseStatus.configured
                 ? 'border-green-100 bg-green-50/80 text-green-800'
                 : 'border-amber-100 bg-amber-50/80 text-amber-800'
             }`}>
               <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
-                <span className={`inline-block h-2 w-2 rounded-full ${firebaseStatus.configured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                {firebaseStatus.configured ? 'Firebase Activo' : 'Firebase en Modo Local'}
+                <span className={`inline-block h-2 w-2 rounded-full ${usingPrivy || firebaseStatus.configured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                {usingPrivy ? 'Privy Activo' : firebaseStatus.configured ? 'Firebase Activo' : 'Firebase en Modo Local'}
               </div>
               <p className="mt-1.5 text-brand-green-deep/80">
-                El acceso requiere una cuenta autenticada incluida en la lista administrativa privada.
+                El acceso requiere una identidad autenticada incluida en la lista administrativa privada.
               </p>
             </div>
 
@@ -2074,13 +2129,17 @@ function AdminAuthGate({
                   setBusy(true);
                   setError(null);
                   try {
-                    const result = await signInWithGoogle();
-                    if (!result || !result.user) {
-                      throw new Error("Inicio de sesión cancelado o fallido.");
+                    if (usingPrivy) {
+                      await privyIdentity.beginLogin();
+                    } else {
+                      const result = await signInWithGoogle();
+                      if (!result || !result.user) {
+                        throw new Error("Inicio de sesión cancelado o fallido.");
+                      }
                     }
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : "Error al iniciar sesión con Google.");
-                    await signOutAdmin();
+                    setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
+                    if (!usingPrivy) await signOutAdmin();
                   } finally {
                     setBusy(false);
                   }
@@ -2088,15 +2147,15 @@ function AdminAuthGate({
                 disabled={busy || authState.mode === 'checking'}
                 className="flex items-center justify-center gap-3 rounded-2xl bg-brand-gold text-brand-green-deep border border-brand-gold px-5 py-4 text-sm font-bold shadow-md hover:bg-brand-ivory hover:-translate-y-0.5 duration-300 disabled:cursor-wait disabled:opacity-60 cursor-pointer group w-full"
               >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                {!usingPrivy && <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                   <g transform="matrix(1, 0, 0, 1, 0, 0)">
                     <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.89 21.56,11.43 21.35,11.1z" fill="#4285F4" />
                     <path d="M12,21c2.43,0 4.47,-0.8 5.96,-2.18l-2.58,-2c-0.73,0.49 -1.66,0.78 -2.63,0.78 -2.03,0 -3.75,-1.37 -4.36,-3.22H2.33v2.66C3.81,17.43 7.64,21 12,21z" fill="#34A853" />
                     <path d="M7.64,14.38c-0.16,-0.49 -0.25,-1 -0.25,-1.53s0.09,-1.04 0.25,-1.53V8.66H2.33C1.79,9.73 1.48,10.93 1.48,12s0.31,2.27 0.85,3.34L7.64,14.38z" fill="#FBBC05" />
                     <path d="M12,5.38c1.32,0 2.51,0.45 3.44,1.35l2.58,-2.58C16.46,2.69 14.43,2 12,2 7.64,2 3.81,5.57 2.33,9.34l3.05,2.38C5.99,6.75 7.71,5.38 12,5.38z" fill="#EA4335" />
                   </g>
-                </svg>
-                {busy ? 'Verificando...' : 'Iniciar Sesión con Google'}
+                </svg>}
+                {busy ? 'Verificando...' : usingPrivy ? 'Continuar con Privy' : 'Iniciar Sesión con Google'}
               </button>
 
               {(error || authState.error || authState.mode === 'not-admin') && (
