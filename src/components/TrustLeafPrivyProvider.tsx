@@ -51,12 +51,12 @@ export function TrustLeafPrivyProvider({ children }: TrustLeafPrivyProviderProps
   }
 
   return (
-    <Suspense fallback={<TrustLeafPrivyContext.Provider value={loadingPrivyIdentity}>{children}</TrustLeafPrivyContext.Provider>}>
-      <PrivyBoundary
-        fallback={<TrustLeafPrivyContext.Provider value={disabledPrivyIdentity}>{children}</TrustLeafPrivyContext.Provider>}
-      >
+    <PrivyBoundary
+      fallback={<TrustLeafPrivyContext.Provider value={disabledPrivyIdentity}>{children}</TrustLeafPrivyContext.Provider>}
+    >
+      <Suspense fallback={<TrustLeafPrivyContext.Provider value={loadingPrivyIdentity}>{children}</TrustLeafPrivyContext.Provider>}>
         <ActiveTrustLeafPrivyProvider config={config}>{children}</ActiveTrustLeafPrivyProvider>
-      </PrivyBoundary>
-    </Suspense>
+      </Suspense>
+    </PrivyBoundary>
   );
 }
