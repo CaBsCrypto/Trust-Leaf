@@ -2,6 +2,7 @@ import {lazy, StrictMode, Suspense} from 'react';
 import {createRoot} from 'react-dom/client';
 import { Buffer } from 'buffer';
 import './index.css';
+import { TrustLeafPrivyProvider } from './components/TrustLeafPrivyProvider';
 
 const PILOT_FLOW_ROUTE = '/demo/pilot-flow';
 const PilotFlowPage = lazy(() => import('./features/pilot-flow/PilotFlowPage'));
@@ -25,8 +26,10 @@ if (typeof window !== 'undefined' && !window.Buffer) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Suspense fallback={<div className="min-h-screen bg-[#f2f5f1]" />}>
-      <RootRoute />
-    </Suspense>
+    <TrustLeafPrivyProvider>
+      <Suspense fallback={<div className="min-h-screen bg-[#f2f5f1]" />}>
+        <RootRoute />
+      </Suspense>
+    </TrustLeafPrivyProvider>
   </StrictMode>,
 );
