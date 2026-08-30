@@ -6,10 +6,12 @@ const migrationFiles = (await readdir(migrationDir)).filter(name => name.endsWit
 assert.deepEqual(migrationFiles, [
   '20260826060000_trustleaf_synthetic_security_baseline.sql',
   '20260826150000_trustleaf_auth_rbac_minimum.sql',
+  '20260829110000_trustleaf_synthetic_admin_bootstrap.sql',
 ]);
 
 const sql = (await readFile(new URL('../supabase/migrations/20260826060000_trustleaf_synthetic_security_baseline.sql', import.meta.url), 'utf8')).toLowerCase();
 const config = (await readFile(new URL('../supabase/config.toml', import.meta.url), 'utf8')).toLowerCase();
+const bootstrapSql = (await readFile(new URL('../supabase/migrations/20260829110000_trustleaf_synthetic_admin_bootstrap.sql', import.meta.url), 'utf8')).toLowerCase();
 const tables = [
   'actor_bindings',
   'encrypted_objects',
@@ -37,6 +39,12 @@ for (const forbidden of ['rut', 'email', 'diagnosis', 'diagnostico', 'dose', 'do
   assert.doesNotMatch(sql, new RegExp(`\\b${forbidden}\\b`));
 }
 assert.doesNotMatch(sql, /storage\.buckets|storage\.objects|create extension|service[_-]?key|secret/);
+assert.doesNotMatch(bootstrapSql, /grant execute[^;]*to\s+(anon|authenticated|service_role|public)/);
+assert.match(bootstrapSql, /revoke all on function trustleaf_private\.bootstrap_first_synthetic_admin/);
+assert.match(bootstrapSql, /to trustleaf_server/);
+for (const forbidden of ['rut', 'email', 'diagnosis', 'diagnostico', 'dose', 'dosis', 'gramaje', 'wallet', 'address', 'prescription_pdf', 'service_key', 'sb_secret']) {
+  assert.doesNotMatch(bootstrapSql, new RegExp(`\\b${forbidden}\\b`));
+}
 
 for (const section of ['api', 'realtime', 'studio', 'storage', 'edge_runtime', 'analytics']) {
   assert.match(config, new RegExp(`\\[${section}\\]\\s+enabled = false`));
