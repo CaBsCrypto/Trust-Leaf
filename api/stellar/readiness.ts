@@ -1,6 +1,8 @@
 import { fundTestnetAccount, getContractsStatus, getDeterministicKeypair, getRuntimeReadiness } from '../_lib/stellar.js';
 import { createLegacyAuthorizationMiddleware } from '../_lib/legacy-route-authorization.ts';
 import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../_lib/pilot-safety.js';
+import { createPrivyIdentityVerifier } from '../_lib/privy-identity.ts';
+import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.ts';
 
 /**
  * Preview-only Vercel function consolidation. Exact rewrites below preserve the
@@ -67,7 +69,66 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
+  if (route === 'privy-session') {
+    if (req.method !== 'GET') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    return resolvePrivySession(req, res);
+  }
+
+  if (route === 'privy-bootstrap-admin') {
+    if (req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    return bootstrapPrivyAdmin(req, res);
+  }
+
   res.status(404).json({ message: 'Ruta Stellar no disponible.' });
+}
+
+async function resolvePrivySession(req: any, res: any) {
+  res.setHeader('Cache-Control', 'no-store');
+  const token = readPrivyToken(req.headers ?? {});
+  if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  try {
+    const identity = await createPrivyIdentityVerifier(process.env).verify(token);
+    const binding = await createSupabasePrivyActorStore(process.env).resolve(identity.subject);
+    if (!binding || binding.state !== 'active' || isExpired(binding.validUntil)) {
+      return res.status(200).json({ authenticated: true, authorized: false });
+    }
+    return res.status(200).json({ authenticated: true, authorized: true, role: binding.role, actorRef: binding.actorRef });
+  } catch (error) {
+    const candidate = error as { code?: string; statusCode?: number };
+    return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'AUTH_UNAVAILABLE' });
+  }
+}
+
+async function bootstrapPrivyAdmin(req: any, res: any) {
+  res.setHeader('Cache-Control', 'no-store');
+  const token = readPrivyToken(req.headers ?? {});
+  if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  try {
+    const identity = await createPrivyIdentityVerifier(process.env).verify(token);
+    const allowedEmail = requiredBootstrapEmail(process.env.TRUSTLEAF_BOOTSTRAP_ADMIN_EMAIL);
+    if (!identity.emails.includes(allowedEmail)) return res.status(403).json({ code: 'BOOTSTRAP_NOT_ALLOWED' });
+    const actor = await createSupabasePrivyActorStore(process.env).bootstrapFirstAdmin(identity.subject);
+    if (actor.role !== 'admin' || actor.state !== 'active') return res.status(503).json({ code: 'BOOTSTRAP_INVALID_RESULT' });
+    return res.status(200).json({ authorized: true, role: 'admin', actorRef: actor.actorRef });
+  } catch (error) {
+    const candidate = error as { code?: string; statusCode?: number };
+    return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'BOOTSTRAP_UNAVAILABLE' });
+  }
+}
+
+function readPrivyToken(headers: Record<string, string | string[] | undefined>) {
+  const value = headers['privy-id-token'];
+  return typeof value === 'string' && value.trim() && value.length <= 12_000 ? value.trim() : null;
+}
+
+function isExpired(value: string | undefined) { return Boolean(value && Date.parse(value) <= Date.now()); }
+
+function requiredBootstrapEmail(value: string | undefined) {
+  const email = value?.trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw Object.assign(new Error('Bootstrap configuration unavailable.'), { code: 'BOOTSTRAP_CONFIGURATION_MISSING', statusCode: 503 });
+  }
+  return email;
 }
 
 async function authorizeConsolidatedRoute(req: any, res: any, path: string) {

@@ -18,6 +18,14 @@
       "destination": "/api/stellar/readiness?__trustleaf_route=faucet"
     },
     {
+      "source": "/api/auth/privy/session",
+      "destination": "/api/stellar/readiness?__trustleaf_route=privy-session"
+    },
+    {
+      "source": "/api/auth/privy/bootstrap-admin",
+      "destination": "/api/stellar/readiness?__trustleaf_route=privy-bootstrap-admin"
+    },
+    {
       "source": "/paciente",
       "destination": "/index.html"
     },
