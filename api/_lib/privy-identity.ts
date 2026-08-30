@@ -2,10 +2,11 @@ import { PrivyClient } from '@privy-io/node';
 
 export interface PrivyIdentity {
   subject: string;
+  emails: readonly string[];
 }
 
 export interface PrivyUserReader {
-  users(): { get(input: { id_token: string }): Promise<{ id: string }> };
+  users(): { get(input: { id_token: string }): Promise<{ id: string; linked_accounts?: unknown[] }> };
 }
 
 /**
@@ -25,13 +26,29 @@ export function createPrivyIdentityVerifier(
       try {
         const user = await reader.users().get({ id_token: identityToken });
         if (!isPrivyDid(user?.id)) throw identityError('PRIVY_IDENTITY_SUBJECT_INVALID', 401);
-        return { subject: user.id };
+        return { subject: user.id, emails: linkedAccountEmails(user.linked_accounts) };
       } catch (error) {
         if (isIdentityError(error)) throw error;
         throw identityError('PRIVY_IDENTITY_TOKEN_INVALID', 401);
       }
     },
   };
+}
+
+function linkedAccountEmails(accounts: unknown): readonly string[] {
+  if (!Array.isArray(accounts)) return [];
+  const unique = new Set<string>();
+  for (const account of accounts) {
+    if (!account || typeof account !== 'object') continue;
+    const record = account as Record<string, unknown>;
+    // Privy returns `address` for email login and `email` for Google OAuth.
+    for (const candidate of [record.address, record.email]) {
+      if (typeof candidate !== 'string') continue;
+      const email = candidate.trim().toLowerCase();
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) unique.add(email);
+    }
+  }
+  return [...unique];
 }
 
 function required(value: string | undefined) {

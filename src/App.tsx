@@ -2012,6 +2012,7 @@ function AdminAuthGate({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mayBootstrap, setMayBootstrap] = useState(false);
   const firebaseStatus = getFirebaseRuntimeStatus();
   const usingPrivy = privyIdentity.enabled;
 
@@ -2031,7 +2032,10 @@ function AdminAuthGate({
           if (!cancelled) onPrivyAuthorized();
           return;
         }
-        if (!cancelled) setError('Esta cuenta existe, pero aún no tiene autorización administrativa.');
+        if (!cancelled) {
+          setMayBootstrap(true);
+          setError('Esta identidad aún no tiene autorización administrativa.');
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'No fue posible validar la identidad.');
       } finally {
@@ -2157,6 +2161,37 @@ function AdminAuthGate({
                 </svg>}
                 {busy ? 'Verificando...' : usingPrivy ? 'Continuar con Privy' : 'Iniciar Sesión con Google'}
               </button>
+
+              {usingPrivy && privyIdentity.authenticated && mayBootstrap && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setBusy(true);
+                    setError(null);
+                    try {
+                      const token = await privyIdentity.getIdentityToken();
+                      if (!token) throw new Error('No fue posible confirmar la sesión de Privy.');
+                      const response = await fetch('/api/auth/privy/bootstrap-admin', {
+                        method: 'POST',
+                        headers: { 'privy-id-token': token },
+                      });
+                      const payload = await response.json() as { authorized?: boolean; role?: string };
+                      if (!response.ok || !payload.authorized || payload.role !== 'admin') {
+                        throw new Error('Esta cuenta no está habilitada para activar la administración.');
+                      }
+                      onPrivyAuthorized();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'No fue posible activar la administración.');
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                  disabled={busy}
+                  className="flex items-center justify-center rounded-2xl border border-brand-green-deep/15 bg-white px-5 py-3 text-sm font-bold text-brand-green-deep transition hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60"
+                >
+                  Activar primera cuenta administradora
+                </button>
+              )}
 
               {(error || authState.error || authState.mode === 'not-admin') && (
                 <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-red-700 leading-relaxed">

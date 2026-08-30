@@ -12,7 +12,7 @@ test('resolves an active Privy actor through the private Supabase RPC', async ()
     return new Response(JSON.stringify([{ actor_ref: actorRef, role: 'patient', actor_state: 'active', valid_until: null }]));
   });
   const authorizer = createPrivyRbacAuthorizer({
-    verifier: { async verify() { return { subject }; } },
+    verifier: { async verify() { return { subject, emails: [] }; } },
     store,
   });
   assert.deepEqual(await authorizer.authorize('identity-token', ['patient']), { subject, actorRef, role: 'patient', state: 'active' });
@@ -21,7 +21,7 @@ test('resolves an active Privy actor through the private Supabase RPC', async ()
 
 test('fails closed for an unbound actor or a forbidden role', async () => {
   const authorizer = createPrivyRbacAuthorizer({
-    verifier: { async verify() { return { subject }; } },
+    verifier: { async verify() { return { subject, emails: [] }; } },
     store: { async resolve() { return null; } },
   });
   await assert.rejects(authorizer.authorize('identity-token', ['patient']), { code: 'PRIVY_ACTOR_NOT_ACTIVE', statusCode: 403 });

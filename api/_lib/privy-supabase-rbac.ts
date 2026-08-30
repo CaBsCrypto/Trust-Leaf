@@ -12,6 +12,7 @@ export interface PrivyActorBinding {
 
 export interface PrivyActorStore {
   resolve(subject: string): Promise<PrivyActorBinding | null>;
+  bootstrapFirstAdmin(subject: string): Promise<PrivyActorBinding>;
 }
 
 export function createSupabasePrivyActorStore(
@@ -24,6 +25,7 @@ export function createSupabasePrivyActorStore(
     'SUPABASE_SERVER_KEY_MISSING',
   );
   const endpoint = new URL('/rest/v1/rpc/resolve_privy_actor', projectUrl).toString();
+  const bootstrapEndpoint = new URL('/rest/v1/rpc/bootstrap_first_privy_admin', projectUrl).toString();
 
   return {
     async resolve(subject) {
@@ -47,6 +49,28 @@ export function createSupabasePrivyActorStore(
       const rows = await response.json() as unknown;
       if (!Array.isArray(rows) || rows.length === 0) return null;
       if (rows.length !== 1) throw rbacError('PRIVY_ACTOR_BINDING_AMBIGUOUS', 503);
+      return parseBinding(rows[0]);
+    },
+    async bootstrapFirstAdmin(subject) {
+      if (!isPrivyDid(subject)) throw rbacError('PRIVY_IDENTITY_SUBJECT_INVALID', 401);
+      let response: Response;
+      try {
+        response = await fetcher(bootstrapEndpoint, {
+          method: 'POST',
+          headers: {
+            apikey: serviceKey,
+            'content-type': 'application/json',
+            'content-profile': 'trustleaf_private',
+          },
+          body: JSON.stringify({ subject }),
+          signal: AbortSignal.timeout(5_000),
+        });
+      } catch {
+        throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
+      }
+      if (!response.ok) throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
+      const rows = await response.json() as unknown;
+      if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
       return parseBinding(rows[0]);
     },
   };

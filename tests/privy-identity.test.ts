@@ -6,10 +6,10 @@ const env = { PRIVY_APP_ID: 'privy-app-id', PRIVY_APP_SECRET: 'server-secret' };
 
 test('verifies a Privy DID through the server-side reader', async () => {
   const verifier = createPrivyIdentityVerifier(env, {
-    users: () => ({ async get() { return { id: 'did:privy:patient-123456' }; } }),
+    users: () => ({ async get() { return { id: 'did:privy:patient-123456', linked_accounts: [{ type: 'email', address: 'Patient@TrustLeaf.org' }, { type: 'google_oauth', email: 'patient@trustleaf.org' }] }; } }),
   });
 
-  assert.deepEqual(await verifier.verify('identity-token'), { subject: 'did:privy:patient-123456' });
+  assert.deepEqual(await verifier.verify('identity-token'), { subject: 'did:privy:patient-123456', emails: ['patient@trustleaf.org'] });
 });
 
 test('does not accept arbitrary identity subjects or missing server configuration', async () => {
