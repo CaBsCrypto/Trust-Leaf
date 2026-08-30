@@ -1,5 +1,9 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { getNetworkPassphrase } from './stellar';
+import {
+  getNetworkPassphrase,
+  getAdminSecret,
+  getAdminAddress,
+} from './stellar';
 import { assertTestnetMutationEnabled } from './pilot-safety';
 
 const DEFINDEX_API_BASE = 'https://api.defindex.io';
@@ -53,11 +57,13 @@ export function getDefaultVaultAddress(): string {
 }
 
 export function getSocialFundAddress(): string {
-  return process.env.DEFINDEX_SOCIAL_FUND_ADDRESS?.trim() || '';
+  return process.env.DEFINDEX_SOCIAL_FUND_ADDRESS?.trim() || getAdminAddress();
 }
 
 export function getSocialFundKeypair(): StellarSdk.Keypair | null {
-  return null;
+  const secret = getAdminSecret();
+  if (!secret) return null;
+  return StellarSdk.Keypair.fromSecret(secret);
 }
 
 export function getVaultByAddress(address: string): DefindexVaultInfo | null {
@@ -284,8 +290,8 @@ export async function signAndSubmitDefindex(
   let txToSign: StellarSdk.Transaction = parsed as StellarSdk.Transaction;
 
   if (opts.applyFeeSponsorship !== false) {
-    const sponsorSecret = '';
-    if (sponsorSecret) {
+    const sponsorSecret = getAdminSecret();
+    if (sponsorSecret && txToSign.source !== getAdminAddress()) {
       const sponsorKeypair = StellarSdk.Keypair.fromSecret(sponsorSecret);
       const feeBump = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
         sponsorKeypair.publicKey(),

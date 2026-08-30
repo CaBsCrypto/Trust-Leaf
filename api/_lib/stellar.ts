@@ -30,9 +30,23 @@ const DEFAULT_DEMO_DOCTOR_ADDRESS =
 const DEFAULT_DEMO_DISPENSARY_ADDRESS =
   'GCJLFG6PX6OA6JBJPQP2PXBJ7SD726O4R46IMWD4GBK3CX7HCWEJZRJ6';
 
+import * as crypto from 'crypto';
+
 export function getDeterministicKeypair(email: string): LegacyStellarSdk.Keypair {
-  void email;
-  throw new Error('La derivación de billeteras está deshabilitada en la demo pública.');
+  const normalized = email.toLowerCase().trim();
+
+  if (normalized === 'medico@trustleaf.test') {
+    const secret = getDoctorSecret();
+    if (secret) return StellarSdk.Keypair.fromSecret(secret);
+  }
+  if (normalized === 'dispensario@trustleaf.test') {
+    const secret = getDispensarySecret();
+    if (secret) return StellarSdk.Keypair.fromSecret(secret);
+  }
+
+  const salt = getAdminSecret() || 'trust-leaf-secret-salt-2026';
+  const hash = crypto.createHmac('sha256', salt).update(normalized).digest();
+  return StellarSdk.Keypair.fromRawEd25519Seed(hash);
 }
 
 export function getRpcUrl() {
@@ -82,7 +96,7 @@ export function getDemoPatientAddress() {
 }
 
 export function getDoctorSecret() {
-  return '';
+  return process.env.STELLAR_DOCTOR_SECRET?.trim() || '';
 }
 
 export function getDoctorAddress() {
@@ -95,7 +109,7 @@ export function getDoctorAddress() {
 }
 
 export function getDispensarySecret() {
-  return '';
+  return process.env.STELLAR_DISPENSARY_SECRET?.trim() || '';
 }
 
 export function getDispensaryAddress() {
@@ -108,7 +122,7 @@ export function getDispensaryAddress() {
 }
 
 export function getAdminSecret() {
-  return '';
+  return process.env.STELLAR_ADMIN_SECRET?.trim() || '';
 }
 
 export function getAdminAddress() {
@@ -122,9 +136,9 @@ export function getAdminAddress() {
 
 export function getRuntimeReadiness() {
   const mutationSafety = getPilotMutationSafety();
-  const hasAdminSigner = false;
-  const hasDoctorSigner = false;
-  const hasDispensarySigner = false;
+  const hasAdminSigner = Boolean(getAdminSecret());
+  const hasDoctorSigner = Boolean(getDoctorSecret());
+  const hasDispensarySigner = Boolean(getDispensarySecret());
   const hasPasskeyRelayer = Boolean(
     process.env.STELLAR_RELAYER_URL && process.env.STELLAR_RELAYER_API_KEY,
   );
@@ -170,7 +184,9 @@ export function getRuntimeReadiness() {
       passkeyDiscovery: hasMercuryLookup,
     },
     missing: [
-      ...(!hasAdminSigner ? ['SIGNER_CUSTODY_DISABLED'] : []),
+      ...(!hasAdminSigner ? ['STELLAR_ADMIN_SECRET'] : []),
+      ...(!hasDoctorSigner ? ['STELLAR_DOCTOR_SECRET'] : []),
+      ...(!hasDispensarySigner ? ['STELLAR_DISPENSARY_SECRET'] : []),
       ...(!hasPasskeyRelayer ? ['STELLAR_RELAYER_URL', 'STELLAR_RELAYER_API_KEY'] : []),
       ...(!hasMercuryLookup ? ['STELLAR_MERCURY_URL', 'STELLAR_MERCURY_JWT or STELLAR_MERCURY_KEY'] : []),
     ],
@@ -251,7 +267,7 @@ export async function registerDoctorOnTestnet(input: { doctorAddress: string }) 
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
+    throw new Error('Falta STELLAR_ADMIN_SECRET para registrar medicos en DoctorRegistry Testnet.');
   }
 
   const server = getSorobanServer();
@@ -284,7 +300,7 @@ export async function registerDispensaryOnTestnet(input: { dispensaryAddress: st
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
+    throw new Error('Falta STELLAR_ADMIN_SECRET para registrar dispensarios en DispensaryRegistry Testnet.');
   }
 
   const server = getSorobanServer();
@@ -317,7 +333,7 @@ export async function revokeDoctorOnTestnet(input: { doctorAddress: string }) {
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
+    throw new Error('Falta STELLAR_ADMIN_SECRET para revocar medicos en DoctorRegistry Testnet.');
   }
 
   const server = getSorobanServer();
@@ -350,7 +366,7 @@ export async function revokeDispensaryOnTestnet(input: { dispensaryAddress: stri
 
   const adminSecret = getAdminSecret();
   if (!adminSecret) {
-    throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
+    throw new Error('Falta STELLAR_ADMIN_SECRET para revocar dispensarios en DispensaryRegistry Testnet.');
   }
 
   const server = getSorobanServer();
@@ -488,7 +504,7 @@ export async function issuePrescriptionForPatient(input: {
     const doctorSecret = getDoctorSecret();
     if (!doctorSecret) {
       throw new Error(
-        'La custodia de firmas está deshabilitada en la demo pública.',
+        'Falta STELLAR_DOCTOR_SECRET para emitir recetas reales desde el POV médico.',
       );
     }
     doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
@@ -883,7 +899,7 @@ export async function dispensePrescriptionForPatient(input: {
     const dispensarySecret = getDispensarySecret();
     if (!dispensarySecret) {
       throw new Error(
-        'La custodia de firmas está deshabilitada en la demo pública.',
+        'Falta STELLAR_DISPENSARY_SECRET para dispensar recetas reales desde el POV dispensario.',
       );
     }
     dispensaryKeypair = StellarSdk.Keypair.fromSecret(dispensarySecret);
@@ -1026,7 +1042,7 @@ export async function dispensePrescriptionForPatient(input: {
         if (doctorSecret) {
           doctorKeypair = StellarSdk.Keypair.fromSecret(doctorSecret);
         } else {
-          throw new Error('La custodia de firmas está deshabilitada en la demo pública.');
+          throw new Error('Falta STELLAR_DOCTOR_SECRET para quemar el NFT de la receta.');
         }
       }
       console.log(`[NFT Burn] Receta completamente consumida. Preparando transacción clásica de quema para el asset ${assetCode}...`);

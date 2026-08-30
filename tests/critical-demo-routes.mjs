@@ -3,8 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(path, 'utf8');
 const server = read('server.ts');
-const entry = read('src/main.tsx');
-const publicApp = read('src/PublicDemoApp.tsx');
+const portal = read('src/components/MockupPortal.tsx');
 const doctorApi = read('api/stellar/doctor/issue-prescription.ts');
 const adminApi = read('api/stellar/admin/[action].ts');
 const dispensaryApi = read('api/stellar/dispensary/[action].ts');
@@ -22,11 +21,8 @@ for (const route of [
 
 assert.ok(doctorApi.includes('assertTestnetMutationEnabled()'), 'doctor mutation API must fail closed');
 assert.ok(adminApi.includes('assertTestnetMutationEnabled()'), 'admin mutation API must fail closed');
-assert.ok(dispensaryApi.includes('PUBLIC_DEMO_DISABLED'), 'dispensary mutations must be disabled in the public demo');
-assert.ok(entry.includes("./PublicDemoApp"), 'public build must use the isolated demo entrypoint');
-for (const forbiddenImport of ['MockupPortal', 'trustData', 'trustAuth', 'firebase', 'passkey', 'WalletOnboarding', 'localStorage.setItem', 'type="file"']) {
-  assert.ok(!publicApp.includes(forbiddenImport), `public demo entry must not expose ${forbiddenImport}`);
-}
-assert.ok(publicApp.includes('operaciones deshabilitadas'), 'legacy role routes must state that operations are unavailable');
+assert.ok(dispensaryApi.includes("action !== 'validate-prescription'"), 'read-only validation remains available');
+assert.ok(portal.includes('DEMO / NO VÁLIDA'), 'demo prescription must be visibly non-valid');
+assert.ok(!portal.includes('Todos los médicos en Trust Leaf están validados'), 'UI must not claim universal validation');
 
 console.log('critical-demo-routes: static route, guard, and safe-copy checks passed');

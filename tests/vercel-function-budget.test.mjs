@@ -32,8 +32,8 @@ const endpoints = (await files(join(root, 'api')))
 assert.ok(endpoints.length <= 12, `Vercel Hobby function budget exceeded: ${endpoints.length}`);
 
 const handler = await readFile(join(root, 'api/stellar/readiness.ts'), 'utf8');
-for (const token of ['contracts', 'derive-wallet', 'faucet', 'res.status(503)', "res.status(404)"]) {
+for (const token of ['contracts', 'derive-wallet', 'faucet', 'assertTestnetMutationEnabled', 'sendPilotSafetyError', "res.status(404)"]) {
   assert.match(handler, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 }
 
-console.log(`vercel-function-budget: ${endpoints.length} effective functions, static Stellar routes mapped with disabled public-operation guard`);
+console.log(`vercel-function-budget: ${endpoints.length} effective functions, static Stellar routes mapped with fail-closed faucet guard`);

@@ -74,7 +74,7 @@ assert.deepEqual(pilotPublicProjection('dispense-partial', PILOT_QR_HANDLE), { d
 assert.deepEqual(pilotPublicProjection('dispense-complete', PILOT_QR_HANDLE), { demo: true, evidenceExists: true, proofMatches: true, status: 'unavailable' });
 assert.deepEqual(pilotPublicProjection('directory-enabled', `${PILOT_QR_HANDLE}.altered`), { demo: true, evidenceExists: false, proofMatches: false, status: 'unavailable' });
 
-const app = readFileSync(new URL('../src/PublicDemoApp.tsx', import.meta.url), 'utf8');
+const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const entry = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/features/pilot-flow/PilotFlowPage.tsx', import.meta.url), 'utf8');
 const model = readFileSync(new URL('../src/features/pilot-flow/pilotFlowMachine.ts', import.meta.url), 'utf8');
@@ -83,10 +83,11 @@ const globalStyles = readFileSync(new URL('../src/index.css', import.meta.url), 
 const runbook = readFileSync(new URL('../docs/internal/pilot-flow-visual-review-runbook.md', import.meta.url), 'utf8');
 const blueprint = readFileSync(new URL('../docs/internal/pilot-flow-visual-blueprint.md', import.meta.url), 'utf8');
 
-assert.match(app, /\/demo\/pilot-flow/);
-assert.match(app, /ReceiptPilotFlow/);
-assert.match(entry, /import PublicDemoApp from '\.\/PublicDemoApp'/);
-assert.doesNotMatch(entry, /App\.tsx/);
+assert.doesNotMatch(app, /PilotFlowPage|\/demo\/pilot-flow/);
+assert.doesNotMatch(entry, /import\s+App\s+from/);
+assert.match(entry, /lazy\(\(\) => import\('\.\/App\.tsx'\)\)/);
+assert.match(entry, /lazy\(\(\) => import\('\.\/features\/pilot-flow\/PilotFlowPage'\)\)/);
+assert.ok(entry.indexOf("window.location.pathname === PILOT_FLOW_ROUTE") < entry.indexOf('<LegacyApp />'), 'entrypoint must select the isolated route before rendering legacy app');
 assert.match(ui, /aria-label="Rol activo"/);
 assert.match(ui, /role="progressbar"/);
 assert.match(ui, /role="alert"/);

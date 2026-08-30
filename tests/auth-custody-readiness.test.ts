@@ -3,7 +3,7 @@ import { inspectAuthCustodyReadiness } from '../api/_lib/auth-custody-readiness.
 
 const empty = inspectAuthCustodyReadiness({});
 assert.equal(empty.ready, false);
-assert.equal(empty.checks.legacySignerInputDisabled, true);
+assert.equal(empty.checks.noLegacyInlineSecret, true);
 assert.equal(JSON.stringify(empty).includes('undefined'), false);
 
 const synthetic = inspectAuthCustodyReadiness({
@@ -17,7 +17,7 @@ const synthetic = inspectAuthCustodyReadiness({
 assert.equal(synthetic.ready, true);
 assert.deepEqual(synthetic.blockers, []);
 
-const ignoredLegacyInput = inspectAuthCustodyReadiness({ legacySignerInput: 'synthetic-secret-must-not-be-returned' });
-assert.equal(ignoredLegacyInput.checks.legacySignerInputDisabled, true);
-assert.equal(JSON.stringify(ignoredLegacyInput).includes('synthetic-secret'), false);
+const legacySecret = inspectAuthCustodyReadiness({ ...Object.fromEntries([]), STELLAR_ADMIN_SECRET: 'synthetic-secret-must-not-be-returned' });
+assert.equal(legacySecret.checks.noLegacyInlineSecret, false);
+assert.equal(JSON.stringify(legacySecret).includes('synthetic-secret'), false);
 console.log('auth-custody-readiness: sanitized presence, public format and inline-secret gates passed');

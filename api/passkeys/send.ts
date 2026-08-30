@@ -1,3 +1,5 @@
+import { createPasskeyServer } from '../_lib/stellar.js';
+import { assertTestnetMutationEnabled } from '../_lib/pilot-safety.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -5,5 +7,39 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  return res.status(503).json({ code: 'PUBLIC_DEMO_DISABLED', message: 'El envío mediante passkeys está deshabilitado en la demo sintética.' });
+  try {
+    assertTestnetMutationEnabled();
+  } catch (error) {
+    res.status(503).send(error instanceof Error ? error.message : 'Mutaciones testnet deshabilitadas.');
+    return;
+  }
+
+  const passkeyServer = await createPasskeyServer();
+  if (!passkeyServer) {
+    res
+      .status(503)
+      .send(
+        'Passkey relayer no configurado. Define STELLAR_RELAYER_URL y STELLAR_RELAYER_API_KEY para testnet.',
+      );
+    return;
+  }
+
+  const { xdr } = req.body ?? {};
+  if (!xdr || typeof xdr !== 'string') {
+    res.status(400).send('Debe enviarse un XDR base64 válido.');
+    return;
+  }
+
+  try {
+    const result = await passkeyServer.send(xdr);
+    res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(500)
+      .send(
+        error instanceof Error
+          ? error.message
+          : 'No fue posible enviar la transacción passkey a testnet.',
+      );
+  }
 }
