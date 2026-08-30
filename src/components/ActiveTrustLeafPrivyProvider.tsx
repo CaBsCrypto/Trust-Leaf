@@ -27,10 +27,12 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
 }
 
 export function ActiveTrustLeafPrivyProvider({ config, children }: ActiveTrustLeafPrivyProviderProps) {
+  const providerProps = config.clientId
+    ? { appId: config.appId, clientId: config.clientId }
+    : { appId: config.appId };
   return (
     <PrivyProvider
-      appId={config.appId}
-      clientId={config.clientId}
+      {...providerProps}
       config={{
         // Google keeps sign-in familiar for most patients; email OTP remains
         // available for people who do not want to use a social provider.
