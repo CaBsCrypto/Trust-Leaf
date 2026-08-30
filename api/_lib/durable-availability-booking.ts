@@ -70,13 +70,15 @@ export function createAvailabilityBookingService(repository: AvailabilityBooking
   };
 }
 
+function actorRef(principal: AuthorizedPrincipal) { return principal.actorRef ?? ''; }
+
 async function replayOrThrow(repository: AvailabilityBookingRepository, operationId: string, intent: Record<string, unknown>) {
   const existing = await repository.replay(operationId); if (!existing) return null;
   const expected = Buffer.from(digest(intent), 'hex'); const actual = Buffer.from(existing.intentDigest, 'hex');
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) throw fail('IDEMPOTENCY_REPLAY_MISMATCH', 409);
   return existing.outcome;
 }
-function requirePrincipal(principal: AuthorizedPrincipal, role: string, scope: string) { if (!UUID.test(principal.actorRef ?? '') || !principal.roles.includes(role as never) || !principal.scopes.includes(scope)) throw fail('COMMAND_FORBIDDEN', 403); }
+function requirePrincipal(principal: AuthorizedPrincipal, role: string, scope: string) { if (!UUID.test(actorRef(principal)) || !principal.roles.includes(role as never) || !principal.scopes.includes(scope)) throw fail('COMMAND_FORBIDDEN', 403); }
 function validateRefs(...refs: string[]) { if (refs.some(ref => !UUID.test(ref))) throw fail('OPAQUE_REFERENCE_REQUIRED', 400); }
 function validateOperation(value: string) { if (!OPERATION.test(value)) throw fail('IDEMPOTENCY_KEY_REQUIRED', 400); }
 function validateWindow(startsAt: string, endsAt: string) { const start = Date.parse(startsAt); const end = Date.parse(endsAt); if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || end - start > 8 * 60 * 60 * 1_000) throw fail('AVAILABILITY_WINDOW_INVALID', 400); return { startsAt: new Date(start).toISOString(), endsAt: new Date(end).toISOString() }; }

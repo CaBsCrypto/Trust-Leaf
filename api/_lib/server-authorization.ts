@@ -23,6 +23,8 @@ export interface AuthorizationPolicy {
 
 export interface AuthorizedPrincipal {
   subject: string;
+  /** Optional domain actor id. When absent, callers must not infer it from an auth subject. */
+  actorRef?: string;
   roles: ServerRole[];
   scopes: string[];
 }

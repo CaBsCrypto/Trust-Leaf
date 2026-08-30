@@ -127,7 +127,10 @@ function canUseFirebase() {
 
 function getSupabaseConfig() {
   const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+  // Supabase renamed the browser-safe anon key to "publishable key". Accept
+  // the legacy name only while existing preview environments are migrated.
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim()
+    ?? import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
   if (!url || !anonKey) {
     return null;
