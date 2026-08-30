@@ -10,7 +10,7 @@ export type PrivyRuntimeConfig =
  */
 export function readPrivyRuntimeConfig(env: ClientEnv): PrivyRuntimeConfig {
   for (const [name, value] of Object.entries(env)) {
-    if (!value?.trim()) continue;
+    if (typeof value !== 'string' || !value.trim()) continue;
     if (/^VITE_.*(?:PRIVY.*(?:SECRET|AUTHORIZATION)|APP_SECRET)/i.test(name)) {
       throw new Error('PRIVY_CLIENT_SECRET_FORBIDDEN');
     }
