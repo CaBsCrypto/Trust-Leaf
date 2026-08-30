@@ -6,6 +6,7 @@ const migrationFiles = (await readdir(migrationDir)).filter(name => name.endsWit
 assert.deepEqual(migrationFiles, [
   '20260826060000_trustleaf_synthetic_security_baseline.sql',
   '20260826150000_trustleaf_auth_rbac_minimum.sql',
+  '20260829120000_trustleaf_synthetic_availability_booking.sql',
 ]);
 
 const sql = (await readFile(new URL('../supabase/migrations/20260826060000_trustleaf_synthetic_security_baseline.sql', import.meta.url), 'utf8')).toLowerCase();

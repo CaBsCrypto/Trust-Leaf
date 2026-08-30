@@ -33,6 +33,8 @@
     "test:visual-readonly-review": "node --experimental-strip-types tests/visual-readonly-review.test.ts",
     "test:durable-data-controls": "node --experimental-strip-types tests/durable-data-kms-observability.test.ts",
     "test:durable-receipt-mapping": "node --experimental-strip-types tests/durable-receipt-mapping.test.ts",
+    "test:durable-availability-booking": "node --experimental-strip-types tests/durable-availability-booking.test.ts",
+    "test:durable-availability-booking-migration": "node tests/durable-availability-booking-migration.test.mjs",
     "test:clinical-platform-readiness": "node --experimental-strip-types tests/clinical-platform-readiness.test.ts",
     "test:supabase-migration-security": "node tests/supabase-migration-security.test.mjs",
     "test:supabase-auth-rbac-migration": "node tests/supabase-auth-rbac-migration.test.mjs",
