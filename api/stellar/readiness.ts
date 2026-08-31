@@ -113,7 +113,8 @@ async function resolvePrivySession(req: any, res: any) {
 async function enrollPrivyActor(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
   const token = readPrivyToken(req.headers ?? {});
-  const role = req.body?.role;
+  const body = readJsonBody(req.body);
+  const role = body?.role;
   if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
   if (role !== 'patient' && role !== 'doctor' && role !== 'dispensary') return res.status(400).json({ code: 'ROLE_INVALID' });
   try {
@@ -130,6 +131,17 @@ async function enrollPrivyActor(req: any, res: any) {
   } catch (error) {
     const candidate = error as { code?: string; statusCode?: number };
     return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'ENROLLMENT_UNAVAILABLE' });
+  }
+}
+
+function readJsonBody(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === 'object') return value as Record<string, unknown>;
+  if (typeof value !== 'string' || value.length > 10_000) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
   }
 }
 
