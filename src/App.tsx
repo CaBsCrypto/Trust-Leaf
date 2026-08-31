@@ -2196,9 +2196,9 @@ function AdminAuthGate({
                         method: 'POST',
                         headers: { 'privy-id-token': token },
                       });
-                      const payload = await response.json() as { authorized?: boolean; role?: string };
+                      const payload = await response.json() as { authorized?: boolean; role?: string; code?: string };
                       if (!response.ok || !payload.authorized || payload.role !== 'admin') {
-                        throw new Error('Esta cuenta no está habilitada para activar la administración.');
+                        throw new Error(bootstrapAdminMessage(payload.code));
                       }
                       onPrivyAuthorized();
                     } catch (err) {
@@ -2230,6 +2230,14 @@ function AdminAuthGate({
       </main>
     </div>
   );
+}
+
+function bootstrapAdminMessage(code?: string) {
+  if (code === 'BOOTSTRAP_NOT_ALLOWED') return 'Esta identidad no coincide con la cuenta administradora inicial configurada.';
+  if (code === 'BOOTSTRAP_CONFIGURATION_MISSING') return 'Falta completar la configuración privada de la cuenta administradora.';
+  if (code === 'PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE') return 'La configuración de administración aún no está disponible. Intenta nuevamente en un momento.';
+  if (code === 'PRIVY_ADMIN_BOOTSTRAP_PERMISSION_DENIED') return 'La conexión privada de administración no tiene los permisos requeridos.';
+  return 'No fue posible completar la configuración administrativa.';
 }
 
 function privyValidationMessage(code?: string) {

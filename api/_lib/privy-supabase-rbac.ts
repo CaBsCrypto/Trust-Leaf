@@ -66,12 +66,32 @@ export function createSupabasePrivyActorStore(
       } catch {
         throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
       }
-      if (!response.ok) throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
+      if (!response.ok) {
+        const diagnostic = await readSafeSupabaseDiagnostic(response);
+        // Only diagnostic categories are logged. Tokens, subjects, emails and DB payloads stay private.
+        console.error('Privy admin bootstrap rejected by Supabase.', diagnostic);
+        throw rbacError(diagnostic.code, diagnostic.statusCode);
+      }
       const rows = await response.json() as unknown;
       if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
       return parseBinding(rows[0]);
     },
   };
+}
+
+async function readSafeSupabaseDiagnostic(response: Response) {
+  const fallback = { code: 'PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', statusCode: 503 } as const;
+  let body: unknown;
+  try { body = await response.json(); } catch { return fallback; }
+  if (!body || typeof body !== 'object') return fallback;
+  const code = (body as Record<string, unknown>).code;
+  if (code === 'PGRST202' || code === '42883') {
+    return { code: 'PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE', statusCode: 503 } as const;
+  }
+  if (code === '42501') {
+    return { code: 'PRIVY_ADMIN_BOOTSTRAP_PERMISSION_DENIED', statusCode: 503 } as const;
+  }
+  return fallback;
 }
 
 export function createPrivyRbacAuthorizer(input: {
