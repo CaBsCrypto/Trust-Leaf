@@ -85,6 +85,11 @@ export default async function handler(req: any, res: any) {
     return enrollPrivyActor(req, res);
   }
 
+  if (route === 'privy-submit-test-application') {
+    if (req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    return submitPrivyTestApplication(req, res);
+  }
+
   if (route === 'privy-admin-pending-actors') {
     if (req.method !== 'GET') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
     return listPendingPrivyActors(req, res);
@@ -173,6 +178,40 @@ async function enrollPrivyActor(req: any, res: any) {
     const candidate = error as { code?: string; statusCode?: number };
     return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'ENROLLMENT_UNAVAILABLE' });
   }
+}
+
+async function submitPrivyTestApplication(req: any, res: any) {
+  res.setHeader('Cache-Control', 'no-store');
+  const token = readPrivyToken(req.headers ?? {});
+  const body = readJsonBody(req.body);
+  const role = body?.role;
+  const profile = body?.profile;
+  if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  if ((role !== 'doctor' && role !== 'dispensary') || !isProfessionalTestProfile(role, profile)) {
+    return res.status(400).json({ code: 'TEST_APPLICATION_INVALID' });
+  }
+  try {
+    const identity = await createPrivyIdentityVerifier(process.env).verify(token);
+    const actor = await createSupabasePrivyActorStore(process.env).submitTestApplication(identity.subject, role, profile);
+    return res.status(200).json({
+      authenticated: true,
+      authorized: false,
+      role: actor.role,
+      state: actor.state,
+      email: identity.emails[0] ?? null,
+    });
+  } catch (error) {
+    const candidate = error as { code?: string; statusCode?: number };
+    return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'TEST_APPLICATION_UNAVAILABLE' });
+  }
+}
+
+function isProfessionalTestProfile(role: unknown, value: unknown): value is { displayName: string; registrationReference: string; reviewContext: string } {
+  if (!value || typeof value !== 'object') return false;
+  const profile = value as Record<string, unknown>;
+  const doctor = profile.displayName === 'Dra. Camila Prueba' && profile.registrationReference === 'TEST-RNPI-0001' && profile.reviewContext === 'Medicina general | Perfil de prueba';
+  const dispensary = profile.displayName === 'Dispensario Central Prueba' && profile.registrationReference === 'TEST-ISP-0001' && profile.reviewContext === 'Operación farmacéutica | Perfil de prueba';
+  return role === 'doctor' ? doctor : dispensary;
 }
 
 function readJsonBody(value: unknown): Record<string, unknown> | null {
