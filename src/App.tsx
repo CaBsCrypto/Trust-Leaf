@@ -2032,7 +2032,7 @@ function AdminAuthGate({
           return;
         }
         if (!cancelled) {
-          setError('Esta identidad aún no tiene autorización administrativa.');
+          setError('Acceso no autorizado. Esta cuenta no tiene permisos de administrador.');
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'No fue posible validar la identidad.');
@@ -2058,7 +2058,7 @@ function AdminAuthGate({
     authState.mode === 'authorized'
       ? 'Allowlist validada'
       : authState.mode === 'not-admin'
-        ? 'Cuenta sin allowlist'
+        ? 'Acceso no autorizado'
         : 'Documento appAdministrators/{uid}';
 
   return (
