@@ -5,6 +5,7 @@ export interface TrustLeafPrivyIdentity {
   ready: boolean;
   authenticated: boolean;
   beginLogin: () => Promise<void>;
+  logout: () => Promise<void>;
   getIdentityToken: () => Promise<string | null>;
 }
 
@@ -15,6 +16,7 @@ export const disabledPrivyIdentity: TrustLeafPrivyIdentity = {
   async beginLogin() {
     throw new Error('PRIVY_NOT_CONFIGURED');
   },
+  async logout() {},
   async getIdentityToken() {
     return null;
   },
@@ -27,6 +29,7 @@ export const loadingPrivyIdentity: TrustLeafPrivyIdentity = {
   async beginLogin() {
     throw new Error('PRIVY_LOADING');
   },
+  async logout() {},
   async getIdentityToken() {
     return null;
   },

@@ -2162,6 +2162,27 @@ function AdminAuthGate({
                 {busy ? 'Verificando...' : usingPrivy ? 'Continuar con Privy' : 'Iniciar Sesión con Google'}
               </button>
 
+              {usingPrivy && privyIdentity.authenticated && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setBusy(true);
+                    setError(null);
+                    try {
+                      await privyIdentity.logout();
+                    } catch {
+                      setError('No fue posible cerrar la sesión actual de Privy.');
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                  disabled={busy}
+                  className="flex items-center justify-center rounded-2xl border border-brand-green-deep/15 bg-white px-5 py-3 text-sm font-bold text-brand-green-deep transition hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60"
+                >
+                  Cambiar método de ingreso
+                </button>
+              )}
+
               {usingPrivy && privyIdentity.authenticated && mayBootstrap && (
                 <button
                   type="button"
