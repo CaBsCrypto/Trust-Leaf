@@ -1658,8 +1658,12 @@ function AuthGate({
         const payload = await response.json() as { role?: ActorRole; state?: string; authorized?: boolean };
         if (!response.ok) throw new Error('AUTH_UNAVAILABLE');
         if (!cancelled) setPrivyState({ role: payload.role, state: payload.state, authorized: Boolean(payload.authorized) });
-      } catch {
-        if (!cancelled) setError('No fue posible confirmar esta identidad. Vuelve a ingresar con Privy.');
+      } catch (sessionError) {
+        // A restored browser session can briefly lack a fresh token. Keep the
+        // sign-in path usable instead of presenting a false authorization error.
+        if (!cancelled && !(sessionError instanceof Error && sessionError.message === 'AUTH_REQUIRED')) {
+          setError('No fue posible confirmar esta identidad. Vuelve a ingresar con Privy.');
+        }
       }
     })();
     return () => { cancelled = true; };
