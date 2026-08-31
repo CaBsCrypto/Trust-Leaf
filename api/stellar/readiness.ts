@@ -2,6 +2,8 @@ import { fundTestnetAccount, getContractsStatus, getDeterministicKeypair, getRun
 import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../_lib/pilot-safety.js';
 import { createPrivyIdentityVerifier } from '../_lib/privy-identity.js';
 import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.js';
+import { createPrivyRbacAuthorizer } from '../_lib/privy-supabase-rbac.js';
+import { createHash, randomUUID } from 'node:crypto';
 
 /**
  * Preview-only Vercel function consolidation. Exact rewrites below preserve the
@@ -83,7 +85,44 @@ export default async function handler(req: any, res: any) {
     return enrollPrivyActor(req, res);
   }
 
+  if (route === 'privy-admin-pending-actors') {
+    if (req.method !== 'GET') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    return listPendingPrivyActors(req, res);
+  }
+
+  if (route === 'privy-admin-review-actor') {
+    if (req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    return reviewPendingPrivyActor(req, res);
+  }
+
   res.status(404).json({ message: 'Ruta Stellar no disponible.' });
+}
+
+async function listPendingPrivyActors(req: any, res: any) {
+  const token = readPrivyToken(req.headers ?? {});
+  if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  try {
+    const verifier = createPrivyIdentityVerifier(process.env);
+    const store = createSupabasePrivyActorStore(process.env);
+    const admin = await createPrivyRbacAuthorizer({ verifier, store }).authorize(token, ['admin']);
+    const actors = await store.listPending(admin.subject);
+    return res.status(200).json({ actors });
+  } catch (error) { const e = error as { code?: string; statusCode?: number }; return res.status(e.statusCode ?? 503).json({ code: e.code ?? 'REVIEW_QUEUE_UNAVAILABLE' }); }
+}
+
+async function reviewPendingPrivyActor(req: any, res: any) {
+  const token = readPrivyToken(req.headers ?? {});
+  const body = readJsonBody(req.body);
+  if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  if (!body || typeof body.actorRef !== 'string' || !Number.isSafeInteger(body.version) || (body.decision !== 'approve' && body.decision !== 'reject')) return res.status(400).json({ code: 'REVIEW_INPUT_INVALID' });
+  try {
+    const verifier = createPrivyIdentityVerifier(process.env);
+    const store = createSupabasePrivyActorStore(process.env);
+    const admin = await createPrivyRbacAuthorizer({ verifier, store }).authorize(token, ['admin']);
+    const operationDigest = createHash('sha256').update(`${randomUUID()}|${admin.actorRef}|${body.actorRef}|${body.version}|${body.decision}`).digest('hex');
+    const actor = await store.reviewPending(admin.subject, body.actorRef, body.version, body.decision, operationDigest);
+    return res.status(200).json({ actor });
+  } catch (error) { const e = error as { code?: string; statusCode?: number }; return res.status(e.statusCode ?? 503).json({ code: e.code ?? 'REVIEW_UNAVAILABLE' }); }
 }
 
 async function resolvePrivySession(req: any, res: any) {

@@ -14,6 +14,8 @@ export interface PrivyActorStore {
   resolve(subject: string): Promise<PrivyActorBinding | null>;
   bootstrapFirstAdmin(subject: string): Promise<PrivyActorBinding>;
   enroll(subject: string, role: Exclude<PrivyActorRole, 'admin'>): Promise<PrivyActorBinding>;
+  listPending(adminSubject: string): Promise<Array<PrivyActorBinding & { version: number; requestedAt: string }>>;
+  reviewPending(adminSubject: string, actorRef: string, version: number, decision: 'approve' | 'reject', operationDigest: string): Promise<PrivyActorBinding>;
 }
 
 export function createSupabasePrivyActorStore(
@@ -28,6 +30,8 @@ export function createSupabasePrivyActorStore(
   const endpoint = new URL('/rest/v1/rpc/trustleaf_resolve_privy_actor', projectUrl).toString();
   const bootstrapEndpoint = new URL('/rest/v1/rpc/trustleaf_bootstrap_first_privy_admin', projectUrl).toString();
   const enrollEndpoint = new URL('/rest/v1/rpc/trustleaf_enroll_privy_actor', projectUrl).toString();
+  const listPendingEndpoint = new URL('/rest/v1/rpc/trustleaf_list_pending_privy_actors', projectUrl).toString();
+  const reviewPendingEndpoint = new URL('/rest/v1/rpc/trustleaf_review_pending_privy_actor', projectUrl).toString();
 
   return {
     async resolve(subject) {
@@ -92,7 +96,31 @@ export function createSupabasePrivyActorStore(
       if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_ENROLLMENT_UNAVAILABLE', 503);
       return parseBinding(rows[0]);
     },
+    async listPending(adminSubject) {
+      const response = await postRpc(fetcher, listPendingEndpoint, serviceKey, { admin_subject: adminSubject });
+      if (!response.ok) throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
+      const rows = await response.json() as unknown;
+      if (!Array.isArray(rows)) throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
+      return rows.map((row) => {
+        const data = row as Record<string, unknown>;
+        const binding = parseBinding({ ...data, actor_state: 'pending' });
+        if (!Number.isSafeInteger(data.version) || typeof data.requested_at !== 'string') throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
+        return { ...binding, version: data.version, requestedAt: data.requested_at };
+      });
+    },
+    async reviewPending(adminSubject, actorRef, version, decision, operationDigest) {
+      if (!UUID.test(actorRef) || !Number.isSafeInteger(version) || version < 1 || !/^[0-9a-f]{64}$/i.test(operationDigest)) throw rbacError('PRIVY_REVIEW_INVALID', 400);
+      const response = await postRpc(fetcher, reviewPendingEndpoint, serviceKey, { admin_subject: adminSubject, target_actor_ref: actorRef, expected_version: version, decision, operation_digest: `\\x${operationDigest}` });
+      if (!response.ok) throw rbacError('PRIVY_REVIEW_UNAVAILABLE', 503);
+      const rows = await response.json() as unknown;
+      if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_REVIEW_UNAVAILABLE', 503);
+      return parseBinding(rows[0]);
+    },
   };
+}
+
+function postRpc(fetcher: typeof fetch, endpoint: string, serviceKey: string, body: unknown) {
+  return fetcher(endpoint, { method: 'POST', headers: { apikey: serviceKey, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5_000) });
 }
 
 async function readSafeSupabaseDiagnostic(response: Response) {

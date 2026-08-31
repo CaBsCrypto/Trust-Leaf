@@ -30,6 +30,14 @@
       "destination": "/api/stellar/readiness?__trustleaf_route=privy-enroll-actor"
     },
     {
+      "source": "/api/auth/privy/admin/pending-actors",
+      "destination": "/api/stellar/readiness?__trustleaf_route=privy-admin-pending-actors"
+    },
+    {
+      "source": "/api/auth/privy/admin/review-actor",
+      "destination": "/api/stellar/readiness?__trustleaf_route=privy-admin-review-actor"
+    },
+    {
       "source": "/paciente",
       "destination": "/index.html"
     },

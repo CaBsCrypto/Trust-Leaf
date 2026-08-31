@@ -1008,6 +1008,7 @@ function AppContent() {
         onRegisterDispensaryOnchain={registerDispensaryOnchain}
         onRevokeDoctorOnchain={revokeDoctorOnchain}
         onRevokeDispensaryOnchain={revokeDispensaryOnchain}
+        privyIdentity={privyIdentity}
       />
     );
   }
@@ -2289,6 +2290,53 @@ function privyValidationMessage(code?: string) {
   return 'No fue posible validar la identidad en el servidor.';
 }
 
+function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPrivyIdentity }) {
+  const [actors, setActors] = useState<Array<{ actorRef: string; role: 'doctor' | 'dispensary'; version: number; requestedAt: string }>>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const load = async () => {
+    setNotice(null);
+    const token = await privyIdentity.getIdentityToken();
+    if (!token) throw new Error('SESSION_REQUIRED');
+    const response = await fetch('/api/auth/privy/admin/pending-actors', { headers: { 'privy-id-token': token } });
+    if (!response.ok) throw new Error('QUEUE_UNAVAILABLE');
+    const payload = await response.json() as { actors?: typeof actors };
+    setActors(Array.isArray(payload.actors) ? payload.actors : []);
+  };
+
+  useEffect(() => { void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.')); }, []);
+
+  const review = async (actor: typeof actors[number], decision: 'approve' | 'reject') => {
+    setBusy(`${actor.actorRef}:${decision}`);
+    setNotice(null);
+    try {
+      const token = await privyIdentity.getIdentityToken();
+      if (!token) throw new Error('SESSION_REQUIRED');
+      const response = await fetch('/api/auth/privy/admin/review-actor', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'privy-id-token': token },
+        body: JSON.stringify({ actorRef: actor.actorRef, version: actor.version, decision }),
+      });
+      if (!response.ok) throw new Error('REVIEW_UNAVAILABLE');
+      setNotice(decision === 'approve' ? 'Cuenta autorizada. El actor ya puede continuar.' : 'Solicitud rechazada.');
+      await load();
+    } catch { setNotice('No fue posible registrar la decisión. Vuelve a intentarlo.'); }
+    finally { setBusy(null); }
+  };
+
+  return (
+    <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Solicitudes verificadas</p><h2 className="mt-1 text-xl font-serif">Aprobaciones de cuentas</h2></div>
+        <button onClick={() => void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.'))} className="rounded-xl border border-brand-green-deep/10 px-3 py-2 text-xs font-bold">Actualizar</button>
+      </div>
+      {notice && <p className="mt-4 text-sm text-brand-green-mid">{notice}</p>}
+      {actors.length === 0 ? <p className="mt-4 text-sm text-brand-green-mid/70">No hay solicitudes profesionales pendientes.</p> : <div className="mt-4 space-y-3">{actors.map((actor) => <div key={actor.actorRef} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-neutral p-4"><div><p className="font-bold capitalize">{actor.role === 'doctor' ? 'Médico' : 'Dispensario'}</p><p className="text-xs text-brand-green-mid/65">Solicitud pendiente de revisión</p></div><div className="flex gap-2"><button disabled={Boolean(busy)} onClick={() => void review(actor, 'reject')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Rechazar</button><button disabled={Boolean(busy)} onClick={() => void review(actor, 'approve')} className="rounded-xl bg-brand-green-deep px-3 py-2 text-xs font-bold text-brand-ivory disabled:opacity-50">{busy === `${actor.actorRef}:approve` ? 'Autorizando...' : 'Autorizar'}</button></div></div>)}</div>}
+    </section>
+  );
+}
+
 function AdminRoute({
   onBack,
   session,
@@ -2304,6 +2352,7 @@ function AdminRoute({
   onRegisterDispensaryOnchain,
   onRevokeDoctorOnchain,
   onRevokeDispensaryOnchain,
+  privyIdentity,
 }: {
   onBack: () => void;
   session: TrustSession | null;
@@ -2319,6 +2368,7 @@ function AdminRoute({
   onRegisterDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
   onRevokeDoctorOnchain: (request: DoctorRegistration) => Promise<unknown>;
   onRevokeDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
+  privyIdentity: TrustLeafPrivyIdentity;
 }) {
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
@@ -2485,6 +2535,7 @@ function AdminRoute({
       </div>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorReviewQueue privyIdentity={privyIdentity} />}
         <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
