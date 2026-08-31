@@ -24,8 +24,8 @@ export function createSupabasePrivyActorStore(
     env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY,
     'SUPABASE_SERVER_KEY_MISSING',
   );
-  const endpoint = new URL('/rest/v1/rpc/resolve_privy_actor', projectUrl).toString();
-  const bootstrapEndpoint = new URL('/rest/v1/rpc/bootstrap_first_privy_admin', projectUrl).toString();
+  const endpoint = new URL('/rest/v1/rpc/trustleaf_resolve_privy_actor', projectUrl).toString();
+  const bootstrapEndpoint = new URL('/rest/v1/rpc/trustleaf_bootstrap_first_privy_admin', projectUrl).toString();
 
   return {
     async resolve(subject) {
@@ -37,7 +37,6 @@ export function createSupabasePrivyActorStore(
           headers: {
             apikey: serviceKey,
             'content-type': 'application/json',
-            'content-profile': 'trustleaf_private',
           },
           body: JSON.stringify({ subject }),
           signal: AbortSignal.timeout(5_000),
@@ -60,7 +59,6 @@ export function createSupabasePrivyActorStore(
           headers: {
             apikey: serviceKey,
             'content-type': 'application/json',
-            'content-profile': 'trustleaf_private',
           },
           body: JSON.stringify({ subject }),
           signal: AbortSignal.timeout(5_000),
