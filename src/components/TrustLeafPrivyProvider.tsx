@@ -43,7 +43,7 @@ export { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 export function TrustLeafPrivyProvider({ children }: TrustLeafPrivyProviderProps) {
   // Keep the public app resilient while Privy is being validated. Activation
   // requires an explicit Vercel flag instead of enabling from App ID alone.
-  const config = import.meta.env.VITE_PRIVY_ENABLED === 'true'
+  const config = import.meta.env.VITE_PRIVY_ENABLED?.trim() === 'true'
     ? readPrivyRuntimeConfig(import.meta.env)
     : { enabled: false as const, reason: 'CONFIG_MISSING' as const };
   if (!config.enabled) {
