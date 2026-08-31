@@ -1,5 +1,4 @@
 import { fundTestnetAccount, getContractsStatus, getDeterministicKeypair, getRuntimeReadiness } from '../_lib/stellar.js';
-import { createLegacyAuthorizationMiddleware } from '../_lib/legacy-route-authorization.js';
 import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../_lib/pilot-safety.js';
 import { createPrivyIdentityVerifier } from '../_lib/privy-identity.js';
 import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.js';
@@ -134,6 +133,7 @@ function requiredBootstrapEmail(value: string | undefined) {
 async function authorizeConsolidatedRoute(req: any, res: any, path: string) {
   res.locals ??= {};
   let allowed = false;
+  const { createLegacyAuthorizationMiddleware } = await import('../_lib/legacy-route-authorization.js');
   const middleware = createLegacyAuthorizationMiddleware(process.env);
   await middleware({ ...req, path, headers: req.headers ?? {} }, res, () => { allowed = true; });
   return allowed;
