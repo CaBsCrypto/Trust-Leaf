@@ -26,6 +26,10 @@
       "destination": "/api/stellar/readiness?__trustleaf_route=privy-bootstrap-admin"
     },
     {
+      "source": "/api/auth/privy/enroll-actor",
+      "destination": "/api/stellar/readiness?__trustleaf_route=privy-enroll-actor"
+    },
+    {
       "source": "/paciente",
       "destination": "/index.html"
     },

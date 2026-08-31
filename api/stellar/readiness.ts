@@ -78,6 +78,11 @@ export default async function handler(req: any, res: any) {
     return bootstrapPrivyAdmin(req, res);
   }
 
+  if (route === 'privy-enroll-actor') {
+    if (req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    return enrollPrivyActor(req, res);
+  }
+
   res.status(404).json({ message: 'Ruta Stellar no disponible.' });
 }
 
@@ -88,13 +93,29 @@ async function resolvePrivySession(req: any, res: any) {
   try {
     const identity = await createPrivyIdentityVerifier(process.env).verify(token);
     const binding = await createSupabasePrivyActorStore(process.env).resolve(identity.subject);
-    if (!binding || binding.state !== 'active' || isExpired(binding.validUntil)) {
+    if (!binding) {
       return res.status(200).json({ authenticated: true, authorized: false });
     }
-    return res.status(200).json({ authenticated: true, authorized: true, role: binding.role, actorRef: binding.actorRef });
+    return res.status(200).json({ authenticated: true, authorized: binding.state === 'active' && !isExpired(binding.validUntil), role: binding.role, state: binding.state, actorRef: binding.actorRef });
   } catch (error) {
     const candidate = error as { code?: string; statusCode?: number };
     return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'AUTH_UNAVAILABLE' });
+  }
+}
+
+async function enrollPrivyActor(req: any, res: any) {
+  res.setHeader('Cache-Control', 'no-store');
+  const token = readPrivyToken(req.headers ?? {});
+  const role = req.body?.role;
+  if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  if (role !== 'patient' && role !== 'doctor' && role !== 'dispensary') return res.status(400).json({ code: 'ROLE_INVALID' });
+  try {
+    const identity = await createPrivyIdentityVerifier(process.env).verify(token);
+    const actor = await createSupabasePrivyActorStore(process.env).enroll(identity.subject, role);
+    return res.status(200).json({ authenticated: true, authorized: actor.state === 'active' && !isExpired(actor.validUntil), role: actor.role, state: actor.state, actorRef: actor.actorRef });
+  } catch (error) {
+    const candidate = error as { code?: string; statusCode?: number };
+    return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'ENROLLMENT_UNAVAILABLE' });
   }
 }
 

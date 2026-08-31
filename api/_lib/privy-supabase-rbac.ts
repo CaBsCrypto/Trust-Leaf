@@ -13,6 +13,7 @@ export interface PrivyActorBinding {
 export interface PrivyActorStore {
   resolve(subject: string): Promise<PrivyActorBinding | null>;
   bootstrapFirstAdmin(subject: string): Promise<PrivyActorBinding>;
+  enroll(subject: string, role: Exclude<PrivyActorRole, 'admin'>): Promise<PrivyActorBinding>;
 }
 
 export function createSupabasePrivyActorStore(
@@ -26,6 +27,7 @@ export function createSupabasePrivyActorStore(
   );
   const endpoint = new URL('/rest/v1/rpc/trustleaf_resolve_privy_actor', projectUrl).toString();
   const bootstrapEndpoint = new URL('/rest/v1/rpc/trustleaf_bootstrap_first_privy_admin', projectUrl).toString();
+  const enrollEndpoint = new URL('/rest/v1/rpc/trustleaf_enroll_privy_actor', projectUrl).toString();
 
   return {
     async resolve(subject) {
@@ -74,6 +76,20 @@ export function createSupabasePrivyActorStore(
       }
       const rows = await response.json() as unknown;
       if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503);
+      return parseBinding(rows[0]);
+    },
+    async enroll(subject, role) {
+      if (!isPrivyDid(subject) || role === 'admin') throw rbacError('PRIVY_ENROLLMENT_INVALID', 400);
+      let response: Response;
+      try {
+        response = await fetcher(enrollEndpoint, {
+          method: 'POST', headers: { apikey: serviceKey, 'content-type': 'application/json' },
+          body: JSON.stringify({ subject, requested_role: role }), signal: AbortSignal.timeout(5_000),
+        });
+      } catch { throw rbacError('PRIVY_ENROLLMENT_UNAVAILABLE', 503); }
+      if (!response.ok) throw rbacError('PRIVY_ENROLLMENT_UNAVAILABLE', 503);
+      const rows = await response.json() as unknown;
+      if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_ENROLLMENT_UNAVAILABLE', 503);
       return parseBinding(rows[0]);
     },
   };
