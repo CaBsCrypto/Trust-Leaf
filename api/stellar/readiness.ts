@@ -96,7 +96,14 @@ async function resolvePrivySession(req: any, res: any) {
     if (!binding) {
       return res.status(200).json({ authenticated: true, authorized: false });
     }
-    return res.status(200).json({ authenticated: true, authorized: binding.state === 'active' && !isExpired(binding.validUntil), role: binding.role, state: binding.state, actorRef: binding.actorRef });
+    return res.status(200).json({
+      authenticated: true,
+      authorized: binding.state === 'active' && !isExpired(binding.validUntil),
+      role: binding.role,
+      state: binding.state,
+      actorRef: binding.actorRef,
+      email: identity.emails[0] ?? null,
+    });
   } catch (error) {
     const candidate = error as { code?: string; statusCode?: number };
     return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'AUTH_UNAVAILABLE' });
@@ -112,7 +119,14 @@ async function enrollPrivyActor(req: any, res: any) {
   try {
     const identity = await createPrivyIdentityVerifier(process.env).verify(token);
     const actor = await createSupabasePrivyActorStore(process.env).enroll(identity.subject, role);
-    return res.status(200).json({ authenticated: true, authorized: actor.state === 'active' && !isExpired(actor.validUntil), role: actor.role, state: actor.state, actorRef: actor.actorRef });
+    return res.status(200).json({
+      authenticated: true,
+      authorized: actor.state === 'active' && !isExpired(actor.validUntil),
+      role: actor.role,
+      state: actor.state,
+      actorRef: actor.actorRef,
+      email: identity.emails[0] ?? null,
+    });
   } catch (error) {
     const candidate = error as { code?: string; statusCode?: number };
     return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'ENROLLMENT_UNAVAILABLE' });
