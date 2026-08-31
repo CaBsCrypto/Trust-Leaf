@@ -14,8 +14,15 @@ export interface PrivyActorStore {
   resolve(subject: string): Promise<PrivyActorBinding | null>;
   bootstrapFirstAdmin(subject: string): Promise<PrivyActorBinding>;
   enroll(subject: string, role: Exclude<PrivyActorRole, 'admin'>): Promise<PrivyActorBinding>;
-  listPending(adminSubject: string): Promise<Array<PrivyActorBinding & { version: number; requestedAt: string }>>;
+  submitTestApplication(subject: string, role: Extract<PrivyActorRole, 'doctor' | 'dispensary'>, profile: ProfessionalTestProfile): Promise<PrivyActorBinding>;
+  listPending(adminSubject: string): Promise<Array<PrivyActorBinding & { version: number; requestedAt: string; testProfile?: ProfessionalTestProfile }>>;
   reviewPending(adminSubject: string, actorRef: string, version: number, decision: 'approve' | 'reject', operationDigest: string): Promise<PrivyActorBinding>;
+}
+
+export interface ProfessionalTestProfile {
+  displayName: string;
+  registrationReference: string;
+  reviewContext: string;
 }
 
 export function createSupabasePrivyActorStore(
@@ -32,6 +39,7 @@ export function createSupabasePrivyActorStore(
   const enrollEndpoint = new URL('/rest/v1/rpc/trustleaf_enroll_privy_actor', projectUrl).toString();
   const listPendingEndpoint = new URL('/rest/v1/rpc/trustleaf_list_pending_privy_actors', projectUrl).toString();
   const reviewPendingEndpoint = new URL('/rest/v1/rpc/trustleaf_review_pending_privy_actor', projectUrl).toString();
+  const testApplicationEndpoint = new URL('/rest/v1/rpc/trustleaf_submit_professional_test_application', projectUrl).toString();
 
   return {
     async resolve(subject) {
@@ -96,6 +104,20 @@ export function createSupabasePrivyActorStore(
       if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_ENROLLMENT_UNAVAILABLE', 503);
       return parseBinding(rows[0]);
     },
+    async submitTestApplication(subject, role, profile) {
+      if (!isPrivyDid(subject) || (role !== 'doctor' && role !== 'dispensary')) throw rbacError('PRIVY_TEST_APPLICATION_INVALID', 400);
+      const response = await postRpc(fetcher, testApplicationEndpoint, serviceKey, {
+        subject,
+        requested_role: role,
+        submitted_display_name: profile.displayName,
+        submitted_registration_reference: profile.registrationReference,
+        submitted_review_context: profile.reviewContext,
+      });
+      if (!response.ok) throw rbacError('PRIVY_TEST_APPLICATION_UNAVAILABLE', 503);
+      const rows = await response.json() as unknown;
+      if (!Array.isArray(rows) || rows.length !== 1) throw rbacError('PRIVY_TEST_APPLICATION_UNAVAILABLE', 503);
+      return parseBinding(rows[0]);
+    },
     async listPending(adminSubject) {
       const response = await postRpc(fetcher, listPendingEndpoint, serviceKey, { admin_subject: adminSubject });
       if (!response.ok) throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
@@ -105,7 +127,10 @@ export function createSupabasePrivyActorStore(
         const data = row as Record<string, unknown>;
         const binding = parseBinding({ ...data, actor_state: 'pending' });
         if (!Number.isSafeInteger(data.version) || typeof data.requested_at !== 'string') throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
-        return { ...binding, version: data.version, requestedAt: data.requested_at };
+        const profile = typeof data.display_name === 'string' && typeof data.registration_reference === 'string' && typeof data.review_context === 'string'
+          ? { displayName: data.display_name, registrationReference: data.registration_reference, reviewContext: data.review_context }
+          : undefined;
+        return { ...binding, version: data.version, requestedAt: data.requested_at, ...(profile ? { testProfile: profile } : {}) };
       });
     },
     async reviewPending(adminSubject, actorRef, version, decision, operationDigest) {
