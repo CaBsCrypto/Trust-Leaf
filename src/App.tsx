@@ -2012,7 +2012,6 @@ function AdminAuthGate({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mayBootstrap, setMayBootstrap] = useState(false);
   const firebaseStatus = getFirebaseRuntimeStatus();
   const usingPrivy = privyIdentity.enabled;
 
@@ -2033,7 +2032,6 @@ function AdminAuthGate({
           return;
         }
         if (!cancelled) {
-          setMayBootstrap(true);
           setError('Esta identidad aún no tiene autorización administrativa.');
         }
       } catch (err) {
@@ -2183,37 +2181,6 @@ function AdminAuthGate({
                 </button>
               )}
 
-              {usingPrivy && privyIdentity.authenticated && mayBootstrap && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setBusy(true);
-                    setError(null);
-                    try {
-                      const token = await privyIdentity.getIdentityToken();
-                      if (!token) throw new Error('No fue posible confirmar la sesión de Privy.');
-                      const response = await fetch('/api/auth/privy/bootstrap-admin', {
-                        method: 'POST',
-                        headers: { 'privy-id-token': token },
-                      });
-                      const payload = await response.json() as { authorized?: boolean; role?: string; code?: string };
-                      if (!response.ok || !payload.authorized || payload.role !== 'admin') {
-                        throw new Error(bootstrapAdminMessage(payload.code));
-                      }
-                      onPrivyAuthorized();
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : 'No fue posible activar la administración.');
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                  disabled={busy}
-                  className="flex items-center justify-center rounded-2xl border border-brand-green-deep/15 bg-white px-5 py-3 text-sm font-bold text-brand-green-deep transition hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60"
-                >
-                  Activar primera cuenta administradora
-                </button>
-              )}
-
               {(error || authState.error || authState.mode === 'not-admin') && (
                 <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-red-700 leading-relaxed">
                   <p className="font-bold uppercase tracking-wider">Acceso denegado</p>
@@ -2232,13 +2199,6 @@ function AdminAuthGate({
   );
 }
 
-function bootstrapAdminMessage(code?: string) {
-  if (code === 'BOOTSTRAP_NOT_ALLOWED') return 'Esta identidad no coincide con la cuenta administradora inicial configurada.';
-  if (code === 'BOOTSTRAP_CONFIGURATION_MISSING') return 'Falta completar la configuración privada de la cuenta administradora.';
-  if (code === 'PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE') return 'La configuración de administración aún no está disponible. Intenta nuevamente en un momento.';
-  if (code === 'PRIVY_ADMIN_BOOTSTRAP_SERVER_KEY_INVALID') return 'La conexión privada de administración necesita renovar su configuración segura.';
-  return 'No fue posible completar la configuración administrativa.';
-}
 
 function privyValidationMessage(code?: string) {
   if (code === 'PRIVY_IDENTITY_TOKEN_INVALID') {
