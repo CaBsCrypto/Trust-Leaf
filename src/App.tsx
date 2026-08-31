@@ -2236,7 +2236,7 @@ function bootstrapAdminMessage(code?: string) {
   if (code === 'BOOTSTRAP_NOT_ALLOWED') return 'Esta identidad no coincide con la cuenta administradora inicial configurada.';
   if (code === 'BOOTSTRAP_CONFIGURATION_MISSING') return 'Falta completar la configuración privada de la cuenta administradora.';
   if (code === 'PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE') return 'La configuración de administración aún no está disponible. Intenta nuevamente en un momento.';
-  if (code === 'PRIVY_ADMIN_BOOTSTRAP_PERMISSION_DENIED') return 'La conexión privada de administración no tiene los permisos requeridos.';
+  if (code === 'PRIVY_ADMIN_BOOTSTRAP_SERVER_KEY_INVALID') return 'La conexión privada de administración necesita renovar su configuración segura.';
   return 'No fue posible completar la configuración administrativa.';
 }
 

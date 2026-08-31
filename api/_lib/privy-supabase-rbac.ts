@@ -80,16 +80,16 @@ export function createSupabasePrivyActorStore(
 }
 
 async function readSafeSupabaseDiagnostic(response: Response) {
-  const fallback = { code: 'PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', statusCode: 503 } as const;
+  const fallback = { code: 'PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', statusCode: 503, httpStatus: response.status } as const;
   let body: unknown;
   try { body = await response.json(); } catch { return fallback; }
   if (!body || typeof body !== 'object') return fallback;
   const code = (body as Record<string, unknown>).code;
-  if (code === 'PGRST202' || code === '42883') {
-    return { code: 'PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE', statusCode: 503 } as const;
+  if (response.status === 401 || response.status === 403 || code === '42501') {
+    return { code: 'PRIVY_ADMIN_BOOTSTRAP_SERVER_KEY_INVALID', statusCode: 503, httpStatus: response.status } as const;
   }
-  if (code === '42501') {
-    return { code: 'PRIVY_ADMIN_BOOTSTRAP_PERMISSION_DENIED', statusCode: 503 } as const;
+  if (response.status === 404 || code === 'PGRST202' || code === '42883') {
+    return { code: 'PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE', statusCode: 503, httpStatus: response.status } as const;
   }
   return fallback;
 }
