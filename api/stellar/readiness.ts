@@ -111,6 +111,11 @@ async function bootstrapPrivyAdmin(req: any, res: any) {
     return res.status(200).json({ authorized: true, role: 'admin', actorRef: actor.actorRef });
   } catch (error) {
     const candidate = error as { code?: string; statusCode?: number };
+    // Emit only a stable category: never the Privy token, email, subject or database payload.
+    console.error('Privy admin bootstrap denied.', {
+      code: candidate.code ?? 'BOOTSTRAP_UNAVAILABLE',
+      statusCode: candidate.statusCode ?? 503,
+    });
     return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'BOOTSTRAP_UNAVAILABLE' });
   }
 }
