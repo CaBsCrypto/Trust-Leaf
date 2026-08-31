@@ -1649,6 +1649,7 @@ function AuthGate({
   const [pendingGoogleUser, setPendingGoogleUser] = useState<any | null>(null);
   const [privyState, setPrivyState] = useState<{ role?: ActorRole; state?: string; authorized: boolean; email?: string } | null>(null);
   const [privyBusy, setPrivyBusy] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1675,20 +1676,26 @@ function AuthGate({
     return () => { cancelled = true; };
   }, [privyIdentity.authenticated, privyIdentity.enabled]);
 
-  const enrollWithPrivy = async () => {
+  const enrollWithPrivy = async (resend = false) => {
     setPrivyBusy(true);
     setError(null);
+    setPendingNotice(null);
     try {
       const token = await privyIdentity.getIdentityToken();
       if (!token) throw new Error('AUTH_REQUIRED');
       const response = await fetch('/api/auth/privy/enroll-actor', {
         method: 'POST', headers: { 'content-type': 'application/json', 'privy-id-token': token }, body: JSON.stringify({ role }),
+        cache: 'no-store',
       });
       const payload = await response.json() as { role?: ActorRole; state?: string; authorized?: boolean; email?: string | null; code?: string };
       if (!response.ok) throw new Error(payload.code ?? 'ENROLLMENT_UNAVAILABLE');
       if (payload.role !== role) throw new Error('ROLE_MISMATCH');
       const email = payload.email ?? `${role}@privy.trustleaf`;
       setPrivyState({ role: payload.role, state: payload.state, authorized: Boolean(payload.authorized), email });
+      if (payload.state === 'pending') {
+        setPendingNotice(resend ? 'Solicitud reenviada a administración.' : 'Solicitud enviada a administración.');
+        return;
+      }
       onStart(role, { email, name: role === 'doctor' ? 'Profesional Trust Leaf' : role === 'dispensary' ? 'Dispensario Trust Leaf' : 'Paciente Trust Leaf', mode: 'email' });
     } catch {
       setError('No fue posible crear el acceso. Intenta nuevamente en unos segundos.');
@@ -1721,7 +1728,7 @@ function AuthGate({
           <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm flex flex-col justify-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso seguro</p>
             {privyState?.email && <p className="mt-3 text-xs font-medium text-brand-green-mid/70">Conectado como {privyState.email}</p>}
-            {!privyIdentity.authenticated ? <><h2 className="mt-2 text-2xl font-serif">Ingresa para continuar</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Puedes usar Google o tu correo. No necesitas saldo ni una wallet previa.</p><button disabled={!privyIdentity.ready} onClick={() => void privyIdentity.beginLogin()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyIdentity.ready ? 'Continuar con Privy' : 'Preparando acceso...'}</button></> : hasOtherRole ? <><h2 className="mt-2 text-2xl font-serif">Acceso no autorizado</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Esta identidad ya está registrada con otro rol y no puede cambiarse desde esta pantalla.</p><button onClick={() => void privyIdentity.logout()} className="mt-6 rounded-xl border border-brand-green-deep/15 px-5 py-3 text-sm font-bold">Usar otra cuenta</button></> : isPending ? <><h2 className="mt-2 text-2xl font-serif">Solicitud en revisión</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Tu identidad está confirmada y tu solicitud ya fue enviada a administración. No necesitas completar otro formulario.</p><p className="mt-3 text-xs leading-relaxed text-brand-green-mid/55">Cuando se apruebe la habilitación profesional, este espacio se activará automáticamente.</p></> : active ? <><h2 className="mt-2 text-2xl font-serif">Cuenta autorizada</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Tu identidad y permisos están confirmados.</p><button onClick={() => onStart(role, { email: privyState.email ?? `${role}@privy.trustleaf`, name: 'Cuenta Trust Leaf', mode: 'email' })} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white">Continuar</button></> : <><h2 className="mt-2 text-2xl font-serif">Crear acceso</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">{role === 'patient' ? 'Tu cuenta de paciente se activa de inmediato.' : 'Tu identidad quedará en revisión hasta que administración apruebe el alta.'}</p><button disabled={privyBusy} onClick={() => void enrollWithPrivy()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyBusy ? 'Creando acceso...' : primaryAction}</button></>}
+            {!privyIdentity.authenticated ? <><h2 className="mt-2 text-2xl font-serif">Ingresa para continuar</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Puedes usar Google o tu correo. No necesitas saldo ni una wallet previa.</p><button disabled={!privyIdentity.ready} onClick={() => void privyIdentity.beginLogin()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyIdentity.ready ? 'Continuar con Privy' : 'Preparando acceso...'}</button></> : hasOtherRole ? <><h2 className="mt-2 text-2xl font-serif">Acceso no autorizado</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Esta identidad ya está registrada con otro rol y no puede cambiarse desde esta pantalla.</p><button onClick={() => void privyIdentity.logout()} className="mt-6 rounded-xl border border-brand-green-deep/15 px-5 py-3 text-sm font-bold">Usar otra cuenta</button></> : isPending ? <><h2 className="mt-2 text-2xl font-serif">Solicitud en revisión</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Tu identidad está confirmada y tu solicitud ya fue enviada a administración. No necesitas completar otro formulario.</p><p className="mt-3 text-xs leading-relaxed text-brand-green-mid/55">Cuando se apruebe la habilitación profesional, este espacio se activará automáticamente.</p>{pendingNotice && <p className="mt-3 text-sm text-brand-green-mid">{pendingNotice}</p>}<button disabled={privyBusy} onClick={() => void enrollWithPrivy(true)} className="mt-5 rounded-xl border border-brand-green-deep/15 px-5 py-3 text-sm font-bold disabled:opacity-50">{privyBusy ? 'Enviando...' : 'Reenviar solicitud'}</button></> : active ? <><h2 className="mt-2 text-2xl font-serif">Cuenta autorizada</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Tu identidad y permisos están confirmados.</p><button onClick={() => onStart(role, { email: privyState.email ?? `${role}@privy.trustleaf`, name: 'Cuenta Trust Leaf', mode: 'email' })} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white">Continuar</button></> : <><h2 className="mt-2 text-2xl font-serif">Crear acceso</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">{role === 'patient' ? 'Tu cuenta de paciente se activa de inmediato.' : 'Tu identidad quedará en revisión hasta que administración apruebe el alta.'}</p><button disabled={privyBusy} onClick={() => void enrollWithPrivy()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyBusy ? 'Creando acceso...' : primaryAction}</button></>}
             {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
           </section>
         </main>
