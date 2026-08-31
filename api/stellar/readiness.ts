@@ -99,6 +99,8 @@ export default async function handler(req: any, res: any) {
 }
 
 async function listPendingPrivyActors(req: any, res: any) {
+  // Actor approvals are operational state; never serve a stale administrator queue.
+  res.setHeader('Cache-Control', 'no-store');
   const token = readPrivyToken(req.headers ?? {});
   if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
   try {
