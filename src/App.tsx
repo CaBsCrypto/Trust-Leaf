@@ -396,6 +396,11 @@ function AppContent() {
   const endSession = () => {
     localStorage.removeItem(TRUST_SESSION_KEY);
     setSession(null);
+    if (privyIdentity.enabled && privyIdentity.authenticated) {
+      void privyIdentity.logout().catch(() => {
+        // The local session is already cleared. A retry on the next entry is safe.
+      });
+    }
     if (adminAuth.user) {
       void signOutAdmin();
     }
