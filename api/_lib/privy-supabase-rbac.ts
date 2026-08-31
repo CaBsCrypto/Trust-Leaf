@@ -85,6 +85,11 @@ async function readSafeSupabaseDiagnostic(response: Response) {
   try { body = await response.json(); } catch { return fallback; }
   if (!body || typeof body !== 'object') return fallback;
   const code = (body as Record<string, unknown>).code;
+  const upstreamCode = typeof code === 'string' ? code : 'unknown';
+  console.error('Supabase Privy bootstrap gateway response.', {
+    httpStatus: response.status,
+    upstreamCode,
+  });
   if (response.status === 401 || response.status === 403 || code === '42501') {
     return { code: 'PRIVY_ADMIN_BOOTSTRAP_SERVER_KEY_INVALID', statusCode: 503, httpStatus: response.status } as const;
   }
