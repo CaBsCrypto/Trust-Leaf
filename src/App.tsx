@@ -2027,7 +2027,7 @@ function AdminAuthGate({
         if (!token) throw new Error('No fue posible confirmar la sesión de Privy.');
         const response = await fetch('/api/auth/privy/session', { headers: { 'privy-id-token': token } });
         const payload = await response.json() as { authorized?: boolean; role?: string; code?: string };
-        if (!response.ok) throw new Error('No fue posible validar la identidad en el servidor.');
+        if (!response.ok) throw new Error(privyValidationMessage(payload.code));
         if (payload.authorized && payload.role === 'admin') {
           if (!cancelled) onPrivyAuthorized();
           return;
@@ -2209,6 +2209,22 @@ function AdminAuthGate({
       </main>
     </div>
   );
+}
+
+function privyValidationMessage(code?: string) {
+  if (code === 'PRIVY_IDENTITY_TOKEN_INVALID') {
+    return 'Privy no pudo validar esta sesión. Cierra la sesión y vuelve a ingresar.';
+  }
+  if (code === 'PRIVY_SERVER_CONFIGURATION_MISSING') {
+    return 'Falta una configuración privada de Privy en el servidor.';
+  }
+  if (code === 'PRIVY_ACTOR_STORE_UNAVAILABLE') {
+    return 'La conexión con la autorización administrativa está temporalmente no disponible.';
+  }
+  if (code === 'AUTH_REQUIRED') {
+    return 'No llegó una sesión válida al servidor. Vuelve a ingresar con Privy.';
+  }
+  return 'No fue posible validar la identidad en el servidor.';
 }
 
 function AdminRoute({
