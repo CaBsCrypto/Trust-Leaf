@@ -1,8 +1,8 @@
 import { fundTestnetAccount, getContractsStatus, getDeterministicKeypair, getRuntimeReadiness } from '../_lib/stellar.js';
-import { createLegacyAuthorizationMiddleware } from '../_lib/legacy-route-authorization.ts';
+import { createLegacyAuthorizationMiddleware } from '../_lib/legacy-route-authorization.js';
 import { assertTestnetMutationEnabled, sendPilotSafetyError } from '../_lib/pilot-safety.js';
-import { createPrivyIdentityVerifier } from '../_lib/privy-identity.ts';
-import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.ts';
+import { createPrivyIdentityVerifier } from '../_lib/privy-identity.js';
+import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.js';
 
 /**
  * Preview-only Vercel function consolidation. Exact rewrites below preserve the

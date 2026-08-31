@@ -16,7 +16,7 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
     ready,
     authenticated,
     async beginLogin() {
-      await login();
+      await login({ loginMethods: ['google', 'email', 'passkey', 'wallet'] });
     },
     async getIdentityToken() {
       return getIdentityToken();
@@ -33,6 +33,7 @@ export function ActiveTrustLeafPrivyProvider({ config, children }: ActiveTrustLe
   return (
     <PrivyProvider
       {...providerProps}
+      config={{ loginMethods: ['google', 'email', 'passkey', 'wallet'] }}
     >
       <PrivyIdentityBridge>{children}</PrivyIdentityBridge>
     </PrivyProvider>
