@@ -2554,7 +2554,7 @@ function AdminRoute({
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Trust Leaf</p>
             <h1 className="text-2xl md:text-3xl font-serif">Admin Operacional</h1>
             <p className="mt-1 text-xs text-brand-green-mid/60">
-              Persistencia: {registrationSource === 'supabase' ? 'Supabase' : registrationSource === 'firebase' ? 'Firebase' : 'Local / grabacion'}
+              Gestión privada de accesos y aprobaciones
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -2581,6 +2581,12 @@ function AdminRoute({
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
         {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorReviewQueue privyIdentity={privyIdentity} />}
+        {privyIdentity.enabled && (
+          <section className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/45 px-5 py-4 text-sm leading-relaxed text-brand-green-mid">
+            Privy valida la identidad y Supabase controla los permisos. Las solicitudes profesionales se revisan desde la cola superior.
+          </section>
+        )}
+        {!privyIdentity.enabled && <>
         <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
@@ -3210,8 +3216,9 @@ function AdminRoute({
             )}
           </div>
         </section>
+        </>}
       </main>
-      {registryModal && (
+      {!privyIdentity.enabled && registryModal && (
         <div
           onClick={() => {
             setRegistryModal(null);
