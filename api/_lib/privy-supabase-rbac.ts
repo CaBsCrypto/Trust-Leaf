@@ -91,7 +91,7 @@ export function createSupabasePrivyActorStore(
       return parseBinding(rows[0]);
     },
     async enroll(subject, role) {
-      if (!isPrivyDid(subject) || role === 'admin') throw rbacError('PRIVY_ENROLLMENT_INVALID', 400);
+      if (!isPrivyDid(subject) || !['doctor', 'patient', 'dispensary'].includes(role)) throw rbacError('PRIVY_ENROLLMENT_INVALID', 400);
       let response: Response;
       try {
         response = await fetcher(enrollEndpoint, {
@@ -126,7 +126,7 @@ export function createSupabasePrivyActorStore(
       return rows.map((row) => {
         const data = row as Record<string, unknown>;
         const binding = parseBinding({ ...data, actor_state: 'pending' });
-        if (!Number.isSafeInteger(data.version) || typeof data.requested_at !== 'string') throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
+        if (typeof data.version !== 'number' || !Number.isSafeInteger(data.version) || data.version < 1 || typeof data.requested_at !== 'string') throw rbacError('PRIVY_REVIEW_QUEUE_UNAVAILABLE', 503);
         const profile = typeof data.display_name === 'string' && typeof data.registration_reference === 'string' && typeof data.review_context === 'string'
           ? { displayName: data.display_name, registrationReference: data.registration_reference, reviewContext: data.review_context }
           : undefined;

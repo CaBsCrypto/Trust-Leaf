@@ -5,6 +5,24 @@ import { createPrivyRbacAuthorizer, createSupabasePrivyActorStore } from '../api
 const subject = 'did:privy:patient-123456';
 const actorRef = '11111111-1111-4111-8111-111111111111';
 
+test('enrollment rejects runtime roles outside the public enrollment set', async () => {
+  const store = createSupabasePrivyActorStore({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'synthetic-key' }, async () => {
+    assert.fail('invalid enrollment must not call Supabase');
+  });
+  for (const role of ['admin', 'unknown', null]) {
+    await assert.rejects(store.enroll(subject, role as 'doctor'), { code: 'PRIVY_ENROLLMENT_INVALID' });
+  }
+});
+
+test('review queue requires a positive numeric version', async () => {
+  for (const version of [1, '1', null, 0, -1, 1.5]) {
+    const store = createSupabasePrivyActorStore({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'synthetic-key' }, async () =>
+      new Response(JSON.stringify([{ actor_ref: actorRef, role: 'doctor', version, requested_at: '2026-09-05T12:00:00Z' }])));
+    if (version === 1) assert.equal((await store.listPending(subject))[0].version, 1);
+    else await assert.rejects(store.listPending(subject), { code: 'PRIVY_REVIEW_QUEUE_UNAVAILABLE' });
+  }
+});
+
 test('resolves an active Privy actor through the server-only Supabase gateway', async () => {
   const calls: Array<{ url: string; request: RequestInit }> = [];
   const store = createSupabasePrivyActorStore({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'server-only-key' }, async (url, request) => {

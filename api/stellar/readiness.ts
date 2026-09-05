@@ -121,7 +121,7 @@ async function reviewPendingPrivyActor(req: any, res: any) {
   const token = readPrivyToken(req.headers ?? {});
   const body = readJsonBody(req.body);
   if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
-  if (!body || typeof body.actorRef !== 'string' || !Number.isSafeInteger(body.version) || (body.decision !== 'approve' && body.decision !== 'reject')) return res.status(400).json({ code: 'REVIEW_INPUT_INVALID' });
+  if (!body || typeof body.actorRef !== 'string' || typeof body.version !== 'number' || !Number.isSafeInteger(body.version) || body.version < 1 || (body.decision !== 'approve' && body.decision !== 'reject')) return res.status(400).json({ code: 'REVIEW_INPUT_INVALID' });
   try {
     const verifier = createPrivyIdentityVerifier(process.env);
     const store = createSupabasePrivyActorStore(process.env);
