@@ -4,6 +4,7 @@ export interface TrustLeafPrivyIdentity {
   enabled: boolean;
   ready: boolean;
   authenticated: boolean;
+  subject?: string;
   beginLogin: () => Promise<void>;
   logout: () => Promise<void>;
   getIdentityToken: () => Promise<string | null>;

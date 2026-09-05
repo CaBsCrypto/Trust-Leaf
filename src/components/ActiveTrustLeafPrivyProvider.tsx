@@ -9,12 +9,13 @@ interface ActiveTrustLeafPrivyProviderProps {
 }
 
 function PrivyIdentityBridge({ children }: { children: ReactNode }) {
-  const { ready, authenticated, logout } = usePrivy();
+  const { ready, authenticated, logout, user } = usePrivy();
   const { login } = useLogin();
   const value = useMemo<TrustLeafPrivyIdentity>(() => ({
     enabled: true,
     ready,
     authenticated,
+    subject: user?.id,
     async beginLogin() {
       await login({ loginMethods: ['google', 'email', 'passkey', 'wallet'] });
     },
@@ -24,7 +25,7 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
     async getIdentityToken() {
       return getIdentityToken();
     },
-  }), [authenticated, login, logout, ready]);
+  }), [authenticated, login, logout, ready, user?.id]);
 
   return <TrustLeafPrivyContext.Provider value={value}>{children}</TrustLeafPrivyContext.Provider>;
 }
