@@ -1,5 +1,9 @@
 # Trust Leaf Roadmap De Proximos Sprints
 
+Actualizacion 2026-09-05: el orden inmediato de ejecucion y los criterios de
+validacion estan en [Plan de cierre del MVP](mvp-functional-closure-plan.md).
+Los sprints siguientes conservan el alcance de producto; no indican trabajo terminado.
+
 Este documento ordena el camino desde demo/proof-of-concept hacia el primer MVP
 funcional, grabable y verificable en Stellar Testnet.
 
@@ -99,20 +103,20 @@ Definition of Done:
 
 ## Sprint 3: Admin Real Y Persistencia Minima
 
-Objetivo: consolidar Firebase como persistencia inicial y proteger admin.
+Objetivo: consolidar Supabase como persistencia y Privy como identidad, y proteger admin.
 
 Alcance:
 
 - solicitudes medicas;
 - solicitudes de dispensarios;
-- admin allowlist `appAdministrators/{uid}`;
+- vinculos privados de identidad Privy con roles autorizados en Supabase;
 - estados `pending`, `needs_review`, `approved`, `rejected`;
 - `onchainStatus`: `pending`, `registered`, `failed`;
 - localStorage queda solo como fallback demo controlado.
 
 Definition of Done:
 
-- admin real entra con Firebase;
+- admin entra con Privy y el servidor verifica su rol en Supabase;
 - usuario no admin queda bloqueado;
 - solicitudes persisten al recargar;
 - aprobacion DB y registro on-chain siguen siendo estados separados.
@@ -279,8 +283,8 @@ Definition of Done:
 ## Supuestos
 
 - se mantienen las rutas actuales;
-- Firebase queda como DB inicial;
-- Supabase queda como alternativa futura;
+- Supabase es la DB operativa y Privy verifica la identidad;
+- Firebase es legado pendiente de retiro tras validar las dependencias restantes;
 - Stellar Testnet es obligatorio para la demo verificable;
 - los tres actores principales ven solo lo necesario;
 - admin y `/mvp` concentran estado tecnico.
