@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "qa:synthetic-actors": "node scripts/qa-synthetic-actors.mjs",
     "dev": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",

@@ -111,6 +111,10 @@ function AppContent() {
   const { t } = useLanguage();
   const privyIdentity = useTrustLeafPrivyIdentity();
   const [path, setPath] = useState(() => window.location.pathname);
+  const [professionalAccess, setProfessionalAccess] = useState<{ subject: string; path: string; role: ActorRole } | null>(null);
+  useEffect(() => {
+    setProfessionalAccess(null);
+  }, [privyIdentity.authenticated, privyIdentity.subject]);
   const [dispensaryRegistrations, setDispensaryRegistrations] = useState<DispensaryRegistration[]>(() => {
     const saved = localStorage.getItem('trust_dispensary_registrations');
     return saved ? JSON.parse(saved) : [];
@@ -385,6 +389,16 @@ function AppContent() {
     setSession(nextSession);
   };
 
+  // AuthGate invokes this only after the server confirms the professional role.
+  // Keep the grant in memory, bound to the current identity and route.
+  const startProfessionalSession = (role: ActorRole, input: { email: string; name: string; mode?: TrustSession['mode'] }) => {
+    if (privyIdentity.enabled) {
+      if (!privyIdentity.authenticated || !privyIdentity.subject) return;
+      setProfessionalAccess({ subject: privyIdentity.subject, path, role });
+    }
+    startSession(role, input);
+  };
+
   const startPrivyAdminSession = () => {
     startSession('admin', {
       email: 'admin@trustleaf.org',
@@ -394,6 +408,7 @@ function AppContent() {
   };
 
   const endSession = () => {
+    setProfessionalAccess(null);
     localStorage.removeItem(TRUST_SESSION_KEY);
     setSession(null);
     if (privyIdentity.enabled && privyIdentity.authenticated) {
@@ -406,7 +421,13 @@ function AppContent() {
     }
   };
 
-  const hasRoleSession = (role: ActorRole) => session?.role === role;
+  const hasRoleSession = (role: ActorRole) => session?.role === role && (
+    !privyIdentity.enabled || (role !== 'doctor' && role !== 'dispensary') || (
+      privyIdentity.authenticated && Boolean(privyIdentity.subject)
+      && professionalAccess?.subject === privyIdentity.subject
+      && professionalAccess.path === path && professionalAccess.role === role
+    )
+  );
 
   const navigate = (nextPath: string) => {
     window.history.pushState({}, '', nextPath);
@@ -611,9 +632,9 @@ function AppContent() {
       && (request.contact === session.email || request.name === session.name),
     ) ?? null;
   const doctorCanOperate =
-    session?.role === 'doctor' && (session.mode === 'demo' || Boolean(currentDoctorRegistration));
+    privyIdentity.enabled ? hasRoleSession('doctor') : session?.role === 'doctor' && (session.mode === 'demo' || Boolean(currentDoctorRegistration));
   const dispensaryCanOperate =
-    session?.role === 'dispensary' && (session.mode === 'demo' || Boolean(currentDispensaryRegistration));
+    privyIdentity.enabled ? hasRoleSession('dispensary') : session?.role === 'dispensary' && (session.mode === 'demo' || Boolean(currentDispensaryRegistration));
 
   if (patientView) {
     if (!hasRoleSession('patient')) {
@@ -773,7 +794,7 @@ function AppContent() {
     );
   }
 
-  if (path === '/medico') {
+  if (path === '/medico' && !privyIdentity.enabled) {
     if (!hasRoleSession('doctor')) {
       return (
         <AuthGate
@@ -808,7 +829,7 @@ function AppContent() {
     );
   }
 
-  if (path === '/medico/operacion') {
+  if (path === '/medico/operacion' || (path === '/medico' && privyIdentity.enabled)) {
     if (!hasRoleSession('doctor')) {
       return (
         <AuthGate
@@ -820,7 +841,8 @@ function AppContent() {
           defaultEmail="medico@trustleaf.test"
           defaultName="Dra. Sofia Lagos"
           onBack={() => navigate('/medico')}
-          onStart={startSession}
+          key={`doctor:${privyIdentity.subject ?? 'signed-out'}`}
+          onStart={startProfessionalSession}
           onPasskeySignIn={handlePasskeySignIn('doctor')}
         />
       );
@@ -856,7 +878,7 @@ function AppContent() {
     );
   }
 
-  if (path === '/dispensario') {
+  if (path === '/dispensario' && !privyIdentity.enabled) {
     if (!hasRoleSession('dispensary')) {
       return (
         <AuthGate
@@ -891,7 +913,7 @@ function AppContent() {
     );
   }
 
-  if (path === '/dispensario/operacion' || path === '/dispensario/historial' || path === '/dispensario/retiros') {
+  if ((path === '/dispensario' && privyIdentity.enabled) || path === '/dispensario/operacion' || path === '/dispensario/historial' || path === '/dispensario/retiros') {
     if (!hasRoleSession('dispensary')) {
       return (
         <AuthGate
@@ -903,7 +925,8 @@ function AppContent() {
           defaultEmail="dispensario@trustleaf.test"
           defaultName="Green Leaf Center"
           onBack={() => navigate('/dispensario')}
-          onStart={startSession}
+          key={`dispensary:${privyIdentity.subject ?? 'signed-out'}`}
+          onStart={startProfessionalSession}
           onPasskeySignIn={handlePasskeySignIn('dispensary')}
         />
       );
@@ -1681,7 +1704,7 @@ function AuthGate({
       } finally { if (!cancelled) setPrivySessionChecking(false); }
     })();
     return () => { cancelled = true; };
-  }, [privyIdentity.authenticated, privyIdentity.enabled, privySessionRevision]);
+  }, [privyIdentity.authenticated, privyIdentity.enabled, privyIdentity.subject, privySessionRevision]);
 
   const enrollWithPrivy = async (resend = false) => {
     setPrivyBusy(true);
