@@ -34,6 +34,10 @@
       "destination": "/api/stellar/readiness?__trustleaf_route=privy-submit-test-application"
     },
     {
+      "source": "/api/auth/privy/admin/actors",
+      "destination": "/api/stellar/readiness?__trustleaf_route=privy-admin-actors"
+    },
+    {
       "source": "/api/auth/privy/admin/pending-actors",
       "destination": "/api/stellar/readiness?__trustleaf_route=privy-admin-pending-actors"
     },

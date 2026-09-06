@@ -49,6 +49,7 @@ export type PortalView = 'overview' | 'doctors' | 'dispensaries' | 'profile' | '
 
 
 interface MockupPortalProps {
+  professionalRoleVerified?: boolean;
 
   isOpen: boolean;
 
@@ -2003,6 +2004,7 @@ export default function MockupPortal({
   onSignOut,
 
   session = null,
+  professionalRoleVerified = false,
 
 }: MockupPortalProps & { showTechnicalDetails?: boolean }) {
 
@@ -3344,9 +3346,10 @@ export default function MockupPortal({
 
   const doctorCredentialMetrics = [
 
-    ['Estado', doctorSignerReady ? 'Autorizado' : 'En revisiÃ³n'],
+    ['Acceso profesional', professionalRoleVerified ? 'Autorizado' : 'Sin verificar'],
+    ['Firma Stellar', doctorSignerReady ? 'Disponible' : 'No disponible'],
 
-    ['Recetas emitidas', String(patientDashboard?.summary.total ?? 1)],
+    ['Recetas emitidas', '--'],
 
     ['Pacientes con permiso', String(doctorActivePatients.length)],
 
@@ -3354,7 +3357,8 @@ export default function MockupPortal({
 
   const dispensaryCredentialMetrics = [
 
-    ['Estado', dispensarySignerReady ? 'Autorizado' : 'En revisiÃ³n'],
+    ['Acceso profesional', professionalRoleVerified ? 'Autorizado' : 'Sin verificar'],
+    ['Firma Stellar', dispensarySignerReady ? 'Disponible' : 'No disponible'],
 
     ['Entregas registradas', String(activePickups.length + dispenseRecords.length)],
 
@@ -11438,11 +11442,11 @@ export default function MockupPortal({
 
                               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial profesional</p>
 
-                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Medico autorizado en Trust Leaf</h3>
+                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">{professionalRoleVerified ? 'Acceso medico autorizado' : 'Cuenta profesional'}</h3>
 
                               <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
 
-                                Esta cuenta profesional esta habilitada para atender pacientes, revisar permisos clinicos y emitir recetas verificables.
+                                La consulta requiere permisos del paciente. La emision de recetas requiere una firma habilitada.
 
                               </p>
 
@@ -11596,11 +11600,11 @@ export default function MockupPortal({
 
                               {[
 
-                                ['Pacientes', DOCTOR_SESSION_PATIENTS.length],
+                                ['Pacientes', doctorActivePatients.length],
 
                                 ['Reservadas', reservedAgendaBlocks.length],
 
-                                ['Recetas activas', patientDashboard?.summary.active ?? 1],
+                                ['Recetas activas', '--'],
 
                               ].map(([label, value]) => (
 
