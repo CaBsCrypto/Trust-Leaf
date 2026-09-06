@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { createPrivyTokenCoordinator } from '../lib/privyTokenCoordinator';
+import { usePrivySessionSync } from './usePrivySessionSync';
 import { getIdentityToken, PrivyProvider, useIdentityToken, useLogin, usePrivy, useUser } from '@privy-io/react-auth';
 import type { PrivyRuntimeConfig } from '../lib/privyConfig';
 import { TrustLeafPrivyContext, type TrustLeafPrivyIdentity } from './privyIdentityContext';
@@ -28,14 +29,15 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
     tokens.activate();
     return () => tokens.invalidate();
   }, [tokens]);
+  const syncing = usePrivySessionSync(ready, authenticated, user?.id, () => tokens.invalidate());
   const value = useMemo<TrustLeafPrivyIdentity>(() => ({
     enabled: true,
-    ready,
-    authenticated,
-    subject: user?.id,
-    tokenReady: ready && authenticated && Boolean(identityToken),
+    ready: ready && !syncing,
+    authenticated: authenticated && !syncing,
+    subject: syncing ? undefined : user?.id,
+    tokenReady: ready && authenticated && !syncing && Boolean(identityToken),
     async refreshIdentityToken() {
-      if (currentTokens.current !== tokens) return null;
+      if (syncing || currentTokens.current !== tokens) return null;
       return tokens.refresh();
     },
     async beginLogin() {
@@ -49,10 +51,10 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
       }
     },
     async getIdentityToken() {
-      if (currentTokens.current !== tokens) return null;
+      if (syncing || currentTokens.current !== tokens) return null;
       return tokens.read();
     },
-  }), [authenticated, login, logout, ready, user?.id, identityToken, tokens]);
+  }), [authenticated, login, logout, ready, user?.id, identityToken, tokens, syncing]);
 
   return <TrustLeafPrivyContext.Provider value={value}>{children}</TrustLeafPrivyContext.Provider>;
 }
