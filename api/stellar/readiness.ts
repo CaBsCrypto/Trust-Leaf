@@ -4,6 +4,7 @@ import { createPrivyIdentityVerifier } from '../_lib/privy-identity.js';
 import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.js';
 import { createPrivyRbacAuthorizer } from '../_lib/privy-supabase-rbac.js';
 import { createHash, randomUUID } from 'node:crypto';
+import { readActorDirectory } from '../_lib/privy-actor-directory.js';
 
 /**
  * Preview-only Vercel function consolidation. Exact rewrites below preserve the
@@ -88,6 +89,21 @@ export default async function handler(req: any, res: any) {
   if (route === 'privy-submit-test-application') {
     if (req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
     return submitPrivyTestApplication(req, res);
+  }
+
+  if (route === 'privy-admin-actors') {
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.method !== 'GET') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    const token = readPrivyToken(req.headers ?? {});
+    if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+    const rawOffset = String(req.query?.offset ?? '0');
+    if (!/^\d{1,6}$/.test(rawOffset) || Number(rawOffset) > 100000) return res.status(400).json({ code: 'INVALID_PAGE' });
+    try {
+      return res.status(200).json(await readActorDirectory({ token, offset: Number(rawOffset), env: process.env, verifier: createPrivyIdentityVerifier(process.env) }));
+    } catch (error) {
+      const status = (error as { statusCode?: number }).statusCode;
+      return res.status(status === 401 || status === 403 ? status : 503).json({ code: 'DIRECTORY_UNAVAILABLE' });
+    }
   }
 
   if (route === 'privy-admin-pending-actors') {

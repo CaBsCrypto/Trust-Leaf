@@ -4,6 +4,7 @@ import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethos
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
+import PrivyActorDirectory from './components/PrivyActorDirectory';
 import type { PortalView } from './components/MockupPortal';
 import {
   trustDataStore,
@@ -2364,15 +2365,21 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
   const [actors, setActors] = useState<Array<{ actorRef: string; role: 'doctor' | 'dispensary'; version: number; requestedAt: string; testProfile?: { displayName: string; registrationReference: string; reviewContext: string } }>>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const load = async () => {
-    setNotice(null);
+    setLoading(true);
+    setLoadError(false);
+    try {
     const token = await privyIdentity.getIdentityToken();
     if (!token) throw new Error('SESSION_REQUIRED');
     const response = await fetch('/api/auth/privy/admin/pending-actors', { cache: 'no-store', headers: { 'privy-id-token': token } });
     if (!response.ok) throw new Error('QUEUE_UNAVAILABLE');
     const payload = await response.json() as { actors?: typeof actors };
     setActors(Array.isArray(payload.actors) ? payload.actors : []);
+    } catch (error) { setLoadError(true); throw error; }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.')); }, []);
@@ -2389,9 +2396,10 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
         body: JSON.stringify({ actorRef: actor.actorRef, version: actor.version, decision }),
       });
       if (!response.ok) throw new Error('REVIEW_UNAVAILABLE');
+      setActors(current => current.filter(row => row.actorRef !== actor.actorRef));
       setNotice(decision === 'approve' ? 'Cuenta autorizada. El actor ya puede continuar.' : 'Solicitud rechazada.');
-      await load();
-    } catch { setNotice('No fue posible registrar la decisión. Vuelve a intentarlo.'); }
+      await load().catch(() => setNotice('Decision guardada. No se pudo actualizar la lista; pulsa Actualizar.'));
+    } catch { setNotice('No pudimos confirmar la decision. Actualiza la lista antes de volver a intentarlo.'); }
     finally { setBusy(null); }
   };
 
@@ -2402,7 +2410,7 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
         <button onClick={() => void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.'))} className="rounded-xl border border-brand-green-deep/10 px-3 py-2 text-xs font-bold">Actualizar</button>
       </div>
       {notice && <p className="mt-4 text-sm text-brand-green-mid">{notice}</p>}
-      {actors.length === 0 ? <p className="mt-4 text-sm text-brand-green-mid/70">No hay solicitudes profesionales pendientes.</p> : <div className="mt-4 space-y-3">{actors.map((actor) => <div key={actor.actorRef} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-neutral p-4"><div><p className="font-bold capitalize">{actor.role === 'doctor' ? 'Médico' : 'Dispensario'}</p><p className="text-xs text-brand-green-mid/65">Solicitud pendiente de revisión</p>{actor.testProfile ? <div className="mt-2 text-xs text-brand-green-mid/75"><p className="font-semibold">Datos simulados: {actor.testProfile.displayName}</p><p>{actor.testProfile.registrationReference} · {actor.testProfile.reviewContext}</p></div> : <p className="mt-2 text-xs text-amber-700">Faltan datos de revisión.</p>}</div><div className="flex gap-2"><button disabled={Boolean(busy)} onClick={() => void review(actor, 'reject')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Rechazar</button><button disabled={Boolean(busy) || !actor.testProfile} onClick={() => void review(actor, 'approve')} className="rounded-xl bg-brand-green-deep px-3 py-2 text-xs font-bold text-brand-ivory disabled:opacity-50">{busy === `${actor.actorRef}:approve` ? 'Autorizando...' : 'Autorizar'}</button></div></div>)}</div>}
+      {loading ? <p role="status" className="mt-4 text-sm">Cargando solicitudes...</p> : loadError ? null : actors.length === 0 ? <p className="mt-4 text-sm text-brand-green-mid/70">No hay solicitudes profesionales pendientes.</p> : <div className="mt-4 space-y-3">{actors.map((actor) => <div key={actor.actorRef} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-neutral p-4"><div><p className="font-bold capitalize">{actor.role === 'doctor' ? 'Médico' : 'Dispensario'}</p><p className="text-xs text-brand-green-mid/65">Solicitud pendiente de revisión</p>{actor.testProfile ? <div className="mt-2 text-xs text-brand-green-mid/75"><p className="font-semibold">Datos simulados: {actor.testProfile.displayName}</p><p>{actor.testProfile.registrationReference} · {actor.testProfile.reviewContext}</p></div> : <p className="mt-2 text-xs text-amber-700">Faltan datos de revisión.</p>}</div><div className="flex gap-2"><button disabled={Boolean(busy)} onClick={() => void review(actor, 'reject')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Rechazar</button><button disabled={Boolean(busy) || !actor.testProfile} onClick={() => void review(actor, 'approve')} className="rounded-xl bg-brand-green-deep px-3 py-2 text-xs font-bold text-brand-ivory disabled:opacity-50">{busy === `${actor.actorRef}:approve` ? 'Autorizando...' : 'Autorizar'}</button></div></div>)}</div>}
     </section>
   );
 }
@@ -2606,6 +2614,7 @@ function AdminRoute({
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
         {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorReviewQueue privyIdentity={privyIdentity} />}
+        {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorDirectory identity={privyIdentity} />}
         {privyIdentity.enabled && (
           <section className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/45 px-5 py-4 text-sm leading-relaxed text-brand-green-mid">
             Privy valida la identidad y Supabase controla los permisos. Las solicitudes profesionales se revisan desde la cola superior.

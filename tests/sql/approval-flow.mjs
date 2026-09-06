@@ -67,7 +67,15 @@ try {
       assert.deepEqual(await rpc('select * from trustleaf_private.actor_bindings', [], role), [], 'RLS must hide all rows without a matching auth subject');
     }
   }
-  console.log('PASS: actual SQL enrollment, resend, queue, approval, resolution and permission denials in isolated PostgreSQL.');
+  const directory = (subject, offset = 0, role = 'service_role') => rpc('select * from public.trustleaf_privy_actor_directory($1,$2)', [subject, offset], role);
+  assert.equal((await directory(subjects.admin)).length, 4);
+  assert.equal((await directory(subjects.admin, 25)).length, 0);
+  await assert.rejects(directory(subjects.admin, -1), { code: '22023' });
+  for (const subject of [subjects.patient, subjects.doctor, subjects.dispensary]) {
+    await assert.rejects(directory(subject), { code: '42501' });
+  }
+  for (const role of ['anon', 'authenticated']) await assert.rejects(directory(subjects.admin, 0, role), { code: '42501' });
+  console.log('PASS: actual SQL enrollment, resend, queue, approval, directory, resolution and permission denials in isolated PostgreSQL.');
 } catch (error) {
   console.error('SQL validation failed:', error.code, error.message, error.where ?? '', error.code === 'ERR_ASSERTION' ? error.stack : '');
   process.exitCode = 1;
