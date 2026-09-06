@@ -1,4 +1,5 @@
-import { useMemo, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { createPrivyTokenCoordinator } from '../lib/privyTokenCoordinator';
 import { getIdentityToken, PrivyProvider, useIdentityToken, useLogin, usePrivy, useUser } from '@privy-io/react-auth';
 import type { PrivyRuntimeConfig } from '../lib/privyConfig';
 import { TrustLeafPrivyContext, type TrustLeafPrivyIdentity } from './privyIdentityContext';
@@ -13,6 +14,20 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
   const { identityToken } = useIdentityToken();
   const { refreshUser } = useUser();
   const { login } = useLogin();
+  const tokens = useMemo(() => createPrivyTokenCoordinator(
+    async () => ready && authenticated ? getIdentityToken() : null,
+    async () => {
+      if (!ready || !authenticated) return null;
+      await refreshUser();
+      return getIdentityToken();
+    },
+  ), [ready, authenticated, user?.id, refreshUser]);
+  const currentTokens = useRef(tokens);
+  useLayoutEffect(() => {
+    currentTokens.current = tokens;
+    tokens.activate();
+    return () => tokens.invalidate();
+  }, [tokens]);
   const value = useMemo<TrustLeafPrivyIdentity>(() => ({
     enabled: true,
     ready,
@@ -20,19 +35,24 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
     subject: user?.id,
     tokenReady: ready && authenticated && Boolean(identityToken),
     async refreshIdentityToken() {
-      await refreshUser();
-      return getIdentityToken();
+      if (currentTokens.current !== tokens) return null;
+      return tokens.refresh();
     },
     async beginLogin() {
       await login({ loginMethods: ['google', 'email', 'passkey', 'wallet'] });
     },
     async logout() {
-      await logout();
+      tokens.invalidate();
+      try { await logout(); } catch (error) {
+        if (currentTokens.current === tokens) tokens.activate();
+        throw error;
+      }
     },
     async getIdentityToken() {
-      return getIdentityToken();
+      if (currentTokens.current !== tokens) return null;
+      return tokens.read();
     },
-  }), [authenticated, login, logout, ready, user?.id, identityToken, refreshUser]);
+  }), [authenticated, login, logout, ready, user?.id, identityToken, tokens]);
 
   return <TrustLeafPrivyContext.Provider value={value}>{children}</TrustLeafPrivyContext.Provider>;
 }

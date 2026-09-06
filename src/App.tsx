@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
+import PrivySessionBoundary from './components/PrivySessionBoundary';
 import { readPrivyAdminJson } from './lib/privyRead';
 import type { PortalView } from './components/MockupPortal';
 import {
@@ -104,7 +105,7 @@ const PATIENT_ROUTE_VIEWS: Record<string, PortalView> = {
 export default function App() {
   return (
     <LanguageProvider>
-      <AppContent />
+      <PrivySessionBoundary><AppContent /></PrivySessionBoundary>
     </LanguageProvider>
   );
 }
@@ -127,6 +128,8 @@ function AppContent() {
   });
   const [registrationSource, setRegistrationSource] = useState<PersistenceSource>('local-demo');
   const [session, setSession] = useState<TrustSession | null>(() => {
+    // A cached role/email is not proof of authorization for a Privy identity.
+    if (privyIdentity.enabled) return null;
     try {
       const saved = localStorage.getItem(TRUST_SESSION_KEY);
       return saved ? JSON.parse(saved) : null;
@@ -387,7 +390,7 @@ function AppContent() {
     if (role === 'patient' && nextSession.mode === 'demo') {
       seedDemoPatientState();
     }
-    localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
+    if (!privyIdentity.enabled) localStorage.setItem(TRUST_SESSION_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
   };
 
