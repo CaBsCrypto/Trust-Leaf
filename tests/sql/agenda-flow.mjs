@@ -48,5 +48,21 @@ export async function testAgenda(db, subjects) {
   const pending='did:privy:agenda-pending';
   await db.query('select * from public.trustleaf_enroll_privy_actor($1,$2)',[pending,'doctor']);
   await assert.rejects(list(pending),{code:'42501'});
+  // Promote a separate synthetic fixture only inside this ephemeral database.
+  const otherDoctor='did:privy:agenda-other-doctor';
+  const other=(await db.query('select * from public.trustleaf_enroll_privy_actor($1,$2)',[otherDoctor,'doctor'])).rows[0];
+  await db.query("update trustleaf_private.actor_bindings set state='active' where actor_ref=$1",[other.actor_ref]);
+  const slot2={...slot,slotRef:randomUUID(),operationId:randomUUID()};
+  await call(subjects.doctor,'publish',slot2);
+  assert.equal((await list(otherDoctor)).slots.length,0,'doctor cannot list another agenda');
+  await assert.rejects(call(otherDoctor,'cancel-slot',{slotRef:slot2.slotRef,version:1,operationId:randomUUID()}),{code:'42501'});
+  const slot3={...slot,slotRef:randomUUID(),operationId:randomUUID()};
+  await call(otherDoctor,'publish',slot3);
+  await call(subjects.patient,'reserve',{slotRef:slot2.slotRef,bookingRef:randomUUID(),version:1,operationId:randomUUID()});
+  await assert.rejects(call(subjects.patient,'reserve',{slotRef:slot3.slotRef,bookingRef:randomUUID(),version:1,operationId:randomUUID()}),{code:'40001'});
+  await db.query("update trustleaf_private.actor_bindings set state='suspended' where actor_ref=$1",[other.actor_ref]);
+  await assert.rejects(list(otherDoctor),{code:'42501'});
+  await assert.rejects(call(patient2,'reserve',{slotRef:slot3.slotRef,bookingRef:randomUUID(),version:1,operationId:randomUUID()}),{code:'40001'});
+  await assert.rejects(call(subjects.patient,'list',{from,to:new Date(Date.now()+100*86400000).toISOString()}),{code:'22023'});
   console.log('PASS: SQL Privy agenda publish, overlap, competing reservations, role isolation, replay, cancellation and rebooking.');
 }

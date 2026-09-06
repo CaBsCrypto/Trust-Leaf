@@ -2,6 +2,8 @@
 .env
 .env.*
 node_modules
+tests/ui
+scratch
 dist
 soroban/target*/**
 !soroban/target/

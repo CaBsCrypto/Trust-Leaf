@@ -22,8 +22,9 @@
 
 - `npm run qa:synthetic-actors`: incluye autorizacion HTTP, categorias de error y ausencia de reintentos de escritura.
 - `npm test --prefix tests/sql`: aplica todas las migraciones a PostgreSQL aislado/PGlite; prueba reservas competidoras, reenvio, permisos, cancelacion y nueva reserva. PGlite serializa las consultas; no sustituye una prueba multiconexion en PostgreSQL alojado.
-- `npm install --prefix tests/ui` y `npm run dev --prefix tests/ui`: fixture local en 127.0.0.1:4317, sin credenciales reales ni acceso a produccion.
+- `npm install --prefix tests/sql`, `npm install --prefix tests/ui` y `npm run dev --prefix tests/ui`: fixture local en 127.0.0.1:4317 con PostgreSQL efimero, sin credenciales reales ni acceso a produccion. `?role=doctor` y `?role=patient` seleccionan identidades ficticias en ese entorno aislado.
 - `node tests/ui/agenda-browser.mjs`: componente React real con HTTP simulado. Requiere Playwright; admite PLAYWRIGHT_MODULE y PLAYWRIGHT_CHANNEL. Capturas en scratch/agenda-qa.
+- `node tests/ui/agenda-sql-browser.mjs`: navegador y HTTP locales contra las migraciones SQL reales, con identidades ficticias. Verifica publicacion, persistencia al recargar, reserva compartida y cancelacion; no valida tokens reales de Privy.
 
 ## Despliegue y comprobacion real pendiente
 

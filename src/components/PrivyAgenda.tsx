@@ -41,7 +41,7 @@ export default function PrivyAgenda({ email }: { email?: string }) {
     const current=++generation.current;
     const controller=new AbortController();
     setSlots([]); setRole(null); setError(''); setLoading(true);
-    if(!identity.ready || !identity.authenticated || identity.tokenReady===false) {
+    if(!identity.ready || !identity.authenticated) {
       const timeout=setTimeout(()=>{setLoading(false);setError('La sesion no esta disponible. Reintenta la consulta.');},10000);
       return ()=>{clearTimeout(timeout);controller.abort();};
     }

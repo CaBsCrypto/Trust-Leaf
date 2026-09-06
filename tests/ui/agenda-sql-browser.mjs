@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const require=createRequire(import.meta.url);
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
+const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHANNEL?{channel:process.env.PLAYWRIGHT_CHANNEL}:{})});
+const errors=[];
+try{
+  const context=await browser.newContext({timezoneId:'America/Santiago'});
+  const doctor=await context.newPage();const patient=await context.newPage();
+  for(const page of [doctor,patient])page.on('pageerror',e=>errors.push(e.message));
+  await doctor.goto('http://127.0.0.1:4317/?role=doctor');
+  await doctor.getByLabel('Hora',{exact:true}).fill('16:00');
+  await doctor.getByRole('button',{name:'Publicar horario',exact:true}).click();
+  await doctor.getByText('Disponible',{exact:true}).waitFor();
+  await doctor.reload();await doctor.getByText('Disponible',{exact:true}).waitFor();
+  await patient.goto('http://127.0.0.1:4317/?role=patient');
+  await patient.getByRole('button',{name:'Reservar',exact:true}).click();
+  await patient.getByText('Cita confirmada',{exact:true}).waitFor();
+  const reference=await patient.getByText(/^Reserva [0-9a-f-]+$/).textContent();
+  await doctor.getByRole('button',{name:'Actualizar agenda',exact:true}).click();
+  await doctor.getByText(reference,{exact:true}).waitFor();
+  await patient.reload();await patient.getByText(reference,{exact:true}).waitFor();
+  patient.on('dialog',dialog=>dialog.accept());
+  await patient.getByRole('button',{name:'Cancelar cita',exact:true}).click();
+  await patient.getByRole('button',{name:'Reservar',exact:true}).waitFor();
+  await doctor.getByRole('button',{name:'Actualizar agenda',exact:true}).click();
+  await doctor.getByText('Disponible',{exact:true}).waitFor();
+  doctor.on('dialog',dialog=>dialog.accept());
+  await doctor.getByRole('button',{name:'Retirar horario',exact:true}).click();
+  await doctor.getByText('Cancelada',{exact:true}).waitFor();
+  assert.deepEqual(errors,[]);
+  console.log('PASS: browser -> local HTTP -> actual migrated SQL: publish, reload, reserve, matching reference, patient cancel, doctor withdrawal. Identity is synthetic; not hosted Privy/Supabase.');
+}finally{await browser.close();}
