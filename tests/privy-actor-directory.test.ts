@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readActorDirectory } from '../api/_lib/privy-actor-directory.ts';
+import { registerHooks } from 'node:module';
+
+// Node's source-only test run resolves emitted .js imports to their TS source.
+const hooks = registerHooks({ resolve(specifier, context, nextResolve) {
+  if (specifier === './privy-supabase-rbac.js' && context.parentURL?.endsWith('/api/_lib/privy-actor-directory.ts')) {
+    return nextResolve('./privy-supabase-rbac.ts', context);
+  }
+  return nextResolve(specifier, context);
+} });
+const { readActorDirectory } = await import('../api/_lib/privy-actor-directory.ts');
+hooks.deregister();
 
 const env = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'synthetic', PRIVY_APP_ID: 'test-app', PRIVY_APP_SECRET: 'test-secret' };
 const subject = 'did:privy:admin-test';

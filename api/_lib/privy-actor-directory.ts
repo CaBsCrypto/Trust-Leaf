@@ -1,4 +1,4 @@
-import { createPrivyRbacAuthorizer, createSupabasePrivyActorStore } from './privy-supabase-rbac.ts';
+import { createPrivyRbacAuthorizer, createSupabasePrivyActorStore } from './privy-supabase-rbac.js';
 import type { PrivyIdentity } from './privy-identity.ts';
 
 const PAGE_SIZE = 25;
