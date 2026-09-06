@@ -5,6 +5,7 @@ import { createSupabasePrivyActorStore } from '../_lib/privy-supabase-rbac.js';
 import { createPrivyRbacAuthorizer } from '../_lib/privy-supabase-rbac.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { readActorDirectory } from '../_lib/privy-actor-directory.js';
+import { executePrivyAgenda } from '../_lib/privy-agenda.js';
 
 /**
  * Preview-only Vercel function consolidation. Exact rewrites below preserve the
@@ -13,6 +14,22 @@ import { readActorDirectory } from '../_lib/privy-actor-directory.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+
+  if (route === 'privy-agenda') {
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
+    const token = readPrivyToken(req.headers ?? {});
+    if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+    const body = req.method === 'GET' ? { action: 'list', input: { from: req.query.from, to: req.query.to } } : readJsonBody(req.body);
+    if (!body || typeof body.action !== 'string' || !body.input || typeof body.input !== 'object' || Array.isArray(body.input)
+      || JSON.stringify(body).length > 4000 || (req.method === 'POST' && body.action === 'list')) return res.status(400).json({ code: 'AGENDA_INPUT_INVALID' });
+    try {
+      return res.status(200).json(await executePrivyAgenda({ token, action: body.action, input: body.input as Record<string, unknown>, env: process.env, verifier: createPrivyIdentityVerifier(process.env) }));
+    } catch (error) {
+      const status = (error as { statusCode?: number }).statusCode;
+      return res.status(status && [400,401,403,409].includes(status) ? status : 503).json({ code: status === 409 ? 'AGENDA_CONFLICT' : 'AGENDA_UNAVAILABLE' });
+    }
+  }
 
   if (route === 'readiness') {
     res.status(200).json(getRuntimeReadiness());

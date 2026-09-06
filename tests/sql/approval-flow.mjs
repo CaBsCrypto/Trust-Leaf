@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
+import { testAgenda } from './agenda-flow.mjs';
 
 const db = new PGlite();
 const migrations = new URL('../../supabase/migrations/', import.meta.url);
@@ -75,6 +76,7 @@ try {
     await assert.rejects(directory(subject), { code: '42501' });
   }
   for (const role of ['anon', 'authenticated']) await assert.rejects(directory(subjects.admin, 0, role), { code: '42501' });
+  await testAgenda(db, subjects);
   console.log('PASS: actual SQL enrollment, resend, queue, approval, directory, resolution and permission denials in isolated PostgreSQL.');
 } catch (error) {
   console.error('SQL validation failed:', error.code, error.message, error.where ?? '', error.code === 'ERR_ASSERTION' ? error.stack : '');

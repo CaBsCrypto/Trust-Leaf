@@ -1985,6 +1985,9 @@ const MOCK_GLOBAL_DISPENSARIES: Record<string, any[]> = {
 
 
 
+import PrivyAgenda from './PrivyAgenda';
+import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
+
 export default function MockupPortal({
 
   isOpen,
@@ -2007,6 +2010,8 @@ export default function MockupPortal({
   professionalRoleVerified = false,
 
 }: MockupPortalProps & { showTechnicalDetails?: boolean }) {
+
+  const privyIdentity = useTrustLeafPrivyIdentity();
 
   const { t } = useLanguage();
 
@@ -2290,6 +2295,8 @@ export default function MockupPortal({
 
   const [doctorAgendaBlocks, setDoctorAgendaBlocks] = useState<DoctorAgendaBlock[]>(() => {
 
+    if (privyIdentity.enabled) return [];
+
     const saved = localStorage.getItem('trust_doctor_agenda_blocks');
 
     if (saved) return JSON.parse(saved);
@@ -2496,7 +2503,7 @@ export default function MockupPortal({
 
   // Real-time Agenda Sync
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (privyIdentity.enabled || !auth.currentUser) return;
     const agendaRef = collection(db, 'agenda');
 
     const unsubscribe = onSnapshot(agendaRef, (snapshot) => {
@@ -2512,7 +2519,7 @@ export default function MockupPortal({
     });
 
     return () => unsubscribe();
-  }, [isDoctorPortal, auth.currentUser]);
+  }, [isDoctorPortal, auth.currentUser, privyIdentity.enabled]);
 
   // Real-time Notifications Sync
   useEffect(() => {
@@ -2642,9 +2649,9 @@ export default function MockupPortal({
 
   useEffect(() => {
 
-    localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify(doctorAgendaBlocks));
+    if (!privyIdentity.enabled) localStorage.setItem('trust_doctor_agenda_blocks', JSON.stringify(doctorAgendaBlocks));
 
-  }, [doctorAgendaBlocks]);
+  }, [doctorAgendaBlocks, privyIdentity.enabled]);
 
 
 
@@ -4963,6 +4970,8 @@ export default function MockupPortal({
 
   const handleCompleteBooking = async () => {
 
+    if (privyIdentity.enabled) { switchView('doctors'); return; }
+
     setBookingStep('success');
 
     if (bookingDoctor && selectedDate && selectedTime) {
@@ -5038,6 +5047,7 @@ export default function MockupPortal({
 
 
   const handleAddAgendaBlock = async () => {
+    if (privyIdentity.enabled) { switchView('doctors'); return; }
 
     const blockId = `agenda-custom-${Date.now()}`;
     const block: DoctorAgendaBlock = {
@@ -5090,6 +5100,7 @@ export default function MockupPortal({
 
 
   const toggleAgendaBlockStatus = async (blockId: string) => {
+    if (privyIdentity.enabled) { switchView('doctors'); return; }
 
     const targetBlock = doctorAgendaBlocks.find(block => block.id === blockId);
     if (!targetBlock) return;
@@ -10993,7 +11004,11 @@ export default function MockupPortal({
 
 
 
-                  {activeView === 'doctors' && isViewAllowed('doctors') && (
+                  {activeView === 'doctors' && isViewAllowed('doctors') && privyIdentity.enabled && (
+                    <PrivyAgenda key={privyIdentity.subject ?? 'signed-out'} email={session?.email} />
+                  )}
+
+                  {activeView === 'doctors' && isViewAllowed('doctors') && !privyIdentity.enabled && (
 
                     <motion.div 
 

@@ -7,6 +7,7 @@ const suites = [
   ['Privy authorization adapter (mock RPC)', 'privy-supabase-rbac.test.ts'],
   ['Private actor directory and contact isolation (mock providers)', 'privy-actor-directory.test.ts'],
   ['Admin read-only identity recovery', 'privy-admin-read.test.ts'],
+  ['Privy agenda authorization and safe errors', 'privy-agenda.test.ts'],
   ['Booking, isolation and duplicate prevention (in memory)', 'durable-availability-booking.test.ts'],
   ['Receipt and partial withdrawals (synthetic ledger)', 'receipt-shared-state-e2e.test.ts'],
   ['Demo journey and UI source checks (not browser E2E)', 'pilot-flow-demo-e2e.test.ts'],
