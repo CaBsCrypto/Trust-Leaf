@@ -159,6 +159,9 @@ Primer bloque ejecutable: F1. Reproducir sesion cruzada y refresco tras escritur
 corregir y validar; despues establecer la navegacion compartida de F2.
 El borrador mensual no se despliega mientras faltan decisiones y pruebas.
 
+Inicio tecnico preparado: [backlog y matriz de pruebas F1](session-stability-kickoff.md).
+La preparacion de este bloque no significa que los fallos ya esten corregidos.
+
 ## 6. Ramas y coordinacion
 
 Flujo propuesto: feature -> PR con pruebas -> staging -> aceptacion entre roles
