@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 import type { TrustLeafPrivyIdentity } from './privyIdentityContext';
+import { readPrivyAdminJson } from '../lib/privyRead';
 
 type Actor = { actorRef: string; email: string | null; role: string; state: string };
 const labels: Record<string, string> = { admin: 'Administrador', doctor: 'Medico', dispensary: 'Dispensario', patient: 'Paciente', active: 'Activo', pending: 'Pendiente', suspended: 'Suspendido', revoked: 'Revocado', expired: 'Vencido' };
@@ -19,20 +20,20 @@ export default function PrivyActorDirectory({ identity }: { identity: TrustLeafP
     setError(false);
     setActors([]);
     setNextOffset(null);
+    if (!identity.ready || identity.tokenReady === false) {
+      const timeout = setTimeout(() => { setError(true); setLoading(false); }, 10000);
+      return () => clearTimeout(timeout);
+    }
     void (async () => {
       try {
-        const token = await identity.getIdentityToken();
-        if (!token) throw new Error('SESSION_REQUIRED');
-        const response = await fetch(`/api/auth/privy/admin/actors?offset=${page}`, { cache: 'no-store', headers: { 'privy-id-token': token }, signal: controller.signal });
-        if (!response.ok) throw new Error('DIRECTORY_UNAVAILABLE');
-        const payload = await response.json();
+        const payload = await readPrivyAdminJson<{ actors: Actor[]; nextOffset: number | null }>(`/api/auth/privy/admin/actors?offset=${page}`, identity, controller.signal);
         if (!Array.isArray(payload.actors)) throw new Error('DIRECTORY_INVALID');
         if (!cancelled) { setActors(payload.actors); setNextOffset(payload.nextOffset ?? null); }
       } catch { if (!cancelled) setError(true); }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; controller.abort(); };
-  }, [page, revision, identity.subject]);
+  }, [page, revision, identity.subject, identity.ready, identity.tokenReady]);
   const buttonStyle = 'flex h-9 w-9 items-center justify-center rounded border border-brand-green-deep/20 disabled:opacity-40';
   return <section className="mt-8 border-t border-brand-green-deep/15 pt-6">
     <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-serif">Actores registrados</h2><button type="button" title="Actualizar actores" aria-label="Actualizar actores" disabled={loading} className={buttonStyle} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} /></button></div>
