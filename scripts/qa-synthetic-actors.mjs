@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const suites = [
+  ['Privy token coordination and retired identity isolation', 'privy-token-coordinator.test.ts'],
   ['Four-role access matrix (mock identity and RPC)', 'synthetic-four-role-access.test.ts'],
   ['Privy authorization adapter (mock RPC)', 'privy-supabase-rbac.test.ts'],
   ['Private actor directory and contact isolation (mock providers)', 'privy-actor-directory.test.ts'],

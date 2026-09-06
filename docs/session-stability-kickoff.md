@@ -1,7 +1,8 @@
 # F1: inicio de estabilizacion
 
 Fecha: 2026-09-06. Rama: `feat/session-consistency`.
-Estado: primer arreglo de agenda validado en browser aislado; F1 sigue abierta.
+Estado: agenda, limite de sesion y coordinacion de tokens validados aisladamente;
+F1 sigue abierta hasta build completo y prueba con Privy real.
 Marco: [plan maestro](TRUSTLEAF_MASTER_PLAN.md).
 
 ## Objetivo del primer bloque
@@ -106,3 +107,25 @@ No hay tareas paralelas ni procesos de validacion ejecutandose por este document
 - `git diff --check`: sin errores. No se ejecuto build completo, SDK Privy real,
   SQL alojado ni prueba entre pestanas reales. F1-02/F1-04 siguen pendientes.
 - Sin deploy, merge, mutaciones de Supabase ni cambios en la migracion mensual.
+
+## Segundo arreglo local: aislamiento del portal y tokens
+
+- `PrivySessionBoundary` remonta el contenido del portal cuando cambian readiness,
+  autenticacion o subject. Una respuesta tardia queda en el componente retirado,
+  sin restaurar correo/estado de otra identidad en el nuevo arbol.
+- Con Privy activo, App no restaura ni persiste roles/correos desde la sesion
+  local heredada. Tras recargar debe verificarse el acceso nuevamente. Esto no
+  reemplaza la autorizacion del servidor ni migra todas las caches de Firebase.
+- Coordinador de tokens: una lectura compartida en vuelo, refresh serializado,
+  invalidacion por identidad/logout y recuperacion tras error. Sin cache durable
+  de tokens y sin reintentos de mutaciones. No prueba limites reales del proveedor.
+- PASS `tests/privy-token-coordinator.test.ts`: concurrencia, refresh en cola,
+  rechazo de resultados obsoletos y recuperacion. Incorporado al runner sintetico.
+- PASS `tests/ui/session-boundary-browser.mjs`: respuesta de doctor demorada tras
+  entrar como paciente, y reinicio al salir. Usa el componente real de aislamiento
+  con un consumidor sintetico; no carga toda App ni el SDK Privy.
+- PASS regresiones `session-agenda-browser.mjs` y `agenda-browser.mjs`.
+- Runner completo con la suite nueva incorporada: 12/12 PASS.
+  Verificacion de sintaxis con esbuild no equivale a typecheck/build.
+- Pendiente: build completo, SDK real entre pestanas, inventario de datos demo y
+  prueba del flujo de acceso completo tras recarga. No promover aun a produccion.
