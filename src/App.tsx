@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
+import { readPrivyAdminJson } from './lib/privyRead';
 import type { PortalView } from './components/MockupPortal';
 import {
   trustDataStore,
@@ -2372,17 +2373,21 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
     setLoading(true);
     setLoadError(false);
     try {
-    const token = await privyIdentity.getIdentityToken();
-    if (!token) throw new Error('SESSION_REQUIRED');
-    const response = await fetch('/api/auth/privy/admin/pending-actors', { cache: 'no-store', headers: { 'privy-id-token': token } });
-    if (!response.ok) throw new Error('QUEUE_UNAVAILABLE');
-    const payload = await response.json() as { actors?: typeof actors };
+    const payload = await readPrivyAdminJson<{ actors?: typeof actors }>('/api/auth/privy/admin/pending-actors', privyIdentity);
     setActors(Array.isArray(payload.actors) ? payload.actors : []);
     } catch (error) { setLoadError(true); throw error; }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.')); }, []);
+  useEffect(() => {
+    if (!privyIdentity.ready || privyIdentity.tokenReady === false) {
+      setLoading(true);
+      const timeout = setTimeout(() => { setLoading(false); setLoadError(true); setNotice('No fue posible preparar la sesion. Vuelve a ingresar.'); }, 10000);
+      return () => clearTimeout(timeout);
+    }
+    setNotice(null);
+    void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.'));
+  }, [privyIdentity.subject, privyIdentity.ready, privyIdentity.tokenReady]);
 
   const review = async (actor: typeof actors[number], decision: 'approve' | 'reject') => {
     setBusy(`${actor.actorRef}:${decision}`);
@@ -2407,7 +2412,7 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
     <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Solicitudes verificadas</p><h2 className="mt-1 text-xl font-serif">Aprobaciones de cuentas</h2></div>
-        <button onClick={() => void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.'))} className="rounded-xl border border-brand-green-deep/10 px-3 py-2 text-xs font-bold">Actualizar</button>
+        <button disabled={loading || Boolean(busy)} onClick={() => { setNotice(null); void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.')); }} className="rounded-xl border border-brand-green-deep/10 px-3 py-2 text-xs font-bold disabled:opacity-50">Actualizar</button>
       </div>
       {notice && <p className="mt-4 text-sm text-brand-green-mid">{notice}</p>}
       {loading ? <p role="status" className="mt-4 text-sm">Cargando solicitudes...</p> : loadError ? null : actors.length === 0 ? <p className="mt-4 text-sm text-brand-green-mid/70">No hay solicitudes profesionales pendientes.</p> : <div className="mt-4 space-y-3">{actors.map((actor) => <div key={actor.actorRef} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-neutral p-4"><div><p className="font-bold capitalize">{actor.role === 'doctor' ? 'Médico' : 'Dispensario'}</p><p className="text-xs text-brand-green-mid/65">Solicitud pendiente de revisión</p>{actor.testProfile ? <div className="mt-2 text-xs text-brand-green-mid/75"><p className="font-semibold">Datos simulados: {actor.testProfile.displayName}</p><p>{actor.testProfile.registrationReference} · {actor.testProfile.reviewContext}</p></div> : <p className="mt-2 text-xs text-amber-700">Faltan datos de revisión.</p>}</div><div className="flex gap-2"><button disabled={Boolean(busy)} onClick={() => void review(actor, 'reject')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Rechazar</button><button disabled={Boolean(busy) || !actor.testProfile} onClick={() => void review(actor, 'approve')} className="rounded-xl bg-brand-green-deep px-3 py-2 text-xs font-bold text-brand-ivory disabled:opacity-50">{busy === `${actor.actorRef}:approve` ? 'Autorizando...' : 'Autorizar'}</button></div></div>)}</div>}

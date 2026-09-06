@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { getIdentityToken, PrivyProvider, useLogin, usePrivy } from '@privy-io/react-auth';
+import { getIdentityToken, PrivyProvider, useIdentityToken, useLogin, usePrivy, useUser } from '@privy-io/react-auth';
 import type { PrivyRuntimeConfig } from '../lib/privyConfig';
 import { TrustLeafPrivyContext, type TrustLeafPrivyIdentity } from './privyIdentityContext';
 
@@ -10,12 +10,19 @@ interface ActiveTrustLeafPrivyProviderProps {
 
 function PrivyIdentityBridge({ children }: { children: ReactNode }) {
   const { ready, authenticated, logout, user } = usePrivy();
+  const { identityToken } = useIdentityToken();
+  const { refreshUser } = useUser();
   const { login } = useLogin();
   const value = useMemo<TrustLeafPrivyIdentity>(() => ({
     enabled: true,
     ready,
     authenticated,
     subject: user?.id,
+    tokenReady: ready && authenticated && Boolean(identityToken),
+    async refreshIdentityToken() {
+      await refreshUser();
+      return getIdentityToken();
+    },
     async beginLogin() {
       await login({ loginMethods: ['google', 'email', 'passkey', 'wallet'] });
     },
@@ -25,7 +32,7 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
     async getIdentityToken() {
       return getIdentityToken();
     },
-  }), [authenticated, login, logout, ready, user?.id]);
+  }), [authenticated, login, logout, ready, user?.id, identityToken, refreshUser]);
 
   return <TrustLeafPrivyContext.Provider value={value}>{children}</TrustLeafPrivyContext.Provider>;
 }
