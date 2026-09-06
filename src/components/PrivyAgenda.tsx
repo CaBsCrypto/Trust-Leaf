@@ -11,6 +11,12 @@ const commandStyle = 'inline-flex items-center justify-center gap-2 rounded bord
 
 export default function PrivyAgenda({ email }: { email?: string }) {
   const identity = useTrustLeafPrivyIdentity();
+  // Commands, notices and rows must never survive an identity transition.
+  return <IdentityAgenda key={`${identity.subject ?? 'signed-out'}:${identity.authenticated}:${identity.ready}`} email={email}/>;
+}
+
+function IdentityAgenda({ email }: { email?: string }) {
+  const identity = useTrustLeafPrivyIdentity();
   const [date,setDate] = useState(() => localDate(new Date()));
   const [publishDate,setPublishDate] = useState(() => localDate(new Date(Date.now()+86400000)));
   const [time,setTime] = useState('09:00');
@@ -25,14 +31,18 @@ export default function PrivyAgenda({ email }: { email?: string }) {
   const [revision,setRevision] = useState(0);
   const generation = useRef(0);
   const commandLock = useRef(false);
+  const commandController = useRef<AbortController | null>(null);
+  useEffect(() => () => commandController.current?.abort(), []);
 
   async function request(path: string, command?: Command, signal?: AbortSignal) {
     let token = await identity.getIdentityToken();
+    signal?.throwIfAborted();
     if (!token && !command) token = await identity.refreshIdentityToken?.() ?? null;
+    signal?.throwIfAborted();
     if (!token) throw Object.assign(new Error('Inicia sesion nuevamente para consultar tu agenda.'),{status:401});
     const send = () => fetch(path,{method:command ? 'POST':'GET',cache:'no-store',signal,headers:{'privy-id-token':token!,...(command ? {'content-type':'application/json'}:{})},...(command ? {body:JSON.stringify(command)}:{})});
     let response=await send();
-    if (response.status===401 && !command && identity.refreshIdentityToken) { token=await identity.refreshIdentityToken(); if(token) response=await send(); }
+    if (response.status===401 && !command && identity.refreshIdentityToken) { token=await identity.refreshIdentityToken(); signal?.throwIfAborted(); if(token) response=await send(); }
     if(!response.ok) throw Object.assign(new Error(response.status===403 ? 'Esta cuenta no tiene acceso a la agenda.' : response.status===409 ? 'El horario cambio o se superpone con otra cita. Actualiza la agenda.' : response.status===400 ? 'Revisa la fecha y el horario. No se guardo el cambio.' : 'No fue posible confirmar la operacion. Puedes consultar la agenda o reintentar.'),{status:response.status});
     return response.json();
   }
@@ -51,7 +61,7 @@ export default function PrivyAgenda({ email }: { email?: string }) {
       if(current!==generation.current || controller.signal.aborted)return;
       if(!Array.isArray(data.slots) || !['doctor','patient'].includes(data.role))throw new Error('Respuesta de agenda no disponible.');
       setSlots(data.slots);setRole(data.role);
-    }).catch(e=>{if(!controller.signal.aborted && current===generation.current)setError(e.message);})
+    }).catch(e=>{if(!controller.signal.aborted && current===generation.current)setError(notice ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. Pulsa Actualizar agenda.' : e.message);})
       .finally(()=>{if(!controller.signal.aborted && current===generation.current)setLoading(false);});
     return ()=>controller.abort();
   },[date,revision,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
@@ -59,15 +69,21 @@ export default function PrivyAgenda({ email }: { email?: string }) {
   async function execute(command: Command) {
     if(commandLock.current)return;
     commandLock.current=true;setBusy(true);setPending(command);setError('');setNotice('');
-    try {await request('/api/agenda',command);setPending(null);setNotice('Cambio guardado.');setRevision(v=>v+1);}
-    catch(e) {const failure=e as Error & {status?:number};setError(failure.message);if([400,403,409].includes(failure.status ?? 0))setPending(null);}
-    finally {commandLock.current=false;setBusy(false);}
+    const controller=new AbortController();commandController.current=controller;
+    try {
+      await request('/api/agenda',command,controller.signal);
+      if(controller.signal.aborted)return;
+      setPending(null);setNotice('Cambio guardado.');
+      if(command.action==='publish')setDate(localDate(new Date(String(command.input.startsAt))));
+      setRevision(v=>v+1);
+    }
+    catch(e) {if(controller.signal.aborted)return;const failure=e as Error & {status?:number};setError(failure.message);if([400,403,409].includes(failure.status ?? 0))setPending(null);}
+    finally {if(!controller.signal.aborted){commandLock.current=false;setBusy(false);}}
   }
   const mutate=(action:string,input:Record<string,unknown>)=>void execute({action,input:{...input,operationId:crypto.randomUUID()}});
   function publish(event: FormEvent) {
     event.preventDefault();const start=new Date(`${publishDate}T${time}`);
     if(!Number.isFinite(start.getTime()) || start.getTime()<=Date.now()){setError('Selecciona un horario futuro.');return;}
-    setDate(publishDate);
     mutate('publish',{slotRef:crypto.randomUUID(),startsAt:start.toISOString(),endsAt:new Date(start.getTime()+duration*60000).toISOString()});
   }
   const move=(days:number)=>{const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+days);setDate(localDate(next));};

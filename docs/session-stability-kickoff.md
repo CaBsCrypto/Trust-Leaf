@@ -1,7 +1,7 @@
 # F1: inicio de estabilizacion
 
 Fecha: 2026-09-06. Rama: `feat/session-consistency`.
-Estado: preparacion tecnica completada; correcciones y regresion pendientes.
+Estado: primer arreglo de agenda validado en browser aislado; F1 sigue abierta.
 Marco: [plan maestro](TRUSTLEAF_MASTER_PLAN.md).
 
 ## Objetivo del primer bloque
@@ -64,7 +64,7 @@ No ampliar esta rama a nuevas pantallas, receta, inventario o migraciones SQL.
 Reutilizar `tests/ui/agenda-browser.mjs`, `tests/ui/agenda-sql-browser.mjs` y
 `tests/sql/approval-flow.mjs`; ampliar los fixtures para respuestas demoradas y
 cambios de identidad. Registrar comando, entorno, resultado y limitaciones.
-No se han ejecutado esas suites en esta preparacion.
+La evidencia del primer arreglo figura al final; no implica validacion del SDK real.
 
 Hay una migracion mensual local sin seguimiento que los runners SQL pueden
 descubrir automaticamente. Ejecutar baseline en un worktree limpio o mediante
@@ -78,6 +78,31 @@ No se necesita ningun secreto nuevo para preparar estas pruebas.
 
 ## Continuidad
 
-Proxima accion: crear casos reproducibles F1-01 y F1-03 en fixtures aislados.
+Proxima accion: ampliar F1-01 a respuestas demoradas y sesion del portal completo;
+coordinar token/refresh en F1-02 y probar Privy real entre pestanas.
 Responsable de ejecucion: tarea actual; revision humana: propietario del proyecto.
 No hay tareas paralelas ni procesos de validacion ejecutandose por este documento.
+
+## Primer arreglo local: evidencia 2026-09-06
+
+- `tests/ui/session-agenda-browser.mjs`: dos regresiones fallaron antes del cambio
+  (comando pendiente persistia al cambiar identidad; lectura fallida sugeria
+  operacion no confirmada). Ambas pasan despues del arreglo.
+- `PrivyAgenda` reinicia su estado por subject/autenticacion/disponibilidad de
+  sesion; cancela solicitudes al desmontar y comprueba cancelacion tras obtener
+  token. Esto no revierte una escritura que el servidor ya haya recibido.
+- Publicar mueve la fecha visible despues del guardado, junto con la revision,
+  evitando disparar la lectura adicional anterior a la escritura.
+- Un fallo de refresco conserva el guardado confirmado y pide actualizar, no
+  reenviar el comando. Los reintentos explicitos conservan operationId.
+- `tests/ui/agenda-browser.mjs`: PASS publicar, recargar, reservar, confirmacion
+  del medico, cancelacion y recuperacion de respuesta perdida; desktop/movil.
+- Entorno: Edge headless, React real con HTTP interceptado y cuentas ficticias.
+  Servidor `vite-session.config.mjs`, loopback 4318, sin plugin SQL ni migraciones.
+- Variables para ejecutar: PLAYWRIGHT_MODULE al paquete disponible,
+  PLAYWRIGHT_CHANNEL=msedge, AGENDA_FIXTURE_URL=http://127.0.0.1:4318.
+  Comandos: `node tests/ui/session-agenda-browser.mjs` y
+  `node tests/ui/agenda-browser.mjs`.
+- `git diff --check`: sin errores. No se ejecuto build completo, SDK Privy real,
+  SQL alojado ni prueba entre pestanas reales. F1-02/F1-04 siguen pendientes.
+- Sin deploy, merge, mutaciones de Supabase ni cambios en la migracion mensual.

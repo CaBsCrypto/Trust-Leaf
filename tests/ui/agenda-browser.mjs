@@ -24,7 +24,7 @@ async function open(role,viewport={width:1280,height:850}){
     if(loseResponse){loseResponse=false;return route.fulfill({status:503,json:{code:'UNAVAILABLE'}});}
     return route.fulfill({json:{resourceRef:body.input.bookingRef??body.input.slotRef,replayed:false}});
   });
-  await page.goto(`http://127.0.0.1:4317/?role=${role}`);return page;
+  await page.goto(`${process.env.AGENDA_FIXTURE_URL ?? 'http://127.0.0.1:4317'}/?role=${role}`);return page;
 }
 try{
   const doctor=await open('doctor');
