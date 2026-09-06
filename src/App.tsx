@@ -872,6 +872,7 @@ function AppContent() {
         pageMode
         showTechnicalDetails={showTechnicalDetails}
         roleLabel="Portal Médico"
+        professionalRoleVerified={privyIdentity.enabled && hasRoleSession('doctor')}
         onSignOut={endSession}
         session={session}
       />
@@ -962,6 +963,7 @@ function AppContent() {
         pageMode
         showTechnicalDetails={showTechnicalDetails}
         roleLabel="Portal Dispensario"
+        professionalRoleVerified={privyIdentity.enabled && hasRoleSession('dispensary')}
         onSignOut={endSession}
         session={session}
       />
