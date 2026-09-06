@@ -37,6 +37,7 @@ import {
   displayToStroops,
 } from "./api/_lib/defindex";
 import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
+import consolidatedReadinessHandler from './api/stellar/readiness';
 import { createLegacyAuthorizationMiddleware } from "./api/_lib/legacy-route-authorization";
 import {
   createLegacyObjectAuthorizationMiddleware,
@@ -111,6 +112,11 @@ async function startServer() {
 
   // Middlewares
   app.use(express.json());
+  app.all('/api/agenda', (req, res) => {
+    void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
+      query: { ...req.query, __trustleaf_route: 'privy-agenda' } }, res)
+      .catch(() => { if (!res.headersSent) res.status(503).json({ code: 'AGENDA_UNAVAILABLE' }); });
+  });
   app.use(createLegacyAuthorizationMiddleware(process.env));
   app.use((req, res, next) => {
     const protectedMutation = req.method === "POST" && (
