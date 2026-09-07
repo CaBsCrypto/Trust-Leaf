@@ -39,9 +39,9 @@ export default function GoogleCalendarConnection() {
   }
   return <div className="flex flex-wrap items-center gap-3 border-y border-gray-200 py-3">
     <button type="button" disabled={busy} onClick={() => void connect()} className="inline-flex items-center gap-2 rounded border border-gray-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">
-      <CalendarDays size={18}/>{busy ? 'Conectando...' : connected ? 'Reconectar Google Calendar' : 'Conectar Google Calendar'}
+      <CalendarDays size={18}/>{busy ? 'Conectando...' : connected ? 'Reconectar calendario central' : 'Conectar calendario central'}
     </button>
-    {connected && <span className="text-sm text-green-700">Google Calendar conectado</span>}
+    {connected && <span className="text-sm text-green-700">Organizador central conectado</span>}
     {error && <p role="alert" className="w-full text-sm text-red-700">{error}</p>}
   </div>;
 }

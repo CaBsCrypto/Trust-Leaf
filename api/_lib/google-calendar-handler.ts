@@ -19,7 +19,7 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
     if (!/^[a-f0-9]{64}$/i.test(secret) || !env.GOOGLE_CALENDAR_CLIENT_SECRET || env.GOOGLE_CALENDAR_REDIRECT_URI !== calendarCallback) throw new Error('Configuration');
     const store = createSupabasePrivyActorStore(env, fetch);
     async function rpc(operation: string, subject = '', state = '', value = '') {
-      const response = await fetch(new URL('/rest/v1/rpc/trustleaf_calendar_connection', env.SUPABASE_URL ?? env.VITE_SUPABASE_URL), {
+      const response = await fetch(new URL('/rest/v1/rpc/trustleaf_central_calendar_connection', env.SUPABASE_URL ?? env.VITE_SUPABASE_URL), {
         method: 'POST', headers: { apikey: (env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim(), 'content-type': 'application/json' },
         body: JSON.stringify({ p_action: operation, p_subject: subject, p_key: state, p_value: value }), signal: AbortSignal.timeout(10000),
       });
@@ -35,9 +35,9 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
       const pending = await rpc('consume', '', digest(`${state}:${browser}`));
       clearCookie();
       const binding = await store.resolve(pending.subject);
-      if (!binding || binding.role !== 'doctor' || binding.state !== 'active' || (binding.validUntil && Date.parse(binding.validUntil) <= Date.now())) throw new Error('Role');
+      if (!binding || binding.role !== 'admin' || binding.state !== 'active' || (binding.validUntil && Date.parse(binding.validUntil) <= Date.now())) throw new Error('Role');
       if (req.query.error || typeof req.query.code !== 'string' || req.query.code.length > 4096) throw new Error('Consent');
-      const verifier = unseal(pending.payload, secret, `state:${pending.subject}`);
+      const verifier = unseal(pending.payload, secret, `central-state:${pending.subject}`);
       const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ client_id: env.GOOGLE_CALENDAR_CLIENT_ID!, client_secret: env.GOOGLE_CALENDAR_CLIENT_SECRET!, redirect_uri: calendarCallback, grant_type: 'authorization_code', code: req.query.code, code_verifier: verifier }),
@@ -46,8 +46,8 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
       if (!response.ok) throw new Error('Exchange');
       const tokens = await response.json();
       if (typeof tokens.refresh_token !== 'string' || !String(tokens.scope ?? '').split(' ').includes(calendarScope)) throw new Error('Missing consent');
-      await rpc('save', pending.subject, '', seal(tokens.refresh_token, secret, `refresh:${pending.subject}`));
-      return res.redirect(303, '/medico?calendar=connected');
+      await rpc('save', pending.subject, '', seal(tokens.refresh_token, secret, 'central-calendar:refresh'));
+      return res.redirect(303, '/admin?calendar=connected');
     }
     if (!['start', 'status'].includes(action)) return res.status(404).end();
     if (req.method !== (action === 'start' ? 'POST' : 'GET')) return res.status(405).end();
@@ -55,15 +55,15 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
     const token = req.headers['privy-id-token'];
     if (typeof token !== 'string') return res.status(401).json({ code: 'AUTH_REQUIRED' });
     const verifier = dependencies.verifier ?? (await import('./privy-identity.js')).createPrivyIdentityVerifier(env);
-    const principal = await createPrivyRbacAuthorizer({ verifier, store }).authorize(token, ['doctor']);
+    const principal = await createPrivyRbacAuthorizer({ verifier, store }).authorize(token, ['admin']);
     if (action === 'status') return res.status(200).json(await rpc('status', principal.subject));
     const auth = authorizationRequest(env.GOOGLE_CALENDAR_CLIENT_ID ?? '');
     const browser = randomBytes(32).toString('base64url');
-    await rpc('start', principal.subject, digest(`${auth.state}:${browser}`), seal(auth.verifier, secret, `state:${principal.subject}`));
+    await rpc('start', principal.subject, digest(`${auth.state}:${browser}`), seal(auth.verifier, secret, `central-state:${principal.subject}`));
     res.setHeader('Set-Cookie', `${cookie}=${browser}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
     return res.status(200).json({ url: auth.url });
   } catch (error) {
-    if (action === 'callback') { clearCookie(); return res.redirect(303, '/medico?calendar=error'); }
+    if (action === 'callback') { clearCookie(); return res.redirect(303, '/admin?calendar=error'); }
     const status = (error as { statusCode?: number }).statusCode;
     return res.status(status === 401 || status === 403 ? status : 503).json({ code: 'CALENDAR_CONNECTION_UNAVAILABLE' });
   }

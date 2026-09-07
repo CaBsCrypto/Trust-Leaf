@@ -1,5 +1,18 @@
 # Google Calendar connection
 
+## Central organizer revision
+
+Local revision: the connection control moves from doctor agenda to administration.
+Start/status and callback require an active administrator. A new singleton table
+and separate OAuth state table isolate central credentials from legacy doctor
+connections; existing credentials are NOT promoted or copied. Apply
+`20260907020000_central_calendar_connection.sql` before deploying this revision.
+Google login and consent must be restarted from admin, not the previous doctor flow.
+The callback remains unchanged in Cloud but returns to `/admin`.
+This connects the organizer only; automatic invitations/Meet, calendar ID persistence,
+revocation UI and guest entry without the organizer are still pending.
+The historical doctor implementation below describes the initial release.
+
 Status: local implementation, not deployed or enabled. Automatic event/Meet creation is NOT implemented.
 
 The doctor-only start route verifies Privy identity and active Supabase role. The callback uses a single-use database record, a browser-bound HttpOnly cookie, PKCE, expiry and role revalidation. Refresh tokens use AES-256-GCM with the subject as authenticated context. No tokens are returned to the browser or stored in Git.

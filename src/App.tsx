@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
+import GoogleCalendarConnection from './components/GoogleCalendarConnection';
 import PrivySessionBoundary from './components/PrivySessionBoundary';
 import { readPrivyAdminJson } from './lib/privyRead';
 import type { PortalView } from './components/MockupPortal';
@@ -2621,6 +2622,7 @@ function AdminRoute({
       </div>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {privyIdentity.enabled && privyIdentity.authenticated && import.meta.env.VITE_GOOGLE_CALENDAR_ENABLED === 'true' && <GoogleCalendarConnection key={privyIdentity.subject}/>}
         {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorReviewQueue privyIdentity={privyIdentity} />}
         {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorDirectory identity={privyIdentity} />}
         {privyIdentity.enabled && (
