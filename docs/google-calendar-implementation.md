@@ -90,3 +90,16 @@ Scope: `https://www.googleapis.com/auth/calendar.app.created`, limited to second
 Persist the app-created calendar ID. Add an outbox transaction to confirmed booking/cancellation; workers must use deterministic event IDs, conference request IDs and retry claims. Store conference pending/ready/error separately from booking state. Do not report a confirmed booking as failed solely because Google is unavailable. Add per-participant authorization for Meet URLs, refresh/reconnect and disconnect flows. Test rescheduling/cancellation and duplicate/concurrent requests. No clinical detail in Google event contents.
 
 References: https://developers.google.com/workspace/calendar/api/auth and https://developers.google.com/identity/protocols/oauth2/web-server
+# Production verification: session reads, 2026-09-07
+
+Deployment `trustleaf-inzuuus5g` loads the central organizer, ready conference,
+pending queue and actor directory on an authenticated admin reload without manual
+refresh. Ordinary token reads now use the SDK-managed identity token, subject-bound;
+explicit refresh and server authorization remain in place. Local build and token
+coordinator tests passed. This browser check does not prove all session edge cases.
+
+Doctor confirmed receipt of the invitation. Patient receipt and two-device guest
+admission without the organizer remain unverified. Google documents that participants
+without a Google account may require admission by the organizer or a participant:
+https://support.google.com/meet/answer/9303069
+Do not equate successful event creation with unattended guest access.
