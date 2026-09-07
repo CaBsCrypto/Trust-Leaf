@@ -10,7 +10,7 @@ export async function setupCentralCalendar(env: Record<string,string|undefined>,
     if(!response.ok) throw new Error('CALENDAR_SETUP_STORAGE_FAILED');
     return response.json();
   }
-  const existing=await rpc('credentials');
+  const existing=await rpc('setup-credentials');
   if(!existing?.refresh_ciphertext || !env.GOOGLE_CALENDAR_CLIENT_ID || !env.GOOGLE_CALENDAR_CLIENT_SECRET) throw new Error('CALENDAR_CONNECTION_REQUIRED');
   const token=await refreshCalendarToken({clientId:env.GOOGLE_CALENDAR_CLIENT_ID,clientSecret:env.GOOGLE_CALENDAR_CLIENT_SECRET,
     refreshToken:unseal(existing.refresh_ciphertext,env.GOOGLE_CALENDAR_ENCRYPTION_KEY??'','central-calendar:refresh')},fetcher);
@@ -19,11 +19,11 @@ export async function setupCentralCalendar(env: Record<string,string|undefined>,
     await provider.verifyMeet(existing.calendar_id);
     return {ready:true};
   }
-  const claim=await rpc('setup-claim');
+  const claim=await rpc('setup-claim',{connectionRef:existing.connection_ref});
   if(!claim?.claimed) throw new Error('CALENDAR_SETUP_REVIEW_REQUIRED');
   // Calendar insertion has no idempotency key. Never automatically repeat an ambiguous creation.
   const id=await provider.create();
-  await rpc('setup-save',{calendarId:id});
   await provider.verifyMeet(id);
+  await rpc('setup-save',{calendarId:id,connectionRef:existing.connection_ref});
   return {ready:true};
 }

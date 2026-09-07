@@ -10,7 +10,7 @@ export interface CalendarJob {
 
 export interface CalendarWorkStore {
   claim(): Promise<CalendarJob | null>;
-  credentials(): Promise<{ clientId: string; clientSecret: string; refreshToken: string; calendarId: string }>;
+  credentials(job: CalendarJob): Promise<{ clientId: string; clientSecret: string; refreshToken: string; calendarId: string }>;
   booking(job: CalendarJob): Promise<CalendarBooking>;
   finish(input: { bookingRef: string; revision: number; leaseId: string;
     state: 'ready' | 'pending' | 'cancelled' | 'error'; meetUrl?: string | null }): Promise<unknown>;
@@ -23,7 +23,7 @@ export async function processCalendarJob(store: CalendarWorkStore, fetcher: type
   const identity = { bookingRef: job.booking_ref, revision: job.revision, leaseId: job.lease_id };
   let outcome: { state: 'ready' | 'pending' | 'cancelled' | 'error'; meetUrl?: string | null };
   try {
-    const credentials = await store.credentials();
+    const credentials = await store.credentials(job);
     if (!credentials.calendarId) throw new Error('CALENDAR_SETUP_REQUIRED');
     const accessToken = await refreshCalendarToken(credentials, fetcher);
     const events = createCalendarEvents(accessToken, credentials.calendarId, fetcher);

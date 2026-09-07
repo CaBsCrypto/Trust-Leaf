@@ -28,8 +28,8 @@ export function calendarWorkStore(env: Record<string, string | undefined>, fetch
   return {
     claim:()=>rpc('claim'),
     finish:input=>rpc('finish',input),
-    async credentials() {
-      const data=await rpc('credentials');
+    async credentials(job: CalendarJob) {
+      const data=await rpc('job-credentials',{bookingRef:job.booking_ref,leaseId:job.lease_id});
       if(!data || typeof data.refresh_ciphertext!=='string' || typeof data.calendar_id!=='string') throw new Error('CALENDAR_SETUP_REQUIRED');
       if(!env.GOOGLE_CALENDAR_CLIENT_ID || !env.GOOGLE_CALENDAR_CLIENT_SECRET) throw new Error('CALENDAR_SETUP_REQUIRED');
       return {clientId:env.GOOGLE_CALENDAR_CLIENT_ID,clientSecret:env.GOOGLE_CALENDAR_CLIENT_SECRET,

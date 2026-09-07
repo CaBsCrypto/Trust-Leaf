@@ -6,6 +6,7 @@ import CalendarOperations from './CalendarOperations';
 export default function GoogleCalendarConnection() {
   const identity = useTrustLeafPrivyIdentity();
   const [connected, setConnected] = useState(false);
+  const [candidatePending, setCandidatePending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(true);
@@ -13,6 +14,7 @@ export default function GoogleCalendarConnection() {
   const activeRequest = useRef<AbortController | null>(null);
   useEffect(() => {
     setConnected(false);
+    setCandidatePending(false);
     setChecking(true);
     setError('');
     if (!identity.ready || !identity.authenticated || !identity.tokenReady) return;
@@ -23,7 +25,10 @@ export default function GoogleCalendarConnection() {
       const response = await fetch('/api/google-calendar/status', { headers: { 'privy-id-token': token }, cache: 'no-store', signal: check.signal });
       if (!response.ok) throw new Error('status');
       const data = await response.json();
-      if (!check.signal.aborted) setConnected(data.connected === true);
+      if (!check.signal.aborted) {
+        setConnected(data.connected === true);
+        setCandidatePending(data.candidatePending === true);
+      }
     }).catch(() => {
       if (!check.signal.aborted) setError('No se pudo verificar el calendario central.');
     }).finally(() => { if (!check.signal.aborted) setChecking(false); });
@@ -54,8 +59,9 @@ export default function GoogleCalendarConnection() {
       <CalendarDays size={18}/>{checking ? 'Verificando calendario...' : busy ? 'Conectando...' : connected ? 'Reconectar calendario central' : 'Conectar calendario central'}
     </button>
     {connected && <span className="text-sm text-green-700">Organizador central conectado</span>}
+    {candidatePending && <span className="text-sm text-amber-700">Nuevo organizador pendiente de preparar</span>}
     {error && <p role="alert" className="w-full text-sm text-red-700">{error}</p>}
     {error && <button type="button" onClick={() => setRevision(v => v + 1)}>Reintentar verificacion</button>}
-    {connected && <CalendarOperations key={identity.subject}/>}
+    {(connected || candidatePending) && <CalendarOperations key={identity.subject}/>}
   </div>;
 }

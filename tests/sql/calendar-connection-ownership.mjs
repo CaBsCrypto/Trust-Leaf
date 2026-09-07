@@ -1,0 +1,39 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { PGlite } from '@electric-sql/pglite';
+const db=new PGlite();
+try {
+  await db.exec(`create role anon; create role authenticated; create role service_role; create schema trustleaf_private;
+    create table public.trustleaf_central_calendar(singleton boolean primary key,connected_by text,refresh_ciphertext text,calendar_id text,setup_started boolean,updated_at timestamptz default now());
+    create table trustleaf_private.calendar_booking_jobs(booking_ref uuid primary key,lease_id uuid,lease_until timestamptz);
+    create function public.trustleaf_resolve_privy_actor(text) returns table(role text,actor_state text,valid_until timestamptz)
+      language sql as $$select 'admin','active',null::timestamptz where $1='admin'$$;
+    create function public.trustleaf_central_calendar_connection(text,text,text,text) returns jsonb language sql as $$select '{}'::jsonb$$;
+    create function public.trustleaf_calendar_job(text,jsonb) returns jsonb language sql as $$select '{}'::jsonb$$;
+    insert into public.trustleaf_central_calendar values(true,'admin','old-secret','old-calendar',true,now());
+    insert into trustleaf_private.calendar_booking_jobs values('11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222',now()+interval '1 hour');`);
+  await db.exec(await readFile(new URL('../../supabase/migrations/20260908010000_calendar_connection_ownership.sql',import.meta.url),'utf8'));
+  const rpc=async(action,input={})=>(await db.query('select public.trustleaf_calendar_job($1,$2) v',[action,input])).rows[0].v;
+  const save=subject=>db.query("select public.trustleaf_central_calendar_connection('save',$1,'','new-secret')",[subject]);
+  const old={bookingRef:'11111111-1111-4111-8111-111111111111',leaseId:'22222222-2222-4222-8222-222222222222'};
+  await assert.rejects(save('patient'));
+  await save('admin');
+  assert.equal((await rpc('job-credentials',old)).calendar_id,'old-calendar');
+  const candidate=await rpc('setup-credentials');
+  assert.equal(candidate.refresh_ciphertext,'new-secret');
+  assert.equal(await rpc('setup-claim',{connectionRef:'33333333-3333-4333-8333-333333333333'}),null);
+  assert.equal((await rpc('setup-claim',{connectionRef:candidate.connection_ref})).claimed,true);
+  assert.equal(await rpc('setup-claim',{connectionRef:candidate.connection_ref}),null);
+  await assert.rejects(save('admin'));
+  await rpc('setup-save',{connectionRef:candidate.connection_ref,calendarId:'new-calendar'});
+  assert.equal((await rpc('job-credentials',old)).calendar_id,'old-calendar');
+  await db.exec("insert into trustleaf_private.calendar_booking_jobs(booking_ref,lease_id,lease_until) values('44444444-4444-4444-8444-444444444444','55555555-5555-4555-8555-555555555555',now()+interval '1 hour')");
+  const fresh={bookingRef:'44444444-4444-4444-8444-444444444444',leaseId:'55555555-5555-4555-8555-555555555555'};
+  assert.equal((await rpc('job-credentials',fresh)).calendar_id,'new-calendar');
+  await assert.rejects(rpc('job-credentials',{...old,leaseId:fresh.leaseId}));
+  await db.exec('set role anon');
+  await assert.rejects(rpc('setup-credentials'));
+  await db.exec('reset role; set role service_role');
+  await assert.rejects(db.query("select public.trustleaf_calendar_job_legacy('credentials','{}')"));
+  console.log('PASS: old ownership retained, candidate fenced, new bookings use new organizer, unauthorized access denied');
+} finally { await db.close(); }
