@@ -36,10 +36,10 @@ assert.equal((await processCalendarJob(store,fetcher)).state,'cancelled');
 desired='confirmed';
 replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{createRequest:{status:{statusCode:'pending'}}}})];
 assert.equal((await processCalendarJob(store,fetcher)).state,'pending');
-assert.equal(finished.meetUrl,null);
+assert.equal((finished as Parameters<CalendarWorkStore['finish']>[0]).meetUrl,null);
 replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}})];
 assert.equal((await processCalendarJob(store,fetcher)).state,'ready');
-assert.equal(finished.meetUrl,'https://meet.google.com/abc-defg-hij');
+assert.equal((finished as Parameters<CalendarWorkStore['finish']>[0]).meetUrl,'https://meet.google.com/abc-defg-hij');
 
 replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}})];
 await assert.rejects(processCalendarJob({...store,finish:async()=>{throw new Error('storage unavailable');}},fetcher),/storage unavailable/);
