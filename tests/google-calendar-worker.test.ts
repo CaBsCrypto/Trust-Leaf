@@ -22,5 +22,26 @@ assert.equal(finished.meetUrl,undefined);
 desired='cancelled';
 replies=[json({access_token:'access'}),new Response(null,{status:204})];
 assert.equal((await processCalendarJob(store,fetcher)).state,'cancelled');
+for (const status of [404, 410]) {
+  replies=[json({access_token:'access'}),new Response(null,{status})];
+  assert.equal((await processCalendarJob(store,fetcher)).state,'cancelled');
+  assert.equal(finished.meetUrl,undefined);
+}
+replies=[json({access_token:'access'}),json({error:'temporary provider failure'},503)];
+assert.equal((await processCalendarJob(store,fetcher)).state,'error');
+assert.deepEqual(finished,{bookingRef:'booking',revision:2,leaseId:'lease',state:'error'});
+replies=[json({access_token:'access'}),new Response(null,{status:204})];
+assert.equal((await processCalendarJob(store,fetcher)).state,'cancelled');
+
+desired='confirmed';
+replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{createRequest:{status:{statusCode:'pending'}}}})];
+assert.equal((await processCalendarJob(store,fetcher)).state,'pending');
+assert.equal(finished.meetUrl,null);
+replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}})];
+assert.equal((await processCalendarJob(store,fetcher)).state,'ready');
+assert.equal(finished.meetUrl,'https://meet.google.com/abc-defg-hij');
+
+replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}})];
+await assert.rejects(processCalendarJob({...store,finish:async()=>{throw new Error('storage unavailable');}},fetcher),/storage unavailable/);
 assert.deepEqual(await processCalendarJob({...store,claim:async()=>null},fetcher),{processed:false});
 console.log('PASS: worker event creation, cancellation, reconnect failure and empty queue');
