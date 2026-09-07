@@ -66,6 +66,31 @@ function IdentityAgenda({ email }: { email?: string }) {
     return ()=>controller.abort();
   },[date,revision,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
 
+  const waitingForMeet = slots.some(slot => slot.bookingState === 'confirmed' &&
+    !['ready', 'cancelled'].includes(slot.conference?.state ?? ''));
+  useEffect(() => {
+    if (!waitingForMeet || loading || busy || !identity.ready || !identity.authenticated) return;
+    const controller = new AbortController();
+    const current = generation.current;
+    const resume = () => {
+      if (document.visibilityState === 'visible' && !controller.signal.aborted) setSlots(rows => [...rows]);
+    };
+    document.addEventListener('visibilitychange', resume);
+    const timer = setTimeout(async () => {
+      if (document.visibilityState !== 'visible') return;
+      const start = new Date(`${date}T00:00:00`);
+      const end = new Date(start); end.setDate(end.getDate() + 7);
+      try {
+        const data = await request(`/api/agenda?${new URLSearchParams({from:start.toISOString(),to:end.toISOString()})}`, undefined, controller.signal);
+        if (!controller.signal.aborted && current === generation.current && Array.isArray(data.slots)) setSlots(data.slots);
+      } catch {
+        // Preserve the usable agenda if a background status refresh fails.
+        if (!controller.signal.aborted && current === generation.current) setSlots(rows => [...rows]);
+      }
+    }, 15000);
+    return () => { clearTimeout(timer); controller.abort(); document.removeEventListener('visibilitychange', resume); };
+  }, [slots, waitingForMeet, loading, busy, date, identity.subject, identity.ready, identity.authenticated]);
+
   async function execute(command: Command) {
     if(commandLock.current)return;
     commandLock.current=true;setBusy(true);setPending(command);setError('');setNotice('');

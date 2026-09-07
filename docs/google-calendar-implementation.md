@@ -14,7 +14,8 @@
   after one worker attempt, with a Meet URL and no error. Administrator UI shows Lista.
 - Fixture used the agenda SQL function for existing test participants, not a fresh
   browser login/reservation. It is not evidence of end-to-end browser authorization.
-- Invitation receipt and two-device admission without the organizer await user testing.
+- User confirmed receipt of the Meet invitation at the doctor's Zoho-hosted email.
+  Patient invitation receipt and two-device admission without the organizer remain unverified.
 - Real cancellation/retry validation, initial admin session loading, full typecheck,
   participant UI validation and repository publication remain open.
 
