@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw, X } from 'lucide-react';
 import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
+import GoogleCalendarConnection from './GoogleCalendarConnection';
 
 type Slot = { slotRef: string; doctorRef: string; startsAt: string; endsAt: string; state: string; version: number; bookingRef: string | null; bookingState: string | null };
 type Command = { action: string; input: Record<string, unknown> };
@@ -90,6 +91,7 @@ function IdentityAgenda({ email }: { email?: string }) {
   const disabled=busy || loading || pending!==null;
   const zone=Intl.DateTimeFormat().resolvedOptions().timeZone;
   return <section className="w-full min-w-0 space-y-5 text-gray-900">
+    {role === 'doctor' && import.meta.env.VITE_GOOGLE_CALENDAR_ENABLED === 'true' && <GoogleCalendarConnection/>}
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 className="flex items-center gap-2 text-xl font-semibold"><CalendarDays size={22}/>{role==='doctor'?'Mi agenda':'Horarios y citas'}</h2>
       <button title="Actualizar agenda" aria-label="Actualizar agenda" className={iconStyle} disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={18}/></button>

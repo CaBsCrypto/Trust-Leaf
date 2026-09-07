@@ -6,6 +6,7 @@ import { createPrivyRbacAuthorizer } from '../_lib/privy-supabase-rbac.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { readActorDirectory } from '../_lib/privy-actor-directory.js';
 import { executePrivyAgenda } from '../_lib/privy-agenda.js';
+import { googleCalendarHandler } from '../_lib/google-calendar-handler.js';
 
 /**
  * Preview-only Vercel function consolidation. Exact rewrites below preserve the
@@ -14,6 +15,7 @@ import { executePrivyAgenda } from '../_lib/privy-agenda.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+  if (route.startsWith('google-calendar-')) return googleCalendarHandler(req, res, route.slice('google-calendar-'.length));
 
   if (route === 'privy-agenda') {
     res.setHeader('Cache-Control', 'no-store');

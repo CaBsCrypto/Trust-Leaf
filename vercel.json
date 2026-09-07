@@ -5,6 +5,9 @@
     }
   },
   "rewrites": [
+    { "source": "/api/google-calendar/start", "destination": "/api/stellar/readiness?__trustleaf_route=google-calendar-start" },
+    { "source": "/api/google-calendar/status", "destination": "/api/stellar/readiness?__trustleaf_route=google-calendar-status" },
+    { "source": "/api/google-calendar/callback", "destination": "/api/stellar/readiness?__trustleaf_route=google-calendar-callback" },
     {
       "source": "/api/stellar/contracts",
       "destination": "/api/stellar/readiness?__trustleaf_route=contracts"
