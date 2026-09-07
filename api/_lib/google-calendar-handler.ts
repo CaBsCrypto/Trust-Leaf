@@ -49,13 +49,31 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
       await rpc('save', pending.subject, '', seal(tokens.refresh_token, secret, 'central-calendar:refresh'));
       return res.redirect(303, '/admin?calendar=connected');
     }
-    if (!['start', 'status'].includes(action)) return res.status(404).end();
-    if (req.method !== (action === 'start' ? 'POST' : 'GET')) return res.status(405).end();
-    if (action === 'start' && req.headers.origin !== 'https://www.trustleaf.org') return res.status(403).json({ code: 'ORIGIN_REJECTED' });
+    if (!['start', 'status', 'setup', 'process', 'jobs'].includes(action)) return res.status(404).end();
+    const readOnly = ['status', 'jobs'].includes(action);
+    if (req.method !== (readOnly ? 'GET' : 'POST')) return res.status(405).end();
+    if (!readOnly && req.headers.origin !== 'https://www.trustleaf.org') return res.status(403).json({ code: 'ORIGIN_REJECTED' });
     const token = req.headers['privy-id-token'];
     if (typeof token !== 'string') return res.status(401).json({ code: 'AUTH_REQUIRED' });
     const verifier = dependencies.verifier ?? (await import('./privy-identity.js')).createPrivyIdentityVerifier(env);
     const principal = await createPrivyRbacAuthorizer({ verifier, store }).authorize(token, ['admin']);
+    if (action === 'jobs') {
+      const response = await fetch(new URL('/rest/v1/rpc/trustleaf_calendar_job', env.SUPABASE_URL ?? env.VITE_SUPABASE_URL), {
+        method: 'POST', headers: { apikey: (env.SUPABASE_SECRET_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim(), 'content-type': 'application/json' },
+        body: JSON.stringify({p_action:'list',p_input:{}}), signal:AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error('Storage');
+      return res.status(200).json({jobs:await response.json()});
+    }
+    if (action === 'setup') {
+      const { setupCentralCalendar } = await import('./google-calendar-setup.js');
+      return res.status(200).json(await setupCentralCalendar(env, fetch));
+    }
+    if (action === 'process') {
+      const { calendarWorkStore } = await import('./google-calendar-store.js');
+      const { processCalendarJob } = await import('./google-calendar-worker.js');
+      return res.status(200).json(await processCalendarJob(calendarWorkStore(env, fetch), fetch));
+    }
     if (action === 'status') return res.status(200).json(await rpc('status', principal.subject));
     const auth = authorizationRequest(env.GOOGLE_CALENDAR_CLIENT_ID ?? '');
     const browser = randomBytes(32).toString('base64url');
@@ -63,6 +81,17 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
     res.setHeader('Set-Cookie', `${cookie}=${browser}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
     return res.status(200).json({ url: auth.url });
   } catch (error) {
+    if (action === 'setup') {
+      const known = new Set(['CALENDAR_SETUP_STORAGE_FAILED', 'CALENDAR_CONNECTION_REQUIRED',
+        'CALENDAR_RECONNECT_REQUIRED', 'CALENDAR_REFRESH_FAILED', 'CALENDAR_SETUP_REVIEW_REQUIRED',
+        'CALENDAR_CREATE_FAILED', 'CALENDAR_READ_FAILED', 'CALENDAR_MEET_UNAVAILABLE']);
+      const message = error instanceof Error ? error.message : '';
+      const code = known.has(message) ? message :
+        (error as { code?: string })?.code === 'ERR_MODULE_NOT_FOUND' ? 'CALENDAR_MODULE_MISSING' : 'CALENDAR_SETUP_FAILED';
+      console.error(code);
+      const status = (error as { statusCode?: number }).statusCode;
+      return res.status(status === 401 || status === 403 ? status : 503).json({ code });
+    }
     if (action === 'callback') { clearCookie(); return res.redirect(303, '/admin?calendar=error'); }
     const status = (error as { statusCode?: number }).statusCode;
     return res.status(status === 401 || status === 403 ? status : 503).json({ code: 'CALENDAR_CONNECTION_UNAVAILABLE' });
