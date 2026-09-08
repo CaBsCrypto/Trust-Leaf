@@ -104,7 +104,7 @@ acredita los demas POV ni el recorrido completo.
 | Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; medico, paciente y dispensario deniegan a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
 | Medico publica, paciente reserva, Meet y cancelacion | Parcial: horario 09-09 a las 09:00 publicado y reservado por cuentas separadas; enlace Meet generado; persistencia y cita compartida confirmadas | No se probo conexion audiovisual a este nuevo enlace ni cancelacion en esta ejecucion |
 | Consulta con/sin tratamiento y permisos del paciente | Parcial: borrador, historial y ambos cierres en medico; paciente ve notas cerradas, tratamiento y saldo; concede/revoca/restaura permiso de 24h, con persistencia | Revocacion del tratamiento y observacion del dispensario durante revocacion pendientes |
-| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico y movimiento -10g; recarga confirmada | Falta B con cuenta separada, operador y confirmacion del comprobante desde paciente. Ajuste negativo devuelve 503, defecto abierto |
+| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico y movimiento -10g; recarga confirmada; usuario confirma historial de 10g desde paciente | Falta B con cuenta separada, operador y confirmacion del saldo desde paciente. Ajuste negativo devuelve 503, defecto abierto |
 | Operador, recarga, cambio de cuenta y movil | Pendiente en entorno alojado | Browser sintetico aprobado, no aceptar como POV real |
 
 ### Validacion del objetivo: primer recorrido administrativo
@@ -235,8 +235,15 @@ hecha. Tras otro ingreso real de A, aparece el tratamiento compartido sin las
 notas medicas. Se registra una sola entrega simulada de 10g: 10g retirados,
 20g disponibles y lote con 90g. Historial muestra un comprobante y movimiento
 -10g, ademas de la recepcion inicial +100g. Recarga confirma esos valores.
-Se solicito al usuario verificar saldo/comprobante desde paciente en el otro
-dispositivo y proporcionar correos distintos para B y operador; aun pendientes.
+El usuario confirma que ve el historial de entregas de 10g desde paciente en el
+otro dispositivo; no confirma aun el saldo de 20g. Correos distintos para B y
+operador siguen pendientes. A las 05:32, la misma identidad del dispensario es
+rechazada en admin, medico y paciente, sin recibir acceso a sus paneles.
+
+CI del PR #19 detecto una carrera en la prueba de cierre de sesion de Calendar.
+Se cancela la operacion en el commit de identidad y la prueba espera la pantalla
+desconectada antes de liberar el token demorado. Cinco repeticiones locales y
+TypeScript pasan; esta correccion aun requiere nueva CI y despliegue.
 
 ### Correccion local: supervision de videollamadas
 

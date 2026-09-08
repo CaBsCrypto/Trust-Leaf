@@ -27,6 +27,7 @@ try {
   await page.evaluate(() => window.dispatchEvent(new Event('fixture-hold-token')));
   await page.getByRole('button', { name: 'Procesar siguiente', exact: true }).click();
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'signed-out' })));
+  await page.getByText('Inicia sesion como administrador para consultar las videollamadas.', { exact: true }).waitFor();
   await page.evaluate(() => window.dispatchEvent(new Event('fixture-release-token')));
   await page.waitForTimeout(300);
   assert.equal(writes.length, 0, 'logout must cancel the deferred privileged operation');

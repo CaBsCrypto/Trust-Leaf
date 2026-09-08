@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { RefreshCw, Settings } from 'lucide-react';
 import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 
@@ -34,7 +34,8 @@ function IdentityCalendarOperations() {
   const commandController = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const sessionAvailable = identity.enabled && identity.ready && identity.authenticated && Boolean(identity.subject) && identity.tokenReady !== false;
-  useEffect(() => () => commandController.current?.abort(), []);
+  // Cancel during the identity commit, before a deferred token can resume a write.
+  useLayoutEffect(() => () => commandController.current?.abort(), []);
 
   useEffect(() => {
     const controller = new AbortController();
