@@ -291,6 +291,20 @@ identico y ledger intacto. No se afirma que esa sea la version alojada.
   supervision de estas operaciones desde admin y restantes pruebas negativas
   alojadas. No se declara cerrado el objetivo completo ni habilitado uso real.
 
+Continuacion de cuarentena y busqueda: desde el dispensario alojado se pone el
+lote en cuarentena y desaparece del selector, sin alterar saldo ni cantidades.
+Se detecta un defecto de presentacion: el formulario seguia habilitado sin
+lotes; una busqueda sin coincidencias tambien informaba incorrectamente que
+no habia pacientes autorizados, y en inventario quedaba una lista vacia sin
+estado. Lote liberado nuevamente y stock de 90g conservado.
+
+Correccion en revision: deshabilitar entrega sin lotes utilizables, mostrar su
+estado y distinguir busqueda sin coincidencias de falta real de registros.
+Browser con SQL aislado verifica seleccion invalidada por cuarentena,
+bloqueo/restauracion entre encargado y operador, ausencia de entregas y
+recorrido completo. No requiere migracion ni cambia API/permisos. Pendiente
+CI, despliegue y comprobacion alojada del nuevo texto/estado.
+
 ### Correccion local: supervision de videollamadas
 
 La prueba aislada `tests/ui/calendar-operations-browser.mjs` reprodujo una
