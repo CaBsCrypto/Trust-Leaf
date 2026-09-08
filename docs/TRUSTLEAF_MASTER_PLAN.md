@@ -16,7 +16,7 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
 | 0 Consolidar base | PR #22 integrado en `e05644f`, CI main `34211275049` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de los cuatro roles y organizacion A observados; nuevas solicitudes, dispensario B y operador independientes pendientes |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles y organizacion A observados; usuario envia solicitud de B desde otro dispositivo, admin la aprueba y directorio confirma dispensario activo. Organizacion B y operador independientes pendientes |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g con saldo 20g y stock 90g; ajuste invalido y sobrecupo rechazados con 409; cuarentena bloquea formulario. Caso alojado con B pendiente |
@@ -355,6 +355,22 @@ recorrido completo. No requiere migracion ni cambia API/permisos.
   identidades nuevas, para encargado de dispensario B y operador. La cuenta de
   admin queda abierta; no se reutilizan identidades de otros roles ni se crean
   accesos ficticios para sustituir la validacion alojada.
+
+### Alta alojada del segundo dispensario: 08-09, 16:13 America/Santiago
+
+- El usuario eligio una nueva cuenta que controla, ingreso por Privy desde otro
+  dispositivo y confirmo el envio de datos simulados y el estado pendiente.
+- Al actualizar la bandeja administrativa aparecio una unica solicitud de
+  dispensario con perfil simulado. El directorio confirmo esa nueva identidad
+  con rol dispensario y estado pendiente; las otras cinco cuentas se conservaron.
+- Admin pulso Autorizar una sola vez. La interfaz confirmo "Cuenta autorizada"
+  y dejo vacia la cola. Actualizar actores confirmo estado Activo y rol Dispensario
+  para la misma identidad, sin asignarle permisos administrativos.
+- Pendiente: recarga en el dispositivo de B, participacion en el piloto,
+  organizacion y lote ficticio propios, permiso del paciente y entrega de 20g.
+  Esta aprobacion no acredita aun esos pasos ni la prueba de operador.
+- No se modifico manualmente la base ni se emitieron nuevas entregas; los correos
+  personales y referencias completas no se incluyen en esta evidencia publica.
 
 ### Correccion local: supervision de videollamadas
 
