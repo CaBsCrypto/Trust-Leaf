@@ -101,7 +101,7 @@ acredita los demas POV ni el recorrido completo.
 | Migracion unica, historial y permisos SQL | Aprobado: 26 versiones, 13 tablas con RLS forzado | Borrador mensual excluido |
 | Bloqueo sin sesion | Aprobado: HTTP 401 y sin cache | Repetir al cambiar flags o autenticacion |
 | Sesion administradora y participacion | Aprobado: alta en piloto desde interfaz, contador de un participante y persistencia tras recarga | Supervision de entregas y aprobaciones nuevas pendientes |
-| Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; ruta medico deniega a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
+| Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; medico, paciente y dispensario deniegan a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
 | Medico publica, paciente reserva, Meet y cancelacion | Pendiente en el nuevo piloto | Evidencia previa de Meet no cierra esta regresion |
 | Consulta con/sin tratamiento y permisos del paciente | Pendiente con cuentas separadas | Pruebas sinteticas aprobadas; falta aceptacion alojada |
 | Dispensarios A/B: 10g + 20g y stock conjunto | Pendiente con cuentas separadas | PostgreSQL independiente aprobado; faltan dos organizaciones alojadas de prueba |
@@ -113,7 +113,9 @@ acredita los demas POV ni el recorrido completo.
 comprobo recarga, navegacion Actividad/Organizaciones y POV sinteticos de solo
 lectura. Medicion DOM: documento 385px en viewport 390px y 1360px en viewport
 1366px; panel sin desbordamiento interno. Las vistas sinteticas no cambian la
-identidad. La misma sesion fue rechazada en `/medico` sin cambiar su rol.
+identidad. La misma sesion fue rechazada en `/medico`, `/paciente` y
+`/dispensario` sin cambiar su rol. Tras cerrar esa sesion desde el acceso medico,
+la pestana administrativa volvio al formulario de ingreso sin datos protegidos.
 
 Defectos encontrados: la vista de organizaciones vacias no mostraba un estado
 explicito y un rechazo de escritura invalidaba las lecturas posteriores del panel.
@@ -123,8 +125,51 @@ rechazado -200g y ajuste +10g confirmado en la otra sesion; la primera no mostra
 resultado y separa errores de lectura/escritura para conservar el rechazo visible.
 Regresion local pasa, incluida reconexion, replay sin duplicar y estado vacio.
 Tambien se neutralizo el encabezado del acceso medico para no afirmar aprobacion
-antes de validar el rol. Candidato en `fix/operations-recovery`; no implica aun
+antes de validar el rol. [PR #17](https://github.com/CaBsCrypto/Trust-Leaf/pull/17)
+fusionado en `0d4bbe0`, con
+[CI de main aprobado](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34196442528).
+Vercel `dpl_G9RDnu2KHQBUh5WywBrSDwHjhnHb` Ready y alias oficial confirmados;
+estado vacio y encabezado neutro observados en produccion. Esto no implica aun
 validacion alojada de las escrituras medicas o de dispensacion.
+
+### Validacion ampliada: equipo y agenda sincronizada
+
+2026-09-08: se amplio `tests/ui/operations-browser.mjs` con interfaces reales y
+SQL aislado, sin modificar manualmente registros para completar los recorridos:
+
+- Cancelacion por paciente reflejada en medico, bloqueo de iniciar una cita
+  cancelada y retiro del horario liberado.
+- Cierre de otra consulta sin tratamiento; ninguna receta adicional creada.
+- Alta de operador por el encargado, persistencia tras recarga, stock propio
+  de cada organizacion y rechazo HTTP 403 de un ajuste enviado por el operador.
+- Revocacion y nueva autorizacion por el paciente; el tratamiento desaparece
+  de la vista del operador mientras no hay permiso.
+- Entrega de 10g por operador de A y 20g por B: stock 90g/80g, saldo comun 0g,
+  conservacion de la referencia del operador y formulario agotado deshabilitado.
+- Retiro del operador desde Equipo: pierde organizacion, privilegios,
+  inventario y pacientes anteriores tambien tras recargar.
+- Seis POV sinteticos con capturas desktop/movil sin desbordamiento. Se
+  inspeccionaron visualmente las capturas de medico y operador en movil.
+
+La ampliacion reprodujo otro defecto: la agenda abierta del paciente no recibia
+horarios nuevos al recuperar foco porque el refresco solo atendia Meet pendiente.
+`PrivyAgenda` ahora refresca todas las agendas visibles cada 15 segundos y al
+recuperar foco, visibilidad o conexion. No es una suscripcion en tiempo real.
+Serializa lecturas, invalida resultados anteriores a las escrituras y conserva
+errores de escritura separados del refresco. Un 401/403 retira las citas visibles.
+
+Pruebas locales aprobadas: `npm run lint`, `npm run qa:operations-pilot`, recorrido
+browser + SQL ampliado, reserva con respuesta perdida, y Calendar con HTTP
+simulado para ambos roles. Esta ultima verifica Meet pendiente -> listo,
+cancelacion posterior, recuperacion de 503 y limpieza ante 403. Las tres suites
+de navegador quedan exigidas por CI. No se llamo a Google desde esas pruebas.
+
+Entrega en `test/operations-workflow-validation`, pendiente de CI remoto y
+publicacion. Sin migracion nueva ni cambios en flags, cuentas o permisos
+alojados. El acceso medico de produccion queda preparado en Privy; falta que
+su titular complete el ingreso para continuar la aceptacion real. Tambien
+faltan una segunda organizacion y una cuenta de operador separadas para el
+recorrido alojado; ninguna identidad sintetica sustituye esa validacion.
 
 ## 1. Narrativa de producto
 
