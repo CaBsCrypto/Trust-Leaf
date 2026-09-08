@@ -26,7 +26,7 @@ export async function executeOperationsPilot(input: {
     const code = typeof candidate === 'string' && /^(?:[0-9A-Z]{5}|PGRST[0-9]{3})$/.test(candidate) ? candidate : 'UNKNOWN';
     // Only bounded operational diagnostics; never log the RPC input or SQL message/details.
     console.warn('TRUSTLEAF_PILOT_RPC_FAILURE', { action: c.action, upstreamStatus: response.status, databaseCode: code });
-    const status = code === '42501' ? 403 : ['40001', '23505'].includes(code) ? 409
+    const status = code === '42501' ? 403 : ['PT409', '40001', '23505'].includes(code) ? 409
       : /^22|^23502$|^23514$|^23503$/.test(code) ? 400 : 503;
     throw failure(status, status === 409 ? 'PILOT_CONFLICT' : 'PILOT_UNAVAILABLE');
   }

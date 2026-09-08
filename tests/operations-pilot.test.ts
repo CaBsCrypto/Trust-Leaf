@@ -29,7 +29,7 @@ test('pending identity cannot reach the pilot RPC', async () => {
   assert.equal(calls, 1);
 });
 test('errors never expose SQL detail or retry uncertain writes', async () => {
-  for (const [code, statusCode] of [['42501', 403], ['40001', 409], ['23505', 409], ['23514', 400], ['23502', 400], ['XX000', 503]] as const) {
+  for (const [code, statusCode] of [['42501', 403], ['PT409', 409], ['40001', 409], ['23505', 409], ['23514', 400], ['23502', 400], ['XX000', 503]] as const) {
     let mutations = 0;
     await assert.rejects(executeOperationsPilot({ token: 'fixture', command: { action: 'dispense', input: {} }, env, verifier,
       fetcher: async url => { if (String(url).includes('resolve_privy')) return Response.json(binding()); mutations++;

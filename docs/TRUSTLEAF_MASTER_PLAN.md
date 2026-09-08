@@ -245,6 +245,26 @@ Se cancela la operacion en el commit de identidad y la prueba espera la pantalla
 desconectada antes de liberar el token demorado. Cinco repeticiones locales y
 TypeScript pasan; esta correccion aun requiere nueva CI y despliegue.
 
+Continuacion 05:37-05:40: PR #19 fusionado en `1390e581`, CI de PR y main
+aprobadas. Vercel `dpl_6MK7UjoM8vsMPTVX3HgPPCRbcUJm` listo y asociado al dominio
+oficial. Dispensario a 390px: atenciones, inventario e historial sin
+desbordamiento horizontal; historial a 1366px tampoco desborda. No equivale a
+validacion movil de los otros roles. Tamano temporal del navegador restaurado.
+
+El nuevo diagnostico del ajuste negativo informa `TRANSPORT`, sin respuesta
+HTTP de Supabase. Stock y entrega previos se conservan. La causa interna del
+gateway no esta confirmada. Se prepara `20260909020000_pilot_business_conflicts`:
+solo cambia 15 rechazos explicitos de dos funciones del piloto de `40001` a
+`PT409`; conserva cuerpos restantes, permisos y datos. APIs de piloto y agenda
+mantienen HTTP 409 con compatibilidad para ambos codigos. SQL local, pruebas
+API, tipos y browser con base aislada pasan; falta CI/PostgREST y aplicacion.
+
+Fundamento: `40001` es un fallo de serializacion reintentable, no un rechazo
+terminal de negocio. PostgREST documenta [reintentos automaticos antiguos](https://github.com/PostgREST/postgrest/issues/3673)
+y [codigos HTTP personalizados PT](https://docs.postgrest.org/en/v12/references/errors.html).
+CI agrega PostgREST 12.2.12 aislado para comprobar rechazo rapido, reintento
+identico y ledger intacto. No se afirma que esa sea la version alojada.
+
 ### Correccion local: supervision de videollamadas
 
 La prueba aislada `tests/ui/calendar-operations-browser.mjs` reprodujo una
