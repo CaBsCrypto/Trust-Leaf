@@ -16,7 +16,7 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
 | 0 Consolidar base | PR #22 integrado en `e05644f`, CI main `34211275049` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles y organizacion A observados; usuario envia solicitud de B desde otro dispositivo, admin la aprueba y directorio confirma dispensario activo. Organizacion B y operador independientes pendientes |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles; B solicita, admin aprueba y confirma rol activo. Organizacion B y encargado visibles en admin; cinco participantes. Operador independiente pendiente |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g con saldo 20g y stock 90g; ajuste invalido y sobrecupo rechazados con 409; cuarentena bloquea formulario. Caso alojado con B pendiente |
@@ -371,6 +371,20 @@ recorrido completo. No requiere migracion ni cambia API/permisos.
   Esta aprobacion no acredita aun esos pasos ni la prueba de operador.
 - No se modifico manualmente la base ni se emitieron nuevas entregas; los correos
   personales y referencias completas no se incluyen en esta evidencia publica.
+
+Continuacion 16:14-16:26: usuario crea `Dispensario B - pruebas` desde su panel.
+Admin confirma organizacion y encargado distintos de A, cinco participantes y
+evento `create-organization`. Usuario confirma recepcion de lote ficticio; admin
+observa `receive-batch` del actor B a las 16:18. Esta vista de auditoria no permite
+certificar por si sola los 100g ni la fecha exacta del lote; comprobarlos en B.
+
+Paciente ingresa por correo/OTP y el panel muestra la identidad correcta,
+tratamiento vigente de 30g, 10g retirados y 20g disponibles. B aparece inicialmente
+sin permiso. Se concede `Autorizar 24 horas` una sola vez desde Tratamientos;
+confirmacion guardada con vigencia hasta el 09-09 a las 16:25 Santiago. Recarga,
+entrada al panel y lectura nueva confirman permiso y saldo sin cambios.
+Permiso de A permanece intacto. Falta observar desde B el paciente compartido,
+verificar lote/stock y registrar los 20g restantes; no hay entrega B acreditada aun.
 
 ### Correccion local: supervision de videollamadas
 
