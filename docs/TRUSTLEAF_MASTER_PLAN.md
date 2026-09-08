@@ -164,9 +164,17 @@ simulado para ambos roles. Esta ultima verifica Meet pendiente -> listo,
 cancelacion posterior, recuperacion de 503 y limpieza ante 403. Las tres suites
 de navegador quedan exigidas por CI. No se llamo a Google desde esas pruebas.
 
-Entrega en `test/operations-workflow-validation`, pendiente de CI remoto y
-publicacion. Sin migracion nueva ni cambios en flags, cuentas o permisos
-alojados. El acceso medico de produccion queda preparado en Privy; falta que
+Entrega integrada mediante [PR #18](https://github.com/CaBsCrypto/Trust-Leaf/pull/18),
+merge `ce143fdd158674712d2ab22c826808e239d462b5`. CI aprobado en el
+[PR](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34198558967) y en
+[main](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34198953389), incluidos
+tipos, PostgreSQL independiente, builds y las tres suites de navegador.
+Vercel `dpl_J97S92Xd3htgmpqVYcnnP5DaSAQF` Ready, enlazado a ese commit por el
+estado de GitHub y servido por `www.trustleaf.org` y `trustleaf.org`.
+Smoke anonimo posterior: `/api/agenda` y `/api/operations-pilot` devuelven 401
+`AUTH_REQUIRED` y `no-store` (tambien `private` en operaciones).
+Sin migracion nueva ni cambios en flags, cuentas o permisos alojados.
+El acceso medico de produccion queda preparado en Privy; falta que
 su titular complete el ingreso para continuar la aceptacion real. Tambien
 faltan una segunda organizacion y una cuenta de operador separadas para el
 recorrido alojado; ninguna identidad sintetica sustituye esa validacion.
