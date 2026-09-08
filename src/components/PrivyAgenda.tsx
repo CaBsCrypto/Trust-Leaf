@@ -26,6 +26,7 @@ function IdentityAgenda({ email }: { email?: string }) {
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
+  const [readError,setReadError] = useState('');
   const [notice,setNotice] = useState('');
   const [pending,setPending] = useState<Command | null>(null);
   const [revision,setRevision] = useState(0);
@@ -50,60 +51,55 @@ function IdentityAgenda({ email }: { email?: string }) {
   useEffect(() => {
     const current=++generation.current;
     const controller=new AbortController();
-    setSlots([]); setRole(null); setError(''); setLoading(true);
+    setSlots([]); setRole(null); setReadError(''); setLoading(true);
     if(!identity.ready || !identity.authenticated) {
-      const timeout=setTimeout(()=>{setLoading(false);setError('La sesion no esta disponible. Reintenta la consulta.');},10000);
+      const timeout=setTimeout(()=>{setLoading(false);setReadError('La sesion no esta disponible. Reintenta la consulta.');},10000);
       return ()=>{clearTimeout(timeout);controller.abort();};
     }
     const start=new Date(`${date}T00:00:00`); const end=new Date(start); end.setDate(end.getDate()+7);
-    if(!Number.isFinite(start.getTime())) {setLoading(false);setError('Selecciona una fecha valida.');return;}
-    void request(`/api/agenda?${new URLSearchParams({from:start.toISOString(),to:end.toISOString()})}`,undefined,controller.signal).then(data=>{
-      if(current!==generation.current || controller.signal.aborted)return;
-      if(!Array.isArray(data.slots) || !['doctor','patient'].includes(data.role))throw new Error('Respuesta de agenda no disponible.');
-      setSlots(data.slots);setRole(data.role);
-    }).catch(e=>{if(!controller.signal.aborted && current===generation.current)setError(notice ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. Pulsa Actualizar agenda.' : e.message);})
-      .finally(()=>{if(!controller.signal.aborted && current===generation.current)setLoading(false);});
-    return ()=>controller.abort();
-  },[date,revision,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
-
-  const waitingForMeet = slots.some(slot => slot.bookingState === 'confirmed' &&
-    !['ready', 'cancelled'].includes(slot.conference?.state ?? ''));
-  useEffect(() => {
-    if (!waitingForMeet || loading || busy || !identity.ready || !identity.authenticated) return;
-    const controller = new AbortController();
-    const current = generation.current;
-    const resume = () => {
-      if (document.visibilityState === 'visible' && !controller.signal.aborted) setSlots(rows => [...rows]);
-    };
-    document.addEventListener('visibilitychange', resume);
-    const timer = setTimeout(async () => {
-      if (document.visibilityState !== 'visible') return;
-      const start = new Date(`${date}T00:00:00`);
-      const end = new Date(start); end.setDate(end.getDate() + 7);
+    if(!Number.isFinite(start.getTime())) {setLoading(false);setReadError('Selecciona una fecha valida.');return;}
+    let reading = false;
+    async function refresh() {
+      if (reading || controller.signal.aborted) return;
+      reading = true;
       try {
         const data = await request(`/api/agenda?${new URLSearchParams({from:start.toISOString(),to:end.toISOString()})}`, undefined, controller.signal);
-        if (!controller.signal.aborted && current === generation.current && Array.isArray(data.slots)) setSlots(data.slots);
-      } catch {
-        // Preserve the usable agenda if a background status refresh fails.
-        if (!controller.signal.aborted && current === generation.current) setSlots(rows => [...rows]);
+        if (controller.signal.aborted || current !== generation.current) return;
+        if (!Array.isArray(data.slots) || !['doctor','patient'].includes(data.role)) throw new Error('Respuesta de agenda no disponible.');
+        setSlots(data.slots); setRole(data.role); setReadError('');
+      } catch (e) {
+        if (controller.signal.aborted || current !== generation.current) return;
+        const failure = e as Error & { status?: number };
+        if ([401,403].includes(failure.status ?? 0)) { setSlots([]); setRole(null); }
+        setReadError(failure.message);
+      } finally {
+        reading = false;
+        if (!controller.signal.aborted && current === generation.current) setLoading(false);
       }
-    }, 15000);
-    return () => { clearTimeout(timer); controller.abort(); document.removeEventListener('visibilitychange', resume); };
-  }, [slots, waitingForMeet, loading, busy, date, identity.subject, identity.ready, identity.authenticated]);
+    }
+    void refresh();
+    const resume = () => { if (document.visibilityState === 'visible' && !commandLock.current) void refresh(); };
+    const timer = setInterval(resume, 15000);
+    window.addEventListener('focus', resume); window.addEventListener('online', resume);
+    document.addEventListener('visibilitychange', resume);
+    return () => { clearInterval(timer); controller.abort(); window.removeEventListener('focus', resume);
+      window.removeEventListener('online', resume); document.removeEventListener('visibilitychange', resume); };
+  },[date,revision,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
 
   async function execute(command: Command) {
     if(commandLock.current)return;
-    commandLock.current=true;setBusy(true);setPending(command);setError('');setNotice('');
+    commandLock.current=true;setBusy(true);setPending(command);setError('');setReadError('');setNotice('');generation.current++;
     const controller=new AbortController();commandController.current=controller;
     try {
       await request('/api/agenda',command,controller.signal);
       if(controller.signal.aborted)return;
       setPending(null);setNotice('Cambio guardado.');
       if(command.action==='publish')setDate(localDate(new Date(String(command.input.startsAt))));
-      setRevision(v=>v+1);
     }
-    catch(e) {if(controller.signal.aborted)return;const failure=e as Error & {status?:number};setError(failure.message);if([400,403,409].includes(failure.status ?? 0))setPending(null);}
-    finally {if(!controller.signal.aborted){commandLock.current=false;setBusy(false);}}
+    catch(e) {if(controller.signal.aborted)return;const failure=e as Error & {status?:number};setError(failure.message);
+      if([401,403].includes(failure.status ?? 0)){setSlots([]);setRole(null);}
+      if([400,401,403,409].includes(failure.status ?? 0))setPending(null);}
+    finally {if(!controller.signal.aborted){commandLock.current=false;setBusy(false);setRevision(v=>v+1);}}
   }
   const mutate=(action:string,input:Record<string,unknown>)=>void execute({action,input:{...input,operationId:crypto.randomUUID()}});
   function publish(event: FormEvent) {
@@ -113,11 +109,12 @@ function IdentityAgenda({ email }: { email?: string }) {
   }
   const move=(days:number)=>{const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+days);setDate(localDate(next));};
   const disabled=busy || loading || pending!==null;
+  const visibleError = readError || error;
   const zone=Intl.DateTimeFormat().resolvedOptions().timeZone;
   return <section className="w-full min-w-0 space-y-5 text-gray-900">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 className="flex items-center gap-2 text-xl font-semibold"><CalendarDays size={22}/>{role==='doctor'?'Mi agenda':'Horarios y citas'}</h2>
-      <button title="Actualizar agenda" aria-label="Actualizar agenda" className={iconStyle} disabled={busy||loading} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={18}/></button>
+      <button title="Actualizar agenda" aria-label="Actualizar agenda" className={iconStyle} disabled={busy||loading} onClick={()=>{setError('');setRevision(v=>v+1);}}><RefreshCw size={18}/></button>
     </div>
     <p className="break-words text-sm text-gray-600">{email ? `${email} · ` : ''}{zone}</p>
     <div className="flex flex-wrap items-center gap-2">
@@ -132,9 +129,9 @@ function IdentityAgenda({ email }: { email?: string }) {
       <button disabled={disabled} className={commandStyle}><Plus size={16}/>Publicar horario</button>
     </form>}
     {notice && <p role="status" className="text-sm text-green-800">{notice}</p>}
-    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+    {visibleError && <p role="alert" className="text-sm text-red-700">{notice && readError ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. ' : ''}{visibleError}</p>}
     {pending && !busy && <button className={commandStyle} onClick={()=>void execute(pending)}><RefreshCw size={16}/>Reintentar cambio</button>}
-    {loading ? <p role="status">Cargando agenda...</p> : !error && slots.length===0 ? <p className="text-sm text-gray-600">No hay horarios ni citas en esta semana.</p> : <ul className="divide-y divide-gray-200">
+    {loading ? <p role="status">Cargando agenda...</p> : !visibleError && slots.length===0 ? <p className="text-sm text-gray-600">No hay horarios ni citas en esta semana.</p> : <ul className="divide-y divide-gray-200">
       {slots.map(slot=>{const future=Date.parse(slot.startsAt)>Date.now();const confirmed=slot.bookingState==='confirmed';
         const label=confirmed?'Cita confirmada':slot.state==='published'?'Disponible':slot.bookingState==='cancelled'||slot.state==='cancelled'?'Cancelada':'Reservada';
         return <li key={slot.slotRef} className="flex flex-wrap items-center justify-between gap-3 py-4">

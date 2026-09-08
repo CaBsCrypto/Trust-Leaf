@@ -21,6 +21,12 @@ async function command(page, name) {
   const r = await response; assert.equal(r.status(), 200, `${name}: ${await r.text()}`);
   await refresh(page);
 }
+async function agendaCommand(page, button) {
+  const response = page.waitForResponse(r => r.url().endsWith('/api/agenda') && r.request().method() === 'POST');
+  await button.click();
+  const r = await response; assert.equal(r.status(), 200, await r.text());
+  await page.getByText('Cargando agenda...', { exact: true }).waitFor({ state: 'hidden' });
+}
 try {
   for (const role of ['doctor', 'patient', 'dispensary', 'dispensaryB', 'admin']) {
     const context = await browser.newContext({ viewport: { width: 1365, height: 900 }, timezoneId: 'America/Santiago' });
@@ -48,6 +54,42 @@ try {
   await command(doctor, 'Finalizar con tratamiento simulado');
   assert.equal((await refresh(patient)).notes.length, 1, 'completed notes are available to the related patient');
   await doctor.getByText('Atencion finalizada', { exact: true }).waitFor();
+
+  // Cancel and complete without treatment from the same interfaces, not SQL updates.
+  for (const [hour, cancel] of [['15:00', true], ['16:00', false]]) {
+    await doctor.getByRole('tab', { name: 'Agenda', exact: true }).click();
+    await doctor.getByLabel('Hora', { exact: true }).fill(hour);
+    await agendaCommand(doctor, doctor.getByRole('button', { name: 'Publicar horario', exact: true }));
+    await doctor.getByText('Disponible', { exact: true }).waitFor();
+    await patient.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await patient.getByRole('button', { name: 'Reservar', exact: true }).waitFor({ timeout: 5000 });
+    const before = await refresh(patient);
+    await agendaCommand(patient, patient.getByRole('button', { name: 'Reservar', exact: true }));
+    const after = await refresh(patient);
+    const booking = after.bookings.find(b => !before.bookings.some(old => old.booking_ref === b.booking_ref));
+    assert.ok(booking, 'booking is persisted for the related patient');
+    if (cancel) {
+      patient.once('dialog', dialog => dialog.accept());
+      await agendaCommand(patient, patient.locator('li').filter({ hasText: booking.booking_ref }).getByRole('button', { name: 'Cancelar cita', exact: true }));
+      await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click();
+      const cancelled = await refresh(doctor);
+      assert.equal(cancelled.bookings.find(b => b.booking_ref === booking.booking_ref).state, 'cancelled');
+      const row = doctor.locator('article').filter({ hasText: booking.booking_ref });
+      await row.getByText('Cancelada', { exact: true }).waitFor();
+      assert.equal(await row.getByRole('button', { name: 'Iniciar consulta simulada' }).count(), 0);
+      await doctor.getByRole('tab', { name: 'Agenda', exact: true }).click();
+      doctor.once('dialog', dialog => dialog.accept());
+      await agendaCommand(doctor, doctor.getByRole('button', { name: 'Retirar horario', exact: true }));
+    } else {
+      await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click(); await refresh(doctor);
+      await command(doctor, 'Iniciar consulta simulada');
+      doctor.once('dialog', dialog => dialog.accept());
+      await command(doctor, 'Finalizar sin tratamiento');
+      const completed = await refresh(patient);
+      assert.equal(completed.encounters.find(e => e.booking_ref === booking.booking_ref).state, 'completed');
+      assert.equal(completed.treatments.length, before.treatments.length, 'closing without treatment does not create a prescription');
+    }
+  }
   for (const [page, name] of [[dispensary, 'Dispensario A QA'], [dispensaryB, 'Dispensario B QA']]) {
     await page.getByRole('tab', { name: 'Equipo', exact: true }).click();
     await page.getByLabel('Nombre del dispensario', { exact: true }).fill(name);
@@ -58,19 +100,59 @@ try {
     await page.getByLabel('Vencimiento', { exact: true }).fill('2027-12-01T12:00');
     await command(page, 'Recibir lote simulado');
   }
+  const operator = await (await browser.newContext({ viewport: { width: 1365, height: 900 }, timezoneId: 'America/Santiago' })).newPage();
+  pages.operator = operator; operator.on('pageerror', e => errors.push(e.message));
+  await operator.goto(`${baseUrl}/?operations&role=operator`);
+  await command(operator, 'Aceptar y participar');
+  await operator.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  const operatorRef = (await operator.locator('.op-code > span').innerText()).trim();
+  await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await dispensary.getByLabel('Referencia de operador aprobado', { exact: true }).fill(operatorRef);
+  await command(dispensary, 'Agregar operador');
+  await operator.reload();
+  await operator.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await operator.getByText('Operador', { exact: true }).waitFor();
+  assert.equal(await operator.getByRole('button', { name: 'Agregar operador', exact: true }).count(), 0);
+  await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await operator.getByText('100 g', { exact: false }).waitFor();
+  for (const name of ['Recibir lote simulado', 'Registrar ajuste', 'Poner en cuarentena']) {
+    assert.equal(await operator.getByRole('button', { name, exact: true }).count(), 0, `operator cannot ${name}`);
+  }
+  const operatorSnapshot = await refresh(operator);
+  const otherInventory = await refresh(dispensaryB);
+  assert.notEqual(operatorSnapshot.batches[0].batch_ref, otherInventory.batches[0].batch_ref, 'stock belongs to an organization, not a shared user');
+  const forged = await operator.request.post(`${baseUrl}/api/operations-pilot`, { headers: { 'privy-id-token': 'fixture-operator' },
+    data: { action: 'adjust-stock', input: { operationId: crypto.randomUUID(), resourceRef: operatorSnapshot.batches[0].batch_ref, version: operatorSnapshot.batches[0].version, quantityMg: 1000, reason: 'INTENTO OPERADOR QA' } } });
+  assert.equal(forged.status(), 403, 'server rejects a forged manager operation');
   await patient.getByRole('tab', { name: 'Tratamientos', exact: true }).click(); await refresh(patient);
   for (const name of ['Dispensario A QA', 'Dispensario B QA']) {
     const row = patient.locator('.op-line').filter({ hasText: name });
     const response = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
     await row.getByRole('button', { name: 'Autorizar 24 horas' }).click(); assert.equal((await response).status(), 200); await refresh(patient);
   }
-  for (const [page, grams] of [[dispensary, '10'], [dispensaryB, '20']]) {
+  await operator.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(operator);
+  await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
+  const revoke = patient.locator('.op-line').filter({ hasText: 'Dispensario A QA' });
+  const revoked = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
+  await revoke.getByRole('button', { name: 'Revocar permiso', exact: true }).click(); assert.equal((await revoked).status(), 200);
+  await refresh(operator);
+  await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor({ state: 'hidden' });
+  assert.equal((await refresh(operator)).treatments.length, 0, 'revoking a patient grant removes the protected treatment');
+  await refresh(patient);
+  const granted = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
+  await revoke.getByRole('button', { name: 'Autorizar 24 horas', exact: true }).click(); assert.equal((await granted).status(), 200);
+  for (const [page, grams] of [[operator, '10'], [dispensaryB, '20']]) {
     await page.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(page);
     const delivery = form(page, 'Registrar entrega simulada');
     await delivery.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
     await delivery.getByLabel('Cantidad en gramos', { exact: true }).fill(grams);
     await command(page, 'Registrar entrega simulada');
   }
+  assert.equal((await refresh(dispensary)).deliveries[0].operator_ref, operatorRef, 'delivery retains the responsible team member');
+  assert.equal((await refresh(dispensary)).batches[0].stock_mg, 90000);
+  assert.equal((await refresh(dispensaryB)).batches[0].stock_mg, 80000);
+  await operator.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await operator.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('0 g', { exact: true }).waitFor({ timeout: 5000 });
   await patient.reload(); await patient.getByRole('tab', { name: 'Tratamientos', exact: true }).click();
   await patient.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('0 g', { exact: true }).waitFor();
   assert.equal(await dispensaryB.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).isDisabled(), true, 'exhausted period disables another delivery');
@@ -89,9 +171,20 @@ try {
   await doctor.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'otherPatient' })));
   await doctor.getByRole('heading', { name: 'Mi atencion', exact: true }).waitFor();
   assert.equal(await doctor.getByText('NOTA FICTICIA PARA QA:', { exact: false }).count(), 0);
+  await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  dispensary.once('dialog', dialog => dialog.accept());
+  await command(dispensary, `Retirar operador ${operatorRef.slice(0, 8)}`);
+  await refresh(operator);
+  await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await operator.getByText('No hay lotes registrados.', { exact: true }).waitFor();
+  const removedMembership = (await refresh(operator)).membership;
+  assert.equal(removedMembership?.organization_ref ?? null, null, 'removed organization does not survive refresh');
+  assert.equal(removedMembership?.role ?? null, null, 'removed privileges do not survive refresh');
+  await operator.reload();
+  await operator.getByRole('tab', { name: 'Atenciones', exact: true }).click();
+  assert.equal((await refresh(operator)).treatments.length, 0, 'removed operator cannot access former organization patients');
   const recover = await (await browser.newContext()).newPage();
   await recover.goto(`${baseUrl}/?operations&role=operator`);
-  await command(recover, 'Aceptar y participar');
   await recover.getByRole('tab', { name: 'Equipo', exact: true }).click();
   await recover.getByLabel('Nombre del dispensario', { exact: true }).fill('Organizacion recuperada QA');
   const operationIds = [];
@@ -149,7 +242,7 @@ try {
   await patient.getByRole('alert').waitFor();
   assert.equal(await patient.locator('.op-reference').count(), 0, 'authorization loss clears cached medical and delivery records');
   assert.deepEqual(errors, []);
-  console.log('PASS: browser + actual isolated SQL: join, publish, reserve, consult, draft, issue, organizations, lots, consent, 10g + 20g deliveries, persistent history, privacy, desktop/mobile, identity reset, rejected-write refresh across sessions and reconnection.');
+  console.log('PASS: browser + actual isolated SQL: join, publish, reserve, cancel, close with/without treatment, organizations, operator enrollment/removal and permissions, lots, grant revocation, 10g + 20g deliveries, responsible operator, persistent history, privacy, desktop/mobile, identity reset, rejected-write refresh across sessions and reconnection.');
 } catch (error) {
   for (const [role, page] of Object.entries(pages)) await page.screenshot({ path: fileURLToPath(new URL(`failure-${role}.png`, output)), fullPage: true }).catch(() => {});
   throw error;
