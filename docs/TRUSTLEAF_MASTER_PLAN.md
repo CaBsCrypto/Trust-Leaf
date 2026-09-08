@@ -15,15 +15,16 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
-| 0 Consolidar base | PR #16 integrado en `2477c44`; CI verde en main `8431b6e`; respaldo de aplicacion cifrado y restaurado; 26 migraciones remotas | Solo se aplico `20260909010000`, con historial atomico; despliegue activo Ready y consulta admin autenticada confirmados |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Repetir login, solicitudes y equipos con Privy/Supabase alojados |
+| 0 Consolidar base | PR #21 integrado en `df3ff43`, CI main `34209126178` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de los cuatro roles y organizacion A observados; nuevas solicitudes, dispensario B y operador independientes pendientes |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
-| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | Esquema alojado y protegido; sin entregas creadas durante la migracion. Caso entre cuentas reales pendiente |
-| 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Login ficticio en QA; no sustituye recorrido real ni validacion de todos los estados |
+| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g con saldo 20g y stock 90g; ajuste invalido y sobrecupo rechazados con 409; cuarentena bloquea formulario. Caso alojado con B pendiente |
+| 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Recorrido real parcial de cuatro roles; admin observa una entrega, dos cierres y auditoria, tambien tras recarga y en movil. No sustituye todos los escenarios pendientes |
 
-Version integrada: `src/features/operations`, API `/api/operations-pilot` y
-migracion `20260909010000_operations_pilot.sql`. Activacion requiere ambos flags
+Version integrada: `src/features/operations`, API `/api/operations-pilot`,
+migracion `20260909010000_operations_pilot.sql` y correccion de conflictos
+`20260909020000_pilot_business_conflicts.sql`. Activacion requiere ambos flags
 `TRUSTLEAF_OPERATIONS_PILOT_ENABLED=true` (servidor) y
 `VITE_OPERATIONS_PILOT_ENABLED=true` (build); por defecto estan desactivados.
 Los participantes deben aceptar datos ficticios. No se crean cuentas Privy ni
@@ -66,8 +67,9 @@ para produccion. Detalles reproducibles en [runbook del piloto](operations-pilot
 
 La migracion mensual `20260906120000_monthly_dispensing_quota.sql` estaba sin
 registrar al iniciar el trabajo. Se conserva intacta, no es dependencia del nuevo
-piloto y NO debe entrar en un `db push` indiscriminado. Solo se aplico la migracion
-del piloto; no se repararon ni modificaron versiones historicas.
+piloto y NO debe entrar en un `db push` indiscriminado. Se aplicaron exclusivamente
+el piloto y despues su correccion de conflictos revisada; no se repararon ni
+modificaron versiones historicas.
 
 Revision remota del 2026-09-08: las 25 versiones previas coincidieron con la
 cadena revisada. Supabase informo `backups:null` y `pitr_enabled:false`.
@@ -100,11 +102,11 @@ acredita los demas POV ni el recorrido completo.
 | Respaldo cifrado y restauracion de aplicacion | Aprobado: 18 tablas/68 registros, restauracion aislada | No sustituye recuperacion completa del servicio |
 | Migracion unica, historial y permisos SQL | Aprobado: 26 versiones, 13 tablas con RLS forzado | Borrador mensual excluido |
 | Bloqueo sin sesion | Aprobado: HTTP 401 y sin cache | Repetir al cambiar flags o autenticacion |
-| Sesion administradora y participacion | Aprobado: alta en piloto desde interfaz, contador de un participante y persistencia tras recarga | Supervision de entregas y aprobaciones nuevas pendientes |
+| Sesion administradora y participacion | Aprobado: alta desde interfaz y recarga; nueva sesion Google/Privy confirma cuatro participantes, una entrega, dos consultas finalizadas, organizacion y auditoria minima | Nuevas aprobaciones y equipo de B pendientes |
 | Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; medico, paciente y dispensario deniegan a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
 | Medico publica, paciente reserva, Meet y cancelacion | Parcial: horario 09-09 a las 09:00 publicado y reservado por cuentas separadas; enlace Meet generado; persistencia y cita compartida confirmadas | No se probo conexion audiovisual a este nuevo enlace ni cancelacion en esta ejecucion |
 | Consulta con/sin tratamiento y permisos del paciente | Parcial: borrador, historial y ambos cierres en medico; paciente ve notas cerradas, tratamiento y saldo; concede/revoca/restaura permiso de 24h, con persistencia | Revocacion del tratamiento y observacion del dispensario durante revocacion pendientes |
-| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico y movimiento -10g; recarga confirmada; usuario confirma historial de 10g desde paciente. Ajuste negativo corregido: HTTP 409, sin movimientos; ajuste +5g y compensacion -5g aprobados | Falta B con cuenta separada, operador y confirmacion del saldo desde paciente |
+| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico; usuario confirma historial de 10g desde paciente. Ajuste negativo y entrega de 21g rechazados con HTTP 409; ajustes compensatorios +5g/-5g auditados; cuarentena bloquea formulario y liberacion restaura disponibilidad | Falta B con cuenta separada, operador y confirmacion del saldo desde paciente |
 | Operador, recarga, cambio de cuenta y movil | Parcial alojado: cambios de cuenta, recargas y dispensario a 390px; su identidad no accede a admin/medico/paciente | Operador independiente y movil de los otros roles pendientes; browser sintetico no sustituye esos POV |
 
 ### Validacion del objetivo: primer recorrido administrativo
@@ -298,12 +300,41 @@ lotes; una busqueda sin coincidencias tambien informaba incorrectamente que
 no habia pacientes autorizados, y en inventario quedaba una lista vacia sin
 estado. Lote liberado nuevamente y stock de 90g conservado.
 
-Correccion en revision: deshabilitar entrega sin lotes utilizables, mostrar su
+Correccion implementada: deshabilitar entrega sin lotes utilizables, mostrar su
 estado y distinguir busqueda sin coincidencias de falta real de registros.
 Browser con SQL aislado verifica seleccion invalidada por cuarentena,
 bloqueo/restauracion entre encargado y operador, ausencia de entregas y
-recorrido completo. No requiere migracion ni cambia API/permisos. Pendiente
-CI, despliegue y comprobacion alojada del nuevo texto/estado.
+recorrido completo. No requiere migracion ni cambia API/permisos.
+
+### Cierre de disponibilidad y supervision: 08-09, 06:30 America/Santiago
+
+- [PR #21](https://github.com/CaBsCrypto/Trust-Leaf/pull/21) fusionado en
+  `df3ff433d2ac632683378b97e52048049418c255`. CI PR `34208662156` y main
+  `34209126178` aprobadas, incluidos PostgreSQL independiente, PostgREST y browser.
+- Vercel `dpl_F2dAWMV18D2A4MnFjhEC6RxS1gDN` READY con alias oficial.
+  Cuarentena alojada muestra ausencia de lotes utilizables y deshabilita selector,
+  cantidad y registro de entrega. Busqueda sin coincidencias muestra su estado
+  correcto tanto en Atenciones como en Inventario.
+- Lote liberado desde su interfaz al finalizar la prueba: activo, 90g. Atenciones
+  conserva 10g retirados y 20g disponibles; historial mantiene un comprobante de
+  10g y cuatro movimientos (100g, -10g, +5g, -5g). No se creo otra entrega.
+- Intento unico de entregar 21g contra saldo de 20g rechazado con HTTP 409/PT409
+  a las 06:19, sin alterar cantidades. Es un rechazo alojado secuencial, no una
+  nueva prueba de concurrencia con dos cuentas reales.
+- Inicio normal Google/Privy con cuenta admin previamente autenticada, sin
+  modificar roles ni introducir tokens manualmente. Supervision muestra cuatro
+  participantes, dos consultas finalizadas, una entrega, organizacion A/encargado
+  y eventos minimos de auditoria. No muestra el contenido de las notas clinicas.
+  POV de prueba identificado como sintetico de solo lectura, sin suplantacion.
+- Recarga de admin conserva identidad, contadores y auditoria. Captura movil
+  inspeccionada a 390px, documento de 385px sin desbordamiento horizontal; tamano
+  del navegador restaurado al terminar.
+- Pendiente visual menor: el acceso admin sin sesion aun menciona el documento
+  heredado `appAdministrators/{uid}` aunque el ingreso usa Privy y permisos SQL.
+  No confundir ese texto con una validacion de Firebase.
+- Sigue pendiente B/operador con cuentas independientes, saldo confirmado por
+  el paciente en su dispositivo, revocaciones/vencimientos alojados y cancelacion
+  del nuevo ciclo. Esta evidencia no cierra todo el objetivo ni habilita uso real.
 
 ### Correccion local: supervision de videollamadas
 
