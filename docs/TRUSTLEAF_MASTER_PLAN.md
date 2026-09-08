@@ -1,7 +1,7 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-Fecha de corte: 2026-09-08. Estado: piloto operativo implementado localmente;
-aceptacion alojada y cierre de lanzamiento pendientes.
+Fecha de corte: 2026-09-08. Estado: candidato de piloto operativo validado en CI;
+migracion, activacion alojada y aceptacion con usuarios pendientes.
 Este documento es el punto de entrada para el nuevo alcance. No certifica
 cumplimiento sanitario ni autoriza datos clinicos reales, mainnet o despliegues.
 
@@ -18,7 +18,7 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 | 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Repetir login, solicitudes y equipos con Privy/Supabase alojados |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Meet e invitaciones tienen confirmacion del usuario previa a este cambio; regresion integrada pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Sin emision clinica real; pendiente aceptacion alojada |
-| 4 Entregas/stock | Caso 10g A + 20g B, permisos 24h, lotes, cuarentena, ajustes, idempotencia y bloqueo de sobrecupo pasan SQL | No activar hasta ejecutar concurrencia con conexiones PostgreSQL independientes |
+| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | No activar hasta respaldo verificado, migracion y revision alojada |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Login ficticio en QA; no sustituye recorrido real ni validacion de todos los estados |
 
 Version local nueva: `src/features/operations`, API `/api/operations-pilot` y
@@ -44,10 +44,15 @@ Evidencia ejecutada en esta entrega:
 - `npm run build`: completo con piloto deshabilitado y habilitado;
   advertencias de dependencias y tamano de bundles.
 - `node tests/vercel-function-budget.test.mjs`: 11 funciones efectivas.
-- Comparacion de tipos contra HEAD: 19 diagnosticos heredados, sin adicionales
-  al primer corte; `npm run lint` NO esta verde y sigue siendo gate de lanzamiento.
+- Los 19 errores de tipos heredados quedaron corregidos: direccion Freighter,
+  permisos asincronos, callbacks y contratos de custodia/estados. `npm run lint` pasa.
+- CI [34190624481](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34190624481)
+  pasa sobre `296d923`: tipos, SQL, PostgreSQL 17 independiente, dos builds y browser.
+  El ensayo verifica por `pg_stat_activity` que ambas sesiones esperan un lock.
+- Restaurador de respaldo validado con datos sinteticos: tablas, funciones,
+  registros, FK y secuencias. Esto NO acredita un respaldo real ya realizado.
 
-Pendiente verificable: concurrencia independiente, integracion real, restauracion,
+Pendiente verificable: integracion real y respaldo/restauracion de la aplicacion,
 retencion/cifrado de datos clinicos y acceso privado a llamadas. Los datos del
 piloto son ficticios; no afirmar que esta capa contiene una ficha clinica apta
 para produccion. Detalles reproducibles en [runbook del piloto](operations-pilot-runbook.md).
@@ -56,6 +61,16 @@ La migracion mensual `20260906120000_monthly_dispensing_quota.sql` estaba sin
 registrar al iniciar el trabajo. Se conserva intacta, no es dependencia del nuevo
 piloto y NO debe entrar en un `db push` indiscriminado. No se aplicaron migraciones
 remotas ni se reparo historial en esta entrega.
+
+Revision remota del 2026-09-08: 25 versiones coinciden con la cadena revisada;
+solo falta `20260909010000_operations_pilot.sql` (el borrador anterior se excluye).
+El listado de respaldos de Supabase devuelve `backups:null` y `pitr_enabled:false`.
+Se preparo un exportador cifrado con Windows DPAPI y restaurador aislado; su
+ejecucion fue bloqueada por revision de seguridad y requiere aprobacion explicita
+del destino `D:\00 CODEX - OPENIA\.backups\trustleaf`. No se exportaron filas.
+El alcance es tablas/funciones de la aplicacion, no Auth, Storage, Vault ni una
+copia completa del servicio. La clave DPAPI depende del usuario Windows actual.
+Hasta cerrar ese punto, integrar codigo no significa habilitar el piloto.
 
 ## 1. Narrativa de producto
 

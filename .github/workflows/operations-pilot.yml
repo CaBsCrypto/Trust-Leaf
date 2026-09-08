@@ -55,7 +55,11 @@ jobs:
           npm run qa:operations-pilot
           node tests/sql/approval-flow.mjs
           node tests/sql/calendar-outbox.mjs
+          node tests/sql/application-backup-test.mjs
           node --experimental-strip-types tests/privy-agenda.test.ts
+          node --experimental-strip-types --import ./tests/calendar-source-loader.mjs tests/google-calendar-worker.test.ts
+          node --experimental-strip-types --import ./tests/calendar-source-loader.mjs tests/google-calendar-transition.test.ts
+          node --experimental-strip-types --import ./tests/calendar-source-loader.mjs tests/google-meet-access.test.ts
           node --experimental-strip-types tests/testnet-e2e-data-qa.test.ts
       - name: PostgreSQL independent connections
         env:

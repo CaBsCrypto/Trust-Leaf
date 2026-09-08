@@ -8,7 +8,7 @@ Hoja de ruta unica: [TRUSTLEAF_MASTER_PLAN.md](TRUSTLEAF_MASTER_PLAN.md).
 1. Instalar las dependencias del proyecto y `npm ci --prefix tests/sql --ignore-scripts`.
 2. Ejecutar `npm run qa:operations-pilot` y `node tests/sql/approval-flow.mjs`.
 3. Ejecutar `npm run qa:operations-types`, `npm run lint` y `npm run build`.
-   El chequeo delta informa deuda existente: NO convierte un lint fallido en verde.
+   El lint global debe pasar; el chequeo delta no sustituye ese requisito.
 4. Instalar dependencias de `tests/ui` y ejecutar desde la raiz:
    `node node_modules/vite/bin/vite.js --config tests/ui/vite-operations.config.mjs`.
 5. Abrir `http://127.0.0.1:4321/?operations&role=doctor`; roles de fixture:
@@ -28,7 +28,10 @@ PGlite no acredita conexiones independientes. El runner
 localhost. Rechaza Supabase, hosts remotos, otros nombres y bases con tablas.
 Aplica el esquema y compite por 20g + 20g contra 30g: solo una transaccion debe
 confirmar; el stock total debe bajar 20g. Conserva la base para inspeccion.
-No se ejecuta automaticamente en QA ni destruye una base existente.
+Se ejecuta en CI con PostgreSQL 17 efimero, sin credenciales de produccion.
+No destruye una base existente. La barrera observa ambas sesiones bloqueadas antes
+de liberarlas, y cubre tambien stock compartido, reintentos identicos, permisos,
+vencimientos, cuarentena y retiro del operador.
 
 ## Integracion alojada
 
@@ -36,6 +39,13 @@ No se ejecuta automaticamente en QA ni destruye una base existente.
   ni incluir el borrador sin registrar `20260906120000_monthly_dispensing_quota.sql`.
 - Probar primero en un proyecto/base aislados con respaldo y restauracion revisados.
   La nueva migracion es `20260909010000_operations_pilot.sql`; no depende del borrador.
+- Si no hay respaldo restaurable en Supabase, obtener aprobacion explicita antes
+  de exportar datos privados. `scripts/backup-operations-application.ps1` guarda
+  solo un archivo DPAPI CurrentUser fuera del repositorio y lo restaura en memoria
+  con `tests/sql/verify-application-backup.mjs`. Es un respaldo logico de aplicacion,
+  no de Auth/Storage/Vault; su llave depende del usuario de Windows.
+- `node tests/sql/application-backup-test.mjs` prueba el restaurador con datos
+  ficticios. Nunca subir respaldos de produccion a CI ni usarlo como prueba real.
 - Habilitar `TRUSTLEAF_OPERATIONS_PILOT_ENABLED=true` exclusivamente en servidor
   y `VITE_OPERATIONS_PILOT_ENABLED=true` en el build del entorno elegido.
 - Supabase y Privy conservan sus claves privadas existentes; no hay token ficticio
@@ -69,8 +79,8 @@ No se ejecuta automaticamente en QA ni destruye una base existente.
   No afirmar sincronizacion instantanea basada en Realtime.
 - La supervison admin no devuelve notas ni tratamientos. Dispensarios ven datos
   minimos autorizados; tras revocacion conservan solo sus propios comprobantes.
-- Pendientes antes de declarar cierre: lint global limpio, concurrencia real,
-  prueba alojada de identidades, restauracion y aceptacion de cada POV.
+- Tipos y concurrencia PostgreSQL ya pasaron. Pendientes antes de declarar cierre:
+  prueba alojada de identidades, respaldo/restauracion real y aceptacion de cada POV.
 - Pendientes antes de pacientes reales: base juridica sanitaria, verificacion de
   profesionales/establecimientos, cifrado y retencion de fichas, recuperacion y
   privacidad de llamadas. Ninguna pantalla del piloto emite una receta legal.
