@@ -17,8 +17,8 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 |---|---|---|
 | 0 Consolidar base | PR #16 integrado en `2477c44`; CI verde en main `8431b6e`; respaldo de aplicacion cifrado y restaurado; 26 migraciones remotas | Solo se aplico `20260909010000`, con historial atomico; despliegue activo Ready y consulta admin autenticada confirmados |
 | 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Repetir login, solicitudes y equipos con Privy/Supabase alojados |
-| 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Meet e invitaciones tienen confirmacion del usuario previa a este cambio; regresion integrada pendiente |
-| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Sin emision clinica real; pendiente aceptacion alojada |
+| 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
+| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | Esquema alojado y protegido; sin entregas creadas durante la migracion. Caso entre cuentas reales pendiente |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Login ficticio en QA; no sustituye recorrido real ni validacion de todos los estados |
 
@@ -102,9 +102,9 @@ acredita los demas POV ni el recorrido completo.
 | Bloqueo sin sesion | Aprobado: HTTP 401 y sin cache | Repetir al cambiar flags o autenticacion |
 | Sesion administradora y participacion | Aprobado: alta en piloto desde interfaz, contador de un participante y persistencia tras recarga | Supervision de entregas y aprobaciones nuevas pendientes |
 | Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; medico, paciente y dispensario deniegan a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
-| Medico publica, paciente reserva, Meet y cancelacion | Pendiente en el nuevo piloto | Evidencia previa de Meet no cierra esta regresion |
-| Consulta con/sin tratamiento y permisos del paciente | Pendiente con cuentas separadas | Pruebas sinteticas aprobadas; falta aceptacion alojada |
-| Dispensarios A/B: 10g + 20g y stock conjunto | Pendiente con cuentas separadas | PostgreSQL independiente aprobado; faltan dos organizaciones alojadas de prueba |
+| Medico publica, paciente reserva, Meet y cancelacion | Parcial: horario 09-09 a las 09:00 publicado y reservado por cuentas separadas; enlace Meet generado; persistencia y cita compartida confirmadas | No se probo conexion audiovisual a este nuevo enlace ni cancelacion en esta ejecucion |
+| Consulta con/sin tratamiento y permisos del paciente | Parcial: borrador, historial y ambos cierres en medico; paciente ve notas cerradas, tratamiento y saldo; concede/revoca/restaura permiso de 24h, con persistencia | Revocacion del tratamiento y observacion del dispensario durante revocacion pendientes |
+| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico y movimiento -10g; recarga confirmada | Falta B con cuenta separada, operador y confirmacion del comprobante desde paciente. Ajuste negativo devuelve 503, defecto abierto |
 | Operador, recarga, cambio de cuenta y movil | Pendiente en entorno alojado | Browser sintetico aprobado, no aceptar como POV real |
 
 ### Validacion del objetivo: primer recorrido administrativo
@@ -174,10 +174,84 @@ estado de GitHub y servido por `www.trustleaf.org` y `trustleaf.org`.
 Smoke anonimo posterior: `/api/agenda` y `/api/operations-pilot` devuelven 401
 `AUTH_REQUIRED` y `no-store` (tambien `private` en operaciones).
 Sin migracion nueva ni cambios en flags, cuentas o permisos alojados.
-El acceso medico de produccion queda preparado en Privy; falta que
-su titular complete el ingreso para continuar la aceptacion real. Tambien
-faltan una segunda organizacion y una cuenta de operador separadas para el
-recorrido alojado; ninguna identidad sintetica sustituye esa validacion.
+El ingreso medico pendiente en este punto se completo en el recorrido siguiente.
+Siguen faltando una segunda organizacion y una cuenta de operador separadas
+para el recorrido alojado; ninguna identidad sintetica sustituye esa validacion.
+
+### Aceptacion alojada: agenda y cierres medicos
+
+2026-09-08, aproximadamente 04:39-04:58 America/Santiago: el usuario completo
+los ingresos reales de medico y paciente por Privy. Las escrituras siguientes
+se realizaron exclusivamente desde `www.trustleaf.org`, con participacion
+explicita en el piloto y notas ficticias, sin modificaciones manuales de la base.
+No se publican correos, referencias completas ni enlaces de llamadas en Git.
+
+- Medico: participacion, publicacion de un horario el 09-09-2026 09:00-09:30
+  y persistencia tras recarga. La automatizacion de fecha/hora no sustituyo
+  los valores predeterminados; se comprobo la fecha real y se utilizo ese unico
+  horario, sin crear duplicados para ocultar la diferencia.
+- Paciente: participacion con otra identidad, reserva del horario anterior,
+  confirmacion y enlace Meet generados. Recarga conserva la cuenta y la cita
+  aparece en Mi atencion. Antes de emitir, Tratamientos indica que no hay
+  tratamientos y no presenta acciones de dispensacion.
+- Medico: al regresar con su propia cuenta ve esa misma reserva. Inicia la
+  atencion, guarda una nota explicitamente ficticia y recarga: estado En atencion,
+  borrador e historial de una version conservados. Finaliza con tratamiento
+  simulado: 30g asignados, 0g retirados, 30g disponibles, periodo 1 de 3.
+- Caso sin tratamiento: se uso la cita previa de prueba del 07-09 a las 09:00,
+  se guardo otra nota ficticia y se finalizo sin emision. La herramienta de clic
+  agoto su espera, pero la lectura posterior confirmo guardado; no se repitio
+  la escritura. Nueva recarga confirma ambas atenciones finalizadas y un solo
+  tratamiento total, con sus controles de emision retirados.
+- Capturas del navegador interno muestran el panel paciente sin tratamiento y
+  el panel medico con el tratamiento; no acreditan aun todos los tamanos moviles.
+
+Pendiente: volver al paciente para comprobar tratamiento y autorizar una
+organizacion; preparar dispensario, equipo y lotes ficticios desde sus paneles;
+ejecutar entregas A/B y supervision administrativa. No hay entrega de medicina
+real ni uso clinico autorizado por esta prueba.
+
+Continuacion alojada 05:01-05:11: la cuenta dispensario aprobo participacion y
+creo desde Equipo `Dispensario A - Piloto ficticio`, quedando como encargado.
+Recibio un lote ficticio de 100g, con procedencia de QA y vencimiento 31-12-2026
+12:00 Santiago. Recarga conserva organizacion/lote/stock; cuarentena y liberacion
+se guardan sin alterar cantidades. Atenciones no muestra pacientes sin permiso.
+El historial contiene una recepcion de 100g y ninguna entrega.
+
+Defecto alojado abierto: ajuste de -200g contra stock de 100g produce HTTP 503
+en lugar del conflicto recuperable esperado. Un unico reintento desde el boton
+existente, con el mismo identificador, repite el fallo. El historial y la recarga
+conservan 100g, sin movimiento negativo. Vercel confirma el 503; inspeccion de
+solo la definicion SQL confirma `PILOT_STOCK_CONFLICT` con SQLSTATE `40001`.
+No se ha aislado aun la causa del 503 ni se da por corregida esta proteccion
+alojada. Se prepara diagnostico acotado de accion/HTTP/codigo SQL, sin entradas,
+notas, identidades ni mensajes crudos del proveedor. No se aplico migracion.
+
+Continuacion 05:14-05:21: paciente ve las dos atenciones finalizadas, notas
+cerradas y el mismo tratamiento de 30g. Autoriza a A durante 24h, revoca desde
+su panel y vuelve a autorizar; la vigencia persiste tras recarga. El dispensario
+no fue observado durante el intervalo revocado; no dar esa comprobacion por
+hecha. Tras otro ingreso real de A, aparece el tratamiento compartido sin las
+notas medicas. Se registra una sola entrega simulada de 10g: 10g retirados,
+20g disponibles y lote con 90g. Historial muestra un comprobante y movimiento
+-10g, ademas de la recepcion inicial +100g. Recarga confirma esos valores.
+Se solicito al usuario verificar saldo/comprobante desde paciente en el otro
+dispositivo y proporcionar correos distintos para B y operador; aun pendientes.
+
+### Correccion local: supervision de videollamadas
+
+La prueba aislada `tests/ui/calendar-operations-browser.mjs` reprodujo una
+escritura administrativa enviada despues del cierre de sesion mientras esperaba
+el token. La correccion cancela esa espera y peticion al cambiar identidad,
+invalida lecturas previas a escrituras y refresca al recuperar foco/conexion.
+Un 401/403 limpia registros; un fallo transitorio conserva el ultimo listado
+pero bloquea comandos hasta recuperar una lectura valida. El error de escritura
+no desaparece con un refresco exitoso ni se reenvia automaticamente el comando.
+Las filas identifican la reserva y solo un codigo de error operacional seguro,
+nunca contenido clinico ni errores crudos de Google. Regresion local aprobada;
+se agrega a CI. Tipos, API/SQL aislado y cuatro suites browser pasan localmente;
+capturas de Calendar administrativo desktop/movil inspeccionadas. Esta
+correccion aun no esta integrada ni desplegada.
 
 ## 1. Narrativa de producto
 

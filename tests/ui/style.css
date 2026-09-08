@@ -1,3 +1,4 @@
 @import 'tailwindcss';
 @source '../../src/components/PrivyAgenda.tsx';
+@source '../../src/components/CalendarOperations.tsx';
 body { margin: 0; background: #fff; font-family: Arial, sans-serif; }
