@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { createCalendarEvents, eventBody, eventId } from '../api/_lib/google-calendar-events.ts';
+
+const booking = { bookingRef: 'test-booking', startsAt: '2026-09-08T12:00:00Z', endsAt: '2026-09-08T12:30:00Z', doctorEmail: 'doctor@example.com', patientEmail: 'patient@example.com' };
+const ready = { conferenceData: { entryPoints: [{ entryPointType: 'video', uri: 'https://meet.google.com/abc-defg-hij' }] } };
+const calls: { url: string; method: string }[] = [];
+let replies: Response[] = [];
+const client = createCalendarEvents('test-token', 'calendar@example.com', async (url, options) => {
+  calls.push({ url: String(url), method: options!.method! });
+  assert.equal((options!.headers as Record<string, string>).authorization, 'Bearer test-token');
+  assert.ok(replies.length);
+  return replies.shift()!;
+});
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+assert.match(eventId(booking.bookingRef), /^[0-9a-f]{64}$/);
+assert.notEqual(eventId('another'), eventId(booking.bookingRef));
+assert.equal(eventBody(booking).conferenceData.createRequest.requestId, eventId(booking.bookingRef));
+assert.equal(eventBody(booking).guestsCanInviteOthers, false);
+assert.throws(() => eventBody({ ...booking, endsAt: booking.startsAt }));
+replies = [json({}, 404), json(ready)];
+assert.equal((await client.ensure(booking)).state, 'ready');
+assert.match(calls.at(-1)!.url, /conferenceDataVersion=1&sendUpdates=all/);
+replies = [json(ready)];
+assert.equal((await client.ensure(booking)).state, 'ready');
+assert.equal(calls.at(-1)!.method, 'GET');
+replies = [json({}, 404), json({}, 409), json(ready)];
+assert.equal((await client.ensure(booking)).state, 'ready');
+replies = [json({})];
+assert.equal((await client.ensure(booking)).state, 'pending');
+replies = [json({ conferenceData: { entryPoints: [{ entryPointType: 'video', uri: 'https://evil.example/' }] } })];
+assert.equal((await client.ensure(booking)).meetUrl, null);
+replies = [json({}, 503)];
+await assert.rejects(client.ensure(booking), /CALENDAR_PROVIDER_ERROR/);
+replies = [new Response(null, { status: 410 })];
+await client.cancel(booking.bookingRef);
+assert.match(calls.at(-1)!.url, /sendUpdates=all/);
+console.log('Calendar event idempotency, privacy, pending and cancellation tests passed');

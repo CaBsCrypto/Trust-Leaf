@@ -1,0 +1,95 @@
+name: Operations pilot
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feat/operations-pilot-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operations-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: trustleaf_pilot_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/sql/package-lock.json
+            tests/ui/package-lock.json
+      - name: Install locked dependencies
+        run: |
+          npm ci
+          npm ci --prefix tests/sql --ignore-scripts
+          npm ci --prefix tests/ui
+      - name: Types and isolated regression tests
+        run: |
+          npm run lint
+          npm run qa:operations-pilot
+          node tests/sql/approval-flow.mjs
+          node tests/sql/calendar-outbox.mjs
+          node tests/sql/application-backup-test.mjs
+          node --experimental-strip-types tests/privy-agenda.test.ts
+          node --experimental-strip-types --import ./tests/calendar-source-loader.mjs tests/google-calendar-worker.test.ts
+          node --experimental-strip-types --import ./tests/calendar-source-loader.mjs tests/google-calendar-transition.test.ts
+          node --experimental-strip-types --import ./tests/calendar-source-loader.mjs tests/google-meet-access.test.ts
+          node --experimental-strip-types tests/testnet-e2e-data-qa.test.ts
+      - name: PostgreSQL independent connections
+        env:
+          PILOT_TEST_DATABASE_URL: postgresql://postgres:synthetic-ci-only@127.0.0.1:5432/trustleaf_pilot_test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+          npm run test:operations-pilot-concurrency
+      - name: Build disabled and enabled pilot
+        run: |
+          VITE_OPERATIONS_PILOT_ENABLED=false npm run build
+          VITE_OPERATIONS_PILOT_ENABLED=true npm run build
+      - name: Browser integration with synthetic identities
+        run: |
+          npm install --prefix /tmp/trustleaf-browser --no-package-lock playwright@1.58.2
+          /tmp/trustleaf-browser/node_modules/.bin/playwright install --with-deps chromium
+          mkdir -p scratch
+          node node_modules/vite/bin/vite.js --config tests/ui/vite-operations.config.mjs > scratch/operations-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4321/ > /dev/null; then break; fi
+            sleep 1
+          done
+          PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/operations-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: operations-pilot-synthetic-evidence
+          path: |
+            scratch/operations-qa
+            scratch/operations-server.log
+          retention-days: 7

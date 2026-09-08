@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { calendarProvider, refreshCalendarToken } from '../api/_lib/google-calendar-provider.ts';
+let replies: Response[] = [];
+let lastUrl = '';
+let lastBody = '';
+const fetcher: typeof fetch = async (url, options) => {
+  lastUrl = String(url); lastBody = String(options?.body ?? '');
+  assert.ok(replies.length);
+  return replies.shift()!;
+};
+const json = (body: unknown, status=200) => new Response(JSON.stringify(body), {status});
+replies=[json({access_token:'token'})];
+assert.equal(await refreshCalendarToken({clientId:'client',clientSecret:'secret',refreshToken:'refresh'},fetcher),'token');
+assert.equal(new URLSearchParams(lastBody).get('grant_type'),'refresh_token');
+replies=[json({error:'invalid_grant',error_description:'sensitive provider detail'},400)];
+await assert.rejects(refreshCalendarToken({clientId:'client',clientSecret:'secret',refreshToken:'refresh'},fetcher), {message:'CALENDAR_RECONNECT_REQUIRED'});
+const provider=calendarProvider('token',fetcher);
+replies=[json({id:'private@example.com'})];
+assert.equal(await provider.create(),'private@example.com');
+assert.deepEqual(JSON.parse(lastBody),{summary:'Consultas Trust Leaf',timeZone:'America/Santiago'});
+replies=[json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}})];
+await provider.verifyMeet('private@example.com');
+assert.ok(lastUrl.endsWith('private%40example.com'));
+replies=[json({conferenceProperties:{allowedConferenceSolutionTypes:[]}})];
+await assert.rejects(provider.verifyMeet('private@example.com'),/CALENDAR_MEET_UNAVAILABLE/);
+console.log('PASS: refresh, revoked consent, calendar creation and Meet capability');

@@ -40,7 +40,7 @@ test('resolves an active Privy actor through the server-only Supabase gateway', 
 test('fails closed for an unbound actor or a forbidden role', async () => {
   const authorizer = createPrivyRbacAuthorizer({
     verifier: { async verify() { return { subject, emails: [] }; } },
-    store: { async resolve() { return null; } },
+    store: { ...createSupabasePrivyActorStore({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'synthetic-key' }, async () => { throw new Error('Unexpected request'); }), async resolve() { return null; } },
   });
   await assert.rejects(authorizer.authorize('identity-token', ['patient']), { code: 'PRIVY_ACTOR_NOT_ACTIVE', statusCode: 403 });
 });

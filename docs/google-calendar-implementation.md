@@ -1,5 +1,62 @@
 # Google Calendar connection
 
+## Current integration work (2026-09-07)
+
+### Production verification update
+
+- Production deployment: `trustleaf-8zcm3o4ga-cabscryptocontacto-6028s-projects.vercel.app`.
+- Central secondary calendar preparation completed and Google Meet capability passed.
+- Calendar migration applied and registered; monthly quota draft remains untouched.
+- Automation flag and server-only worker secret configured; secret also stored in Vault.
+- Supabase cron job `trustleaf-calendar-worker` runs each minute. Observed successful
+  execution and HTTP 200, without timeout.
+- Technical fixture booking `88bb2f83-1b5b-48be-9404-5d9015a27b44` reached `ready`
+  after one worker attempt, with a Meet URL and no error. Administrator UI shows Lista.
+- Fixture used the agenda SQL function for existing test participants, not a fresh
+  browser login/reservation. It is not evidence of end-to-end browser authorization.
+- User confirmed receipt of the Meet invitation at the doctor's Zoho-hosted email.
+  Patient invitation receipt and two-device admission without the organizer remain unverified.
+- Real cancellation/retry validation, initial admin session loading, full typecheck,
+  participant UI validation and repository publication remain open.
+
+The following section records the earlier pre-deployment gates for context.
+
+Central OAuth consent has been verified in the production administrator UI.
+The booking automation code is in a successful Vercel preview, not production:
+`https://trustleaf-1tehsk96u-cabscryptocontacto-6028s-projects.vercel.app`.
+The Calendar migration below is applied to production Supabase and its migration
+history is registered. Verified: queue exists, zero jobs, anon denied and service_role
+allowed. No existing bookings were backfilled and no real Meet has been generated.
+
+- `20260907040000_calendar_booking_outbox.sql`: transactional enqueue, worker leases,
+  cancellation revision fencing, private participant link query, central calendar setup.
+- Google event client: stable booking event/conference IDs, pending conference state,
+  guest notifications and cancellation. Event contents exclude clinical details.
+- Worker/store: server-only refresh token decryption, Privy participant email lookup.
+- Admin setup/process/jobs endpoints, participant agenda links and operations view.
+- Worker endpoint: requires a server-only `CRON_SECRET` of at least 32 characters.
+
+Remaining release gates:
+
+1. Preview build passed after synchronizing React type dependencies in pnpm lockfile.
+   Seven Calendar test files and PGlite outbox tests passed. Full typecheck still has
+   errors outside Calendar; UI and real-provider integration remain unverified.
+2. Add a real periodic worker trigger; the endpoint alone is not a scheduler.
+3. Verify retry timing, expired leases and provider failure recovery against PostgreSQL.
+4. Calendar migration applied and registered; monthly quota draft was not applied.
+5. Deploy, prepare the secondary calendar and verify Google Meet support.
+6. Enable `GOOGLE_CALENDAR_AUTOMATION_ENABLED=true` only after setup succeeds.
+7. Reserve using test participants and verify one event, invitation receipt, participant
+   links, cancellation and two-device guest admission without the organizer.
+
+No existing booking is automatically backfilled. Calendar creation has no provider
+idempotency key: an ambiguous creation remains locked for operator reconciliation.
+Changing the organizer account after calendar setup needs a dedicated migration flow;
+do not silently reuse a calendar owned by a different Google account.
+
+Tests using PGlite validate SQL outcomes, not multi-connection PostgreSQL scheduling.
+Mock provider tests do not prove real Google invitation delivery or Meet admission.
+
 ## Central organizer revision
 
 Local revision: the connection control moves from doctor agenda to administration.
@@ -33,3 +90,16 @@ Scope: `https://www.googleapis.com/auth/calendar.app.created`, limited to second
 Persist the app-created calendar ID. Add an outbox transaction to confirmed booking/cancellation; workers must use deterministic event IDs, conference request IDs and retry claims. Store conference pending/ready/error separately from booking state. Do not report a confirmed booking as failed solely because Google is unavailable. Add per-participant authorization for Meet URLs, refresh/reconnect and disconnect flows. Test rescheduling/cancellation and duplicate/concurrent requests. No clinical detail in Google event contents.
 
 References: https://developers.google.com/workspace/calendar/api/auth and https://developers.google.com/identity/protocols/oauth2/web-server
+# Production verification: session reads, 2026-09-07
+
+Deployment `trustleaf-inzuuus5g` loads the central organizer, ready conference,
+pending queue and actor directory on an authenticated admin reload without manual
+refresh. Ordinary token reads now use the SDK-managed identity token, subject-bound;
+explicit refresh and server authorization remain in place. Local build and token
+coordinator tests passed. This browser check does not prove all session edge cases.
+
+Doctor confirmed receipt of the invitation. Patient receipt and two-device guest
+admission without the organizer remain unverified. Google documents that participants
+without a Google account may require admission by the organizer or a participant:
+https://support.google.com/meet/answer/9303069
+Do not equate successful event creation with unattended guest access.

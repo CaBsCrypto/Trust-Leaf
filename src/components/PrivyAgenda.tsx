@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw, Video, X } from 'lucide-react';
 import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 
-type Slot = { slotRef: string; doctorRef: string; startsAt: string; endsAt: string; state: string; version: number; bookingRef: string | null; bookingState: string | null };
+type Slot = { slotRef: string; doctorRef: string; startsAt: string; endsAt: string; state: string; version: number; bookingRef: string | null; bookingState: string | null; conference?: {state: string | null; meetUrl?: string | null} | null };
 type Command = { action: string; input: Record<string, unknown> };
 const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const inputStyle = 'min-w-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm';
@@ -66,6 +66,31 @@ function IdentityAgenda({ email }: { email?: string }) {
     return ()=>controller.abort();
   },[date,revision,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
 
+  const waitingForMeet = slots.some(slot => slot.bookingState === 'confirmed' &&
+    !['ready', 'cancelled'].includes(slot.conference?.state ?? ''));
+  useEffect(() => {
+    if (!waitingForMeet || loading || busy || !identity.ready || !identity.authenticated) return;
+    const controller = new AbortController();
+    const current = generation.current;
+    const resume = () => {
+      if (document.visibilityState === 'visible' && !controller.signal.aborted) setSlots(rows => [...rows]);
+    };
+    document.addEventListener('visibilitychange', resume);
+    const timer = setTimeout(async () => {
+      if (document.visibilityState !== 'visible') return;
+      const start = new Date(`${date}T00:00:00`);
+      const end = new Date(start); end.setDate(end.getDate() + 7);
+      try {
+        const data = await request(`/api/agenda?${new URLSearchParams({from:start.toISOString(),to:end.toISOString()})}`, undefined, controller.signal);
+        if (!controller.signal.aborted && current === generation.current && Array.isArray(data.slots)) setSlots(data.slots);
+      } catch {
+        // Preserve the usable agenda if a background status refresh fails.
+        if (!controller.signal.aborted && current === generation.current) setSlots(rows => [...rows]);
+      }
+    }, 15000);
+    return () => { clearTimeout(timer); controller.abort(); document.removeEventListener('visibilitychange', resume); };
+  }, [slots, waitingForMeet, loading, busy, date, identity.subject, identity.ready, identity.authenticated]);
+
   async function execute(command: Command) {
     if(commandLock.current)return;
     commandLock.current=true;setBusy(true);setPending(command);setError('');setNotice('');
@@ -117,6 +142,9 @@ function IdentityAgenda({ email }: { email?: string }) {
           {role==='patient' && <p title={slot.doctorRef} className="text-xs text-gray-600">Medico · {slot.doctorRef.slice(0,8)}</p>}
           <p className={`text-sm ${confirmed?'text-blue-700':'text-gray-600'}`}>{label}</p>
           {confirmed && <p className="break-all text-xs text-gray-500">Reserva {slot.bookingRef}</p>}</div>
+          {confirmed && slot.conference && (slot.conference.state==='ready' && /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(slot.conference.meetUrl??'')
+            ? <a className={commandStyle} href={slot.conference.meetUrl!} target="_blank" rel="noopener noreferrer"><Video size={16}/>Unirse a consulta</a>
+            : <p role="status" className="text-sm text-gray-600">{['error','unavailable'].includes(slot.conference.state??'')?'Videollamada no disponible temporalmente':'Preparando videollamada'}</p>)}
           {future && role==='patient' && slot.state==='published' && <button disabled={disabled} className={commandStyle} onClick={()=>mutate('reserve',{slotRef:slot.slotRef,bookingRef:crypto.randomUUID(),version:slot.version})}>Reservar</button>}
           {future && (confirmed || role==='doctor' && slot.state==='published') && <button disabled={disabled} className={commandStyle} onClick={()=>{if(window.confirm(confirmed?'¿Cancelar esta cita?':'¿Retirar este horario?'))mutate(confirmed?'cancel-booking':'cancel-slot',{slotRef:slot.slotRef,bookingRef:slot.bookingRef,version:slot.version});}}><X size={16}/>{confirmed?'Cancelar cita':'Retirar horario'}</button>}
         </li>;})}

@@ -15,6 +15,14 @@ import { googleCalendarHandler } from '../_lib/google-calendar-handler.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+  if (route === 'operations-pilot') {
+    const { operationsPilotHandler } = await import('../_lib/operations-pilot.js');
+    return operationsPilotHandler(req, res, process.env, createPrivyIdentityVerifier(process.env));
+  }
+  if (route === 'calendar-worker') {
+    const { calendarCron } = await import('../_lib/google-calendar-cron.js');
+    return calendarCron(req, res);
+  }
   if (route.startsWith('google-calendar-')) return googleCalendarHandler(req, res, route.slice('google-calendar-'.length));
 
   if (route === 'privy-agenda') {

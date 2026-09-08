@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
+import OperationsWorkspace from './features/operations/OperationsWorkspace';
 import GoogleCalendarConnection from './components/GoogleCalendarConnection';
 import PrivySessionBoundary from './components/PrivySessionBoundary';
 import { readPrivyAdminJson } from './lib/privyRead';
@@ -257,7 +258,7 @@ function AppContent() {
     setWalletBusy('freighter');
     setWalletError(null);
     try {
-      const address = await connectFreighterOnTestnet();
+      const { address } = await connectFreighterOnTestnet();
       setWalletSetup({
         primaryMethod: 'freighter',
         hasFreighterBackup: false,
@@ -660,6 +661,10 @@ function AppContent() {
       );
     }
 
+    if (privyIdentity.enabled && import.meta.env.VITE_OPERATIONS_PILOT_ENABLED === 'true') {
+      return <OperationsWorkspace email={session?.email} onSignOut={endSession}/>;
+    }
+
     if (session?.mode === 'email' && adminAuth.user && !patientProfile && !checkingProfile) {
       const handleContinueOnboarding = async () => {
         if (!walletSetup.contractAccount || walletSetup.primaryMethod === null) return;
@@ -869,6 +874,10 @@ function AppContent() {
       );
     }
 
+    if (privyIdentity.enabled && import.meta.env.VITE_OPERATIONS_PILOT_ENABLED === 'true') {
+      return <OperationsWorkspace email={session?.email} onSignOut={endSession}/>;
+    }
+
     return (
       <LazyPortal
         isOpen
@@ -954,6 +963,10 @@ function AppContent() {
       );
     }
 
+    if (privyIdentity.enabled && import.meta.env.VITE_OPERATIONS_PILOT_ENABLED === 'true') {
+      return <OperationsWorkspace email={session?.email} onSignOut={endSession}/>;
+    }
+
     return (
       <LazyPortal
         isOpen
@@ -984,7 +997,7 @@ function AppContent() {
     const adminRouteSession: TrustSession | null = hasRealAdminSession
       ? {
           role: 'admin',
-          email: adminAuth.user?.email ?? 'admin@trustleaf.org',
+          email: adminAuth.user?.email ?? session?.email ?? 'Correo no disponible',
           name: adminAuth.user?.displayName ?? 'Admin Trust Leaf',
           mode: 'email',
           createdAt: new Date().toISOString(),
@@ -2625,6 +2638,7 @@ function AdminRoute({
         {privyIdentity.enabled && privyIdentity.authenticated && import.meta.env.VITE_GOOGLE_CALENDAR_ENABLED === 'true' && <GoogleCalendarConnection key={privyIdentity.subject}/>}
         {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorReviewQueue privyIdentity={privyIdentity} />}
         {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorDirectory identity={privyIdentity} />}
+        {privyIdentity.enabled && privyIdentity.authenticated && import.meta.env.VITE_OPERATIONS_PILOT_ENABLED === 'true' && <OperationsWorkspace email={session?.email} embedded/>}
         {privyIdentity.enabled && (
           <section className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/45 px-5 py-4 text-sm leading-relaxed text-brand-green-mid">
             Privy valida la identidad y Supabase controla los permisos. Las solicitudes profesionales se revisan desde la cola superior.
@@ -4219,7 +4233,7 @@ function DoctorRegistrationRoute({
                               type="button"
                               onClick={async () => {
                                 try {
-                                  const address = await connectFreighterOnTestnet();
+                                  const { address } = await connectFreighterOnTestnet();
                                   setRegistrationForm((curr) => ({ ...curr, wallet: address }));
                                 } catch (e: any) {
                                   alert(e.message || 'Error al conectar Freighter.');
@@ -4365,7 +4379,7 @@ function RoleRoutePage({
   onBack: () => void;
   onNavigate: (path: string) => void;
   dispensaryRegistrations?: DispensaryRegistration[];
-  onSubmitDispensaryRegistration?: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt'>) => void;
+  onSubmitDispensaryRegistration?: (input: Omit<DispensaryRegistration, 'id' | 'status' | 'submittedAt' | 'onchainStatus'>) => void;
   showTechnicalDetails?: boolean;
 }) {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
@@ -4589,7 +4603,7 @@ function RoleRoutePage({
                                 type="button"
                                 onClick={async () => {
                                   try {
-                                    const address = await connectFreighterOnTestnet();
+                                    const { address } = await connectFreighterOnTestnet();
                                     setRegistrationForm((curr) => ({ ...curr, wallet: address }));
                                   } catch (e: any) {
                                     alert(e.message || 'Error al conectar Freighter.');

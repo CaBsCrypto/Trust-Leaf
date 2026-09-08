@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { seal } from '../api/_lib/google-calendar-security.ts';
+import { setupCentralCalendar } from '../api/_lib/google-calendar-setup.ts';
+const key='a'.repeat(64);
+const env={SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'test',GOOGLE_CALENDAR_CLIENT_ID:'client',GOOGLE_CALENDAR_CLIENT_SECRET:'secret',GOOGLE_CALENDAR_ENCRYPTION_KEY:key};
+const credential={refresh_ciphertext:seal('refresh',key,'central-calendar:refresh'),calendar_id:null};
+let replies:unknown[]=[];
+const operations:string[]=[];
+const fetcher:typeof fetch=async(url,options)=>{
+  operations.push(String(url));
+  assert.ok(replies.length);
+  return new Response(JSON.stringify(replies.shift()));
+};
+replies=[credential,{access_token:'token'},{claimed:true},{id:'calendar'},{saved:true},{conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}];
+assert.deepEqual(await setupCentralCalendar(env,fetcher),{ready:true});
+assert.equal(operations.filter(url=>url==='https://www.googleapis.com/calendar/v3/calendars').length,1);
+operations.length=0;
+replies=[{...credential,calendar_id:'calendar'},{access_token:'token'},{conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}];
+assert.deepEqual(await setupCentralCalendar(env,fetcher),{ready:true});
+assert.equal(operations.filter(url=>url==='https://www.googleapis.com/calendar/v3/calendars').length,0);
+replies=[credential,{access_token:'token'},null];
+await assert.rejects(setupCentralCalendar(env,fetcher),/CALENDAR_SETUP_REVIEW_REQUIRED/);
+console.log('PASS: setup creation, existing calendar reuse and ambiguous creation protection');

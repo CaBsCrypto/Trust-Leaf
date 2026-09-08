@@ -15,14 +15,22 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
   const { identityToken } = useIdentityToken();
   const { refreshUser } = useUser();
   const { login } = useLogin();
+  const refreshUserRef = useRef(refreshUser);
+  useLayoutEffect(() => { refreshUserRef.current = refreshUser; }, [refreshUser]);
+  const sessionToken = useRef({ subject: user?.id, token: identityToken });
+  useLayoutEffect(() => { sessionToken.current = { subject: user?.id, token: identityToken }; }, [user?.id, identityToken]);
   const tokens = useMemo(() => createPrivyTokenCoordinator(
-    async () => ready && authenticated ? getIdentityToken() : null,
+    async () => {
+      if (!ready || !authenticated || sessionToken.current.subject !== user?.id) return null;
+      // The SDK owns token rotation; ordinary reads need not refresh its user endpoint.
+      return sessionToken.current.token ?? getIdentityToken();
+    },
     async () => {
       if (!ready || !authenticated) return null;
-      await refreshUser();
+      await refreshUserRef.current();
       return getIdentityToken();
     },
-  ), [ready, authenticated, user?.id, refreshUser]);
+  ), [ready, authenticated, user?.id]);
   const currentTokens = useRef(tokens);
   useLayoutEffect(() => {
     currentTokens.current = tokens;

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {validCalendarWorkerSecret,calendarCron} from '../api/_lib/google-calendar-cron.ts';
+const secret='a'.repeat(48);
+assert.equal(validCalendarWorkerSecret(`Bearer ${secret}`,secret),true);
+for(const value of [undefined,[],`Bearer ${'b'.repeat(48)}`,'Bearer a'])assert.equal(validCalendarWorkerSecret(value,secret),false);
+assert.equal(validCalendarWorkerSecret('Bearer undefined',undefined),false);
+let status=0;
+const res={setHeader(){},status(code:number){status=code;return this;},json(){},end(){}};
+await calendarCron({method:'GET',headers:{}},res,{CRON_SECRET:secret});
+assert.equal(status,401);
+await calendarCron({method:'GET',headers:{authorization:`Bearer ${secret}`}},res,{CRON_SECRET:secret});
+assert.equal(status,503);
+console.log('PASS: worker authorization and disabled gate');

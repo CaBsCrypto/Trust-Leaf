@@ -4,7 +4,7 @@ import type { ReadonlyReceiptFixture, ReadonlyRole } from './readonlyRoleReceipt
 export const DEPLOYED_TESTNET_RECEIPT_CONTRACT_ID = 'CA7SCEMQM4VETVCDD6RKO5RE7TCFG2HJD3PKW6EPD325IRDXJWF5OSY3';
 export const STELLAR_EXPERT_CONTRACT_URL = `https://stellar.expert/explorer/testnet/contract/${DEPLOYED_TESTNET_RECEIPT_CONTRACT_ID}`;
 export type ReviewScenario = 'active' | 'partial' | 'dispensed' | 'revoked' | 'expired' | 'unknown';
-export interface TestnetEvidenceLink { label: string; state: string; url: string }
+export interface TestnetEvidenceLink { label: string; state: ReadonlyReceiptFixture['timeline'][number]['state']; url: string }
 const transaction = (hash: string) => `https://stellar.expert/explorer/testnet/tx/${hash}`;
 
 export const TESTNET_EVIDENCE_LINKS: readonly TestnetEvidenceLink[] = [

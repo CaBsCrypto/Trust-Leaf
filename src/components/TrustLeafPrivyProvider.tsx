@@ -38,6 +38,7 @@ class PrivyBoundary extends Component<PrivyBoundaryProps, PrivyBoundaryState> {
 }
 
 export { useTrustLeafPrivyIdentity } from './privyIdentityContext';
+export type { TrustLeafPrivyIdentity } from './privyIdentityContext';
 
 /** A missing Privy dashboard setup must never break existing actor routes. */
 export function TrustLeafPrivyProvider({ children }: TrustLeafPrivyProviderProps) {
