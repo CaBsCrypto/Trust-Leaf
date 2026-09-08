@@ -11,9 +11,11 @@ assert.ok(['postgres:', 'postgresql:'].includes(url.protocol));
 assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(url.hostname));
 assert.equal(url.pathname, '/trustleaf_pilot_test');
 assert.equal(url.search, '', 'connection overrides are not allowed');
+const connectionEnv = { PGHOST: url.hostname.replaceAll(/[\[\]]/g, ''), PGPORT: url.port || '5432',
+  PGDATABASE: url.pathname.slice(1), PGUSER: decodeURIComponent(url.username), PGPASSWORD: decodeURIComponent(url.password), PGCONNECT_TIMEOUT: '5' };
 const sql = (text, application = 'pilot-setup') => new Promise((resolve, reject) => {
   const child = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
-    env: { ...process.env, PGDATABASE: connection, PGAPPNAME: application, PGOPTIONS: '-c statement_timeout=20000 -c lock_timeout=15000' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, ...connectionEnv, PGAPPNAME: application, PGOPTIONS: '-c statement_timeout=20000 -c lock_timeout=15000' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   });
   let out = '', err = ''; child.stdout.on('data', b => { out += b; }); child.stderr.on('data', b => { err += b; });
   child.once('error', reject); child.once('exit', code => code === 0 ? resolve(out.trim()) : reject(new Error(err)));
@@ -26,7 +28,7 @@ const mutation = async (who, action, input) => JSON.parse(await sql(command(who,
 // The holder makes both connections wait; observing both waiters proves overlap.
 async function competing(lockExpression, statements) {
   const holder = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
-    env: { ...process.env, PGDATABASE: connection, PGAPPNAME: 'pilot-barrier' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, ...connectionEnv, PGAPPNAME: 'pilot-barrier' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   });
   const held = new Promise((resolve, reject) => {
     let output = '';
