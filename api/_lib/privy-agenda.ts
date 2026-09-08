@@ -19,7 +19,7 @@ export async function executePrivyAgenda(input: {
   });
   if (!response.ok) {
     const diagnostic = await response.json().catch(() => ({}));
-    const status = diagnostic.code === '42501' ? 403 : ['40001', '23505'].includes(diagnostic.code) ? 409
+    const status = diagnostic.code === '42501' ? 403 : ['PT409', '40001', '23505'].includes(diagnostic.code) ? 409
       : String(diagnostic.code).startsWith('22') ? 400 : 503;
     throw failure(status);
   }

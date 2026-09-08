@@ -6,7 +6,7 @@ const { db, subjects, actors, call, agenda } = await operationsDatabase();
 const mutation = (key, action, input = {}) => call(key, action, { ...input, operationId: randomUUID() });
 const snapshot = key => call(key, 'snapshot');
 const forbidden = promise => assert.rejects(promise, { code: '42501' });
-const conflict = promise => assert.rejects(promise, { code: '40001' });
+const conflict = promise => assert.rejects(promise, { code: 'PT409' });
 async function owner(sql, args = []) { await db.exec('reset role'); try { return await db.query(sql, args); } finally { await db.exec('set role service_role'); } }
 try {
   assert.equal((await snapshot('doctor')).joined, false);

@@ -68,6 +68,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client
           npm run test:operations-pilot-concurrency
+      - name: PostgREST business conflict response
+        run: |
+          docker run --rm -d --name pilot-rest --network host \
+            -e PGRST_DB_URI=postgresql://postgres:synthetic-ci-only@127.0.0.1:5432/trustleaf_pilot_test \
+            -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=service_role \
+            -e PGRST_SERVER_HOST=127.0.0.1 -e PGRST_SERVER_PORT=54321 \
+            postgrest/postgrest:v12.2.12
+          trap 'docker stop pilot-rest' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:54321/ > /dev/null; then break; fi
+            sleep 1
+          done
+          PILOT_TEST_POSTGREST_URL=http://127.0.0.1:54321 node tests/sql/operations-postgrest.mjs
       - name: Build disabled and enabled pilot
         run: |
           VITE_OPERATIONS_PILOT_ENABLED=false npm run build

@@ -22,7 +22,7 @@ test('wrong role and pending accounts never reach agenda mutation',async()=>{
   }
 });
 test('SQL conflicts and failures expose categories only and are never retried',async()=>{
-  for(const [code,statusCode] of [['40001',409],['23505',409],['42501',403],['22023',400],['XX000',503]] as const){
+  for(const [code,statusCode] of [['PT409',409],['40001',409],['23505',409],['42501',403],['22023',400],['XX000',503]] as const){
     let commands=0;const fetcher:typeof fetch=async url=>{if(String(url).includes('resolve_privy'))return Response.json(binding('doctor'));commands++;return Response.json({code,message:'sensitive internal details'},{status:400});};
     await assert.rejects(executePrivyAgenda({token:'fixture',action:'publish',input:{},env,verifier,fetcher}),{statusCode,message:'Agenda unavailable'});assert.equal(commands,1);
   }

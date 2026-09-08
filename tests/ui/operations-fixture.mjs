@@ -14,7 +14,7 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
       let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 12000) throw new Error('request too large'); }
       const command = req.method === 'GET' ? url.pathname === '/api/agenda' ? { action: 'list', input: { from: url.searchParams.get('from'), to: url.searchParams.get('to') } } : { action: 'snapshot', input: {} } : JSON.parse(body);
       res.end(JSON.stringify(await (url.pathname === '/api/agenda' ? agenda : call)(key, command.action, command.input)));
-    } catch (e) { res.statusCode = e.code === '42501' ? 403 : ['40001', '23505'].includes(e.code) ? 409 : 400;
+    } catch (e) { res.statusCode = e.code === '42501' ? 403 : ['PT409', '40001', '23505'].includes(e.code) ? 409 : 400;
       res.end(JSON.stringify({ code: 'FIXTURE_REJECTED' })); }
   });
 } }; }
