@@ -15,7 +15,7 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
-| 0 Consolidar base | PR #21 integrado en `df3ff43`, CI main `34209126178` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
+| 0 Consolidar base | PR #22 integrado en `e05644f`, CI main `34211275049` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
 | 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de los cuatro roles y organizacion A observados; nuevas solicitudes, dispensario B y operador independientes pendientes |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
@@ -329,12 +329,32 @@ recorrido completo. No requiere migracion ni cambia API/permisos.
 - Recarga de admin conserva identidad, contadores y auditoria. Captura movil
   inspeccionada a 390px, documento de 385px sin desbordamiento horizontal; tamano
   del navegador restaurado al terminar.
-- Pendiente visual menor: el acceso admin sin sesion aun menciona el documento
+- Defecto visual detectado: el acceso admin sin sesion mencionaba el documento
   heredado `appAdministrators/{uid}` aunque el ingreso usa Privy y permisos SQL.
-  No confundir ese texto con una validacion de Firebase.
+  Corregido y verificado posteriormente en PR #22, segun el cierre siguiente.
 - Sigue pendiente B/operador con cuentas independientes, saldo confirmado por
   el paciente en su dispositivo, revocaciones/vencimientos alojados y cancelacion
   del nuevo ciclo. Esta evidencia no cierra todo el objetivo ni habilita uso real.
+
+### Acceso administrativo sin texto heredado: 08-09, 06:44 America/Santiago
+
+- [PR #22](https://github.com/CaBsCrypto/Trust-Leaf/pull/22) integrado en
+  `e05644fc4bc88307c48a31481b48d329b960f5e5`. CI PR `34210857963` y main
+  `34211275049` aprobadas. La prueba de texto existente se amplio y se incorporo
+  a CI; no sustituye la comprobacion de autenticacion en navegador.
+- Vercel `dpl_2pp9nHyPufkbzTxFypthHusAFj3Y` READY con ambos dominios oficiales.
+  Tras salir y recargar, la pantalla Privy muestra "Permisos" y "Permiso
+  administrativo requerido en Supabase". No declara privilegios por verificar
+  identidad ni muestra el documento de Firebase en este camino de acceso.
+- Sin credenciales, directorio admin y API del piloto responden HTTP 401
+  `AUTH_REQUIRED`, sin cache y sin actores. Inicio normal Google/Privy posterior
+  recupera la cuenta admin y la supervision, con una entrega y dos cierres.
+- Alcance: texto y regresion; sin cambios en API, autorizacion, migraciones,
+  calendario ni datos. El camino heredado deshabilitado permanece sin refactor.
+- Pendiente de intervencion del usuario: correos controlados e ingreso de dos
+  identidades nuevas, para encargado de dispensario B y operador. La cuenta de
+  admin queda abierta; no se reutilizan identidades de otros roles ni se crean
+  accesos ficticios para sustituir la validacion alojada.
 
 ### Correccion local: supervision de videollamadas
 
