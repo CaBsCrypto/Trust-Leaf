@@ -104,8 +104,8 @@ acredita los demas POV ni el recorrido completo.
 | Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; medico, paciente y dispensario deniegan a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
 | Medico publica, paciente reserva, Meet y cancelacion | Parcial: horario 09-09 a las 09:00 publicado y reservado por cuentas separadas; enlace Meet generado; persistencia y cita compartida confirmadas | No se probo conexion audiovisual a este nuevo enlace ni cancelacion en esta ejecucion |
 | Consulta con/sin tratamiento y permisos del paciente | Parcial: borrador, historial y ambos cierres en medico; paciente ve notas cerradas, tratamiento y saldo; concede/revoca/restaura permiso de 24h, con persistencia | Revocacion del tratamiento y observacion del dispensario durante revocacion pendientes |
-| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico y movimiento -10g; recarga confirmada; usuario confirma historial de 10g desde paciente | Falta B con cuenta separada, operador y confirmacion del saldo desde paciente. Ajuste negativo devuelve 503, defecto abierto |
-| Operador, recarga, cambio de cuenta y movil | Pendiente en entorno alojado | Browser sintetico aprobado, no aceptar como POV real |
+| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico y movimiento -10g; recarga confirmada; usuario confirma historial de 10g desde paciente. Ajuste negativo corregido: HTTP 409, sin movimientos; ajuste +5g y compensacion -5g aprobados | Falta B con cuenta separada, operador y confirmacion del saldo desde paciente |
+| Operador, recarga, cambio de cuenta y movil | Parcial alojado: cambios de cuenta, recargas y dispensario a 390px; su identidad no accede a admin/medico/paciente | Operador independiente y movil de los otros roles pendientes; browser sintetico no sustituye esos POV |
 
 ### Validacion del objetivo: primer recorrido administrativo
 
@@ -264,6 +264,32 @@ terminal de negocio. PostgREST documenta [reintentos automaticos antiguos](https
 y [codigos HTTP personalizados PT](https://docs.postgrest.org/en/v12/references/errors.html).
 CI agrega PostgREST 12.2.12 aislado para comprobar rechazo rapido, reintento
 identico y ledger intacto. No se afirma que esa sea la version alojada.
+
+### Cierre del defecto de ajuste: 08-09, 06:01 America/Santiago
+
+- [PR #20](https://github.com/CaBsCrypto/Trust-Leaf/pull/20) fusionado en
+  `4347fb6164dd9c66f83f5ad97b31a8ed9f2a5710`. CI PR `34206691422` y main
+  `34207139673` aprobadas: tipos, SQL, conexiones independientes, PostgREST,
+  builds con/sin piloto y cuatro suites browser.
+- Vercel `dpl_9i3Bf7i1hc33gQAHJFkDr7vn1XBP` READY con alias oficial. API
+  compatible publicada antes de la migracion.
+- Respaldo DPAPI local de ambas definiciones, fuera de Git, restaurado en SQL
+  aislado. Comparacion exacta demuestra solo cambio de codigos y ACLs intactas.
+  Este respaldo de funciones no sustituye el respaldo anterior de tablas.
+- Aplicada solo `20260909020000_pilot_business_conflicts`, SHA256
+  `4707AF485972D9BAE579FD68C7FC225B3E49D7D63AB9019CBBEB025DFBF48B3B`.
+  Preflight exige 26 versiones y hashes esperados; postflight confirma 27,
+  version nueva y ACLs originales. Sin alteraciones de tablas ni datos del piloto.
+- Reintento desde el boton existente conserva la misma operacion fallida:
+  Vercel registra HTTP 409 y `PT409`; la pantalla informa conflicto y recupera
+  los formularios. No se registra movimiento del ajuste de -200g; stock 90g.
+- Desde el panel se registran ajuste ficticio +5g y compensacion -5g, ambos con
+  motivo y conservados en historial, sin borrar nada. Stock final 90g; cupo
+  del paciente permanece con 10g retirados y 20g disponibles. Recarga confirma.
+- Pendiente: segundo dispensario autorizado entrega los 20g restantes,
+  operador con cuenta independiente, confirmacion del saldo del paciente,
+  supervision de estas operaciones desde admin y restantes pruebas negativas
+  alojadas. No se declara cerrado el objetivo completo ni habilitado uso real.
 
 ### Correccion local: supervision de videollamadas
 
