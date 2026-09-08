@@ -1,7 +1,7 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-Fecha de corte: 2026-09-08. Estado: candidato de piloto operativo validado en CI;
-migracion, activacion alojada y aceptacion con usuarios pendientes.
+Fecha de corte: 2026-09-08. Estado: piloto operativo integrado a main y desplegado
+INACTIVO; migracion, activacion alojada y aceptacion con usuarios pendientes.
 Este documento es el punto de entrada para el nuevo alcance. No certifica
 cumplimiento sanitario ni autoriza datos clinicos reales, mainnet o despliegues.
 
@@ -14,14 +14,14 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
-| 0 Consolidar base | GitHub confirma baseline `20796f6` en `feat/google-calendar-connection` y main `b6186b2`, 8 commits de diferencia; Vercel confirma deployment `dpl_HoYTFU2RUG8oQArNQJRqyks7KZx5` Ready con alias oficial | Inventario remoto de migraciones y revision antes de integrar; no cambios de produccion en esta entrega |
+| 0 Consolidar base | Baseline de entrada: `20796f6` y main `b6186b2`; PR #16 integra ambos en `2477c44`, CI pasa sobre main; 25 migraciones remotas revisadas | Vercel `dpl_GkQNnu37QcJwndhjTFFJZ91Djb72` Ready en URL oficial; ambos flags false; ninguna migracion aplicada |
 | 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Repetir login, solicitudes y equipos con Privy/Supabase alojados |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Meet e invitaciones tienen confirmacion del usuario previa a este cambio; regresion integrada pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Sin emision clinica real; pendiente aceptacion alojada |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | No activar hasta respaldo verificado, migracion y revision alojada |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Login ficticio en QA; no sustituye recorrido real ni validacion de todos los estados |
 
-Version local nueva: `src/features/operations`, API `/api/operations-pilot` y
+Version integrada: `src/features/operations`, API `/api/operations-pilot` y
 migracion `20260909010000_operations_pilot.sql`. Activacion requiere ambos flags
 `TRUSTLEAF_OPERATIONS_PILOT_ENABLED=true` (servidor) y
 `VITE_OPERATIONS_PILOT_ENABLED=true` (build); por defecto estan desactivados.
@@ -46,11 +46,17 @@ Evidencia ejecutada en esta entrega:
 - `node tests/vercel-function-budget.test.mjs`: 11 funciones efectivas.
 - Los 19 errores de tipos heredados quedaron corregidos: direccion Freighter,
   permisos asincronos, callbacks y contratos de custodia/estados. `npm run lint` pasa.
-- CI [34190624481](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34190624481)
-  pasa sobre `296d923`: tipos, SQL, PostgreSQL 17 independiente, dos builds y browser.
+- CI [34191628264](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34191628264)
+  pasa sobre main `2477c44`: tipos, SQL, PostgreSQL 17 independiente, dos builds y browser.
   El ensayo verifica por `pg_stat_activity` que ambas sesiones esperan un lock.
 - Restaurador de respaldo validado con datos sinteticos: tablas, funciones,
   registros, FK y secuencias. Esto NO acredita un respaldo real ya realizado.
+- [PR #16](https://github.com/CaBsCrypto/Trust-Leaf/pull/16) fusionado tras CI verde.
+  Codigo desplegado: `2477c4461c37e9856eafb3dd62ae470de817215c`.
+- Smoke anonimo alojado: raiz y cuatro rutas HTTP 200; los cuatro botones de
+  Privy quedan habilitados en Chrome sin errores JS. No se inicio ninguna sesion.
+  API sin identidad: HTTP 401; con header ficticio: HTTP 503 `PILOT_DISABLED`;
+  respuestas privadas sin cache. Esto verifica el bloqueo, no el flujo autenticado.
 
 Pendiente verificable: integracion real y respaldo/restauracion de la aplicacion,
 retencion/cifrado de datos clinicos y acceso privado a llamadas. Los datos del
@@ -113,7 +119,7 @@ No comenzamos de cero. La agenda persistente y sus pruebas estan en main:
 | Solicitudes, aprobacion y directorio admin | Implementados, con pruebas SQL y recorridos reales parciales | Repetir regresion completa con cuentas separadas |
 | Medico publica y paciente reserva | Recorrido real verificado en produccion | Ambos recuperaron la misma reserva tras recargar |
 | Agenda y permisos negativos | Pruebas aisladas SQL/browser y controles API | Ampliar concurrencia real entre conexiones PostgreSQL |
-| Cupos e inventario | Nuevo piloto aislado implementado, con pruebas SQL/browser | Concurrencia independiente y despliegue pendientes; borrador anterior intacto |
+| Cupos e inventario | Piloto implementado, pruebas SQL/browser y concurrencia PostgreSQL aprobadas | Codigo desplegado inactivo; respaldo, migracion y aceptacion pendientes; borrador anterior intacto |
 | Consulta, receta y retiro integral | Recorrido sintetico local enlazado a Supabase RPC | No confundir identidades ficticias ni datos locales con aceptacion en produccion |
 | Stellar | Adaptadores y pruebas Testnet parciales | No acreditan el ciclo clinico completo en cadena |
 
@@ -226,9 +232,10 @@ reales con descuento de cupo pero sin inventario consistente. La verificacion
 sanitaria de profesionales y condiciones de operacion se revisan antes del
 piloto real; una aprobacion interna no reemplaza a la autoridad competente.
 
-Siguiente gate vigente: corregir la deuda de tipos, ejecutar concurrencia
-PostgreSQL independiente y revisar la migracion aislada antes de la aceptacion
-alojada. El borrador mensual anterior no se despliega con este nuevo piloto.
+Siguiente gate vigente: obtener aprobacion del respaldo privado cifrado, verificar
+su restauracion y aplicar exclusivamente la migracion del piloto; despues activar
+y recorrer los paneles con cuentas separadas. Tipos y concurrencia ya pasan.
+El borrador mensual anterior no se despliega con este nuevo piloto.
 
 Inicio tecnico preparado: [backlog y matriz de pruebas F1](session-stability-kickoff.md).
 La preparacion de este bloque no significa que los fallos ya esten corregidos.

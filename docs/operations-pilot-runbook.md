@@ -1,7 +1,22 @@
 # Piloto operativo: ejecucion y limites
 
-Estado: implementacion local, flags de activacion deshabilitados por defecto.
+Estado al 2026-09-08: PR #16 integrado a main (`2477c44`), codigo desplegado
+en trustleaf.org con ambos flags false. Migracion y aceptacion pendientes.
 Hoja de ruta unica: [TRUSTLEAF_MASTER_PLAN.md](TRUSTLEAF_MASTER_PLAN.md).
+
+## Corte de entrega
+
+- CI main [34191628264](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34191628264)
+  aprobado: tipos, SQL, conexiones PostgreSQL independientes y navegador sintetico.
+- Vercel `dpl_GkQNnu37QcJwndhjTFFJZ91Djb72` Ready, alias oficial verificado.
+- Cuatro accesos anonimos cargan y habilitan Privy sin errores JS; API sin sesion
+  devuelve 401. Con header de prueba y piloto apagado devuelve 503 `PILOT_DISABLED`.
+- Supabase conserva 25 migraciones; `20260909010000` NO aplicada. No se reparo historial.
+- Exportacion de respaldo bloqueada por revision de seguridad: ninguna fila
+  exportada. Requiere autorizacion explicita para datos privados cifrados en
+  `D:\00 CODEX - OPENIA\.backups\trustleaf`, fuera de Git. No reintentar sin ella.
+- Siguiente orden: respaldo autorizado/restaurado, migracion aislada, activacion,
+  smoke autenticado y aceptacion por actor. No probar entregas alojadas antes.
 
 ## Pruebas locales
 
