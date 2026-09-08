@@ -1,7 +1,8 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-Fecha de corte: 2026-09-08. Estado: piloto operativo integrado a main y desplegado
-INACTIVO; migracion, activacion alojada y aceptacion con usuarios pendientes.
+Fecha de corte: 2026-09-08. Estado: piloto operativo integrado a main; respaldo
+restaurado, migracion aplicada y activacion alojada confirmada. Aceptacion
+del recorrido completo con usuarios pendiente.
 Este documento es el punto de entrada para el nuevo alcance. No certifica
 cumplimiento sanitario ni autoriza datos clinicos reales, mainnet o despliegues.
 
@@ -14,11 +15,11 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
-| 0 Consolidar base | Baseline de entrada: `20796f6` y main `b6186b2`; PR #16 integra ambos en `2477c44`, CI pasa sobre main; 25 migraciones remotas revisadas | Vercel `dpl_GkQNnu37QcJwndhjTFFJZ91Djb72` Ready en URL oficial; ambos flags false; ninguna migracion aplicada |
+| 0 Consolidar base | PR #16 integrado en `2477c44`; CI verde en main `8431b6e`; respaldo de aplicacion cifrado y restaurado; 26 migraciones remotas | Solo se aplico `20260909010000`, con historial atomico; despliegue activo Ready y consulta admin autenticada confirmados |
 | 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Repetir login, solicitudes y equipos con Privy/Supabase alojados |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Meet e invitaciones tienen confirmacion del usuario previa a este cambio; regresion integrada pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Sin emision clinica real; pendiente aceptacion alojada |
-| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | No activar hasta respaldo verificado, migracion y revision alojada |
+| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | Esquema alojado y protegido; sin entregas creadas durante la migracion. Caso entre cuentas reales pendiente |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Login ficticio en QA; no sustituye recorrido real ni validacion de todos los estados |
 
 Version integrada: `src/features/operations`, API `/api/operations-pilot` y
@@ -58,25 +59,52 @@ Evidencia ejecutada en esta entrega:
   API sin identidad: HTTP 401; con header ficticio: HTTP 503 `PILOT_DISABLED`;
   respuestas privadas sin cache. Esto verifica el bloqueo, no el flujo autenticado.
 
-Pendiente verificable: integracion real y respaldo/restauracion de la aplicacion,
-retencion/cifrado de datos clinicos y acceso privado a llamadas. Los datos del
+Pendiente verificable: integracion real del recorrido, recuperacion completa del
+servicio, retencion/cifrado de datos clinicos y acceso privado a llamadas. Los datos del
 piloto son ficticios; no afirmar que esta capa contiene una ficha clinica apta
 para produccion. Detalles reproducibles en [runbook del piloto](operations-pilot-runbook.md).
 
 La migracion mensual `20260906120000_monthly_dispensing_quota.sql` estaba sin
 registrar al iniciar el trabajo. Se conserva intacta, no es dependencia del nuevo
-piloto y NO debe entrar en un `db push` indiscriminado. No se aplicaron migraciones
-remotas ni se reparo historial en esta entrega.
+piloto y NO debe entrar en un `db push` indiscriminado. Solo se aplico la migracion
+del piloto; no se repararon ni modificaron versiones historicas.
 
-Revision remota del 2026-09-08: 25 versiones coinciden con la cadena revisada;
-solo falta `20260909010000_operations_pilot.sql` (el borrador anterior se excluye).
-El listado de respaldos de Supabase devuelve `backups:null` y `pitr_enabled:false`.
-Se preparo un exportador cifrado con Windows DPAPI y restaurador aislado; su
-ejecucion fue bloqueada por revision de seguridad y requiere aprobacion explicita
-del destino `D:\00 CODEX - OPENIA\.backups\trustleaf`. No se exportaron filas.
-El alcance es tablas/funciones de la aplicacion, no Auth, Storage, Vault ni una
-copia completa del servicio. La clave DPAPI depende del usuario Windows actual.
-Hasta cerrar ese punto, integrar codigo no significa habilitar el piloto.
+Revision remota del 2026-09-08: las 25 versiones previas coincidieron con la
+cadena revisada. Supabase informo `backups:null` y `pitr_enabled:false`.
+Tras autorizacion explicita se guardo `application-20260908-025819.dpapi` en
+`D:\00 CODEX - OPENIA\.backups\trustleaf`, fuera de Git. Windows DPAPI CurrentUser;
+SHA256 `DB864E429FA40F67209D38108ABFB9024D66F451857856333EFF23C6F655560E`.
+La restauracion aislada en PGlite recupero 18 tablas y 68 registros, con funciones,
+columnas, claves foraneas y secuencias verificadas; sin filas en logs ni texto plano
+persistente. Alcance de aplicacion, no Auth, Storage, Vault ni recuperacion completa
+de Supabase. La clave depende del usuario Windows actual.
+
+Se aplico `20260909010000_operations_pilot.sql` junto con su entrada de historial
+en una sola transaccion, previa prueba local del wrapper y rechazo del reintento.
+Resultado remoto: 26 versiones, 13 tablas nuevas con RLS forzado, RPC denegada
+a anon/authenticated y permitida a service_role. Cero participantes y entregas
+al terminar la migracion; el borrador mensual continua excluido.
+
+Activacion confirmada en `dpl_3LBmhuSrU8hrkMm7L5eGD6kJZGEd`, reconstruccion de
+main `8431b6e` con ambos flags true y alias `https://www.trustleaf.org`.
+Sin sesion la API sigue respondiendo HTTP 401 `AUTH_REQUIRED`, `no-store, private`.
+La sesion administradora real carga "Supervision del piloto", el correo de la
+cuenta y "Aceptar y participar". No se acepto por el usuario ni se crearon datos
+clinicos de prueba desde administracion. El acceso a esta primera pantalla no
+acredita los demas POV ni el recorrido completo.
+
+### Matriz de aceptacion alojada al activar
+
+| Escenario | Resultado | Pendiente / defecto |
+|---|---|---|
+| Respaldo cifrado y restauracion de aplicacion | Aprobado: 18 tablas/68 registros, restauracion aislada | No sustituye recuperacion completa del servicio |
+| Migracion unica, historial y permisos SQL | Aprobado: 26 versiones, 13 tablas con RLS forzado | Borrador mensual excluido |
+| Bloqueo sin sesion | Aprobado: HTTP 401 y sin cache | Repetir al cambiar flags o autenticacion |
+| Sesion administradora, lectura de piloto | Aprobado: correo, rol y aviso ficticio visibles tras recarga | Usuario debe aceptar participacion; supervision de entregas pendiente |
+| Medico publica, paciente reserva, Meet y cancelacion | Pendiente en el nuevo piloto | Evidencia previa de Meet no cierra esta regresion |
+| Consulta con/sin tratamiento y permisos del paciente | Pendiente con cuentas separadas | Pruebas sinteticas aprobadas; falta aceptacion alojada |
+| Dispensarios A/B: 10g + 20g y stock conjunto | Pendiente con cuentas separadas | PostgreSQL independiente aprobado; faltan dos organizaciones alojadas de prueba |
+| Operador, recarga, cambio de cuenta y movil | Pendiente en entorno alojado | Browser sintetico aprobado, no aceptar como POV real |
 
 ## 1. Narrativa de producto
 
@@ -119,7 +147,7 @@ No comenzamos de cero. La agenda persistente y sus pruebas estan en main:
 | Solicitudes, aprobacion y directorio admin | Implementados, con pruebas SQL y recorridos reales parciales | Repetir regresion completa con cuentas separadas |
 | Medico publica y paciente reserva | Recorrido real verificado en produccion | Ambos recuperaron la misma reserva tras recargar |
 | Agenda y permisos negativos | Pruebas aisladas SQL/browser y controles API | Ampliar concurrencia real entre conexiones PostgreSQL |
-| Cupos e inventario | Piloto implementado, pruebas SQL/browser y concurrencia PostgreSQL aprobadas | Codigo desplegado inactivo; respaldo, migracion y aceptacion pendientes; borrador anterior intacto |
+| Cupos e inventario | Piloto implementado, pruebas SQL/browser y concurrencia PostgreSQL aprobadas; migracion aplicada | Piloto simulado activo; aceptacion entre actores pendiente; borrador anterior intacto |
 | Consulta, receta y retiro integral | Recorrido sintetico local enlazado a Supabase RPC | No confundir identidades ficticias ni datos locales con aceptacion en produccion |
 | Stellar | Adaptadores y pruebas Testnet parciales | No acreditan el ciclo clinico completo en cadena |
 
@@ -232,9 +260,9 @@ reales con descuento de cupo pero sin inventario consistente. La verificacion
 sanitaria de profesionales y condiciones de operacion se revisan antes del
 piloto real; una aprobacion interna no reemplaza a la autoridad competente.
 
-Siguiente gate vigente: obtener aprobacion del respaldo privado cifrado, verificar
-su restauracion y aplicar exclusivamente la migracion del piloto; despues activar
-y recorrer los paneles con cuentas separadas. Tipos y concurrencia ya pasan.
+Siguiente gate vigente: aceptar participacion y recorrer los paneles con cuentas
+separadas. Respaldo de aplicacion, restauracion y migracion completados;
+tipos y concurrencia ya pasan.
 El borrador mensual anterior no se despliega con este nuevo piloto.
 
 Inicio tecnico preparado: [backlog y matriz de pruebas F1](session-stability-kickoff.md).

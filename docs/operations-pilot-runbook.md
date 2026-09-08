@@ -1,7 +1,8 @@
 # Piloto operativo: ejecucion y limites
 
-Estado al 2026-09-08: PR #16 integrado a main (`2477c44`), codigo desplegado
-en trustleaf.org con ambos flags false. Migracion y aceptacion pendientes.
+Estado al 2026-09-08: PR #16 integrado a main (`2477c44`), respaldo restaurado
+y migracion aplicada. Flags true y despliegue activo confirmados.
+Aceptacion del recorrido con cuentas separadas pendiente.
 Hoja de ruta unica: [TRUSTLEAF_MASTER_PLAN.md](TRUSTLEAF_MASTER_PLAN.md).
 
 ## Corte de entrega
@@ -11,12 +12,18 @@ Hoja de ruta unica: [TRUSTLEAF_MASTER_PLAN.md](TRUSTLEAF_MASTER_PLAN.md).
 - Vercel `dpl_GkQNnu37QcJwndhjTFFJZ91Djb72` Ready, alias oficial verificado.
 - Cuatro accesos anonimos cargan y habilitan Privy sin errores JS; API sin sesion
   devuelve 401. Con header de prueba y piloto apagado devuelve 503 `PILOT_DISABLED`.
-- Supabase conserva 25 migraciones; `20260909010000` NO aplicada. No se reparo historial.
-- Exportacion de respaldo bloqueada por revision de seguridad: ninguna fila
-  exportada. Requiere autorizacion explicita para datos privados cifrados en
-  `D:\00 CODEX - OPENIA\.backups\trustleaf`, fuera de Git. No reintentar sin ella.
-- Siguiente orden: respaldo autorizado/restaurado, migracion aislada, activacion,
-  smoke autenticado y aceptacion por actor. No probar entregas alojadas antes.
+- Los resultados 401/503 anteriores corresponden al despliegue INACTIVO de referencia.
+- Respaldo explicitamente autorizado: `application-20260908-025819.dpapi` en
+  `D:\00 CODEX - OPENIA\.backups\trustleaf`, DPAPI CurrentUser, fuera de Git.
+  Restauracion aislada: 18 tablas/68 registros. Limitaciones y hash en plan maestro.
+- Supabase tiene 26 migraciones: solo se agrego `20260909010000` y su historial
+  atomicamente. Las 13 tablas nuevas tienen RLS forzado; RPC solo service_role.
+  No se crearon participantes ni entregas. El borrador mensual permanece excluido.
+- Activacion Ready: `dpl_3LBmhuSrU8hrkMm7L5eGD6kJZGEd`, codigo main `8431b6e`.
+  La URL oficial conserva 401 sin sesion y muestra "Supervision del piloto" a la
+  sesion admin real, con "Aceptar y participar". No se acepto ese paso por el usuario.
+- Siguiente orden: participacion explicita y recorrido con cuentas por actor.
+  Matriz de resultados en el plan maestro. Nunca sustituir aceptacion por CI.
 
 ## Pruebas locales
 
@@ -94,8 +101,9 @@ vencimientos, cuarentena y retiro del operador.
   No afirmar sincronizacion instantanea basada en Realtime.
 - La supervison admin no devuelve notas ni tratamientos. Dispensarios ven datos
   minimos autorizados; tras revocacion conservan solo sus propios comprobantes.
-- Tipos y concurrencia PostgreSQL ya pasaron. Pendientes antes de declarar cierre:
-  prueba alojada de identidades, respaldo/restauracion real y aceptacion de cada POV.
+- Tipos, concurrencia PostgreSQL y respaldo/restauracion de aplicacion ya pasaron.
+  Pendientes antes de declarar cierre: recorrido alojado completo y aceptacion de
+  cada POV. La recuperacion completa del servicio sigue siendo un gate de uso real.
 - Pendientes antes de pacientes reales: base juridica sanitaria, verificacion de
   profesionales/establecimientos, cifrado y retencion de fichas, recuperacion y
   privacidad de llamadas. Ninguna pantalla del piloto emite una receta legal.
