@@ -31,9 +31,19 @@ try {
   const fresh={bookingRef:'44444444-4444-4444-8444-444444444444',leaseId:'55555555-5555-4555-8555-555555555555'};
   assert.equal((await rpc('job-credentials',fresh)).calendar_id,'new-calendar');
   await assert.rejects(rpc('job-credentials',{...old,leaseId:fresh.leaseId}));
+  await db.exec(await readFile(new URL('../../supabase/migrations/20260908020000_calendar_refresh_existing.sql',import.meta.url),'utf8'));
+  await save('admin');
+  const renewal=await rpc('setup-credentials');
+  const target=await rpc('renew-target');
+  await assert.rejects(rpc('renew-save',{candidateRef:renewal.connection_ref,connectionRef:target.connection_ref,calendarId:'wrong'}));
+  await rpc('renew-save',{candidateRef:renewal.connection_ref,connectionRef:target.connection_ref,calendarId:target.calendar_id});
+  assert.equal((await rpc('job-credentials',fresh)).calendar_id,'new-calendar');
+  assert.equal((await rpc('job-credentials',old)).calendar_id,'old-calendar');
+  assert.equal((await db.query('select count(*)::int n from trustleaf_private.calendar_candidate')).rows[0].n,0);
   await db.exec('set role anon');
   await assert.rejects(rpc('setup-credentials'));
   await db.exec('reset role; set role service_role');
   await assert.rejects(db.query("select public.trustleaf_calendar_job_legacy('credentials','{}')"));
+  await assert.rejects(db.query("select public.trustleaf_calendar_job_ownership('setup-credentials','{}')"));
   console.log('PASS: old ownership retained, candidate fenced, new bookings use new organizer, unauthorized access denied');
 } finally { await db.close(); }

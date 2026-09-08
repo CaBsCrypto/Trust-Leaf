@@ -1,6 +1,8 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { meetSettingsScope } from './google-meet-access.js';
 
 export const calendarScope = 'https://www.googleapis.com/auth/calendar.app.created';
+export const calendarScopes = [calendarScope, meetSettingsScope];
 export const calendarCallback = 'https://www.trustleaf.org/api/google-calendar/callback';
 
 function key(value: string) {
@@ -35,7 +37,7 @@ export function authorizationRequest(clientId: string) {
   const verifier = randomBytes(32).toString('base64url');
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.search = new URLSearchParams({ client_id: clientId, redirect_uri: calendarCallback,
-    response_type: 'code', scope: calendarScope, access_type: 'offline', prompt: 'consent select_account',
+    response_type: 'code', scope: calendarScopes.join(' '), access_type: 'offline', prompt: 'consent select_account',
     state, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256',
   }).toString();
   return { state, verifier, url: url.toString() };

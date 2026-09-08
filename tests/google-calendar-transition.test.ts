@@ -11,6 +11,7 @@ for(const supported of [true,false]) {
     if(path.includes('/rpc/')) {
       const body=JSON.parse(String(init?.body)); actions.push(body.p_action);
       if(body.p_action==='setup-credentials') return Response.json({connection_ref:'candidate',refresh_ciphertext:seal('refresh',key,'central-calendar:refresh')});
+      if(body.p_action==='renew-target') return Response.json(null);
       assert.equal(body.p_input.connectionRef,'candidate');
       return Response.json(body.p_action==='setup-claim'?{claimed:true}:{saved:true});
     }

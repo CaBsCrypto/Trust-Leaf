@@ -9,9 +9,10 @@ const env = { GOOGLE_CALENDAR_ENABLED: 'true', GOOGLE_CALENDAR_ENCRYPTION_KEY: '
 const verifier = { async verify() { return { subject: 'did:privy:doctor', emails: [] }; } };
 const pending = new Map();
 let activeRole = 'admin'; let saved = ''; let exchanges = 0;
+let scopes = 'https://www.googleapis.com/auth/calendar.app.created https://www.googleapis.com/auth/meetings.space.settings';
 const fetcher: typeof fetch = async (url, init) => {
   if (String(url).includes('resolve_privy')) return Response.json([{ actor_ref: '11111111-1111-4111-8111-111111111111', role: activeRole, actor_state: 'active' }]);
-  if (String(url).includes('oauth2.googleapis.com')) { exchanges++; return Response.json({ refresh_token: 'refresh-test', scope: 'https://www.googleapis.com/auth/calendar.app.created' }); }
+  if (String(url).includes('oauth2.googleapis.com')) { exchanges++; return Response.json({ refresh_token: 'refresh-test', scope: scopes }); }
   const body = JSON.parse(String(init?.body));
   if (body.p_action === 'start') pending.set(body.p_key, { payload: body.p_value, subject: body.p_subject });
   if (body.p_action === 'consume') { const value = pending.get(body.p_key); pending.delete(body.p_key); return value ? Response.json(value) : new Response('', { status: 400 }); }
@@ -35,4 +36,9 @@ assert.equal((await run(callback,'callback')).location,'/admin?calendar=connecte
 assert.ok(saved && !saved.includes('refresh-test'));
 assert.equal((await run(callback,'callback')).location,'/admin?calendar=error');
 assert.equal(exchanges,1);
+scopes = 'https://www.googleapis.com/auth/calendar.app.created';
+const partial = await run(request,'start');
+const before = saved;
+assert.equal((await run({method:'GET',headers:{cookie:partial.headers['Set-Cookie'].split(';')[0]},query:{state:new URL(partial.body.url).searchParams.get('state'),code:'partial'}},'callback')).location,'/admin?calendar=error');
+assert.equal(saved,before);
 console.log('PASS: admin-only central connection, browser binding, encrypted persistence and replay rejection');

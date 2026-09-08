@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { PrivyIdentity } from './privy-identity.ts';
 import { createPrivyRbacAuthorizer, createSupabasePrivyActorStore } from './privy-supabase-rbac.js';
-import { authorizationRequest, calendarCallback, calendarScope, digest, seal, unseal } from './google-calendar-security.js';
+import { authorizationRequest, calendarCallback, calendarScopes, digest, seal, unseal } from './google-calendar-security.js';
 
 export async function googleCalendarHandler(req: any, res: any, action: string, dependencies: {
   env?: Record<string, string | undefined>; fetcher?: typeof fetch;
@@ -45,7 +45,8 @@ export async function googleCalendarHandler(req: any, res: any, action: string, 
       });
       if (!response.ok) throw new Error('Exchange');
       const tokens = await response.json();
-      if (typeof tokens.refresh_token !== 'string' || !String(tokens.scope ?? '').split(' ').includes(calendarScope)) throw new Error('Missing consent');
+      const grantedScopes = new Set(String(tokens.scope ?? '').split(' '));
+      if (typeof tokens.refresh_token !== 'string' || !calendarScopes.every(scope => grantedScopes.has(scope))) throw new Error('Missing consent');
       await rpc('save', pending.subject, '', seal(tokens.refresh_token, secret, 'central-calendar:refresh'));
       return res.redirect(303, '/admin?calendar=connected');
     }

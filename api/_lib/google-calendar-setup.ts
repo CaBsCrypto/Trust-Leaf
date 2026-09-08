@@ -19,6 +19,13 @@ export async function setupCentralCalendar(env: Record<string,string|undefined>,
     await provider.verifyMeet(existing.calendar_id);
     return {ready:true};
   }
+  const target=await rpc('renew-target');
+  if(target?.calendar_id) {
+    // Verify access with the newly consented token before replacing stored credentials.
+    await provider.verifyMeet(target.calendar_id);
+    await rpc('renew-save',{candidateRef:existing.connection_ref,connectionRef:target.connection_ref,calendarId:target.calendar_id});
+    return {ready:true};
+  }
   const claim=await rpc('setup-claim',{connectionRef:existing.connection_ref});
   if(!claim?.claimed) throw new Error('CALENDAR_SETUP_REVIEW_REQUIRED');
   // Calendar insertion has no idempotency key. Never automatically repeat an ambiguous creation.

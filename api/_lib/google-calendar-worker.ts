@@ -1,5 +1,6 @@
 import { createCalendarEvents, type CalendarBooking } from './google-calendar-events.js';
 import { refreshCalendarToken, calendarProvider } from './google-calendar-provider.js';
+import { ensureOpenMeet } from './google-meet-access.js';
 
 export interface CalendarJob {
   booking_ref: string;
@@ -35,6 +36,9 @@ export async function processCalendarJob(store: CalendarWorkStore, fetcher: type
       const booking = await store.booking(job);
       if (booking.bookingRef !== job.booking_ref) throw new Error('CALENDAR_BOOKING_MISMATCH');
       outcome = await events.ensure(booking);
+      if (outcome.state === 'ready' && outcome.meetUrl) {
+        await ensureOpenMeet(accessToken, outcome.meetUrl, fetcher);
+      }
     }
   } catch {
     // Never persist provider payloads, tokens or participant details as diagnostics.

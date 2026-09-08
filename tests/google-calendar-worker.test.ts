@@ -9,13 +9,27 @@ const store: CalendarWorkStore = {
   async finish(value) { finished=value; },
 };
 let replies: Response[]=[];
-const fetcher: typeof fetch=async()=>{assert.ok(replies.length);return replies.shift()!;};
+let denyMeet = false;
+let meetCalls = 0;
+const fetcher: typeof fetch=async(input)=>{
+  if (String(input).startsWith('https://meet.googleapis.com/')) {
+    meetCalls++;
+    return denyMeet ? new Response(null,{status:403}) : Response.json({name:'spaces/test',config:{accessType:'OPEN'}});
+  }
+  assert.ok(replies.length);return replies.shift()!;
+};
 const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status});
 replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({},404),json({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}})];
 assert.deepEqual(await processCalendarJob(store,fetcher),{processed:true,state:'ready'});
 assert.equal(finished.leaseId,'lease');
 assert.equal(finished.revision,2);
 assert.equal(finished.meetUrl,'https://meet.google.com/abc-defg-hij');
+assert.equal(meetCalls,2);
+denyMeet = true;
+replies=[json({access_token:'access'}),json({conferenceProperties:{allowedConferenceSolutionTypes:['hangoutsMeet']}}),json({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/abc-defg-hij'}]}})];
+assert.equal((await processCalendarJob(store,fetcher)).state,'error');
+assert.equal(finished.meetUrl,undefined);
+denyMeet = false;
 replies=[json({error:'invalid_grant'},400)];
 assert.equal((await processCalendarJob(store,fetcher)).state,'error');
 assert.equal(finished.meetUrl,undefined);
