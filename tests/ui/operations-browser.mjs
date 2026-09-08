@@ -6,6 +6,8 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
 const output = new URL('../../scratch/operations-qa/', import.meta.url);
+const baseUrl = process.env.OPERATIONS_TEST_URL ?? 'http://127.0.0.1:4321';
+assert.match(baseUrl, /^http:\/\/127\.0\.0\.1:\d+$/, 'synthetic browser tests must stay local');
 await mkdir(output, { recursive: true });
 const errors = [], pages = {};
 const form = (page, button) => page.locator('form').filter({ has: page.getByRole('button', { name: button, exact: true }) });
@@ -24,10 +26,13 @@ try {
     const context = await browser.newContext({ viewport: { width: 1365, height: 900 }, timezoneId: 'America/Santiago' });
     const page = await context.newPage(); pages[role] = page;
     page.on('pageerror', e => errors.push(e.message));
-    await page.goto(`http://127.0.0.1:4321/?operations&role=${role}`);
+    await page.goto(`${baseUrl}/?operations&role=${role}`);
     await command(page, 'Aceptar y participar');
   }
   const { doctor, patient, dispensary, dispensaryB, admin } = pages;
+  await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).click();
+  await admin.getByText('No hay organizaciones registradas.', { exact: true }).waitFor();
+  await admin.getByRole('tab', { name: 'Actividad', exact: true }).click();
   await doctor.getByRole('tab', { name: 'Agenda', exact: true }).click();
   await doctor.getByLabel('Hora', { exact: true }).fill('14:00');
   await doctor.getByRole('button', { name: 'Publicar horario', exact: true }).click();
@@ -85,7 +90,7 @@ try {
   await doctor.getByRole('heading', { name: 'Mi atencion', exact: true }).waitFor();
   assert.equal(await doctor.getByText('NOTA FICTICIA PARA QA:', { exact: false }).count(), 0);
   const recover = await (await browser.newContext()).newPage();
-  await recover.goto('http://127.0.0.1:4321/?operations&role=operator');
+  await recover.goto(`${baseUrl}/?operations&role=operator`);
   await command(recover, 'Aceptar y participar');
   await recover.getByRole('tab', { name: 'Equipo', exact: true }).click();
   await recover.getByLabel('Nombre del dispensario', { exact: true }).fill('Organizacion recuperada QA');
@@ -101,13 +106,50 @@ try {
   await command(recover, 'Reintentar operacion');
   await recover.getByRole('heading', { name: 'Organizacion recuperada QA', exact: true }).waitFor();
   assert.equal(operationIds.length, 2); assert.equal(operationIds[0], operationIds[1], 'recovery reuses the committed operation ID');
+  await recover.unroute('**/api/operations-pilot');
+  await recover.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await recover.getByLabel('Codigo de lote', { exact: true }).fill('LOTE-RECOVERY-001');
+  await recover.getByLabel('Referencia de origen', { exact: true }).fill('ORIGEN FICTICIO RECOVERY');
+  await recover.getByLabel('Vencimiento', { exact: true }).fill('2027-12-01T12:00');
+  await command(recover, 'Recibir lote simulado');
+  const otherSession = await (await browser.newContext()).newPage();
+  otherSession.on('pageerror', e => errors.push(e.message));
+  await otherSession.goto(`${baseUrl}/?operations&role=operator`);
+  await otherSession.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await otherSession.getByText('100 g', { exact: false }).waitFor();
+
+  // A rejected write must not invalidate every subsequent background read.
+  const adjustment = form(recover, 'Registrar ajuste');
+  await adjustment.getByLabel('Variacion en gramos (+/-)', { exact: true }).fill('-200');
+  await adjustment.getByLabel('Motivo del ajuste', { exact: true }).fill('RECHAZO FICTICIO SIN STOCK');
+  const rejected = recover.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
+  await adjustment.getByRole('button', { name: 'Registrar ajuste', exact: true }).click();
+  assert.equal((await rejected).status(), 409);
+  await recover.getByRole('alert').waitFor();
+  const otherAdjustment = form(otherSession, 'Registrar ajuste');
+  await otherAdjustment.getByLabel('Variacion en gramos (+/-)', { exact: true }).fill('10');
+  await otherAdjustment.getByLabel('Motivo del ajuste', { exact: true }).fill('AJUSTE FICTICIO OTRA SESION');
+  await command(otherSession, 'Registrar ajuste');
+  await recover.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await recover.getByText('110 g', { exact: false }).waitFor({ timeout: 5000 });
+  assert.match(await recover.getByRole('alert').innerText(), /El registro cambio/, 'background success does not hide a rejected action');
+  await refresh(recover);
+  await recover.getByRole('alert').waitFor({ state: 'hidden' });
+  await recover.route('**/api/operations-pilot', route => route.request().method() === 'GET'
+    ? route.fulfill({ status: 503, json: {} }) : route.continue());
+  await refresh(recover);
+  await recover.getByRole('alert').waitFor();
+  await recover.unroute('**/api/operations-pilot');
+  await recover.evaluate(() => window.dispatchEvent(new Event('online')));
+  await recover.getByRole('alert').waitFor({ state: 'hidden', timeout: 5000 });
+  await otherSession.close();
   await recover.close();
   await patient.route('**/api/operations-pilot', route => route.fulfill({ status: 403, json: {} }));
   await refresh(patient);
   await patient.getByRole('alert').waitFor();
   assert.equal(await patient.locator('.op-reference').count(), 0, 'authorization loss clears cached medical and delivery records');
   assert.deepEqual(errors, []);
-  console.log('PASS: browser + actual isolated SQL: join, publish, reserve, consult, draft, issue, organizations, lots, consent, 10g + 20g deliveries, persistent history, privacy, desktop/mobile and identity reset.');
+  console.log('PASS: browser + actual isolated SQL: join, publish, reserve, consult, draft, issue, organizations, lots, consent, 10g + 20g deliveries, persistent history, privacy, desktop/mobile, identity reset, rejected-write refresh across sessions and reconnection.');
 } catch (error) {
   for (const [role, page] of Object.entries(pages)) await page.screenshot({ path: fileURLToPath(new URL(`failure-${role}.png`, output)), fullPage: true }).catch(() => {});
   throw error;

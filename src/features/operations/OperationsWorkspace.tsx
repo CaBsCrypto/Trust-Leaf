@@ -23,6 +23,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [tab, setTab] = useState('today');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PilotCommand | null>(null);
@@ -66,11 +67,11 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         const result = await request(undefined, read.signal);
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
         if (result.synthetic !== true || !['doctor', 'patient', 'dispensary', 'admin'].includes(result.role)) throw new Error('Respuesta operativa no disponible.');
-        setData(result); setError('');
+        setData(result); setReadError('');
       } catch (e) {
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
         if ([401, 403].includes((e as { status?: number }).status ?? 0)) setData(null);
-        setError((e as Error).message);
+        setReadError((e as Error).message);
       }
     }
     void refresh();
@@ -84,21 +85,28 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
 
   async function execute(command: PilotCommand) {
     if (lock.current) return;
-    lock.current = true; setBusy(true); setPending(command); setError(''); setNotice(''); requestNumber.current++;
+    lock.current = true; setBusy(true); setPending(command); setError(''); setReadError(''); setNotice(''); requestNumber.current++;
     try {
       await request(command);
       if (controller.current.signal.aborted) return;
-      setPending(null); setNotice('Cambio guardado.'); setRevision(n => n + 1);
+      setPending(null); setNotice('Cambio guardado.');
     } catch (e) {
       if (controller.current.signal.aborted) return;
       setError((e as Error).message);
       if ([401, 403].includes((e as { status?: number }).status ?? 0)) setData(null);
       if ([400, 401, 403, 409].includes((e as { status?: number }).status ?? 0)) setPending(null);
-    } finally { if (!controller.current.signal.aborted) { lock.current = false; setBusy(false); } }
+    } finally {
+      if (!controller.current.signal.aborted) {
+        lock.current = false; setBusy(false);
+        // Every write invalidates prior reads, including rejected or uncertain writes.
+        setRevision(n => n + 1);
+      }
+    }
   }
   const mutate: Mutate = (action, input) => void execute({ action, input: { ...input, operationId: crypto.randomUUID() } });
   const matches = (value: string) => value.toLocaleLowerCase().includes(search.toLocaleLowerCase());
   const disabled = busy || pending !== null;
+  const visibleError = readError || error;
   const role = data?.role;
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref}`));
   const now = Date.now();
@@ -110,13 +118,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role ? titles[role] : 'Panel operativo'}</h1>
       <p className="op-email">{email ?? 'Cuenta conectada'}</p></div>
       <div className="op-toolbar"><span className="op-simulation">Piloto simulado</span>
-        <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => setRevision(n => n + 1)}><RefreshCw size={18}/></button>
+        <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
         {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" onClick={onSignOut}><LogOut size={18}/></button>}</div></header>
     <div className="op-content">
       {notice && <p role="status" className="op-success">{notice}</p>}
-      {error && <p role="alert" className="op-error">{notice ? `${notice} No se pudo actualizar la vista. ` : ''}{error}</p>}
+      {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
       {pending && !busy && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
-      {!data && !error && <p role="status">Verificando permisos...</p>}
+      {!data && !visibleError && <p role="status">Verificando permisos...</p>}
       {data && !data.joined && <div className="op-empty"><ShieldCheck size={32}/><h2>Participar en el piloto</h2>
         <p>Solo datos ficticios. Sin atencion clinica ni entrega real de medicamentos.</p>
         <button className="op-command" disabled={disabled} onClick={() => mutate('join', { acceptSyntheticOnly: true })}>Aceptar y participar</button></div>}
@@ -185,6 +193,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'team' && <>
           <h2><Users size={20}/>Organizacion y equipo</h2>
+          {role === 'admin' && !data.organizations?.length && <Empty>No hay organizaciones registradas.</Empty>}
           {role === 'dispensary' && <p className="op-code">Mi referencia: <span>{data.actorRef}</span><button aria-label="Copiar mi referencia" title="Copiar mi referencia" onClick={() => { void navigator.clipboard.writeText(data.actorRef).then(() => setNotice('Referencia copiada.')).catch(() => setError('No se pudo copiar.')); }}><Copy size={16}/></button></p>}
           {role === 'dispensary' && !data.membership?.organization_ref && <CommandForm label="Crear dispensario de prueba" disabled={disabled} fields={[{ name: 'name', label: 'Nombre del dispensario', maxLength: 100 }]} submit={v => mutate('create-organization', v)}/>}
           {data.organizations?.filter(o => matches(`${o.name} ${o.organization_ref}`)).map(o => <article className="op-row" key={o.organization_ref}><h3>{o.name}</h3><p className="op-reference">{o.organization_ref}</p></article>)}
