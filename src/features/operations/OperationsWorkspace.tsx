@@ -104,12 +104,15 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     }
   }
   const mutate: Mutate = (action, input) => void execute({ action, input: { ...input, operationId: crypto.randomUUID() } });
-  const matches = (value: string) => value.toLocaleLowerCase().includes(search.toLocaleLowerCase());
+  const query = search.trim().toLocaleLowerCase();
+  const matches = (value: string) => value.toLocaleLowerCase().includes(query);
   const disabled = busy || pending !== null;
   const visibleError = readError || error;
   const role = data?.role;
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref}`));
   const now = Date.now();
+  const availableBatches = (data?.batches ?? []).filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0);
+  const visibleBatches = (data?.batches ?? []).filter(b => matches(`${b.lot_code} ${b.product}`));
   const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ['demo', 'POV de prueba']]
     : role === 'dispensary' ? [['today', 'Atenciones'], ['inventory', 'Inventario'], ['team', 'Equipo'], ['history', 'Historial']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
@@ -161,7 +164,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {(tab === 'treatment' || tab === 'today' && role === 'dispensary') && <>
           <h2><Activity size={20}/>{role === 'dispensary' ? 'Pacientes con permiso vigente' : 'Tratamientos simulados'}</h2>
-          {!treatments.length && <Empty>{role === 'dispensary' ? 'No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.' : 'No hay tratamientos emitidos.'}</Empty>}
+          {!treatments.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : role === 'dispensary' ? 'No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.' : 'No hay tratamientos emitidos.'}</Empty>}
           {treatments.map(t => <article className="op-row" key={t.treatment_ref}>
             <TreatmentSummary treatment={t} time={now}/>
             {role === 'doctor' && t.state === 'active' && <button className="op-command" disabled={disabled} onClick={() => { if (confirm('Revocar este tratamiento simulado?')) mutate('revoke-treatment', { resourceRef: t.treatment_ref, version: t.version }); }}><X size={16}/>Revocar tratamiento</button>}
@@ -171,10 +174,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
               })}
               {(data.grants ?? []).filter(g => g.treatment_ref === t.treatment_ref && Date.parse(g.expires_at) > now && !data.organizations?.some(o => o.organization_ref === g.organization_ref)).map(g => <div className="op-line" key={g.organization_ref}><span>Dispensario {short(g.organization_ref)}</span><button className="op-command" disabled={disabled} onClick={() => mutate('revoke-grant', { resourceRef: t.treatment_ref, organizationRef: g.organization_ref })}>Revocar permiso</button></div>)}
             </div>}
-            {role === 'dispensary' && <CommandForm label="Registrar entrega simulada" disabled={disabled || !currentPeriod(t, now) || currentPeriod(t, now)!.used_mg >= currentPeriod(t, now)!.allowance_mg} fields={[
-              { name: 'batch', label: 'Lote', type: 'select', choices: (data.batches ?? []).filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0).map(b => ({ value: b.batch_ref, label: `${b.lot_code} · ${formatGrams(b.stock_mg)}` })) },
+            {role === 'dispensary' && <>
+              {!availableBatches.length && <Empty>No hay lotes disponibles con stock y vigencia para esta entrega.</Empty>}
+              <CommandForm label="Registrar entrega simulada" disabled={disabled || !availableBatches.length || !currentPeriod(t, now) || currentPeriod(t, now)!.used_mg >= currentPeriod(t, now)!.allowance_mg} fields={[
+              { name: 'batch', label: 'Lote', type: 'select', choices: availableBatches.map(b => ({ value: b.batch_ref, label: `${b.lot_code} · ${formatGrams(b.stock_mg)}` })) },
               { name: 'grams', label: 'Cantidad en gramos', value: '10' }]}
-              submit={values => mutate('dispense', { resourceRef: t.treatment_ref, batchRef: values.batch, quantityMg: gramsToMg(values.grams) })}/>}
+              submit={values => mutate('dispense', { resourceRef: t.treatment_ref, batchRef: values.batch, quantityMg: gramsToMg(values.grams) })}/></>}
           </article>)}
         </>}
         {tab === 'inventory' && role === 'dispensary' && <>
@@ -183,13 +188,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             { name: 'lotCode', label: 'Codigo de lote', maxLength: 80 }, { name: 'product', label: 'Producto', value: 'Flor de prueba', maxLength: 100 },
             { name: 'sourceReference', label: 'Referencia de origen', maxLength: 160 }, { name: 'expiresAt', label: 'Vencimiento', type: 'datetime-local' }, { name: 'grams', label: 'Cantidad en gramos', value: '100' }]}
             submit={v => mutate('receive-batch', { lotCode: v.lotCode, product: v.product, sourceReference: v.sourceReference, expiresAt: new Date(v.expiresAt).toISOString(), quantityMg: gramsToMg(v.grams) })}/>}
-          {(data.batches ?? []).filter(b => matches(`${b.lot_code} ${b.product}`)).map(b => <article className="op-row" key={b.batch_ref}>
+          {visibleBatches.map(b => <article className="op-row" key={b.batch_ref}>
             <h3>{b.lot_code} · {b.product}</h3><p>{formatGrams(b.stock_mg)} · {b.state === 'quarantined' ? 'Cuarentena' : Date.parse(b.expires_at) <= now ? 'Vencido' : 'Disponible'}</p><p>Origen: {b.source_reference} · Vence: {date(b.expires_at)}</p>
             {data.membership?.role === 'manager' && <><button className="op-command" disabled={disabled} onClick={() => mutate('set-batch-state', { resourceRef: b.batch_ref, version: b.version, state: b.state === 'active' ? 'quarantined' : 'active' })}>{b.state === 'active' ? 'Poner en cuarentena' : 'Liberar cuarentena'}</button>
               <CommandForm label="Registrar ajuste" disabled={disabled} fields={[{ name: 'grams', label: 'Variacion en gramos (+/-)' }, { name: 'reason', label: 'Motivo del ajuste', maxLength: 160 }]}
                 submit={v => mutate('adjust-stock', { resourceRef: b.batch_ref, version: b.version, quantityMg: gramsToMg(v.grams, true), reason: v.reason })}/></>}
           </article>)}
-          {!data.batches?.length && <Empty>No hay lotes registrados.</Empty>}
+          {!visibleBatches.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : 'No hay lotes registrados.'}</Empty>}
         </>}
         {tab === 'team' && <>
           <h2><Users size={20}/>Organizacion y equipo</h2>
