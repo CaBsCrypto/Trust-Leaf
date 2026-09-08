@@ -2217,8 +2217,10 @@ function AdminAuthGate({
       : firebaseStatus.configured
         ? 'Firebase Auth configurado'
         : 'Firebase no configurado';
-  const allowlistStatusText =
-    authState.mode === 'authorized'
+  const permissionStatusText =
+    usingPrivy
+      ? 'Permiso administrativo requerido en Supabase'
+      : authState.mode === 'authorized'
       ? 'Allowlist validada'
       : authState.mode === 'not-admin'
         ? 'Acceso no autorizado'
@@ -2252,7 +2254,7 @@ function AdminAuthGate({
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
               ['Auth', authStatusText],
-              ['Allowlist', allowlistStatusText],
+              [usingPrivy ? 'Permisos' : 'Allowlist', permissionStatusText],
               ['On-chain', 'Registro manual y auditable en Stellar Testnet'],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
