@@ -1,8 +1,61 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-Fecha de corte: 2026-09-06. Estado: propuesta de producto y ejecucion.
+Fecha de corte: 2026-09-08. Estado: piloto operativo implementado localmente;
+aceptacion alojada y cierre de lanzamiento pendientes.
 Este documento es el punto de entrada para el nuevo alcance. No certifica
 cumplimiento sanitario ni autoriza datos clinicos reales, mainnet o despliegues.
+
+## Tablero vigente: activacion y operacion diaria
+
+Este tablero sustituye la secuencia de expansion del corte de septiembre 6.
+Objetivo acordado: operacion diaria simulada, medico independiente, dispensario
+de una sede con encargado y operadores, paciente con trazabilidad y admin con
+supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
+
+| Fase | Implementado / evidencia local | Despliegue y aceptacion |
+|---|---|---|
+| 0 Consolidar base | GitHub confirma baseline `20796f6` en `feat/google-calendar-connection` y main `b6186b2`, 8 commits de diferencia; Vercel confirma deployment `dpl_HoYTFU2RUG8oQArNQJRqyks7KZx5` Ready con alias oficial | Inventario remoto de migraciones y revision antes de integrar; no cambios de produccion en esta entrega |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Repetir login, solicitudes y equipos con Privy/Supabase alojados |
+| 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Meet e invitaciones tienen confirmacion del usuario previa a este cambio; regresion integrada pendiente |
+| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Sin emision clinica real; pendiente aceptacion alojada |
+| 4 Entregas/stock | Caso 10g A + 20g B, permisos 24h, lotes, cuarentena, ajustes, idempotencia y bloqueo de sobrecupo pasan SQL | No activar hasta ejecutar concurrencia con conexiones PostgreSQL independientes |
+| 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Login ficticio en QA; no sustituye recorrido real ni validacion de todos los estados |
+
+Version local nueva: `src/features/operations`, API `/api/operations-pilot` y
+migracion `20260909010000_operations_pilot.sql`. Activacion requiere ambos flags
+`TRUSTLEAF_OPERATIONS_PILOT_ENABLED=true` (servidor) y
+`VITE_OPERATIONS_PILOT_ENABLED=true` (build); por defecto estan desactivados.
+Los participantes deben aceptar datos ficticios. No se crean cuentas Privy ni
+roles administrativos automaticamente. El operador necesita rol dispensario
+aprobado, participar en el piloto y ser agregado por referencia por un encargado.
+
+Los paneles piloto reemplazan al portal heredado en las cuatro rutas cuando
+se activa el flag; no escriben datos clinicos ni inventario en Firebase. No se
+ha eliminado globalmente Firebase ni el portal antiguo. La agenda y aprobaciones
+siguen utilizando sus RPC existentes; no se construyo una segunda cola.
+
+Evidencia ejecutada en esta entrega:
+- `npm run test:operations-pilot`: limites API, identidad, errores y cantidades.
+- `npm run test:operations-pilot-sql`: migraciones reales en PGlite aislado.
+- `node tests/sql/approval-flow.mjs`: regresion de altas, aprobacion y agenda.
+- `node tests/ui/operations-browser.mjs`: cinco POV, reserva, nota, emision,
+  dos dispensarios, entregas, persistencia y capturas de 1365px / 390px;
+  recuperacion de respuesta perdida sin duplicados e invalidacion ante 403.
+- `npm run build`: completo con piloto deshabilitado y habilitado;
+  advertencias de dependencias y tamano de bundles.
+- `node tests/vercel-function-budget.test.mjs`: 11 funciones efectivas.
+- Comparacion de tipos contra HEAD: 19 diagnosticos heredados, sin adicionales
+  al primer corte; `npm run lint` NO esta verde y sigue siendo gate de lanzamiento.
+
+Pendiente verificable: concurrencia independiente, integracion real, restauracion,
+retencion/cifrado de datos clinicos y acceso privado a llamadas. Los datos del
+piloto son ficticios; no afirmar que esta capa contiene una ficha clinica apta
+para produccion. Detalles reproducibles en [runbook del piloto](operations-pilot-runbook.md).
+
+La migracion mensual `20260906120000_monthly_dispensing_quota.sql` estaba sin
+registrar al iniciar el trabajo. Se conserva intacta, no es dependencia del nuevo
+piloto y NO debe entrar en un `db push` indiscriminado. No se aplicaron migraciones
+remotas ni se reparo historial en esta entrega.
 
 ## 1. Narrativa de producto
 
@@ -45,8 +98,8 @@ No comenzamos de cero. La agenda persistente y sus pruebas estan en main:
 | Solicitudes, aprobacion y directorio admin | Implementados, con pruebas SQL y recorridos reales parciales | Repetir regresion completa con cuentas separadas |
 | Medico publica y paciente reserva | Recorrido real verificado en produccion | Ambos recuperaron la misma reserva tras recargar |
 | Agenda y permisos negativos | Pruebas aisladas SQL/browser y controles API | Ampliar concurrencia real entre conexiones PostgreSQL |
-| Cupos mensuales e inventario | Borrador SQL local en preparacion | Sin aplicar, sin UI y sin validacion funcional completa |
-| Consulta, receta y retiro integral | Pendientes de integracion end-to-end | No declarar operativos por existir componentes |
+| Cupos e inventario | Nuevo piloto aislado implementado, con pruebas SQL/browser | Concurrencia independiente y despliegue pendientes; borrador anterior intacto |
+| Consulta, receta y retiro integral | Recorrido sintetico local enlazado a Supabase RPC | No confundir identidades ficticias ni datos locales con aceptacion en produccion |
 | Stellar | Adaptadores y pruebas Testnet parciales | No acreditan el ciclo clinico completo en cadena |
 
 La reserva real de prueba se dejo confirmada. No repetir mutaciones de prueba
@@ -93,22 +146,24 @@ Las cuentas sinteticas y sus privilegios no habilitan operaciones clinicas reale
 
 ### Consulta y comunicacion
 
-Relacionar cita, medico, paciente, estado de atencion y expediente privado.
-Primer alcance propuesto: enlace Meet unico por cita, cargado por el profesional,
-visible solo a sus participantes; sin datos clinicos en el titulo ni grabacion
-por defecto. Abrir el enlace no marca la consulta como realizada.
-Automatizar Calendar/Meet requiere autorizacion OAuth separada: ingresar con
-Google en Privy no concede ese acceso. Referencia para la futura integracion:
+Calendar/Meet ya usa organizador central y trabajos persistentes para crear y
+cancelar eventos. El usuario confirmo invitaciones y conexion; no es una
+certificacion de privacidad. Las salas abiertas se mantienen SOLO para pruebas
+sin informacion clinica real. Abrir Meet no inicia ni finaliza la consulta SQL.
+El consentimiento OAuth de Calendar es distinto del ingreso a Privy. Referencia:
 [Google Calendar: crear eventos](https://developers.google.com/workspace/calendar/api/guides/create-events).
 
 ### Receta, cupo y retiros
 
-- Definir cantidad por periodo y duracion: 30 g por mes durante tres meses no
+- Cantidad por periodo y duracion: 30 g durante tres periodos de 30 dias no
   implica 90 g disponibles al inicio.
 - Ejemplo de aceptacion: A entrega 10 g; B consulta el saldo autorizado y puede
   entregar hasta 20 g en ese mismo periodo, nunca otros 30 g.
-- Propuesta pendiente de confirmar: periodos anclados al inicio de la receta,
-  sin arrastre de saldo. Resolver fines de mes, zona horaria y vencimiento.
+- Decision del piloto: intervalos consecutivos de 720 horas desde la emision,
+  inicio inclusivo y fin exclusivo, almacenados en UTC y mostrados en Santiago.
+  Sin arrastre; tres periodos equivalen a 90 dias, no tres meses calendario.
+  Vigencia de receta, duracion de tratamiento y cupo son campos separados.
+  Esta regla simulada no representa una interpretacion de la normativa chilena.
 - Cantidades exactas en enteros de miligramos; alcance inicial de flor.
   No inferir equivalencias de aceites o extractos.
 - Receta vencida o agotada conserva historial privado, pero no permite retiros.
@@ -125,7 +180,8 @@ Google en Privy no concede ese acceso. Referencia para la futura integracion:
 Registrar lote, producto, procedencia, recepciones, movimientos, vencimiento,
 cuarentena y existencias. Bloquear entregas con stock insuficiente o lote no apto.
 Correcciones mediante movimientos compensatorios autorizados, nunca borrando
-el historial. Precisar reglas de devolucion y anulacion antes de implementarlas.
+el historial. Los ajustes de stock exigen motivo y version; no restituyen cupo.
+El flujo de devolucion clinica/anulacion de entrega queda fuera de este piloto.
 
 ### Privacidad y prueba en cadena
 
@@ -137,7 +193,7 @@ debe superar revision de privacidad antes de emitir credenciales vinculables.
 Analitica futura agregada; no reutilizacion de historiales para campanas sin
 evaluar finalidad y base juridica. La evaluacion legal/sanitaria sigue pendiente.
 
-## 5. Fases, dependencias y criterios de cierre
+## 5. Secuencia anterior (historica, sustituida por el tablero vigente)
 
 | Fase | Estado | Entrega y criterio de cierre | Depende de |
 |---|---|---|---|
@@ -155,9 +211,9 @@ reales con descuento de cupo pero sin inventario consistente. La verificacion
 sanitaria de profesionales y condiciones de operacion se revisan antes del
 piloto real; una aprobacion interna no reemplaza a la autoridad competente.
 
-Primer bloque ejecutable: F1. Reproducir sesion cruzada y refresco tras escritura,
-corregir y validar; despues establecer la navegacion compartida de F2.
-El borrador mensual no se despliega mientras faltan decisiones y pruebas.
+Siguiente gate vigente: corregir la deuda de tipos, ejecutar concurrencia
+PostgreSQL independiente y revisar la migracion aislada antes de la aceptacion
+alojada. El borrador mensual anterior no se despliega con este nuevo piloto.
 
 Inicio tecnico preparado: [backlog y matriz de pruebas F1](session-stability-kickoff.md).
 La preparacion de este bloque no significa que los fallos ya esten corregidos.
@@ -208,16 +264,16 @@ Checklist de cierre funcional:
 
 | Decision | Propuesta / condicion |
 |---|---|
-| Periodos mensuales | Aniversario de inicio y sin arrastre; confirmar antes de F4 |
+| Periodos del piloto | Confirmados: 30 dias desde emision y sin arrastre; no regla legal |
 | Productos y unidades | Flor en mg inicialmente; otras presentaciones requieren reglas propias |
-| Llamadas | Link privado por cita primero; OAuth automatizado despues |
+| Llamadas | Calendar central automatizado; acceso abierto limitado a simulaciones; privacidad real pendiente |
 | Admin y soporte | Minimos privilegios; no acceso clinico universal |
 | Cuentas de QA | Sinteticas aisladas para automatizacion; login real se prueba aparte |
 | Stellar | Testnet y prueba minima; no mainnet ni historial medico publico |
 
 Fuera del primer cierre: pagos, marketplace avanzado, marketing basado en
-historiales, conversiones automaticas de productos, automatizacion integral de
-Meet y analitica comercial avanzada. No hay fecha fiable de entrega global hasta
+historiales, conversiones automaticas de productos y analitica comercial avanzada.
+La automatizacion Calendar/Meet ya tiene una implementacion separada. No hay fecha fiable de entrega global hasta
 medir F1-F3 y resolver dependencias; priorizar cierres pequenos demostrables.
 
 ## Referencias y mantenimiento
@@ -228,4 +284,4 @@ medir F1-F3 y resolver dependencias; priorizar cierres pequenos demostrables.
 - [Tablero historico de arquitectura](internal/trustleaf-master-delivery-board.md):
   contiene decisiones y restricciones de etapas anteriores, no estado actual.
 
-Este documento no modifica codigo ni aplica la migracion mensual local.
+Este documento registra evidencia; no demuestra por si solo despliegue remoto.

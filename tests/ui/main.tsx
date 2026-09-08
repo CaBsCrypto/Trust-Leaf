@@ -5,6 +5,7 @@ import PrivySessionBoundary from '../../src/components/PrivySessionBoundary';
 import CrossTabSessionFixture from './CrossTabSessionFixture';
 import { TrustLeafPrivyContext } from '../../src/components/privyIdentityContext';
 import './style.css';
+import OperationsWorkspace from '../../src/features/operations/OperationsWorkspace';
 // This isolated fixture is excluded from Vercel. It cannot authenticate against production.
 const role=new URLSearchParams(location.search).get('role') ?? 'doctor';
 function SessionProbe({ actor }: { actor: string }) {
@@ -23,6 +24,6 @@ function Fixture() {
     window.addEventListener('fixture-identity', change);
     return () => window.removeEventListener('fixture-identity', change);
   }, []);
-  return <TrustLeafPrivyContext.Provider value={{enabled:true,ready:true,authenticated:actor!=='signed-out',tokenReady:true,subject:actor==='signed-out'?undefined:`did:privy:fixture-${actor}`,getIdentityToken:async()=>`fixture-${actor}`,beginLogin:async()=>{},logout:async()=>{}}}><main className="mx-auto max-w-5xl p-4 sm:p-8">{new URLSearchParams(location.search).has('sessionProbe') ? <PrivySessionBoundary><SessionProbe actor={actor}/></PrivySessionBoundary> : <PrivyAgenda email={`${actor}@example.test`}/>}</main></TrustLeafPrivyContext.Provider>;
+  return <TrustLeafPrivyContext.Provider value={{enabled:true,ready:true,authenticated:actor!=='signed-out',tokenReady:true,subject:actor==='signed-out'?undefined:`did:privy:fixture-${actor}`,getIdentityToken:async()=>`fixture-${actor}`,beginLogin:async()=>{},logout:async()=>{}}}><main className="mx-auto max-w-5xl p-4 sm:p-8">{new URLSearchParams(location.search).has('operations') ? <OperationsWorkspace email={`${actor}@example.test`}/> : new URLSearchParams(location.search).has('sessionProbe') ? <PrivySessionBoundary><SessionProbe actor={actor}/></PrivySessionBoundary> : <PrivyAgenda email={`${actor}@example.test`}/>}</main></TrustLeafPrivyContext.Provider>;
 }
 createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('crossTab') ? <CrossTabSessionFixture/> : <Fixture/>);

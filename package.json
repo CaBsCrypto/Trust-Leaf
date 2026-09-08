@@ -4,6 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:operations-pilot": "node --experimental-strip-types tests/operations-pilot.test.ts",
+    "test:operations-pilot-sql": "node tests/sql/operations-pilot.mjs",
+    "test:operations-pilot-concurrency": "node tests/sql/operations-concurrency.mjs",
+    "qa:operations-types": "node scripts/qa-operations-types.mjs",
+    "qa:operations-pilot": "npm run test:operations-pilot && npm run test:operations-pilot-sql && npm run test:vercel-function-budget",
     "qa:synthetic-actors": "node scripts/qa-synthetic-actors.mjs",
     "dev": "tsx server.ts",
     "build": "vite build",

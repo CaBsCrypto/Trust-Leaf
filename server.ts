@@ -112,6 +112,11 @@ async function startServer() {
 
   // Middlewares
   app.use(express.json());
+  app.all('/api/operations-pilot', (req, res) => {
+    void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
+      query: { __trustleaf_route: 'operations-pilot' } }, res)
+      .catch(() => { if (!res.headersSent) res.status(503).json({ code: 'PILOT_UNAVAILABLE' }); });
+  });
   app.all('/api/agenda', (req, res) => {
     void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
       query: { ...req.query, __trustleaf_route: 'privy-agenda' } }, res)

@@ -5,6 +5,7 @@
     }
   },
   "rewrites": [
+    { "source": "/api/operations-pilot", "destination": "/api/stellar/readiness?__trustleaf_route=operations-pilot" },
     { "source": "/api/calendar-worker", "destination": "/api/stellar/readiness?__trustleaf_route=calendar-worker" },
     { "source": "/api/google-calendar/jobs", "destination": "/api/stellar/readiness?__trustleaf_route=google-calendar-jobs" },
     { "source": "/api/google-calendar/setup", "destination": "/api/stellar/readiness?__trustleaf_route=google-calendar-setup" },

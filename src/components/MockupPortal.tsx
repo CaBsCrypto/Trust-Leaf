@@ -267,7 +267,9 @@ interface DispensaryPrescriptionValidation {
 
     remainingQuantity: number;
 
-    status: 'active' | 'used' | 'expired';
+    status: 'active' | 'used' | 'expired' | 'retained';
+
+    retainedBy?: string | null;
 
   };
 
@@ -3851,13 +3853,12 @@ export default function MockupPortal({
 
 
 
+    let cancelled = false;
     if (!dispensaryValidation) {
-
-      const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
-
-      setDispensaryValidation(permission);
-
+      void Promise.resolve(latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false))
+        .then(permission => { if (!cancelled) setDispensaryValidation(permission); });
     }
+    return () => { cancelled = true; };
 
   }, [activeView, isDispensaryPortal]);
 
@@ -4628,7 +4629,7 @@ export default function MockupPortal({
 
       if (!doctorSignerReady) {
 
-        issueDemoPrescription(targetPatientAddress);
+        await issueDemoPrescription(targetPatientAddress);
 
         setDoctorIssueSuccess('DEMO / NO VÁLIDA: vista previa local; no es una receta médica ni fue firmada.');
 
@@ -5469,7 +5470,7 @@ export default function MockupPortal({
 
 
 
-  const issueDemoPrescription = (targetPatientAddress: string) => {
+  const issueDemoPrescription = async (targetPatientAddress: string) => {
 
     const issuedId = Number(localStorage.getItem('trust_latest_prescription_id') ?? DEMO_PRESCRIPTION_ID) + 1;
 
@@ -5591,7 +5592,7 @@ export default function MockupPortal({
 
     );
 
-    const dispensaryPermission = createPrivacyPermission('dispensary-prescription', false);
+    const dispensaryPermission = await createPrivacyPermission('dispensary-prescription', false);
 
     setDispensaryValidation(dispensaryPermission);
 
@@ -6792,7 +6793,7 @@ export default function MockupPortal({
 
 
 
-  const validatePatientQrForDoctor = () => {
+  const validatePatientQrForDoctor = async () => {
 
     const consultationId = selectedConsultationId ?? reservedAgendaBlocks[0]?.id ?? null;
 
@@ -6804,7 +6805,7 @@ export default function MockupPortal({
 
 
 
-    const permission = latestMedicalPermission ?? createPrivacyPermission('medical-consultation', false);
+    const permission = latestMedicalPermission ?? await createPrivacyPermission('medical-consultation', false);
 
     setSelectedQrPermission(permission);
 
@@ -6814,7 +6815,7 @@ export default function MockupPortal({
 
 
 
-  const validatePrescriptionQrForDispensary = () => {
+  const validatePrescriptionQrForDispensary = async () => {
 
     const operator = buildOperatorDispensary();
 
@@ -6822,7 +6823,7 @@ export default function MockupPortal({
 
     setDispensaryStep('inventory');
 
-    const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+    const permission = latestDispensaryPermission ?? await createPrivacyPermission('dispensary-prescription', false);
 
     setDispensaryValidation(permission);
 
@@ -6900,7 +6901,7 @@ export default function MockupPortal({
 
       setHasPrescription(payload.validation.canDispense);
 
-      const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+      const permission = latestDispensaryPermission ?? await createPrivacyPermission('dispensary-prescription', false);
 
       setDispensaryValidation(permission);
 
@@ -6926,7 +6927,7 @@ export default function MockupPortal({
 
         setHasPrescription(true);
 
-        const permission = latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false);
+        const permission = latestDispensaryPermission ?? await createPrivacyPermission('dispensary-prescription', false);
 
         setDispensaryValidation(permission);
 
@@ -8600,7 +8601,7 @@ export default function MockupPortal({
 
               type="button"
 
-              onClick={validatePrescriptionOnTestnet}
+              onClick={() => void validatePrescriptionOnTestnet()}
 
               disabled={prescriptionValidationBusy}
 
@@ -13137,7 +13138,7 @@ export default function MockupPortal({
 
                                 type="button"
 
-                                onClick={validatePrescriptionOnTestnet}
+                                onClick={() => void validatePrescriptionOnTestnet()}
 
                                 disabled={prescriptionValidationBusy}
 
