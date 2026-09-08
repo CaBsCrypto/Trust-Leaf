@@ -46,6 +46,27 @@ test('HTTP handler has no-store, authentication and safe method boundaries', asy
     assert.equal(code, expected); assert.match(headers['Cache-Control'], /no-store/);
   }
 });
+
+test('RPC diagnostics retain only bounded codes, never private payloads or transport details', async () => {
+  const logs: unknown[][] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => { logs.push(args); };
+  try {
+    for (const payload of [{ code: 'XX000', message: 'PRIVATE SQL details' }, { code: 'PRIVATE secret', details: 'PRIVATE' }, null]) {
+      await assert.rejects(executeOperationsPilot({ token: 'PRIVATE token', command: { action: 'adjust-stock', input: { reason: 'PRIVATE reason' } }, env, verifier,
+        fetcher: async url => String(url).includes('resolve_privy') ? Response.json(binding()) : Response.json(payload, { status: 500 }) }), { code: 'PILOT_UNAVAILABLE' });
+    }
+    await assert.rejects(executeOperationsPilot({ token: 'PRIVATE token', command: { action: 'adjust-stock', input: {} }, env, verifier,
+      fetcher: async url => { if (String(url).includes('resolve_privy')) return Response.json(binding()); throw new Error('PRIVATE transport data'); } }), { code: 'PILOT_UNAVAILABLE' });
+    assert.deepEqual(logs.map(entry => entry[1]), [
+      { action: 'adjust-stock', upstreamStatus: 500, databaseCode: 'XX000' },
+      { action: 'adjust-stock', upstreamStatus: 500, databaseCode: 'UNKNOWN' },
+      { action: 'adjust-stock', upstreamStatus: 500, databaseCode: 'UNKNOWN' },
+      { action: 'adjust-stock', upstreamStatus: null, databaseCode: 'TRANSPORT' },
+    ]);
+    assert.equal(JSON.stringify(logs).includes('PRIVATE'), false);
+  } finally { console.warn = original; }
+});
 test('grams are parsed without floating point quota drift', () => {
   assert.equal(gramsToMg('0.001'), 1); assert.equal(gramsToMg('10,125'), 10125); assert.equal(gramsToMg('-1.005', true), -1005);
   for (const bad of ['0', '-1', '1.0001', 'NaN', '1e3', 'Infinity']) assert.throws(() => gramsToMg(bad));

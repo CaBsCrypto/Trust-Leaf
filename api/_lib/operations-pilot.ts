@@ -16,11 +16,18 @@ export async function executeOperationsPilot(input: {
   const response = await fetcher(new URL('/rest/v1/rpc/trustleaf_operations_pilot', input.env.SUPABASE_URL ?? input.env.VITE_SUPABASE_URL), {
     method: 'POST', headers: { apikey: (input.env.SUPABASE_SECRET_KEY ?? input.env.SUPABASE_SERVICE_ROLE_KEY)!.trim(), 'content-type': 'application/json' },
     body: JSON.stringify({ p_subject: principal.subject, p_action: c.action, p_input: c.input }), signal: AbortSignal.timeout(10000),
+  }).catch(() => {
+    console.warn('TRUSTLEAF_PILOT_RPC_FAILURE', { action: c.action, upstreamStatus: null, databaseCode: 'TRANSPORT' });
+    throw failure(503, 'PILOT_UNAVAILABLE');
   });
   if (!response.ok) {
-    const diagnostic = await response.json().catch(() => ({}));
-    const status = diagnostic.code === '42501' ? 403 : ['40001', '23505'].includes(diagnostic.code) ? 409
-      : /^22|^23502$|^23514$|^23503$/.test(diagnostic.code ?? '') ? 400 : 503;
+    const diagnostic: unknown = await response.json().catch(() => null);
+    const candidate = diagnostic && typeof diagnostic === 'object' && 'code' in diagnostic ? diagnostic.code : null;
+    const code = typeof candidate === 'string' && /^(?:[0-9A-Z]{5}|PGRST[0-9]{3})$/.test(candidate) ? candidate : 'UNKNOWN';
+    // Only bounded operational diagnostics; never log the RPC input or SQL message/details.
+    console.warn('TRUSTLEAF_PILOT_RPC_FAILURE', { action: c.action, upstreamStatus: response.status, databaseCode: code });
+    const status = code === '42501' ? 403 : ['40001', '23505'].includes(code) ? 409
+      : /^22|^23502$|^23514$|^23503$/.test(code) ? 400 : 503;
     throw failure(status, status === 409 ? 'PILOT_CONFLICT' : 'PILOT_UNAVAILABLE');
   }
   return response.json();

@@ -87,6 +87,7 @@ jobs:
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/operations-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/agenda-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/calendar-agenda-browser.mjs
+          PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/calendar-operations-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
