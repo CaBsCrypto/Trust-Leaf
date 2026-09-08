@@ -19,7 +19,7 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 | 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles; B solicita, admin aprueba y confirma rol activo. Organizacion B y encargado visibles en admin; cinco participantes. Operador independiente pendiente |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
-| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g con saldo 20g y stock 90g; ajuste invalido y sobrecupo rechazados con 409; cuarentena bloquea formulario. Caso alojado con B pendiente |
+| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g y B 20g desde cuentas separadas; paciente confirma 30g retirados, saldo 0g y dos comprobantes persistentes. Stock final de B y bloqueo del formulario agotado pendientes; controles previos de A verificados |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Recorrido real parcial de cuatro roles; admin observa una entrega, dos cierres y auditoria, tambien tras recarga y en movil. No sustituye todos los escenarios pendientes |
 
 Version integrada: `src/features/operations`, API `/api/operations-pilot`,
@@ -106,7 +106,7 @@ acredita los demas POV ni el recorrido completo.
 | Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; medico, paciente y dispensario deniegan a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
 | Medico publica, paciente reserva, Meet y cancelacion | Parcial: horario 09-09 a las 09:00 publicado y reservado por cuentas separadas; enlace Meet generado; persistencia y cita compartida confirmadas | No se probo conexion audiovisual a este nuevo enlace ni cancelacion en esta ejecucion |
 | Consulta con/sin tratamiento y permisos del paciente | Parcial: borrador, historial y ambos cierres en medico; paciente ve notas cerradas, tratamiento y saldo; concede/revoca/restaura permiso de 24h, con persistencia | Revocacion del tratamiento y observacion del dispensario durante revocacion pendientes |
-| Dispensarios A/B: 10g + 20g y stock conjunto | Parcial: A entrega 10g, saldo 20g y stock 90g, comprobante unico; usuario confirma historial de 10g desde paciente. Ajuste negativo y entrega de 21g rechazados con HTTP 409; ajustes compensatorios +5g/-5g auditados; cuarentena bloquea formulario y liberacion restaura disponibilidad | Falta B con cuenta separada, operador y confirmacion del saldo desde paciente |
+| Dispensarios A/B: 10g + 20g y stock conjunto | Entregas alojadas verificadas: A 10g y B 20g, mismo tratamiento/periodo y comprobantes distintos; paciente ve 30g retirados y saldo 0g, incluso tras recarga. Ajuste negativo/sobrecupo, compensacion y cuarentena de A verificados previamente | Confirmar stock B de 80g y bloqueo con saldo agotado; operador y supervision administrativa de la segunda entrega pendientes |
 | Operador, recarga, cambio de cuenta y movil | Parcial alojado: cambios de cuenta, recargas y dispensario a 390px; su identidad no accede a admin/medico/paciente | Operador independiente y movil de los otros roles pendientes; browser sintetico no sustituye esos POV |
 
 ### Validacion del objetivo: primer recorrido administrativo
@@ -385,6 +385,21 @@ confirmacion guardada con vigencia hasta el 09-09 a las 16:25 Santiago. Recarga,
 entrada al panel y lectura nueva confirman permiso y saldo sin cambios.
 Permiso de A permanece intacto. Falta observar desde B el paciente compartido,
 verificar lote/stock y registrar los 20g restantes; no hay entrega B acreditada aun.
+
+### Entrega parcial entre A y B: 08-09, 16:34-16:35 America/Santiago
+
+- Usuario registra la entrega desde la cuenta de B en el otro dispositivo y
+  comunica saldo 0g. La sesion paciente alojada muestra 30g asignados, 30g retirados
+  y 0g disponibles en el primer periodo del mismo tratamiento.
+- Historial contiene exactamente dos comprobantes, con identificadores distintos:
+  10g de A a las 05:20 y 20g de B a las 16:34. Ambos pertenecen al mismo tratamiento
+  y periodo, con organizaciones y lotes diferentes. No se repitio la operacion.
+- Recarga del navegador, restauracion de la identidad paciente y nueva entrada
+  confirman saldo 0g y ambos registros. Captura del historial inspeccionada;
+  son comprobantes dentro del panel, no archivos PDF ni correos de entrega.
+- No se confirma aun stock final de B (esperado 80g si su recepcion fue 100g),
+  bloqueo de una nueva entrega desde su interfaz, supervisor admin de esta segunda
+  entrega ni operador independiente. El caso parcial no cierra todo el piloto.
 
 ### Correccion local: supervision de videollamadas
 
