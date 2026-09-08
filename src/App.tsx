@@ -845,7 +845,7 @@ function AppContent() {
       return (
         <AuthGate
           role="doctor"
-          title="Acceso medico aprobado"
+          title="Acceso medico"
           description="El panel profesional queda disponible cuando admin aprueba la cuenta y registra la credencial medica. Para grabacion controlada puedes entrar con un medico ya aprobado."
           primaryAction="Entrar al panel"
           demoAction="Entrar como medico aprobado"

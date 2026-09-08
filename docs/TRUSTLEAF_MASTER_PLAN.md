@@ -89,8 +89,8 @@ Activacion confirmada en `dpl_3LBmhuSrU8hrkMm7L5eGD6kJZGEd`, reconstruccion de
 main `8431b6e` con ambos flags true y alias `https://www.trustleaf.org`.
 Sin sesion la API sigue respondiendo HTTP 401 `AUTH_REQUIRED`, `no-store, private`.
 La sesion administradora real carga "Supervision del piloto", el correo de la
-cuenta y "Aceptar y participar". No se acepto por el usuario ni se crearon datos
-clinicos de prueba desde administracion. El acceso a esta primera pantalla no
+cuenta y "Aceptar y participar". Esa primera comprobacion no creo datos clinicos
+de prueba desde administracion. El acceso a esta primera pantalla no
 acredita los demas POV ni el recorrido completo.
 
 ### Matriz de aceptacion alojada al activar
@@ -100,11 +100,31 @@ acredita los demas POV ni el recorrido completo.
 | Respaldo cifrado y restauracion de aplicacion | Aprobado: 18 tablas/68 registros, restauracion aislada | No sustituye recuperacion completa del servicio |
 | Migracion unica, historial y permisos SQL | Aprobado: 26 versiones, 13 tablas con RLS forzado | Borrador mensual excluido |
 | Bloqueo sin sesion | Aprobado: HTTP 401 y sin cache | Repetir al cambiar flags o autenticacion |
-| Sesion administradora, lectura de piloto | Aprobado: correo, rol y aviso ficticio visibles tras recarga | Usuario debe aceptar participacion; supervision de entregas pendiente |
+| Sesion administradora y participacion | Aprobado: alta en piloto desde interfaz, contador de un participante y persistencia tras recarga | Supervision de entregas y aprobaciones nuevas pendientes |
+| Admin desktop/movil y bloqueo de otro rol | Aprobado: sin desbordamiento horizontal a 390px y 1366px; ruta medico deniega a la cuenta admin | Demas roles y dispositivos con identidades separadas pendientes |
 | Medico publica, paciente reserva, Meet y cancelacion | Pendiente en el nuevo piloto | Evidencia previa de Meet no cierra esta regresion |
 | Consulta con/sin tratamiento y permisos del paciente | Pendiente con cuentas separadas | Pruebas sinteticas aprobadas; falta aceptacion alojada |
 | Dispensarios A/B: 10g + 20g y stock conjunto | Pendiente con cuentas separadas | PostgreSQL independiente aprobado; faltan dos organizaciones alojadas de prueba |
 | Operador, recarga, cambio de cuenta y movil | Pendiente en entorno alojado | Browser sintetico aprobado, no aceptar como POV real |
+
+### Validacion del objetivo: primer recorrido administrativo
+
+2026-09-08: se registro la participacion del admin desde el panel oficial y se
+comprobo recarga, navegacion Actividad/Organizaciones y POV sinteticos de solo
+lectura. Medicion DOM: documento 385px en viewport 390px y 1360px en viewport
+1366px; panel sin desbordamiento interno. Las vistas sinteticas no cambian la
+identidad. La misma sesion fue rechazada en `/medico` sin cambiar su rol.
+
+Defectos encontrados: la vista de organizaciones vacias no mostraba un estado
+explicito y un rechazo de escritura invalidaba las lecturas posteriores del panel.
+El segundo fallo se reprodujo localmente con dos sesiones: stock 100g, ajuste
+rechazado -200g y ajuste +10g confirmado en la otra sesion; la primera no mostraba
+110g al recuperar foco. La correccion rearma las lecturas despues de cualquier
+resultado y separa errores de lectura/escritura para conservar el rechazo visible.
+Regresion local pasa, incluida reconexion, replay sin duplicar y estado vacio.
+Tambien se neutralizo el encabezado del acceso medico para no afirmar aprobacion
+antes de validar el rol. Candidato en `fix/operations-recovery`; no implica aun
+validacion alojada de las escrituras medicas o de dispensacion.
 
 ## 1. Narrativa de producto
 
