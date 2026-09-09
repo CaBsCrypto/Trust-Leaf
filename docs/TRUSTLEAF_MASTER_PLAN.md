@@ -16,9 +16,9 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
 | 0 Consolidar base | PR #23 y #24 integrados; baseline `03b2dcf`, CI main `34328580205` aprobada; respaldo de aplicacion restaurado y 28 migraciones remotas en el corte de invitaciones | URL oficial READY sobre `03b2dcf`, comprobada el 09-09. No se aplica ni modifica el borrador mensual |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda y aceptacion por correo pasan SQL; consentimiento, organizacion, encargado/operador y retiro de acceso probados en aislamiento | B invita y trabajador acepta; membresia unica staff-only y persistencia tras recarga confirmadas el 09-09. Restricciones visuales confirmadas por usuario; peticiones directas, sesion nueva, retirada y reincorporacion alojadas pendientes |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda y aceptacion por correo pasan SQL; consentimiento, organizacion, encargado/operador y retiro de acceso probados en aislamiento | B invita y trabajador acepta; membresia unica staff-only, recarga y nueva sesion Privy comprobadas el 09-09. Equipo e inventario del trabajador sin gestion ni ajustes; peticiones directas, retirada y reincorporacion alojadas pendientes |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
-| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion; nueva regresion local conserva historial al reemplazar tratamiento | Revocacion desde medico confirmada el 09-09: detalle conserva 30g retirados. Pendientes nueva reserva/emision y permiso. Defecto visual detectado: resumen revocado muestra retirado 0g; correccion en esta entrega, no implica reset de datos |
+| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion; regresion de reemplazo e historial en CI | Medico revoca el tratamiento agotado, conserva historial y emite otro de 30g/3 periodos tras una nueva reserva confirmada por paciente. Permiso del nuevo tratamiento pendiente. Resumen historico corregido mediante PR #25, sin reset de datos |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g y B 20g desde cuentas separadas; paciente confirma 30g retirados, saldo 0g y dos comprobantes persistentes. Usuario confirma stock B de 80g y formulario bloqueado con cupo agotado; admin observa ambas entregas y auditoria |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Recorrido real parcial de cuatro roles; admin observa dos entregas, dos cierres y auditoria. Recarga y movil administrativos comprobados en el recorrido previo a B; no sustituye todos los escenarios pendientes |
 
@@ -787,9 +787,10 @@ localmente tipos, invitaciones (12 casos API mas SQL) y QA del piloto.
 |---|---|
 | Baseline del equipo B | Panel del encargado conserva trabajador Operador e invitacion Aceptada; lote de prueba disponible con 80g |
 | Revocar tratamiento agotado | Hecho desde panel medico. Estado Revocado; historial por periodo conserva 30g/30g y periodos futuros sin consumo |
-| Corregir resumen del revocado | Defecto de visualizacion reproducido: confundia ausencia de periodo autorizado con consumo cero. Correccion separa periodo calendario de elegibilidad; disponibilidad sigue en 0g |
-| Nuevo horario | Panel medico muestra disponible 10-09-2026 09:00-09:30 America/Santiago. Reserva del paciente aun pendiente |
-| Nuevo tratamiento y permiso | Pendiente en URL oficial. Prueba aislada nueva rechaza superposicion, conserva periodos/comprobantes anteriores y exige permiso nuevo para B |
+| Corregir resumen del revocado | PR #25 fusionado y desplegado; separa periodo calendario de elegibilidad, disponibilidad sigue en 0g. CI y capturas moviles muestran 30g retirados tras revocacion |
+| Nuevo horario | 10-09-2026 09:00-09:30 America/Santiago reservado por el paciente desde otro dispositivo; usuario confirma y medico observa la misma cita confirmada con Meet automatico |
+| Nuevo tratamiento y permiso | Medico inicia, guarda nota ficticia y finaliza con 30g/3 periodos. Referencia corta nueva 4119236d, 30g disponibles; anterior revocada. Operador no ve tratamientos: permiso nuevo del paciente todavia pendiente |
+| Sesion nueva del operador | Ingreso Privy real tras cerrar medico. B / Operador, stock 80g, Equipo sin invitaciones ni retiros de miembros, Inventario sin recepcion/ajustes/cuarentena. No equivale a prueba HTTP directa autenticada |
 | Entrega del operador | Pendiente alojada: 10g, saldo nuevo 20g y stock B 70g si se mantiene baseline 80g; un movimiento/comprobante con responsable |
 | Revocar/restaurar permiso | Pendiente alojada con saldo positivo; no confundir bloqueo de permiso con cupo agotado |
 | Retirada/reincorporacion | Pendiente alojada y con dispositivos separados; no retirar hasta disponer de capacidad para tres envios al destinatario |
@@ -805,6 +806,23 @@ invitacion/reenvio/aceptacion. Respetar 3 envios por destinatario en 24 horas y
 60 segundos entre envios; esperar la siguiente ventana si no hay capacidad.
 No hay tareas programadas ni reenvios adicionales activados por este documento.
 El trabajador debe terminar activo mediante consentimiento nuevo, sin duplicados.
+
+Publicacion del arreglo: [PR #25](https://github.com/CaBsCrypto/Trust-Leaf/pull/25),
+head `25a9b0d9d7aff03beed062228277c6563b80f1e4`,
+[CI 34331847360 aprobado](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34331847360)
+en 4m36s, preview aprobado. Tipos, dos builds, SQL de ciclo operativo,
+PostgreSQL independiente, PostgREST y browser sintetico aprobados. Capturas
+moviles de medico/paciente inspeccionadas: 30g retirados, 0g disponibles,
+Revocado, sin desbordamiento. Merge `c7e86d97f74daf763db0a365f56e7fed7defcaf1`,
+URL oficial READY en `dpl_GYZV65h2hDQm9XWqFxJTAyiqpaRa`.
+CI de main `34332436520` aprobado en 4m12s sobre ese merge, incluidos los mismos
+escenarios SQL, PostgreSQL, PostgREST y navegador. Sin nuevas migraciones.
+
+Consulta agregada de solo lectura al 09-09: una membresia de operador en B y un
+envio al destinatario en las ultimas 24h. La ventana completa de tres envios se
+libera despues de 10-09-2026 04:59:12 America/Santiago si no hay otros envios;
+recalcular antes de retirar. No se retiro al trabajador ni se enviaron nuevas
+invitaciones en esta fase. El hash del borrador mensual sigue sin cambios.
 
 - [Agenda persistente y evidencia tecnica](privy-persistent-agenda.md).
 - [Plan de cierre MVP anterior](mvp-functional-closure-plan.md): conservar como
