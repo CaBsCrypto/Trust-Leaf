@@ -5,6 +5,7 @@ export interface TrustLeafPrivyIdentity {
   ready: boolean;
   authenticated: boolean;
   subject?: string;
+  email?: string;
   tokenReady?: boolean;
   refreshIdentityToken?: () => Promise<string | null>;
   beginLogin: () => Promise<void>;

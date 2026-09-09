@@ -11,12 +11,12 @@ export async function operationsDatabase() {
   for (const name of (await readdir(migrations)).filter(n => n.endsWith('.sql') && n !== '20260906120000_monthly_dispensing_quota.sql').sort()) {
     await db.exec(await readFile(new URL(name, migrations), 'utf8'));
   }
-  const subjects = Object.fromEntries(['admin', 'doctor', 'patient', 'dispensary', 'dispensaryB', 'operator', 'otherDoctor', 'otherPatient']
+  const subjects = Object.fromEntries(['admin', 'doctor', 'patient', 'dispensary', 'dispensaryB', 'dispensaryRecovery', 'operator', 'otherDoctor', 'otherPatient']
     .map(key => [key, `did:privy:pilot-fixture-${key}`]));
   const actors = {};
   actors.admin = (await db.query('select * from public.trustleaf_bootstrap_first_privy_admin($1)', [subjects.admin])).rows[0].actor_ref;
   for (const key of Object.keys(subjects).filter(k => k !== 'admin')) {
-    const role = key.includes('Doctor') ? 'doctor' : key.includes('Patient') ? 'patient' : ['dispensaryB', 'operator'].includes(key) ? 'dispensary' : key;
+    const role = key.includes('Doctor') ? 'doctor' : key.includes('Patient') ? 'patient' : key.startsWith('dispensary') || key === 'operator' ? 'dispensary' : key;
     const row = (await db.query('select * from public.trustleaf_enroll_privy_actor($1,$2)', [subjects[key], role])).rows[0];
     actors[key] = row.actor_ref;
     if (role !== 'patient') await db.query('select * from public.trustleaf_review_pending_privy_actor($1,$2,$3,$4,$5)',

@@ -15,6 +15,13 @@ import { googleCalendarHandler } from '../_lib/google-calendar-handler.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+  if (route === 'team-invitations') {
+    res.setHeader('Cache-Control','no-store, private');
+    try {
+      const { teamInvitationHandler } = await import('../_lib/team-invitations.js');
+      return await teamInvitationHandler(req,res,process.env,createPrivyIdentityVerifier(process.env));
+    } catch { return res.status(503).json({code:'TEAM_UNAVAILABLE'}); }
+  }
   if (route === 'operations-pilot') {
     const { operationsPilotHandler } = await import('../_lib/operations-pilot.js');
     return operationsPilotHandler(req, res, process.env, createPrivyIdentityVerifier(process.env));

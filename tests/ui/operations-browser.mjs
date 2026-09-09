@@ -102,16 +102,38 @@ try {
   }
   const operator = await (await browser.newContext({ viewport: { width: 1365, height: 900 }, timezoneId: 'America/Santiago' })).newPage();
   pages.operator = operator; operator.on('pageerror', e => errors.push(e.message));
-  await operator.goto(`${baseUrl}/?operations&role=operator`);
-  await command(operator, 'Aceptar y participar');
-  await operator.getByRole('tab', { name: 'Equipo', exact: true }).click();
-  const operatorRef = (await operator.locator('.op-code > span').innerText()).trim();
   await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
-  await dispensary.getByLabel('Referencia de operador aprobado', { exact: true }).fill(operatorRef);
-  await command(dispensary, 'Agregar operador');
+  await dispensary.getByLabel('Correo del trabajador', { exact: true }).fill('operator@example.test');
+  await dispensary.getByRole('button', { name: 'Preparar invitacion', exact: true }).click();
+  await dispensary.getByRole('group', { name: 'Confirmar invitacion' }).waitFor();
+  for (const [name, width, height] of [['desktop', 1365, 900], ['mobile', 390, 844]]) {
+    await dispensary.setViewportSize({ width, height });
+    assert.equal(await dispensary.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+    await dispensary.screenshot({ path: fileURLToPath(new URL(`team-invitation-${name}.png`, output)), fullPage: true });
+  }
+  await dispensary.setViewportSize({ width: 1365, height: 900 });
+  const invitationSent = dispensary.waitForResponse(r => r.url().endsWith('/api/team-invitations') && r.request().postDataJSON()?.action === 'create');
+  await dispensary.getByRole('button', { name: 'Enviar invitacion', exact: true }).click();
+  assert.equal((await invitationSent).status(), 200);
+  const emails = await (await dispensary.request.get(`${baseUrl}/__team-mail`)).json();
+  const invitationToken = emails.find(m => m.to[0] === 'operator@example.test').text.match(/#team-invite=([A-Za-z0-9_-]+)/)[1];
+  await operator.goto(`${baseUrl}/dispensario?operations&role=patient#team-invite=${invitationToken}`);
+  await operator.getByRole('alert').waitFor();
+  assert.equal(await operator.getByRole('button', { name: 'Aceptar invitacion como operador' }).count(), 0);
+  assert.equal(new URL(operator.url()).hash, '', 'token removed from the address bar');
+  await operator.getByRole('button', { name: 'Usar otra cuenta' }).click();
+  await operator.getByText('Sin sesion', { exact: true }).waitFor();
+  await operator.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'operator' })));
+  await operator.getByRole('button', { name: 'Aceptar invitacion como operador' }).waitFor();
+  assert.equal(await operator.getByRole('button', { name: 'Aceptar invitacion como operador' }).isDisabled(), true);
+  await operator.getByRole('checkbox').check();
+  const accepted = operator.waitForResponse(r => r.url().endsWith('/api/team-invitations') && r.request().postDataJSON()?.action === 'accept');
+  await operator.getByRole('button', { name: 'Aceptar invitacion como operador' }).click();
+  assert.equal((await accepted).status(), 200);
+  await operator.goto(`${baseUrl}/?operations&role=operator`);
   await operator.reload();
   await operator.getByRole('tab', { name: 'Equipo', exact: true }).click();
-  await operator.getByText('Operador', { exact: true }).waitFor();
+  await operator.getByText('Operador', { exact: true }).first().waitFor();
   assert.equal(await operator.getByRole('button', { name: 'Agregar operador', exact: true }).count(), 0);
   await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await operator.getByText('100 g', { exact: false }).waitFor();
@@ -119,6 +141,7 @@ try {
     assert.equal(await operator.getByRole('button', { name, exact: true }).count(), 0, `operator cannot ${name}`);
   }
   const operatorSnapshot = await refresh(operator);
+  const operatorRef = operatorSnapshot.actorRef;
   const otherInventory = await refresh(dispensaryB);
   assert.notEqual(operatorSnapshot.batches[0].batch_ref, otherInventory.batches[0].batch_ref, 'stock belongs to an organization, not a shared user');
   const forged = await operator.request.post(`${baseUrl}/api/operations-pilot`, { headers: { 'privy-id-token': 'fixture-operator' },
@@ -197,7 +220,7 @@ try {
   assert.equal(await doctor.getByText('NOTA FICTICIA PARA QA:', { exact: false }).count(), 0);
   await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
   dispensary.once('dialog', dialog => dialog.accept());
-  await command(dispensary, `Retirar operador ${operatorRef.slice(0, 8)}`);
+  await command(dispensary, 'Retirar operator@example.test');
   await refresh(operator);
   await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await operator.getByText('No hay lotes registrados.', { exact: true }).waitFor();
@@ -207,8 +230,13 @@ try {
   await operator.reload();
   await operator.getByRole('tab', { name: 'Atenciones', exact: true }).click();
   assert.equal((await refresh(operator)).treatments.length, 0, 'removed operator cannot access former organization patients');
+  await operator.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  assert.equal(await operator.getByRole('button', { name: 'Crear dispensario de prueba' }).count(), 0, 'removed staff never become managers');
+  const createAsRemoved = await operator.request.post(`${baseUrl}/api/operations-pilot`, { headers: { 'privy-id-token': 'fixture-operator' }, data: { action: 'create-organization', input: { name: 'Forbidden', operationId: crypto.randomUUID() } } });
+  assert.equal(createAsRemoved.status(), 403);
   const recover = await (await browser.newContext()).newPage();
-  await recover.goto(`${baseUrl}/?operations&role=operator`);
+  await recover.goto(`${baseUrl}/?operations&role=dispensaryRecovery`);
+  await command(recover, 'Aceptar y participar');
   await recover.getByRole('tab', { name: 'Equipo', exact: true }).click();
   await recover.getByLabel('Nombre del dispensario', { exact: true }).fill('Organizacion recuperada QA');
   const operationIds = [];
@@ -231,7 +259,7 @@ try {
   await command(recover, 'Recibir lote simulado');
   const otherSession = await (await browser.newContext()).newPage();
   otherSession.on('pageerror', e => errors.push(e.message));
-  await otherSession.goto(`${baseUrl}/?operations&role=operator`);
+  await otherSession.goto(`${baseUrl}/?operations&role=dispensaryRecovery`);
   await otherSession.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await otherSession.getByText('100 g', { exact: false }).waitFor();
 
@@ -261,6 +289,55 @@ try {
   await recover.getByRole('alert').waitFor({ state: 'hidden', timeout: 5000 });
   await otherSession.close();
   await recover.close();
+  // A person without an actor joins through email acceptance, not onboarding.
+  await dispensaryB.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await dispensaryB.getByLabel('Correo del trabajador', { exact: true }).fill('newworker@example.test');
+  await dispensaryB.getByRole('button', { name: 'Preparar invitacion', exact: true }).click();
+  const inviteIds = [];
+  await dispensaryB.route('**/api/team-invitations', async route => {
+    const body = route.request().postDataJSON();
+    if (body.action !== 'create') return route.continue();
+    inviteIds.push(body.operationId);
+    const result = await route.fetch(); assert.equal(result.status(), 200);
+    return inviteIds.length === 1 ? route.fulfill({ status: 503, json: {} }) : route.fulfill({ response: result });
+  });
+  await dispensaryB.getByRole('button', { name: 'Enviar invitacion', exact: true }).click();
+  const recoveredInvitation = dispensaryB.waitForResponse(r => r.url().endsWith('/api/team-invitations') && r.request().postDataJSON()?.action === 'create' && r.status() === 200);
+  await dispensaryB.getByRole('button', { name: 'Reintentar operacion', exact: true }).click();
+  await recoveredInvitation;
+  await dispensaryB.getByRole('button', { name: 'Reintentar operacion', exact: true }).waitFor({ state: 'hidden' });
+  assert.equal(inviteIds.length, 2); assert.equal(inviteIds[0], inviteIds[1]);
+  await dispensaryB.unroute('**/api/team-invitations');
+  const sent = (await (await dispensaryB.request.get(`${baseUrl}/__team-mail`)).json()).filter(m => m.to[0] === 'newworker@example.test');
+  assert.equal(sent.length, 1, 'lost response does not send twice');
+  const newToken = sent[0].text.match(/#team-invite=([A-Za-z0-9_-]+)/)[1];
+  const newcomer = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  pages.newWorker = newcomer; newcomer.on('pageerror', e => errors.push(e.message));
+  await newcomer.goto(`${baseUrl}/dispensario?operations&role=newWorker#team-invite=${newToken}`);
+  await newcomer.getByRole('button', { name: 'Aceptar invitacion como operador', exact: true }).waitFor();
+  await newcomer.reload();
+  await newcomer.getByRole('checkbox').check();
+  await newcomer.screenshot({ path: fileURLToPath(new URL('team-accept-mobile.png', output)), fullPage: true });
+  const acceptanceAttempts = [];
+  await newcomer.route('**/api/team-invitations', async route => {
+    const body = route.request().postDataJSON();
+    if (body.action !== 'accept') return route.continue();
+    acceptanceAttempts.push(body.token);
+    const result = await route.fetch(); assert.equal(result.status(), 200);
+    return acceptanceAttempts.length === 1 ? route.fulfill({ status: 503, json: {} }) : route.fulfill({ response: result });
+  });
+  await newcomer.getByRole('button', { name: 'Aceptar invitacion como operador', exact: true }).click();
+  await newcomer.getByRole('alert').waitFor();
+  await newcomer.getByRole('button', { name: 'Aceptar invitacion como operador', exact: true }).click();
+  await newcomer.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  assert.equal(acceptanceAttempts.length, 2); assert.equal(acceptanceAttempts[0], acceptanceAttempts[1]);
+  await newcomer.locator('.op-line').filter({ hasText: 'newworker@example.test' }).waitFor();
+  assert.equal(await newcomer.getByRole('button', { name: 'Crear dispensario de prueba', exact: true }).count(), 0);
+  assert.equal(await newcomer.getByLabel('Correo del trabajador', { exact: true }).count(), 0);
+  assert.equal(await newcomer.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+  await newcomer.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await newcomer.getByText('80 g', { exact: false }).waitFor();
+  await newcomer.screenshot({ path: fileURLToPath(new URL('team-new-worker-mobile.png', output)), fullPage: true });
   await patient.route('**/api/operations-pilot', route => route.fulfill({ status: 403, json: {} }));
   await refresh(patient);
   await patient.getByRole('alert').waitFor();
