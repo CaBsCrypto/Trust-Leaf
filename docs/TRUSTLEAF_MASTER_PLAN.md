@@ -749,8 +749,19 @@ se agrega regresion unitaria y prueba del transporte PostgREST real en CI.
 El estado del panel era correcto; el error estaba en la confirmacion al proveedor.
 No se reenvio el correo ni se duplico la membresia para resolverlo.
 
-Pendiente: confirmar HTTP 200 del reintento firmado tras publicar la correccion,
-sesion nueva, cuenta equivocada, cancelacion/reenvio, permisos por API, retirada
+Correccion publicada mediante [PR 24](https://github.com/CaBsCrypto/Trust-Leaf/pull/24),
+merge `e0d5edb65181b50dd556bcf7c8c421a4200ba4a4`, despliegue
+`dpl_7f8GaMCAidYqeFBfi7ifNPVQATDD` Ready en la URL oficial. Pasaron el
+[CI del PR](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34327653279)
+y el [CI de main](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34328076300),
+incluida la prueba de PostgREST real con HTTP 204. Al repetir exclusivamente los
+webhooks, Resend muestra sent y delivered Success; el endpoint devuelve 200 y
+received:true. Firmas falsas siguen recibiendo 400 y no-store, private.
+Supabase conserva un envio (un intento, una generacion), dos eventos distintos,
+estado delivered y una membresia de operador en B. El encargado tambien conserva
+la invitacion aceptada y el miembro despues de recargar y volver a Equipo.
+
+Pendiente: sesion nueva, cuenta equivocada, cancelacion/reenvio, permisos por API, retirada
 y reincorporacion con dispositivos separados. Una entrega exitosa del operador
 requiere otro tratamiento ficticio desde medico/paciente, sin resetear el saldo
 agotado. Todo permanece limitado al piloto sin datos clinicos reales.

@@ -182,8 +182,14 @@ Incidencia detectada: el webhook firmado persistia sent/delivered, pero devolvia
 void. La correccion trata exclusivamente ese estado como exito sin cuerpo;
 no silencia errores ni acepta firmas falsas. Regresion que falla antes del
 arreglo, 12 pruebas API y SQL aprobadas; CI comprueba ademas PostgREST real y
-evento repetido. Confirmar HTTP 200 en el reintento firmado tras desplegar.
-No reenviar la invitacion para comprobar el webhook ni modificar la membresia.
+evento repetido. [PR 24](https://github.com/CaBsCrypto/Trust-Leaf/pull/24) fusionado
+como `e0d5edb`, despliegue `dpl_7f8GaMCAidYqeFBfi7ifNPVQATDD` Ready en la URL
+oficial y [CI de main aprobado](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34328076300).
+Los mismos webhooks de sent/delivered se repitieron desde Resend y quedaron
+Success, respuesta 200 received:true. Firmas falsas: 400 sin cache.
+Consulta de consistencia: un envio con un intento y una generacion, estado
+delivered, dos eventos distintos y una sola membresia. No se reenvio la
+invitacion ni se modifico la membresia para comprobar la correccion.
 
 Pendiente en sitio oficial: sesion nueva, identidad equivocada, cancelacion,
 reenvio, permisos por peticiones directas, retirada y reincorporacion. La cuenta
