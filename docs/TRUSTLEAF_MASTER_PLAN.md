@@ -16,7 +16,7 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
 | 0 Consolidar base | PR #22 integrado en `e05644f`, CI main `34211275049` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles; B solicita, admin aprueba y confirma rol activo. Organizacion B y encargado visibles en admin; cinco participantes. Operador independiente pendiente |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles; B solicita, admin aprueba y confirma rol activo. Identidad independiente para operador aprobada y adherida al piloto el 09-09; vinculacion al equipo B y restricciones alojadas pendientes |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
 | 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g y B 20g desde cuentas separadas; paciente confirma 30g retirados, saldo 0g y dos comprobantes persistentes. Usuario confirma stock B de 80g y formulario bloqueado con cupo agotado; admin observa ambas entregas y auditoria |
@@ -107,7 +107,7 @@ acredita los demas POV ni el recorrido completo.
 | Medico publica, paciente reserva, Meet y cancelacion | Parcial: horario 09-09 a las 09:00 publicado y reservado por cuentas separadas; enlace Meet generado; persistencia y cita compartida confirmadas | No se probo conexion audiovisual a este nuevo enlace ni cancelacion en esta ejecucion |
 | Consulta con/sin tratamiento y permisos del paciente | Parcial: borrador, historial y ambos cierres en medico; paciente ve notas cerradas, tratamiento y saldo; concede/revoca/restaura permiso de 24h, con persistencia | Revocacion del tratamiento y observacion del dispensario durante revocacion pendientes |
 | Dispensarios A/B: 10g + 20g y stock conjunto | Entregas alojadas verificadas: A 10g y B 20g, mismo tratamiento/periodo y comprobantes distintos; paciente ve 30g retirados y saldo 0g, incluso tras recarga. Usuario confirma stock B de 80g y bloqueo con saldo agotado; admin observa contador 2 y ambos eventos de entrega | Operador independiente y restantes escenarios negativos alojados pendientes; pruebas concurrentes aisladas no equivalen a una carrera ejecutada en produccion |
-| Operador, recarga, cambio de cuenta y movil | Parcial alojado: cambios de cuenta, recargas y dispensario a 390px; su identidad no accede a admin/medico/paciente | Operador independiente y movil de los otros roles pendientes; browser sintetico no sustituye esos POV |
+| Operador, recarga, cambio de cuenta y movil | Parcial alojado: cambios de cuenta, recargas y dispensario a 390px; su identidad no accede a admin/medico/paciente. Cuenta independiente para operador aprobada y adherida al piloto; referencia visible en Equipo, sin organizacion creada | Encargado B debe agregar al operador; probar sus restricciones y retiro de acceso. Movil de otros roles pendiente; browser sintetico no sustituye esos POV |
 
 ### Validacion del objetivo: primer recorrido administrativo
 
@@ -415,6 +415,20 @@ verificar lote/stock y registrar los 20g restantes; no hay entrega B acreditada 
 - Queda cerrado este caso simulado de 10g + 20g, comprobantes, saldo agotado y
   supervision. Falta operador con identidad independiente y los otros escenarios
   de la matriz; no equivale al cierre completo del piloto ni habilita uso real.
+
+### Preparacion del operador B: 08-09 y 09-09, 01:49 America/Santiago
+
+- Usuario verifica por email una identidad distinta, destinada a trabajar en B.
+  El 08-09 se envia su perfil simulado; admin observa la unica solicitud pendiente,
+  autoriza una vez y actualiza el directorio: cuenta activa, sin privilegios admin.
+- El 09-09 se verifica nuevamente el correo conectado y la cuenta autorizada en
+  la URL oficial. Se acepta la participacion exclusivamente simulada; aparece
+  confirmacion de guardado. Equipo muestra su referencia y ninguna membresia.
+- No se pulsa Crear dispensario de prueba ni se modifica inventario. La referencia
+  queda disponible para Agregar operador desde la sesion del encargado B.
+- Alta de identidad completada, vinculacion al equipo aun pendiente. No se dan
+  por probados el acceso a pacientes de B, restricciones de operador ni retiro de
+  acceso. Correos y referencias individuales no se incluyen en este documento.
 
 ### Correccion local: supervision de videollamadas
 
