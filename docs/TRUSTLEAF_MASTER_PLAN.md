@@ -1,6 +1,6 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-Fecha de corte: 2026-09-08. Estado: piloto operativo integrado a main; respaldo
+Fecha de corte: 2026-09-09. Estado: piloto operativo integrado a main; respaldo
 restaurado, migracion aplicada y activacion alojada confirmada. Aceptacion
 del recorrido completo con usuarios pendiente.
 Este documento es el punto de entrada para el nuevo alcance. No certifica
@@ -15,10 +15,10 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
-| 0 Consolidar base | PR #22 integrado en `e05644f`, CI main `34211275049` aprobada; respaldo de aplicacion restaurado y respaldo de funciones verificado; 27 migraciones remotas | Piloto y correccion PT409 aplicados individualmente, sin incluir borrador mensual; version oficial READY y sesiones reales confirmadas |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda existentes pasan SQL; nuevo consentimiento de piloto, organizacion, encargado/operador y retiro de acceso probados | Login real de cuatro roles; B solicita, admin aprueba y confirma rol activo. Identidad independiente para operador aprobada y adherida al piloto el 09-09; vinculacion al equipo B y restricciones alojadas pendientes |
+| 0 Consolidar base | PR #23 y #24 integrados; baseline `03b2dcf`, CI main `34328580205` aprobada; respaldo de aplicacion restaurado y 28 migraciones remotas en el corte de invitaciones | URL oficial READY sobre `03b2dcf`, comprobada el 09-09. No se aplica ni modifica el borrador mensual |
+| 1 Activar actores/equipos | Alta/aprobacion/agenda y aceptacion por correo pasan SQL; consentimiento, organizacion, encargado/operador y retiro de acceso probados en aislamiento | B invita y trabajador acepta; membresia unica staff-only y persistencia tras recarga confirmadas el 09-09. Restricciones visuales confirmadas por usuario; peticiones directas, sesion nueva, retirada y reincorporacion alojadas pendientes |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
-| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion | Medico aloja borrador y ambos cierres; paciente confirma tratamiento de 30g/3 periodos y concede/revoca/restaura permiso temporal con recarga. Revocacion del tratamiento pendiente |
+| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion; nueva regresion local conserva historial al reemplazar tratamiento | Revocacion desde medico confirmada el 09-09: detalle conserva 30g retirados. Pendientes nueva reserva/emision y permiso. Defecto visual detectado: resumen revocado muestra retirado 0g; correccion en esta entrega, no implica reset de datos |
 | 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g y B 20g desde cuentas separadas; paciente confirma 30g retirados, saldo 0g y dos comprobantes persistentes. Usuario confirma stock B de 80g y formulario bloqueado con cupo agotado; admin observa ambas entregas y auditoria |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Recorrido real parcial de cuatro roles; admin observa dos entregas, dos cierres y auditoria. Recarga y movil administrativos comprobados en el recorrido previo a B; no sustituye todos los escenarios pendientes |
 
@@ -28,8 +28,10 @@ migracion `20260909010000_operations_pilot.sql` y correccion de conflictos
 `TRUSTLEAF_OPERATIONS_PILOT_ENABLED=true` (servidor) y
 `VITE_OPERATIONS_PILOT_ENABLED=true` (build); por defecto estan desactivados.
 Los participantes deben aceptar datos ficticios. No se crean cuentas Privy ni
-roles administrativos automaticamente. El operador necesita rol dispensario
-aprobado, participar en el piloto y ser agregado por referencia por un encargado.
+roles administrativos automaticamente. El trabajador verifica su correo con
+Privy y acepta una invitacion del encargado; la aceptacion incorpora al piloto y
+al equipo como operador. No necesita solicitar otro establecimiento. El alta por
+referencia UUID permanece bloqueada, incluso con invitaciones deshabilitadas.
 
 Los paneles piloto reemplazan al portal heredado en las cuatro rutas cuando
 se activa el flag; no escriben datos clinicos ni inventario en Firebase. No se
@@ -767,6 +769,42 @@ requiere otro tratamiento ficticio desde medico/paciente, sin resetear el saldo
 agotado. Todo permanece limitado al piloto sin datos clinicos reales.
 
 Detalle y procedimiento: [invitaciones de operadores](operator-email-invitations.md).
+
+### Cierre operativo del dispensario: ejecucion desde el 09-09
+
+Alcance aprobado: cuentas existentes, datos ficticios y APIs actuales. Primero
+reemplazar el tratamiento agotado mediante revocacion del medico; despues una
+entrega del operador B y prueba de retirada/reincorporacion. No resetear cupos,
+borrar comprobantes, cambiar fechas en produccion ni reabrir el alta por UUID.
+
+Referencia inicial verificada: `main` y URL oficial en
+`03b2dcf4b7f691646e3ef15cbef8285009ab7516`, despliegue
+`dpl_486zj5uqghqk4myKWjVsn7KSDgVk` READY. CI `34328580205` success,
+incluidos PostgreSQL independiente, PostgREST y browser sintetico. Reejecutados
+localmente tipos, invitaciones (12 casos API mas SQL) y QA del piloto.
+
+| Escenario | Estado / evidencia |
+|---|---|
+| Baseline del equipo B | Panel del encargado conserva trabajador Operador e invitacion Aceptada; lote de prueba disponible con 80g |
+| Revocar tratamiento agotado | Hecho desde panel medico. Estado Revocado; historial por periodo conserva 30g/30g y periodos futuros sin consumo |
+| Corregir resumen del revocado | Defecto de visualizacion reproducido: confundia ausencia de periodo autorizado con consumo cero. Correccion separa periodo calendario de elegibilidad; disponibilidad sigue en 0g |
+| Nuevo horario | Panel medico muestra disponible 10-09-2026 09:00-09:30 America/Santiago. Reserva del paciente aun pendiente |
+| Nuevo tratamiento y permiso | Pendiente en URL oficial. Prueba aislada nueva rechaza superposicion, conserva periodos/comprobantes anteriores y exige permiso nuevo para B |
+| Entrega del operador | Pendiente alojada: 10g, saldo nuevo 20g y stock B 70g si se mantiene baseline 80g; un movimiento/comprobante con responsable |
+| Revocar/restaurar permiso | Pendiente alojada con saldo positivo; no confundir bloqueo de permiso con cupo agotado |
+| Retirada/reincorporacion | Pendiente alojada y con dispositivos separados; no retirar hasta disponer de capacidad para tres envios al destinatario |
+
+Nuevo ejecutable `npm run test:dispensary-lifecycle`, integrado al CI: SQL aislado
+con reemplazo de tratamiento sin perder historial, entrega B 10g, reintento,
+revocacion de permiso, retirada y reincorporacion idempotente. No acredita
+correos reales ni sesiones Privy. El browser sintetico agrega regresion de los
+30g historicos visibles tras revocar, disponibilidad cero y dos comprobantes.
+
+La secuencia de correo sera invitacion/cuenta equivocada/cancelacion, nueva
+invitacion/reenvio/aceptacion. Respetar 3 envios por destinatario en 24 horas y
+60 segundos entre envios; esperar la siguiente ventana si no hay capacidad.
+No hay tareas programadas ni reenvios adicionales activados por este documento.
+El trabajador debe terminar activo mediante consentimiento nuevo, sin duplicados.
 
 - [Agenda persistente y evidencia tecnica](privy-persistent-agenda.md).
 - [Plan de cierre MVP anterior](mvp-functional-closure-plan.md): conservar como
