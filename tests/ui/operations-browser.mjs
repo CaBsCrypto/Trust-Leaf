@@ -214,6 +214,19 @@ try {
       await page.screenshot({ path: fileURLToPath(new URL(`${role}-${size}.png`, output)), fullPage: true });
     }
   }
+  await doctor.getByRole('tab', { name: 'Tratamientos', exact: true }).click(); await refresh(doctor);
+  doctor.once('dialog', dialog => dialog.accept());
+  await command(doctor, 'Revocar tratamiento');
+  await patient.getByRole('tab', { name: 'Tratamientos', exact: true }).click(); await refresh(patient);
+  for (const [name, page] of [['doctor', doctor], ['patient', patient]]) {
+    await page.getByText('Revocado', { exact: true }).waitFor();
+    await page.locator('.op-stats div').filter({ hasText: 'Retirado en periodo' }).getByText('30 g', { exact: true }).waitFor();
+    await page.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('0 g', { exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+    await page.screenshot({ path: fileURLToPath(new URL(`${name}-revoked-treatment-mobile.png`, output)), fullPage: true });
+  }
+  await patient.getByRole('tab', { name: 'Historial', exact: true }).click();
+  assert.equal(await patient.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 2);
   // An in-flight draft and its contents must not survive an identity transition.
   await doctor.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'otherPatient' })));
   await doctor.getByRole('heading', { name: 'Mi atencion', exact: true }).waitFor();

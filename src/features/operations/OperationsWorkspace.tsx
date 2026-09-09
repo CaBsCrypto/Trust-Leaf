@@ -226,8 +226,11 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
 function Empty({ children }: { children: ReactNode }) { return <p className="op-empty">{children}</p>; }
 function TreatmentSummary({ treatment: t, time }: { treatment: Treatment; time: number }) {
   const p = currentPeriod(t, time);
+  // Revocation blocks availability, not the display of already recorded deliveries.
+  const calendarPeriod = t.periods.find(period => Date.parse(period.starts_at) <= time && time < Date.parse(period.ends_at));
+  const withdrawn = calendarPeriod?.used_mg ?? t.periods.reduce((total, period) => total + period.used_mg, 0);
   return <><h3>Tratamiento {short(t.treatment_ref)}</h3><p className="op-reference">Paciente {t.patient_ref}</p>
-    <div className="op-stats"><div><span>Asignado por periodo</span><strong>{formatGrams(t.allowance_mg)}</strong></div><div><span>Retirado en periodo</span><strong>{formatGrams(p?.used_mg ?? 0)}</strong></div><div><span>Disponible ahora</span><strong>{formatGrams(p ? Math.max(0, p.allowance_mg - p.used_mg) : 0)}</strong></div></div>
+    <div className="op-stats"><div><span>Asignado por periodo</span><strong>{formatGrams(t.allowance_mg)}</strong></div><div><span>{calendarPeriod ? 'Retirado en periodo' : 'Retirado total'}</span><strong>{formatGrams(withdrawn)}</strong></div><div><span>Disponible ahora</span><strong>{formatGrams(p ? Math.max(0, p.allowance_mg - p.used_mg) : 0)}</strong></div></div>
     <p>{t.state === 'revoked' ? 'Revocado' : p ? `Periodo ${p.period_index} de ${t.period_count}: ${date(p.starts_at)} a ${date(p.ends_at)}` : 'Fuera de vigencia'}</p>
     <details><summary>Vigencia e historial por periodo</summary><p>Emision: {date(t.issued_at)} · Vigencia simulada: {date(t.prescription_valid_until)} · Fin de tratamiento: {date(t.treatment_ends_at)}</p>
       {t.periods.map(period => <p key={period.period_index}>Periodo {period.period_index} · {date(period.starts_at)} a {date(period.ends_at)} · {formatGrams(period.used_mg)} / {formatGrams(period.allowance_mg)}</p>)}</details>
