@@ -79,8 +79,9 @@ Estado comprobado el 2026-09-09:
 - La configuracion del dominio muestra "Enable tracking metrics": no hay
   subdominio de tracking configurado ni seguimiento de aperturas/clics activado.
   El webhook tampoco esta suscrito a eventos opened/clicked.
-- TLS sigue Opportunistic, sin cambios. La entrega de correo real y recepcion de
-  su webhook firmado siguen pendientes de la prueba autenticada.
+- TLS sigue Opportunistic, sin cambios. El primer correo real fue entregado y
+  aceptado por el trabajador; el evento firmado quedo persistido. Se detecto un
+  error de confirmacion HTTP 204/JSON, descrito en la evidencia abajo.
 
 Procedimiento de referencia (no recrear ni rotar los secretos ya guardados):
 
@@ -170,9 +171,22 @@ expiracion, cancelacion, rotacion, cuotas, leases, firma y orden de webhooks,
 restricciones/retirada y regresion de entregas/inventario. Capturas sinteticas
 en `scratch/operations-qa`, fuera de Git.
 
-Pendiente en sitio oficial: encargado B invita al correo acordado; trabajador
-acepta con Privy real y ambos ven la membresia; comprobar entrega del correo,
-restricciones y retirada con dispositivos separados. La identidad ya aprobada
-se conserva. El saldo anterior del paciente sigue en cero: una entrega exitosa
+Primera prueba oficial, 2026-09-09: el encargado B envio y el trabajador acepto
+con Privy real desde otro dispositivo. Supabase: una invitacion aceptada, una
+membresia de operador en B, staff-only y un unico envio. El encargado ve el
+correo/rol y el usuario confirma que tras recargar el trabajador sigue como
+operador sin creacion de dispensarios, gestion del equipo ni ajustes de stock.
+
+Incidencia detectada: el webhook firmado persistia sent/delivered, pero devolvia
+503 porque `teamRpc` intentaba parsear el cuerpo vacio del HTTP 204 de la funcion
+void. La correccion trata exclusivamente ese estado como exito sin cuerpo;
+no silencia errores ni acepta firmas falsas. Regresion que falla antes del
+arreglo, 12 pruebas API y SQL aprobadas; CI comprueba ademas PostgREST real y
+evento repetido. Confirmar HTTP 200 en el reintento firmado tras desplegar.
+No reenviar la invitacion para comprobar el webhook ni modificar la membresia.
+
+Pendiente en sitio oficial: sesion nueva, identidad equivocada, cancelacion,
+reenvio, permisos por peticiones directas, retirada y reincorporacion. La cuenta
+aprobada se conserva. El saldo anterior del paciente sigue en cero: una entrega exitosa
 del operador requiere otro tratamiento ficticio por el flujo medico, nunca
 reiniciar el saldo anterior. Nada de esto habilita atencion o entregas reales.

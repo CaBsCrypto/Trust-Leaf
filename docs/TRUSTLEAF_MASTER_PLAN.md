@@ -734,11 +734,26 @@ webhook sin firma 400; no-store, private en todas esas respuestas.
 Dominio verificado sin tracking de clics/aperturas configurado. TLS sigue
 Opportunistic; no afirmar cifrado de transporte obligatorio.
 
-Pendiente: envio real, webhook firmado de entrega, aceptacion con Privy,
-recarga/sesion nueva, cuenta equivocada, cancelacion/reenvio, permisos, retirada
+Primera prueba real de equipo el 2026-09-09: el encargado B envio una invitacion;
+el trabajador acepto con su cuenta existente desde otro dispositivo. Supabase
+confirma una invitacion aceptada, una membresia de operador en B, un unico envio
+y la marca staff-only. Equipo del encargado muestra el trabajador por correo.
+El usuario confirmo que tras recargar sigue como Operador y no aparecen crear
+dispensario, invitar trabajadores ni ajustar stock. No equivale a haber probado
+todavia peticiones directas ni una sesion completamente nueva en produccion.
+
+El evento firmado de entrega quedo persistido, pero el endpoint respondia 503:
+el cliente RPC intentaba parsear JSON del HTTP 204 sin cuerpo que devuelve una
+funcion void. La correccion reconoce 204 como exito sin relajar firmas ni errores;
+se agrega regresion unitaria y prueba del transporte PostgREST real en CI.
+El estado del panel era correcto; el error estaba en la confirmacion al proveedor.
+No se reenvio el correo ni se duplico la membresia para resolverlo.
+
+Pendiente: confirmar HTTP 200 del reintento firmado tras publicar la correccion,
+sesion nueva, cuenta equivocada, cancelacion/reenvio, permisos por API, retirada
 y reincorporacion con dispositivos separados. Una entrega exitosa del operador
 requiere otro tratamiento ficticio desde medico/paciente, sin resetear el saldo
-agotado. No se han enviado correos reales mediante Resend en esta entrega.
+agotado. Todo permanece limitado al piloto sin datos clinicos reales.
 
 Detalle y procedimiento: [invitaciones de operadores](operator-email-invitations.md).
 

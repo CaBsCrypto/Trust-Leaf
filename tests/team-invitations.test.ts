@@ -93,6 +93,29 @@ test('signed raw webhook only; forged events rejected and early delivery asks pr
   assert.equal((await teamMailWebhook(webhook(), env, fetcher)).status, 200); assert.equal(calls, 1);
   assert.equal((await teamMailWebhook(webhook(), env, async () => Response.json({ code: 'PT409' }, { status: 409 }))).status, 503);
 });
+
+test('signed webhook acknowledges the empty 204 response of a void RPC, including retries', async () => {
+  let calls = 0;
+  const fetcher: typeof fetch = async () => { calls++; return new Response(null, { status: 204 }); };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await teamMailWebhook(webhook(), env, fetcher);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { received: true });
+    assert.match(response.headers.get('Cache-Control') ?? '', /no-store/);
+  }
+  assert.equal(calls, 2);
+  assert.equal((await teamMailWebhook(webhook('email.delivered', false), env, fetcher)).status, 400);
+  assert.equal(calls, 2, 'empty success responses must not bypass signature verification');
+});
+
+test('empty RPC support does not swallow upstream errors or missing JSON action results', async () => {
+  for (const status of [200, 403, 500]) {
+    const response = await teamMailWebhook(webhook(), env, async () => new Response('', { status }));
+    assert.equal(response.status, 503);
+  }
+  await assert.rejects(executeTeamCommand({ env, verifier, token: 'id', command: { action: 'list' },
+    fetcher: async () => new Response(null, { status: 204 }) }), { code: 'TEAM_UNAVAILABLE' });
+});
 test('shared Resend account events are acknowledged without storing unrelated metadata', async () => {
   let calls = 0;
   const fetcher: typeof fetch = async () => { calls++; return Response.json(null); };

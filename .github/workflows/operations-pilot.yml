@@ -83,7 +83,7 @@ jobs:
             if curl --fail --silent http://127.0.0.1:54321/ > /dev/null; then break; fi
             sleep 1
           done
-          PILOT_TEST_POSTGREST_URL=http://127.0.0.1:54321 node tests/sql/operations-postgrest.mjs
+          PILOT_TEST_POSTGREST_URL=http://127.0.0.1:54321 node --experimental-strip-types tests/sql/operations-postgrest.mjs
       - name: Build disabled and enabled pilot
         run: |
           VITE_OPERATIONS_PILOT_ENABLED=false npm run build

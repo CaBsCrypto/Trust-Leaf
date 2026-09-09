@@ -54,6 +54,8 @@ export async function teamRpc(env: Env, fetcher: typeof fetch, name: string, bod
     const status = code==='42501'?403:code==='PT429'?429:['PT409','23505','40001'].includes(String(code))?409:/^22|^235/.test(String(code))?400:503;
     throw teamFailure(status,'TEAM_UNAVAILABLE');
   }
+  // PostgREST returns no body for successful void RPCs such as delivery events.
+  if (response.status === 204) return null;
   return response.json();
 }
 
