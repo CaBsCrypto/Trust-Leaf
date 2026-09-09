@@ -679,11 +679,16 @@ Pruebas locales aprobadas: API/SQL, tipos, compilacion, concurrencia con conexio
 PostgreSQL independientes y restauracion sintetica con invitaciones. Navegador:
 cuatro paneles, cuenta nueva/existente, correo equivocado, cambio de cuenta,
 recarga, respuesta perdida al invitar/aceptar, entrega por operador y retirada;
-capturas de escritorio y movil revisadas. CI remoto pendiente; estas pruebas
-no equivalen a validacion en produccion.
+capturas de escritorio y movil revisadas. Codigo `3c3234d` aprobado en
+[CI remoto](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34317908167),
+incluyendo PostgreSQL 17, restauracion, tipos, builds y navegador. El preview de
+Vercel `dpl_GpmCE1YpHo6k5EsaVGjJpMWoHwt3` compilo y quedo Ready. Su proteccion de
+acceso intercepta las peticiones anonimas: no se afirma validacion de las nuevas
+APIs en ese entorno ni del envio real. [PR 23](https://github.com/CaBsCrypto/Trust-Leaf/pull/23)
+en borrador, sin fusion a main ni migracion remota.
 
 Pendiente para activar: cuenta Resend, DNS y seguimiento desactivado, secretos de
-servidor, webhook, CI/revision final, respaldo remoto actualizado, migracion unica,
+servidor, webhook, revision de activacion, respaldo remoto actualizado, migracion unica,
 deploy con flag y prueba oficial encargado/trabajador. No se han enviado correos
 reales mediante Resend en esta entrega.
 
