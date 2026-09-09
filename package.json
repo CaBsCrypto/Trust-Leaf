@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:team-invitations": "node --experimental-strip-types tests/team-invitations.test.ts && node tests/sql/team-invitations.mjs",
     "test:operations-pilot": "node --experimental-strip-types tests/operations-pilot.test.ts",
     "test:operations-pilot-sql": "node tests/sql/operations-pilot.mjs",
     "test:operations-pilot-concurrency": "node tests/sql/operations-concurrency.mjs",
@@ -101,6 +102,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "resend": "^6.26.0",
     "stellar-sdk": "^13.3.0",
     "vite": "^6.2.3"
   },

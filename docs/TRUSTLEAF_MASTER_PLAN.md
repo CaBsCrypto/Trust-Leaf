@@ -667,6 +667,28 @@ medir F1-F3 y resolver dependencias; priorizar cierres pequenos demostrables.
 
 ## Referencias y mantenimiento
 
+### Equipo por correo - 2026-09-09
+
+Implementado localmente: invitaciones privadas, verificacion fresca de correo
+Privy, aceptacion atomica, restriccion permanente de trabajador, equipo por email,
+outbox Resend con reintentos y webhook firmado. Alta por UUID bloqueada.
+Conservadas las membresias y la cuenta de trabajador aprobada; sin cambios
+remotos, en saldos previos, Zoho, Calendar ni el borrador mensual.
+
+Pruebas locales aprobadas: API/SQL, tipos, compilacion, concurrencia con conexiones
+PostgreSQL independientes y restauracion sintetica con invitaciones. Navegador:
+cuatro paneles, cuenta nueva/existente, correo equivocado, cambio de cuenta,
+recarga, respuesta perdida al invitar/aceptar, entrega por operador y retirada;
+capturas de escritorio y movil revisadas. CI remoto pendiente; estas pruebas
+no equivalen a validacion en produccion.
+
+Pendiente para activar: cuenta Resend, DNS y seguimiento desactivado, secretos de
+servidor, webhook, CI/revision final, respaldo remoto actualizado, migracion unica,
+deploy con flag y prueba oficial encargado/trabajador. No se han enviado correos
+reales mediante Resend en esta entrega.
+
+Detalle y procedimiento: [invitaciones de operadores](operator-email-invitations.md).
+
 - [Agenda persistente y evidencia tecnica](privy-persistent-agenda.md).
 - [Plan de cierre MVP anterior](mvp-functional-closure-plan.md): conservar como
   corte historico; el estado actualizado de expansion se sigue aqui.

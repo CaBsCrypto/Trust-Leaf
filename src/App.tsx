@@ -6,6 +6,8 @@ import Hero from './components/Hero';
 import Footer from './components/Footer';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
 import OperationsWorkspace from './features/operations/OperationsWorkspace';
+import TeamInvitationGate from './features/operations/TeamInvitationGate';
+import { captureTeamInvitation } from './features/operations/team-api';
 import GoogleCalendarConnection from './components/GoogleCalendarConnection';
 import PrivySessionBoundary from './components/PrivySessionBoundary';
 import { readPrivyAdminJson } from './lib/privyRead';
@@ -116,6 +118,12 @@ function AppContent() {
   const { t } = useLanguage();
   const privyIdentity = useTrustLeafPrivyIdentity();
   const [path, setPath] = useState(() => window.location.pathname);
+  const [teamInvitation, setTeamInvitation] = useState(captureTeamInvitation);
+  useEffect(() => {
+    const capture = () => setTeamInvitation(captureTeamInvitation());
+    window.addEventListener('hashchange', capture);
+    return () => window.removeEventListener('hashchange', capture);
+  }, []);
   const [professionalAccess, setProfessionalAccess] = useState<{ subject: string; path: string; role: ActorRole } | null>(null);
   useEffect(() => {
     setProfessionalAccess(null);
@@ -642,6 +650,8 @@ function AppContent() {
     privyIdentity.enabled ? hasRoleSession('doctor') : session?.role === 'doctor' && (session.mode === 'demo' || Boolean(currentDoctorRegistration));
   const dispensaryCanOperate =
     privyIdentity.enabled ? hasRoleSession('dispensary') : session?.role === 'dispensary' && (session.mode === 'demo' || Boolean(currentDispensaryRegistration));
+
+  if (path === '/dispensario' && teamInvitation) return <TeamInvitationGate token={teamInvitation}/>;
 
   if (patientView) {
     if (!hasRoleSession('patient')) {

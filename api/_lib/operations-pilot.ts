@@ -8,6 +8,7 @@ export async function executeOperationsPilot(input: {
 }) {
   if (input.env.TRUSTLEAF_OPERATIONS_PILOT_ENABLED !== 'true') throw failure(503, 'PILOT_DISABLED');
   const c = input.command;
+  if (c?.action === 'add-operator') throw failure(403, 'INVITATION_REQUIRED');
   if (!c || !pilotActions.includes(c.action) || !c.input || Array.isArray(c.input) || typeof c.input !== 'object'
     || Buffer.byteLength(JSON.stringify(c)) > 12000) throw failure(400, 'PILOT_INPUT_INVALID');
   const fetcher = input.fetcher ?? fetch;

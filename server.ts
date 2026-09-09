@@ -111,7 +111,21 @@ async function startServer() {
   const passkeyServer = await createPasskeyServer();
 
   // Middlewares
+  app.post('/api/team-mail-webhook',express.raw({type:'application/json',limit:'64kb'}),async (req,res) => {
+    res.setHeader('Cache-Control','no-store, private');
+    try {
+      const {teamMailWebhook} = await import('./api/_lib/team-invitations');
+      const headers=new Headers();
+      for (const [k,v] of Object.entries(req.headers)) if (typeof v==='string') headers.set(k,v);
+      const response=await teamMailWebhook(new Request('http://localhost/api/team-mail-webhook',{method:'POST',headers,body:req.body}),process.env);
+      res.status(response.status).type('application/json').send(await response.text());
+    } catch { res.status(503).json({code:'TEAM_UNAVAILABLE'}); }
+  });
   app.use(express.json());
+  app.all('/api/team-invitations',(req,res) => {
+    void consolidatedReadinessHandler({method:req.method,headers:req.headers,body:req.body,query:{__trustleaf_route:'team-invitations'}},res)
+      .catch(()=>{if (!res.headersSent) res.status(503).json({code:'TEAM_UNAVAILABLE'});});
+  });
   app.all('/api/operations-pilot', (req, res) => {
     void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
       query: { __trustleaf_route: 'operations-pilot' } }, res)

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { joinTeam } from './team-fixtures.mjs';
 import { operationsDatabase } from './operations-db.mjs';
 
 const { db, subjects, actors, call, agenda } = await operationsDatabase();
@@ -21,10 +22,10 @@ try {
   }
   const orgA = (await mutation('dispensary', 'create-organization', { name: 'Dispensario A simulado' })).resourceRef;
   const orgB = (await mutation('dispensaryB', 'create-organization', { name: 'Dispensario B simulado' })).resourceRef;
-  await mutation('dispensary', 'add-operator', { resourceRef: actors.operator });
+  await joinTeam(db, subjects.dispensary, subjects.operator);
   await forbidden(mutation('operator', 'add-operator', { resourceRef: actors.patient }));
   await forbidden(mutation('patient', 'create-organization', { name: 'Escalamiento' }));
-  await conflict(mutation('operator', 'create-organization', { name: 'Segunda sede' }));
+  await forbidden(mutation('operator', 'create-organization', { name: 'Segunda sede' }));
   assert.deepEqual((await snapshot('patient')).organizations, [], 'no prescription means no directory');
 
   const slotRef = randomUUID(), bookingRef = randomUUID();

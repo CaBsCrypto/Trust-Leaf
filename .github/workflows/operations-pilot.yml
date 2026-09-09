@@ -54,6 +54,7 @@ jobs:
           npm run lint
           npm run test:visual-qa-regressions
           npm run qa:operations-pilot
+          npm run test:team-invitations
           node tests/sql/approval-flow.mjs
           node tests/sql/calendar-outbox.mjs
           node tests/sql/application-backup-test.mjs

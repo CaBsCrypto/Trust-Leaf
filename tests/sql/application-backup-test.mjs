@@ -3,9 +3,14 @@ import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { operationsDatabase } from './operations-db.mjs';
+import { joinTeam } from './team-fixtures.mjs';
+import { randomUUID } from 'node:crypto';
 
-const { db } = await operationsDatabase();
+const { db, call, subjects } = await operationsDatabase();
 try {
+  await call('dispensary', 'join', { acceptSyntheticOnly: true });
+  await call('dispensary', 'create-organization', { name: 'Backup fixture', operationId: randomUUID() });
+  await joinTeam(db, subjects.dispensary, subjects.operator);
   await db.exec('reset role');
   const tableRows = (await db.query("select table_schema,table_name from information_schema.tables where table_type='BASE TABLE' and (table_schema='trustleaf_private' or (table_schema='public' and table_name like 'trustleaf_%')) order by table_schema,table_name")).rows;
   const tables = {};

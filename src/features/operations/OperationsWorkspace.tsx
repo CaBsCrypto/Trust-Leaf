@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Activity, CalendarDays, ClipboardList, Copy, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
+import { Activity, CalendarDays, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
+import TeamPanel from './TeamPanel';
 import PrivyAgenda from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
@@ -119,7 +120,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
 
   return <section className={`tl-operations ${embedded ? '' : 'tl-operations-page'}`}>
     <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role ? titles[role] : 'Panel operativo'}</h1>
-      <p className="op-email">{email ?? 'Cuenta conectada'}</p></div>
+      <p className="op-email">{email ?? identity.email ?? 'Cuenta conectada'}</p>
+      {role === 'dispensary' && data?.membership && <p className="op-email">{data.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name} · {data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
       <div className="op-toolbar"><span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
         {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" onClick={onSignOut}><LogOut size={18}/></button>}</div></header>
@@ -132,6 +134,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         <p>Solo datos ficticios. Sin atencion clinica ni entrega real de medicamentos.</p>
         <button className="op-command" disabled={disabled} onClick={() => mutate('join', { acceptSyntheticOnly: true })}>Aceptar y participar</button></div>}
       {data?.joined && <>
+        {data.staffOnly && !data.membership?.organization_ref && <p className="op-error" role="status">Sin acceso a un dispensario. Pide una nueva invitacion al encargado.</p>}
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Referencia, paciente o lote"/></label>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email}/>}
@@ -199,12 +202,9 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {tab === 'team' && <>
           <h2><Users size={20}/>Organizacion y equipo</h2>
           {role === 'admin' && !data.organizations?.length && <Empty>No hay organizaciones registradas.</Empty>}
-          {role === 'dispensary' && <p className="op-code">Mi referencia: <span>{data.actorRef}</span><button aria-label="Copiar mi referencia" title="Copiar mi referencia" onClick={() => { void navigator.clipboard.writeText(data.actorRef).then(() => setNotice('Referencia copiada.')).catch(() => setError('No se pudo copiar.')); }}><Copy size={16}/></button></p>}
-          {role === 'dispensary' && !data.membership?.organization_ref && <CommandForm label="Crear dispensario de prueba" disabled={disabled} fields={[{ name: 'name', label: 'Nombre del dispensario', maxLength: 100 }]} submit={v => mutate('create-organization', v)}/>}
-          {data.organizations?.filter(o => matches(`${o.name} ${o.organization_ref}`)).map(o => <article className="op-row" key={o.organization_ref}><h3>{o.name}</h3><p className="op-reference">{o.organization_ref}</p></article>)}
-          {data.members?.filter(m => matches(`${m.actor_ref} ${m.role === 'manager' ? 'Encargado' : 'Operador'}`)).map(m => <div className="op-line" key={m.actor_ref}><span className="op-reference">{m.actor_ref}<small>{m.role === 'manager' ? 'Encargado' : 'Operador'}</small></span>
-            {data.membership?.role === 'manager' && m.role === 'operator' && <button title="Retirar operador" aria-label={`Retirar operador ${short(m.actor_ref)}`} disabled={disabled} onClick={() => { if (confirm('Retirar el acceso de este operador?')) mutate('remove-operator', { resourceRef: m.actor_ref }); }}><X size={16}/></button>}</div>)}
-          {data.membership?.role === 'manager' && <CommandForm label="Agregar operador" disabled={disabled} fields={[{ name: 'resourceRef', label: 'Referencia de operador aprobado' }]} submit={v => mutate('add-operator', v)}/>}
+          {role === 'dispensary' && !data.staffOnly && !data.membership?.organization_ref && <CommandForm label="Crear dispensario de prueba" disabled={disabled} fields={[{ name: 'name', label: 'Nombre del dispensario', maxLength: 100 }]} submit={v => mutate('create-organization', v)}/>}
+          {role === 'dispensary' && data.membership?.organization_ref && <TeamPanel search={search} revision={revision} disabled={disabled} remove={actorRef => mutate('remove-operator', { resourceRef: actorRef })}/>}
+          {role === 'admin' && data.organizations?.filter(o => matches(`${o.name} ${o.organization_ref}`)).map(o => <article className="op-row" key={o.organization_ref}><h3>{o.name}</h3><p className="op-reference">{o.organization_ref}</p></article>)}
         </>}
         {tab === 'history' && <>
           <h2>Historial de entregas</h2>{(data.deliveries ?? []).filter(d => matches(`${d.treatment_ref} ${d.delivery_ref}`)).map(d => <article className="op-row" key={d.delivery_ref}><h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3><p>Dispensario {short(d.organization_ref)} · Lote {short(d.batch_ref)} · Periodo {d.period_index}</p><p className="op-reference">Comprobante: {d.delivery_ref}</p><p className="op-reference">Tratamiento: {d.treatment_ref}</p></article>)}

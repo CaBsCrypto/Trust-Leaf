@@ -43,6 +43,7 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
     ready: ready && !syncing,
     authenticated: authenticated && !syncing,
     subject: syncing ? undefined : user?.id,
+    email: syncing ? undefined : user?.email?.address ?? user?.google?.email ?? undefined,
     tokenReady: ready && authenticated && !syncing && Boolean(identityToken),
     async refreshIdentityToken() {
       if (syncing || currentTokens.current !== tokens) return null;
@@ -62,7 +63,7 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
       if (syncing || currentTokens.current !== tokens) return null;
       return tokens.read();
     },
-  }), [authenticated, login, logout, ready, user?.id, identityToken, tokens, syncing]);
+  }), [authenticated, login, logout, ready, user?.id, user?.email?.address, user?.google?.email, identityToken, tokens, syncing]);
 
   return <TrustLeafPrivyContext.Provider value={value}>{children}</TrustLeafPrivyContext.Provider>;
 }

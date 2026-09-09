@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { invitationInput, acceptanceInput } from './team-fixtures.mjs';
 import assert from 'node:assert/strict';
 
 // Deliberately refuses hosted databases and requires an empty, dedicated local database.
@@ -13,6 +14,13 @@ assert.equal(url.pathname, '/trustleaf_pilot_test');
 assert.equal(url.search, '', 'connection overrides are not allowed');
 const connectionEnv = { PGHOST: url.hostname.replaceAll(/[\[\]]/g, ''), PGPORT: url.port || '5432',
   PGDATABASE: url.pathname.slice(1), PGUSER: decodeURIComponent(url.username), PGPASSWORD: decodeURIComponent(url.password), PGCONNECT_TIMEOUT: '5' };
+// Local Linux runs can use existing OS peer authentication instead of creating
+// a password-bearing database administrator just for this fixture.
+if (process.env.PILOT_TEST_USE_LOCAL_SOCKET === 'true') {
+  assert.equal(process.platform, 'linux'); assert.equal(url.hostname, 'localhost');
+  assert.equal(url.username, 'postgres'); assert.equal(url.password, ''); assert.equal(url.port, '');
+  connectionEnv.PGHOST = '/var/run/postgresql';
+}
 const sql = (text, application = 'pilot-setup') => new Promise((resolve, reject) => {
   const child = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
     env: { ...process.env, ...connectionEnv, PGAPPNAME: application, PGOPTIONS: '-c statement_timeout=20000 -c lock_timeout=15000' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
@@ -24,6 +32,7 @@ const sql = (text, application = 'pilot-setup') => new Promise((resolve, reject)
 const literal = value => `'${String(value).replaceAll("'", "''")}'`;
 const command = (who, action, input) => `select public.trustleaf_operations_pilot(${literal('did:privy:concurrency-' + who)},${literal(action)},${literal(JSON.stringify({ operationId: randomUUID(), ...input }))}::jsonb);`;
 const mutation = async (who, action, input) => JSON.parse(await sql(command(who, action, input)));
+const teamCommand = (who, action, input) => `select public.trustleaf_team_invitations(${literal('did:privy:concurrency-' + who)},${literal(action)},${literal(JSON.stringify(input))}::jsonb);`;
 
 // The holder makes both connections wait; observing both waiters proves overlap.
 async function competing(lockExpression, statements) {
@@ -93,7 +102,21 @@ assert.equal(await sql('select count(*) from trustleaf_private.pilot_deliveries;
 await assert.rejects(mutation(winner[0], 'dispense', { ...winner[1], quantityMg: 1000 }), /PILOT_REPLAY_CONFLICT/);
 
 const actorOperator = await sql("select actor_ref from public.trustleaf_resolve_privy_actor('did:privy:concurrency-operator');");
-await mutation('a', 'add-operator', { resourceRef: actorOperator });
+const operatorInvitation = invitationInput();
+await sql(teamCommand('a', 'create', operatorInvitation));
+const acceptTwice = await competing('pg_advisory_xact_lock(42826004)', [
+  teamCommand('operator', 'accept', acceptanceInput(operatorInvitation)), teamCommand('operator', 'accept', acceptanceInput(operatorInvitation)),
+]);
+assert.equal(acceptTwice.filter(r => r.status === 'fulfilled').length, 2, 'concurrent same-token accepts both recover one membership');
+assert.equal(await sql(`select count(*) from trustleaf_private.pilot_memberships where actor_ref=${literal(actorOperator)};`), '1');
+const competingA = invitationInput(), competingB = invitationInput();
+await sql(teamCommand('a', 'create', competingA)); await sql(teamCommand('b', 'create', competingB));
+const twoOrganizations = await competing('pg_advisory_xact_lock(42826004)', [
+  teamCommand('new-worker', 'accept', acceptanceInput(competingA)), teamCommand('new-worker', 'accept', acceptanceInput(competingB)),
+]);
+assert.equal(twoOrganizations.filter(r => r.status === 'fulfilled').length, 1, 'two invitations cannot enroll one identity in two organizations');
+const newWorkerRef = await sql("select actor_ref from public.trustleaf_resolve_privy_actor('did:privy:concurrency-new-worker');");
+assert.equal(await sql(`select count(*) from trustleaf_private.pilot_memberships where actor_ref=${literal(newWorkerRef)};`), '1');
 await assert.rejects(mutation('operator', 'receive-batch', { ...batch, lotCode: 'FORBIDDEN' }), /PILOT_MANAGER_REQUIRED/);
 const slot2 = randomUUID(), booking2 = randomUUID();
 await agenda('doctor', 'publish', { slotRef: slot2, startsAt: new Date(Date.now() + 90000000).toISOString(), endsAt: new Date(Date.now() + 91800000).toISOString() });
@@ -119,7 +142,12 @@ assert.equal(await sql(`select count(*) from trustleaf_private.pilot_deliveries 
 await mutation('patient2', 'revoke-grant', { resourceRef: treatment2, organizationRef: orgB });
 await assert.rejects(mutation('b', 'dispense', { ...retry, operationId: randomUUID() }), /PILOT_GRANT_REQUIRED/);
 await mutation('patient2', 'grant', { resourceRef: treatment2, organizationRef: orgB });
-await mutation('a', 'remove-operator', { resourceRef: actorOperator });
+const removalRace = await competing('pg_advisory_xact_lock(42826004)', [
+  command('a', 'remove-operator', { resourceRef: actorOperator }), teamCommand('operator', 'accept', acceptanceInput(operatorInvitation)),
+]);
+assert.equal(removalRace[0].status, 'fulfilled');
+assert.equal(await sql(`select count(*) from trustleaf_private.pilot_memberships where actor_ref=${literal(actorOperator)};`), '0', 'an acceptance replay never restores removed access');
+await assert.rejects(mutation('operator', 'create-organization', { name: 'Forbidden after removal' }), /STAFF_ONLY/);
 await assert.rejects(mutation('operator', 'dispense', { resourceRef: treatment2, batchRef: scarceBatch, quantityMg: 1000 }), /PILOT_DISPENSARY_REQUIRED/);
 const batchVersion = Number(await sql(`select version from trustleaf_private.pilot_batches where batch_ref=${literal(batchB)};`));
 await mutation('b', 'set-batch-state', { resourceRef: batchB, version: batchVersion, state: 'quarantined' });
@@ -129,4 +157,4 @@ await sql(`update trustleaf_private.pilot_batches set expires_at=clock_timestamp
 await assert.rejects(mutation('b', 'dispense', { ...retry, operationId: randomUUID() }), /PILOT_STOCK_OR_QUOTA_CONFLICT/);
 await mutation('doctor', 'revoke-treatment', { resourceRef: treatment2, version: 1 });
 await assert.rejects(mutation('b', 'dispense', { ...retry, operationId: randomUUID() }), /PILOT_TREATMENT_EXPIRED/);
-console.log('PASS: independent blocked PostgreSQL sessions validate shared quota, shared stock, concurrent retries, lost-response recovery, revocation, expiry, quarantine and operator restrictions. Dedicated test DB retained.');
+console.log('PASS: independent blocked PostgreSQL sessions validate shared quota, stock, retries, response loss, revocation, expiry, quarantine, same/different invitation acceptance and concurrent worker removal. Dedicated test DB retained.');
