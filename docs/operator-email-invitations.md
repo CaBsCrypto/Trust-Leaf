@@ -73,11 +73,14 @@ Estado comprobado el 2026-09-09:
   y `TEAM_INVITATION_ENCRYPTION_KEY` guardadas como secretos de Production en
   Vercel. Clave de cifrado independiente de 32 bytes, sin copias en archivos o Git.
 - Webhook `2b8a80cc-1626-4851-aece-165d4be43369` creado para los seis eventos
-  indicados abajo; actualmente Disabled hasta publicar el nuevo endpoint.
-- Flag de invitaciones explicitamente `false`. Sin redeploy, migracion remota
-  ni envio real. No habilitar ni probar el webhook contra el endpoint antiguo.
-- La UI ofrece crear un subdominio de tracking: no se creo ni activo ninguno.
-  Confirmar la ausencia de seguimiento antes del primer envio real.
+  indicados abajo; Enabled despues de publicar y verificar el endpoint nuevo.
+- Flag de invitaciones `true` en Production. Primero se desplego con `false` y
+  se verifico el bloqueo antes de reconstruir el mismo commit para activarlo.
+- La configuracion del dominio muestra "Enable tracking metrics": no hay
+  subdominio de tracking configurado ni seguimiento de aperturas/clics activado.
+  El webhook tampoco esta suscrito a eventos opened/clicked.
+- TLS sigue Opportunistic, sin cambios. La entrega de correo real y recepcion de
+  su webhook firmado siguen pendientes de la prueba autenticada.
 
 Procedimiento de referencia (no recrear ni rotar los secretos ya guardados):
 
@@ -125,6 +128,33 @@ Referencias: [limites](https://resend.com/docs/knowledge-base/account-quotas-and
   destinatarios y mensajes pendientes. No rotarla sin migracion de cifrado.
 
 ## Evidencia y validacion oficial
+
+Publicacion comprobada el 2026-09-09:
+
+- [PR 23](https://github.com/CaBsCrypto/Trust-Leaf/pull/23) fusionado a `main`
+  como `d8728a42283161d0054b181199f5c0f6827b6320`. Checks del ultimo head
+  `5fcfa4a` aprobados y [CI de main](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34323880970)
+  terminado con success.
+- Respaldo `D:\00 CODEX - OPENIA\.backups\trustleaf\application-20260909-042136.dpapi`,
+  SHA256 `39A36E553C0C65C49B9D8BBF25566D0C64F9501B49433149B8E37C9AB2F46F28`.
+  Restauracion aislada verificada: 31 tablas y 163 filas. Cifrado Windows DPAPI
+  CurrentUser; requiere el perfil Windows original. Alcance de aplicacion, no
+  incluye Auth, Storage, Vault ni configuracion del proveedor.
+- Solo `20260909030000_operator_invitations.sql` aplicada con su registro de
+  historial en la misma transaccion. Historial remoto: 28 versiones; 7 actores,
+  2 membresias y 2 entregas conservados, 0 invitaciones al finalizar migracion.
+  Cinco tablas nuevas con RLS forzado y sin SELECT directo; RPC solo service_role,
+  ejecutor privado anterior sin permiso de ejecucion service_role.
+  Borrador mensual sin modificar ni aplicar.
+- Despliegue deshabilitado `dpl_6tLq1hFvLYQv3LKak2osxyLZaLeF`: GET sin sesion
+  401, POST de creacion con token ficticio 503 TEAM_DISABLED, webhook sin firma
+  400 SIGNATURE_INVALID, GET del webhook 405. Respuestas no-store, private.
+- Despliegue habilitado `dpl_FaK6mBf6873YhSQCw6fHhH6nCARB` Ready, mismo commit,
+  aliases `trustleaf.org` y `www.trustleaf.org`. GET sin sesion 401 AUTH_REQUIRED;
+  POST con token ficticio ahora 401, sin enviar correo ni escribir solicitudes.
+  Webhook sin firma 400 SIGNATURE_INVALID; API de operaciones sin sesion 401.
+  Todas esas respuestas conservan no-store, private; APIs de actor usan
+  Vary: privy-id-token. No acredita todavia una aceptacion o entrega real.
 
 Ejecutables: `npm run test:team-invitations`, `npm run qa:operations-pilot`,
 `npm run test:operations-pilot-concurrency`, `npm run lint`, `npm run build`,

@@ -669,11 +669,12 @@ medir F1-F3 y resolver dependencias; priorizar cierres pequenos demostrables.
 
 ### Equipo por correo - 2026-09-09
 
-Implementado localmente: invitaciones privadas, verificacion fresca de correo
+Implementado y desplegado: invitaciones privadas, verificacion fresca de correo
 Privy, aceptacion atomica, restriccion permanente de trabajador, equipo por email,
 outbox Resend con reintentos y webhook firmado. Alta por UUID bloqueada.
-Conservadas las membresias y la cuenta de trabajador aprobada; sin modificar la
-base remota, los saldos previos, Zoho, Calendar ni el borrador mensual.
+Conservadas las membresias, la cuenta de trabajador aprobada y los saldos previos.
+Aplicada solo la migracion de invitaciones; Zoho, Calendar y el borrador mensual
+permanecen intactos. Validacion real encargado/trabajador aun pendiente.
 
 Pruebas locales aprobadas: API/SQL, tipos, compilacion, concurrencia con conexiones
 PostgreSQL independientes y restauracion sintetica con invitaciones. Navegador:
@@ -684,14 +685,17 @@ capturas de escritorio y movil revisadas. Codigo `3c3234d` aprobado en
 incluyendo PostgreSQL 17, restauracion, tipos, builds y navegador. El preview de
 Vercel `dpl_GpmCE1YpHo6k5EsaVGjJpMWoHwt3` compilo y quedo Ready. Su proteccion de
 acceso intercepta las peticiones anonimas: no se afirma validacion de las nuevas
-APIs en ese entorno ni del envio real. [PR 23](https://github.com/CaBsCrypto/Trust-Leaf/pull/23)
-en borrador, sin fusion a main ni migracion remota.
+APIs en ese entorno ni del envio real. Posteriormente se comprobaron todos los
+checks del ultimo head `5fcfa4a` y se fusiono el
+[PR 23](https://github.com/CaBsCrypto/Trust-Leaf/pull/23) a `main` como
+`d8728a42283161d0054b181199f5c0f6827b6320`. Tambien paso el
+[CI de main](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34323880970).
 
 Configuracion comprobada el 2026-09-09: dominio Resend `trustleaf.org` Verified;
 DKIM y los dos CNAME del proveedor publicados, sin reemplazar los MX de Zoho.
 Cuenta gratuita seleccionada, sin contratar ni activar pagos. Clave con permiso
 de envio restringido al dominio guardada como `RESEND_API_KEY`, secreto de
-Production en Vercel. No se ejecuto un redeploy por este cambio.
+Production en Vercel. Secretos incluidos en los despliegues comprobados abajo.
 
 La cuenta contiene otros proyectos: el codigo `07c2b59` filtra por etiquetas y
 remitente despues de verificar la firma, antes de persistir eventos. Sus 10 pruebas
@@ -703,17 +707,38 @@ Esto no acredita entrega de correo real ni aceptacion en produccion.
 Con autorizacion del usuario se creo el webhook
 `2b8a80cc-1626-4851-aece-165d4be43369`, destino
 `https://www.trustleaf.org/api/team-mail-webhook`, con seis eventos de entrega.
-Quedo Disabled mientras el endpoint no este desplegado; no habia eventos al
-pausarlo. `RESEND_WEBHOOK_SECRET` y `TEAM_INVITATION_ENCRYPTION_KEY` guardadas
+Se mantuvo Disabled hasta publicar y verificar el endpoint, luego Enabled;
+la entrega de un evento real aun no esta probada.
+`RESEND_WEBHOOK_SECRET` y `TEAM_INVITATION_ENCRYPTION_KEY` guardadas
 como secretos de Production en Vercel. La segunda se genero con 32 bytes
 aleatorios independientes, sin archivo local ni exposicion en chat o Git.
-`TRUSTLEAF_TEAM_INVITATIONS_ENABLED=false` guardado explicitamente; sin redeploy.
+`TRUSTLEAF_TEAM_INVITATIONS_ENABLED` paso de `false` a `true` mediante un nuevo
+despliegue del mismo commit, despues de comprobar el bloqueo inicial.
 No se sobrescribieron claves existentes ni se cambiaron permisos de otros proyectos.
 
-Pendiente para activar: confirmar seguimiento desactivado, revision de activacion,
-respaldo remoto actualizado, migracion unica, deploy inicialmente deshabilitado,
-habilitar y probar el webhook, luego flag y prueba oficial encargado/trabajador.
-No se han enviado correos reales mediante Resend en esta entrega.
+Respaldo actualizado y restaurado antes de migrar: 31 tablas y 163 filas,
+`D:\00 CODEX - OPENIA\.backups\trustleaf\application-20260909-042136.dpapi`,
+SHA256 `39A36E553C0C65C49B9D8BBF25566D0C64F9501B49433149B8E37C9AB2F46F28`.
+Cifrado Windows DPAPI CurrentUser, alcance aplicacion; excluye Auth, Storage,
+Vault y configuracion de proveedores. Restauracion aislada verificada.
+Solo `20260909030000_operator_invitations.sql` aplicada y registrada en una
+transaccion: 28 migraciones remotas, 7 actores, 2 membresias y 2 entregas
+conservados. Borrador mensual no aplicado. Nuevas tablas con RLS forzado y sin
+lectura directa; RPC solo service_role, anterior ejecutor ahora privado.
+
+Despliegue inicial `dpl_6tLq1hFvLYQv3LKak2osxyLZaLeF` Ready con flag false:
+invitaciones bloqueadas, autenticacion requerida, webhook falso rechazado y
+sin cache. Despliegue activado `dpl_FaK6mBf6873YhSQCw6fHhH6nCARB` Ready en
+`trustleaf.org` y `www.trustleaf.org`: API sin sesion 401, token ficticio 401,
+webhook sin firma 400; no-store, private en todas esas respuestas.
+Dominio verificado sin tracking de clics/aperturas configurado. TLS sigue
+Opportunistic; no afirmar cifrado de transporte obligatorio.
+
+Pendiente: envio real, webhook firmado de entrega, aceptacion con Privy,
+recarga/sesion nueva, cuenta equivocada, cancelacion/reenvio, permisos, retirada
+y reincorporacion con dispositivos separados. Una entrega exitosa del operador
+requiere otro tratamiento ficticio desde medico/paciente, sin resetear el saldo
+agotado. No se han enviado correos reales mediante Resend en esta entrega.
 
 Detalle y procedimiento: [invitaciones de operadores](operator-email-invitations.md).
 
