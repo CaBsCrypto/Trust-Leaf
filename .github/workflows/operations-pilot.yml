@@ -46,6 +46,7 @@ jobs:
             tests/ui/package-lock.json
       - name: Install locked dependencies
         run: |
+          npx --yes pnpm@10.28.2 install --lockfile-only --frozen-lockfile --ignore-scripts
           npm ci
           npm ci --prefix tests/sql --ignore-scripts
           npm ci --prefix tests/ui
