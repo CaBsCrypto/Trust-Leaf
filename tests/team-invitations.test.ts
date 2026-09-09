@@ -48,6 +48,7 @@ test('create persists encrypted recipient/token first; failure is recorded and s
     const payload = JSON.parse(String(init?.body));
     if (String(url) === 'https://api.resend.com/emails') {
       assert.ok(saved.emailCiphertext); assert.equal(payload.from, 'Trust Leaf <admin@trustleaf.org>');
+      assert.deepEqual(payload.tags, [{ name: 'app', value: 'trustleaf' }, { name: 'category', value: 'operator_invitation' }]);
       assert.deepEqual(payload.to, ['worker@example.test']); assert.equal(payload.text.includes('patient'), false);
       assert.match(payload.text, /\/dispensario#team-invite=/);
       const key = new Headers(init?.headers).get('Idempotency-Key')!;
@@ -78,8 +79,9 @@ test('manager list resolves only organization-scoped users and removes internal 
   } });
   assert.equal(reads, 1); assert.equal(JSON.stringify(result).includes('did:privy:'), false); assert.equal(JSON.stringify(result).includes('Ciphertext'), false);
 });
-function webhook(type = 'email.delivered', signatureValid = true) {
-  const payload = JSON.stringify({ type, data: { email_id: 'provider-id' }, created_at: new Date().toISOString() });
+function webhook(type = 'email.delivered', signatureValid = true, overrides: Record<string, unknown> = {}) {
+  const payload = JSON.stringify({ type, data: { email_id: 'provider-id', from: 'Trust Leaf <admin@trustleaf.org>',
+    tags: { app: 'trustleaf', category: 'operator_invitation' }, ...overrides }, created_at: new Date().toISOString() });
   const id = 'msg_test_event', timestamp = String(Math.floor(Date.now() / 1000));
   const signature = createHmac('sha256', Buffer.from('test-signature-key')).update(`${id}.${timestamp}.${payload}`).digest('base64');
   return new Request('https://www.trustleaf.org/api/team-mail-webhook', { method: 'POST', headers: { 'svix-id': id, 'svix-timestamp': timestamp, 'svix-signature': `v1,${signatureValid ? signature : 'forged'}` }, body: payload });
@@ -91,6 +93,38 @@ test('signed raw webhook only; forged events rejected and early delivery asks pr
   assert.equal((await teamMailWebhook(webhook(), env, fetcher)).status, 200); assert.equal(calls, 1);
   assert.equal((await teamMailWebhook(webhook(), env, async () => Response.json({ code: 'PT409' }, { status: 409 }))).status, 503);
 });
+test('shared Resend account events are acknowledged without storing unrelated metadata', async () => {
+  let calls = 0;
+  const fetcher: typeof fetch = async () => { calls++; return Response.json(null); };
+  for (const overrides of [
+    { tags: undefined },
+    { tags: { app: 'another-project', category: 'operator_invitation' } },
+    { tags: { app: 'trustleaf', category: 'another-purpose' } },
+    { from: 'Other <sender@example.test>' },
+  ]) {
+    const response = await teamMailWebhook(webhook('email.delivered', true, overrides), env, fetcher);
+    assert.equal(response.status, 200); assert.deepEqual(await response.json(), { received: true });
+  }
+  assert.equal((await teamMailWebhook(webhook('email.opened'), env, fetcher)).status, 200);
+  assert.equal((await teamMailWebhook(webhook('email.delivered', false, { tags: undefined }), env, fetcher)).status, 400);
+  assert.equal(calls, 0);
+});
+
+test('all subscribed invitation events reach the durable delivery state handler', async () => {
+  const states: Record<string, string> = { 'email.sent': 'sent', 'email.delivered': 'delivered', 'email.delivery_delayed': 'delayed',
+    'email.failed': 'failed', 'email.bounced': 'bounced', 'email.complained': 'bounced' };
+  let calls = 0;
+  for (const [type, state] of Object.entries(states)) {
+    const response = await teamMailWebhook(webhook(type), env, async (_url, init) => {
+      calls++; const data = JSON.parse(String(init?.body));
+      assert.deepEqual(data, { p_event_id: 'msg_test_event', p_provider_ref: 'provider-id', p_state: state });
+      return Response.json(null);
+    });
+    assert.equal(response.status, 200);
+  }
+  assert.equal(calls, 6);
+});
+
 test('HTTP endpoint is private and never returns provider or SQL details', async () => {
   let status = 0, body: unknown; const headers: Record<string, string> = {};
   const response = { setHeader(k: string, v: string) { headers[k] = v; }, status(s: number) { status = s; return { json(b: unknown) { body = b; } }; } };

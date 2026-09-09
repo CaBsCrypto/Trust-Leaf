@@ -687,10 +687,20 @@ acceso intercepta las peticiones anonimas: no se afirma validacion de las nuevas
 APIs en ese entorno ni del envio real. [PR 23](https://github.com/CaBsCrypto/Trust-Leaf/pull/23)
 en borrador, sin fusion a main ni migracion remota.
 
-Pendiente para activar: cuenta Resend, DNS y seguimiento desactivado, secretos de
-servidor, webhook, revision de activacion, respaldo remoto actualizado, migracion unica,
-deploy con flag y prueba oficial encargado/trabajador. No se han enviado correos
-reales mediante Resend en esta entrega.
+Configuracion comprobada el 2026-09-09: dominio Resend `trustleaf.org` Verified;
+DKIM y los dos CNAME del proveedor publicados, sin reemplazar los MX de Zoho.
+Cuenta gratuita seleccionada, sin contratar ni activar pagos. Clave con permiso
+de envio restringido al dominio guardada como `RESEND_API_KEY`, secreto de
+Production en Vercel. No se ejecuto un redeploy por este cambio.
+
+La cuenta contiene otros proyectos: se agrega filtro firmado por etiquetas y
+remitente antes de persistir eventos de entrega. No hay webhook remoto creado.
+Comprobacion local de este ajuste: 10 pruebas API, suite SQL de invitaciones,
+tipos y compilacion aprobados; no equivale a entrega real ni a CI del nuevo commit.
+Pendiente para activar: confirmar seguimiento desactivado, clave independiente
+de cifrado, webhook y su secreto, revision de activacion, respaldo remoto
+actualizado, migracion unica, deploy con flag y prueba oficial encargado/trabajador.
+No se han enviado correos reales mediante Resend en esta entrega.
 
 Detalle y procedimiento: [invitaciones de operadores](operator-email-invitations.md).
 

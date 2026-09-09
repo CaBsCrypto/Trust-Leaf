@@ -6,6 +6,8 @@ import type { TeamCommand } from '../../src/features/operations/team-contracts.j
 type Env = Record<string, string | undefined>;
 type Json = Record<string, unknown>;
 type Verifier = { verify(token: string): Promise<PrivyIdentity> };
+const TEAM_MAIL_FROM = 'Trust Leaf <admin@trustleaf.org>';
+const TEAM_MAIL_TAGS = [{name:'app',value:'trustleaf'},{name:'category',value:'operator_invitation'}];
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 export const teamFailure = (statusCode: number, code: string) => Object.assign(new Error(code), { statusCode, code });
 function object(value: unknown): Json {
@@ -143,7 +145,7 @@ async function sendInvitation(rpc: (action: string,input: Json)=>Promise<Json>, 
   let state = 'uncertain', providerRef: string | null = null;
   try {
     const response = await fetcher('https://api.resend.com/emails',{method:'POST',headers:{authorization:`Bearer ${env.RESEND_API_KEY}`,'content-type':'application/json','Idempotency-Key':`team/${text(job.mail_ref)}`},
-      body:JSON.stringify({from:'Trust Leaf <admin@trustleaf.org>',reply_to:'admin@trustleaf.org',to:[email],subject:'Invitacion al equipo de Trust Leaf',text:message}),signal:AbortSignal.timeout(8000)});
+      body:JSON.stringify({from:TEAM_MAIL_FROM,reply_to:'admin@trustleaf.org',to:[email],subject:'Invitacion al equipo de Trust Leaf',text:message,tags:TEAM_MAIL_TAGS}),signal:AbortSignal.timeout(8000)});
     if (response.ok) { providerRef=text(object(await response.json()).id); state='sent'; }
     else state=response.status>=500?'uncertain':'failed';
   } catch { /* Preserve uncertainty; the same durable mail key is used on retry. */ }
@@ -163,7 +165,11 @@ export async function teamMailWebhook(request: Request, env: Env, fetcher: typeo
   const states: Record<string,string> = {'email.sent':'sent','email.delivered':'delivered','email.delivery_delayed':'delayed','email.failed':'failed','email.bounced':'bounced','email.complained':'bounced'};
   const state=states[event.type];
   try {
-    if (state && 'email_id' in event.data) await teamRpc(env,fetcher,'trustleaf_team_mail_event',{p_event_id:request.headers.get('svix-id'),p_provider_ref:event.data.email_id,p_state:state});
+    // Resend webhooks cover the whole account, including unrelated applications.
+    if (state && 'email_id' in event.data && 'from' in event.data && event.data.from===TEAM_MAIL_FROM
+      && 'tags' in event.data && event.data.tags?.app==='trustleaf' && event.data.tags?.category==='operator_invitation') {
+      await teamRpc(env,fetcher,'trustleaf_team_mail_event',{p_event_id:request.headers.get('svix-id'),p_provider_ref:event.data.email_id,p_state:state});
+    }
     return Response.json({received:true},{headers});
   } catch { return Response.json({code:'TEAM_UNAVAILABLE'},{status:503,headers}); }
 }

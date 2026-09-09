@@ -54,6 +54,13 @@ Rechaza firmas falsas, deduplica eventos y no rebaja un estado entregado por un
 evento enviado tardio. Si llega antes de registrar el resultado del envio,
 responde 503 para que Resend reintente sin perder el evento.
 
+La cuenta de Resend es compartida: cada invitacion lleva etiquetas estaticas
+`app=trustleaf` y `category=operator_invitation`, sin datos personales. Despues
+de verificar la firma, el webhook exige ambas y el remitente exacto. Los eventos
+ajenos reciben 200 sin consultar ni escribir la base y sin registrar su payload.
+El filtro no evita que Resend envie metadatos de otros proyectos al endpoint;
+una cuenta independiente seria necesaria para aislar tambien ese transporte.
+
 Estados: en cola, enviando, enviado, entregado al servidor receptor, demorado,
 fallido, incierto, rechazado y cancelado. Ninguno acredita lectura del correo.
 
@@ -77,7 +84,9 @@ fallido, incierto, rechazado y cancelado. Ninguno acredita lectura del correo.
 Referencias: [limites](https://resend.com/docs/knowledge-base/account-quotas-and-limits),
 [idempotencia](https://resend.com/docs/dashboard/emails/idempotency-keys),
 [firmas](https://resend.com/docs/webhooks/verify-webhooks-requests),
-[eventos](https://resend.com/docs/webhooks/event-types).
+[eventos](https://resend.com/docs/webhooks/event-types),
+[etiquetas](https://resend.com/docs/dashboard/emails/tags),
+[cuenta compartida](https://resend.com/docs/knowledge-base/setting-up-resend-for-multi-tenants).
 
 ## Publicacion y recuperacion
 
