@@ -54,7 +54,12 @@ const providerRef = `synthetic-postgrest-${randomUUID()}`;
 await team('finish-send', { invitationRef: invitation.invitationRef, leaseRef: job.lease_ref, state: 'sent', providerRef });
 const delivery = { p_event_id: `synthetic-event-${randomUUID()}`, p_provider_ref: providerRef, p_state: 'delivered' };
 const transport = async (url, init) => {
-  const response = await fetch(url, init);
+  // Supabase's gateway adds /rest/v1; the isolated PostgREST server has no gateway.
+  const direct = new URL(url);
+  assert.equal(direct.origin, base);
+  assert.equal(direct.pathname, '/rest/v1/rpc/trustleaf_team_mail_event');
+  direct.pathname = '/rpc/trustleaf_team_mail_event';
+  const response = await fetch(direct, init);
   assert.equal(response.status, 204, 'void RPC must really use HTTP 204');
   assert.equal(await response.clone().text(), '', 'HTTP 204 has no JSON to parse');
   return response;
