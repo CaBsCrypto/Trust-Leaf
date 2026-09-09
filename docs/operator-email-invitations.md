@@ -64,7 +64,22 @@ una cuenta independiente seria necesaria para aislar tambien ese transporte.
 Estados: en cola, enviando, enviado, entregado al servidor receptor, demorado,
 fallido, incierto, rechazado y cancelado. Ninguno acredita lectura del correo.
 
-## Activacion del proveedor pendiente
+## Configuracion del proveedor
+
+Estado comprobado el 2026-09-09:
+
+- Dominio `trustleaf.org` Verified, plan gratuito, MX raiz de Zoho conservados.
+- `RESEND_API_KEY` restringida a envios de ese dominio, `RESEND_WEBHOOK_SECRET`
+  y `TEAM_INVITATION_ENCRYPTION_KEY` guardadas como secretos de Production en
+  Vercel. Clave de cifrado independiente de 32 bytes, sin copias en archivos o Git.
+- Webhook `2b8a80cc-1626-4851-aece-165d4be43369` creado para los seis eventos
+  indicados abajo; actualmente Disabled hasta publicar el nuevo endpoint.
+- Flag de invitaciones explicitamente `false`. Sin redeploy, migracion remota
+  ni envio real. No habilitar ni probar el webhook contra el endpoint antiguo.
+- La UI ofrece crear un subdominio de tracking: no se creo ni activo ninguno.
+  Confirmar la ausencia de seguimiento antes del primer envio real.
+
+Procedimiento de referencia (no recrear ni rotar los secretos ya guardados):
 
 1. Crear o seleccionar la cuenta Resend gratuita. Confirmar los limites de la
    cuenta; actualmente se documentan 100 correos diarios y 3.000 mensuales.
@@ -97,6 +112,9 @@ Referencias: [limites](https://resend.com/docs/knowledge-base/account-quotas-and
   anterior no cubre operaciones recientes. Verificar version/hash de referencia.
 - Aplicar exclusivamente `20260909030000_operator_invitations.sql`. No ejecutar
   un db push general: el borrador mensual permanece fuera de esta entrega.
+- Publicar primero con invitaciones deshabilitadas, confirmar que el nuevo endpoint
+  exige firma y habilitar el webhook existente. Validar entrega firmada antes de
+  permitir invitaciones; no crear otro webhook ni regenerar su secreto.
 - Publicar, confirmar commit y activar `TRUSTLEAF_TEAM_INVITATIONS_ENABLED=true`
   solo con proveedor, dominio y webhook comprobados. Tambien requiere el piloto
   operativo habilitado. Los limites se configuran en variables de servidor.

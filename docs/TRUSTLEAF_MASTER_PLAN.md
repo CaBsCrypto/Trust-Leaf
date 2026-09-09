@@ -672,8 +672,8 @@ medir F1-F3 y resolver dependencias; priorizar cierres pequenos demostrables.
 Implementado localmente: invitaciones privadas, verificacion fresca de correo
 Privy, aceptacion atomica, restriccion permanente de trabajador, equipo por email,
 outbox Resend con reintentos y webhook firmado. Alta por UUID bloqueada.
-Conservadas las membresias y la cuenta de trabajador aprobada; sin cambios
-remotos, en saldos previos, Zoho, Calendar ni el borrador mensual.
+Conservadas las membresias y la cuenta de trabajador aprobada; sin modificar la
+base remota, los saldos previos, Zoho, Calendar ni el borrador mensual.
 
 Pruebas locales aprobadas: API/SQL, tipos, compilacion, concurrencia con conexiones
 PostgreSQL independientes y restauracion sintetica con invitaciones. Navegador:
@@ -693,13 +693,26 @@ Cuenta gratuita seleccionada, sin contratar ni activar pagos. Clave con permiso
 de envio restringido al dominio guardada como `RESEND_API_KEY`, secreto de
 Production en Vercel. No se ejecuto un redeploy por este cambio.
 
-La cuenta contiene otros proyectos: se agrega filtro firmado por etiquetas y
-remitente antes de persistir eventos de entrega. No hay webhook remoto creado.
-Comprobacion local de este ajuste: 10 pruebas API, suite SQL de invitaciones,
-tipos y compilacion aprobados; no equivale a entrega real ni a CI del nuevo commit.
-Pendiente para activar: confirmar seguimiento desactivado, clave independiente
-de cifrado, webhook y su secreto, revision de activacion, respaldo remoto
-actualizado, migracion unica, deploy con flag y prueba oficial encargado/trabajador.
+La cuenta contiene otros proyectos: el codigo `07c2b59` filtra por etiquetas y
+remitente despues de verificar la firma, antes de persistir eventos. Sus 10 pruebas
+API, suite SQL, tipos y compilacion pasaron localmente; tambien paso el
+[CI completo](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/34321908124)
+y el [preview](https://vercel.com/cabscryptocontacto-6028s-projects/trustleaf/96P1XV3UGF866xfopcWm8YPvChHL).
+Esto no acredita entrega de correo real ni aceptacion en produccion.
+
+Con autorizacion del usuario se creo el webhook
+`2b8a80cc-1626-4851-aece-165d4be43369`, destino
+`https://www.trustleaf.org/api/team-mail-webhook`, con seis eventos de entrega.
+Quedo Disabled mientras el endpoint no este desplegado; no habia eventos al
+pausarlo. `RESEND_WEBHOOK_SECRET` y `TEAM_INVITATION_ENCRYPTION_KEY` guardadas
+como secretos de Production en Vercel. La segunda se genero con 32 bytes
+aleatorios independientes, sin archivo local ni exposicion en chat o Git.
+`TRUSTLEAF_TEAM_INVITATIONS_ENABLED=false` guardado explicitamente; sin redeploy.
+No se sobrescribieron claves existentes ni se cambiaron permisos de otros proyectos.
+
+Pendiente para activar: confirmar seguimiento desactivado, revision de activacion,
+respaldo remoto actualizado, migracion unica, deploy inicialmente deshabilitado,
+habilitar y probar el webhook, luego flag y prueba oficial encargado/trabajador.
 No se han enviado correos reales mediante Resend en esta entrega.
 
 Detalle y procedimiento: [invitaciones de operadores](operator-email-invitations.md).
