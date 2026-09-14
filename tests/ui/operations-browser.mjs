@@ -54,6 +54,13 @@ try {
   await command(doctor, 'Finalizar con tratamiento simulado');
   assert.equal((await refresh(patient)).notes.length, 1, 'completed notes are available to the related patient');
   await doctor.getByText('Atencion finalizada', { exact: true }).waitFor();
+  await doctor.getByRole('searchbox').fill('no-existing-booking-qa');
+  await doctor.getByText('No hay consultas para esta busqueda.', { exact: true }).waitFor();
+  await doctor.getByRole('tab', { name: 'Tratamientos', exact: true }).click();
+  await doctor.locator('[role="tab"][aria-selected="true"]').filter({ hasText: 'Tratamientos' }).waitFor();
+  assert.equal(await doctor.getByRole('searchbox').inputValue(), '', 'section change clears unrelated search');
+  await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click();
+  await doctor.getByText('Atencion finalizada', { exact: true }).waitFor();
 
   // Cancel and complete without treatment from the same interfaces, not SQL updates.
   for (const [hour, cancel] of [['15:00', true], ['16:00', false]]) {

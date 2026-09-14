@@ -22,8 +22,9 @@ export default function OperationsWorkspace({ email, onSignOut, embedded = false
 function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSignOut?: () => void; embedded: boolean }) {
   const identity = useTrustLeafPrivyIdentity();
   const [data, setData] = useState<PilotSnapshot | null>(null);
-  const [tab, setTab] = useState('today');
+  const [tab, setSelectedTab] = useState('today');
   const [search, setSearch] = useState('');
+  const setTab = (next: string) => { setSearch(''); setSelectedTab(next); };
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
@@ -112,6 +113,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const visibleError = readError || error;
   const role = data?.role;
   const withoutTeam = role === 'dispensary' && data?.staffOnly && !data.membership?.organization_ref;
+  const searchHint = tab === 'inventory' ? 'Codigo de lote o producto'
+    : tab === 'team' ? role === 'admin' ? 'Nombre o referencia del dispensario' : 'Correo del equipo'
+    : tab === 'today' && role === 'patient' ? 'Referencia de cita o texto de nota'
+    : role === 'doctor' || tab === 'treatment' || role === 'dispensary' && tab === 'today' ? 'Referencia de paciente o registro'
+    : 'Referencia del registro';
+  const visibleBookings = (data?.bookings ?? []).filter(b => matches(role === 'doctor' ? `${b.booking_ref} ${b.patient_ref}` : b.booking_ref));
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref}`));
   const now = Date.now();
   const availableBatches = (data?.batches ?? []).filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0);
@@ -141,11 +148,11 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       </div>}
       {data?.joined && !withoutTeam && <>
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
-        {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Referencia, paciente o lote"/></label>}
+        {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
-          {(data.bookings ?? []).filter(b => matches(`${b.booking_ref} ${b.patient_ref}`)).map(b => {
+          {visibleBookings.map(b => {
             const encounter = data.encounters?.find(e => e.booking_ref === b.booking_ref);
             const notes = data.notes?.filter(n => n.booking_ref === b.booking_ref).sort((a, b) => b.version - a.version) ?? [];
             return <article className="op-row" key={b.booking_ref}>
@@ -163,11 +170,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             </article>;
           })}
           {!data.bookings?.length && <Empty>No hay consultas. Publica un horario desde Agenda.</Empty>}
+          {!!data.bookings?.length && !visibleBookings.length && <Empty>No hay consultas para esta busqueda.</Empty>}
         </>}
         {tab === 'today' && role === 'patient' && <>
           <h2><CalendarDays size={20}/>Mis citas</h2>
-          {(data.bookings ?? []).filter(b => matches(b.booking_ref)).map(b => <article className="op-row" key={b.booking_ref}><h3>{date(b.starts_at)}</h3><p>Medico {short(b.doctor_ref)} · {b.state === 'cancelled' ? 'Cancelada' : data.encounters?.some(e => e.booking_ref === b.booking_ref && e.state === 'completed') ? 'Atencion finalizada' : 'Confirmada'}</p><button className="op-command" onClick={() => setTab('agenda')}>Ver en agenda</button></article>)}
+          {visibleBookings.map(b => <article className="op-row" key={b.booking_ref}><h3>{date(b.starts_at)}</h3><p>Medico {short(b.doctor_ref)} · {b.state === 'cancelled' ? 'Cancelada' : data.encounters?.some(e => e.booking_ref === b.booking_ref && e.state === 'completed') ? 'Atencion finalizada' : 'Confirmada'}</p><button className="op-command" onClick={() => setTab('agenda')}>Ver en agenda</button></article>)}
           {!data.bookings?.length && <Empty>No tienes citas reservadas.</Empty>}
+          {!!data.bookings?.length && !visibleBookings.length && <Empty>No hay citas para esta busqueda.</Empty>}
           <h2>Notas de mi atencion</h2>{data.notes?.filter(n => matches(`${n.booking_ref} ${n.body}`)).map(n => <article className="op-row" key={`${n.booking_ref}-${n.version}`}><strong>{date(n.created_at)} · Version {n.version}</strong><p className="op-note">{n.body}</p></article>)}
         </>}
         {(tab === 'treatment' || tab === 'today' && role === 'dispensary') && <>
