@@ -1018,3 +1018,11 @@ consultation-agenda-browser y operations-browser con SQL aislado. Revisado
 escritorio/movil mediante capturas doctor-filters-*. La compilacion conserva
 advertencias previas de dependencias y paquetes grandes. Faltan CI, preview,
 publicacion y contraste de filtros con consultas existentes del medico real.
+
+Publicacion 14-09: PR #30 fusionado en
+`51d7a671f4c11bfb59436707bcfa8bd2c284e397`; CI `34899602151` aprobado
+(4m52s), preview aprobado. Vercel production READY
+`dpl_7ELsHKcAC7Np4ajqS3oM1eyiuoCj`, aliases trustleaf.org y www.trustleaf.org.
+Pendiente exclusivo de cierre: recorrido autenticado del medico en produccion
+por Pendientes, En atencion, Finalizadas, Canceladas y Todas, con busqueda y
+Ver en agenda. No se han creado ni cerrado consultas publicadas para esta prueba.
