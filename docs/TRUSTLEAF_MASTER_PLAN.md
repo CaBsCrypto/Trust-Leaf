@@ -915,3 +915,17 @@ un encargado de A y, en B, un encargado y un operador reincorporado, cada uno
 una vez, con sus correos correctos. La primera recarga quedo temporalmente
 en blanco; una segunda recupero la aplicacion y la sesion sin cambiar datos.
 Esta observacion no equivale a completar los negativos de invitaciones alojadas.
+
+Cierre del objetivo de supervision de equipos: cobertura final en `17e18f4`,
+CI main `34812686672` aprobado (5m13s), incluidos tipos, regresiones,
+PostgreSQL independiente, compilaciones y navegador. La suite comprueba tambien
+recarga, respuesta valida sin miembros y cambio admin -> paciente -> admin:
+desaparecen los contactos de la sesion anterior y se recuperan al volver.
+El caso vacio usa una respuesta sintetica interceptada; no vacia equipos reales.
+Retirada/reincorporacion se probaron contra SQL aislado; B vigente se contrasto
+en produccion con el equipo reincorporado ya documentado. Rechazo de roles no
+administradores comprobado en el servidor mediante las pruebas del directorio;
+no se presenta como una nueva prueba con tokens reales del operador en produccion.
+Escritorio y movil revisados en capturas. Sin nuevas migraciones, permisos,
+entregas ni cambios de saldo. Los pendientes generales del piloto y de enlaces
+de invitacion siguen separados de este objetivo completado.
