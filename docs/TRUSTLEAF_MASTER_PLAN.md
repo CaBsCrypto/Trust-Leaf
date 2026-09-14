@@ -831,3 +831,22 @@ invitaciones en esta fase. El hash del borrador mensual sigue sin cambios.
   contiene decisiones y restricciones de etapas anteriores, no estado actual.
 
 Este documento registra evidencia; no demuestra por si solo despliegue remoto.
+
+### Trabajador sin equipo: 14-09-2026
+
+Cambio de interfaz: el snapshot staffOnly sin organization_ref muestra un aviso
+persistente, conserva correo y controles de sesion y oculta pestanas, buscador,
+formularios, etiquetas de membresia y avisos de escrituras anteriores. Sin
+migraciones, cambios de API ni alteraciones del borrador mensual.
+
+Regresion de navegador ampliada: retirada, recarga, escritorio/movil, error de
+lectura sin falsa retirada y reincorporacion por una invitacion nueva conservando
+stock e historial. Se respeta el intervalo real de envios. Tipos y build local
+aprobados; la ultima ejecucion local completo reincorporacion pero expiro en el
+escenario posterior de alta de otra cuenta. Exigir CI completo antes de fusionar.
+
+Evidencia manual previa al cambio visual: entrega ficticia de 10 g persistente,
+saldo 20 g, stock B 70 g, comprobante y movimiento conservados; revocacion del
+permiso elimina el tratamiento de Atenciones y retirada del trabajador elimina
+datos de equipo, inventario e historial de su vista. La reincorporacion real
+continua pendiente y no queda validada por estas pruebas locales.
