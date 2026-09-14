@@ -929,3 +929,28 @@ no se presenta como una nueva prueba con tokens reales del operador en produccio
 Escritorio y movil revisados en capturas. Sin nuevas migraciones, permisos,
 entregas ni cambios de saldo. Los pendientes generales del piloto y de enlaces
 de invitacion siguen separados de este objetivo completado.
+
+### Ruta de experiencia diaria de actores
+
+Orden de entrega: medico, paciente, dispensario y administrador. Reutilizar APIs
+y permisos actuales; no crear operaciones ficticias nuevas en produccion solo
+para revisar la interfaz. Invitaciones negativas mantienen su seguimiento aparte.
+
+1. Base compartida: busqueda propia de cada seccion, vacios explicitos y
+   recuperacion de errores. Primer ajuste local: limpiar busqueda al cambiar de
+   pestana, precisar el campo y mostrar citas sin coincidencias.
+2. Medico: revisar agenda diaria, consultas pendientes/en curso/finalizadas,
+   acceso a llamada y continuidad del borrador. Priorizar pendientes sin ocultar
+   el historial ni finalizar consultas al entrar a Meet.
+3. Paciente: revisar proxima cita, tratamiento vigente, saldo, comprobantes y
+   permisos. Mantener visibles vigencia y periodo sin confundirlos con saldo.
+4. Dispensario: revisar atenciones autorizadas, lotes, stock, movimientos y equipo;
+   conservar diferencias entre encargado y operador y trazabilidad por operacion.
+5. Administrador: revisar solicitudes, equipos e incidencias operativas usando
+   supervision de solo lectura; no incorporar fichas clinicas al resumen.
+
+Cada entrega requiere regresion de navegacion, escritorio/movil, nueva sesion,
+tipos, compilacion y CI antes de main. Registrar fricciones observadas y resultados
+por actor. La primera correccion paso tipos y la suite de navegador con SQL
+aislado, incluida busqueda sin coincidencias y limpieza al cambiar de seccion.
+Aun no publicada. No se cambian limites de correo, saldos o membresias.
