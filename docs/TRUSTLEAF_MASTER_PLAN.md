@@ -984,3 +984,12 @@ en scratch/operations-qa; revision visual de medico movil y paciente escritorio.
 Regresion calendar-agenda-browser aprobada para ambos roles; operations-browser
 con SQL aislado aprobado para el recorrido operativo existente. Nueva suite
 incluida en CI. Pendientes CI, preview, publicacion y recorrido autenticado real.
+
+Publicacion 14-09 16:33 Chile: PR #29 fusionado en
+`22533a3caff691f4eea7adcb16f8267f5a64310e`. CI `34886658912` aprobado
+(4m47s), incluidas conexiones PostgreSQL independientes, ambas compilaciones y
+suite nueva de navegador. Preview Vercel aprobado. Production READY
+`dpl_7kVkXTzDQYd4ikHwDR1DLBk2n4MY` con aliases trustleaf.org y
+www.trustleaf.org. Falta comprobacion autenticada medico/paciente: usuario
+confirmo sesion medica abierta y se solicito probar la cita 10-09 09:00 sin
+iniciar ni finalizar atencion. No se considera cerrado el objetivo todavia.
