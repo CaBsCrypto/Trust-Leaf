@@ -859,3 +859,12 @@ Produccion READY: `dpl_GoPsp2pY8hTM4eft6AJfAmrFv2vK`, mismo commit. La sesion re
 retirada muestra el aviso y mantiene actualizar/cerrar sesion. La primera lectura
 tras desplegar fallo sin inventar un estado de retirada; Actualizar datos recupero
 el snapshot y mostro la pantalla correcta. No se reincorporo al trabajador real.
+
+Reincorporacion real posterior, 14-09 a las 02:16 Chile: el usuario confirma la
+aceptacion de una invitacion nueva. El navegador muestra B / Operador antes y
+despues de recargar; consulta agregada confirma exactamente una membresia en B.
+Inventario conserva 70 g, historial conserva el comprobante de 10 g y su movimiento
+sin una nueva entrega. Equipo solo muestra miembros, sin gestion; inventario no
+ofrece ajustes. Atenciones sigue sin pacientes autorizados: no se restauro el
+permiso revocado del paciente al reincorporar al trabajador. Prueba del enlace
+antiguo pendiente por no disponer del correo original; no se considera aprobada.
