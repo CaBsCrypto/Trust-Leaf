@@ -850,3 +850,12 @@ saldo 20 g, stock B 70 g, comprobante y movimiento conservados; revocacion del
 permiso elimina el tratamiento de Atenciones y retirada del trabajador elimina
 datos de equipo, inventario e historial de su vista. La reincorporacion real
 continua pendiente y no queda validada por estas pruebas locales.
+
+Cierre del ajuste visual: PR #26 fusionado como
+`824f37583d1e4ae15a22d574c9909e38ef99ab78`. CI `34807885768` completo aprobado
+(5m14s), incluidas pruebas SQL, concurrencia y navegador. Capturas CI de escritorio
+y movil revisadas, sin pestanas ni etiqueta Operador ni aviso de escritura viejo.
+Produccion READY: `dpl_GoPsp2pY8hTM4eft6AJfAmrFv2vK`, mismo commit. La sesion real
+retirada muestra el aviso y mantiene actualizar/cerrar sesion. La primera lectura
+tras desplegar fallo sin inventar un estado de retirada; Actualizar datos recupero
+el snapshot y mostro la pantalla correcta. No se reincorporo al trabajador real.
