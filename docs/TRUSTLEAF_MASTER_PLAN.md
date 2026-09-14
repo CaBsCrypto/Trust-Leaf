@@ -993,3 +993,28 @@ suite nueva de navegador. Preview Vercel aprobado. Production READY
 www.trustleaf.org. Falta comprobacion autenticada medico/paciente: usuario
 confirmo sesion medica abierta y se solicito probar la cita 10-09 09:00 sin
 iniciar ni finalizar atencion. No se considera cerrado el objetivo todavia.
+
+Cierre manual confirmado por el usuario el 14-09: medico y paciente abrieron
+Meet desde sus consultas y confirmaron en ambos paneles `Reserva seleccionada`
+con resaltado verde tras seguir Ver en agenda. Evidencia reportada desde sus
+dispositivos, complementaria a la suite automatizada de fecha/rango y cero
+escrituras. Se cierra Consulta a su agenda; no implica una nueva validacion de
+audio/video ni el cierre de pendientes de invitaciones.
+
+### Consultas medicas ordenadas
+
+Entrega separada: filtros Pendientes (inicial), En atencion, Finalizadas,
+Canceladas y Todas. Cancelacion prevalece; pendientes incluye confirmadas sin
+atencion incluso pasadas. Orden ascendente en pendientes/activas, descendente
+en el resto, desempate por referencia. Contadores antes de buscar; busqueda
+persiste entre filtros, se limpia entre secciones y se reinicia con la identidad.
+Sin cambios de API, migraciones, permisos ni formularios. Los vacios no ocultan
+errores de lectura. Validacion local de filtros y navegacion a agenda aprobada;
+pendientes compilacion final, regresion completa, CI, preview y recorrido medico
+en produccion. El borrador mensual permanece fuera de esta entrega.
+
+Comprobaciones locales aprobadas: tipos, compilacion, doctor-filters-browser,
+consultation-agenda-browser y operations-browser con SQL aislado. Revisado
+escritorio/movil mediante capturas doctor-filters-*. La compilacion conserva
+advertencias previas de dependencias y paquetes grandes. Faltan CI, preview,
+publicacion y contraste de filtros con consultas existentes del medico real.
