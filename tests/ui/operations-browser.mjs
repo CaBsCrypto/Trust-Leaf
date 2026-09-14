@@ -312,6 +312,26 @@ try {
     await admin.screenshot({ path: fileURLToPath(new URL(`admin-organization-teams-${name}.png`, output)), fullPage: true });
   }
   await admin.setViewportSize({ width: 1365, height: 900 });
+  await admin.reload();
+  await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).click();
+  await admin.getByText('operator@example.test', { exact: true }).waitFor();
+  const membershipSnapshot = await refresh(admin);
+  // Exercise a valid empty-team response without mutating the fixture's memberships.
+  await admin.route('**/api/operations-pilot', route => route.request().method() === 'GET'
+    ? route.fulfill({ status: 200, json: { ...membershipSnapshot, members: [] } }) : route.continue());
+  await refresh(admin);
+  await admin.getByText('Sin miembros actuales.', { exact: true }).first().waitFor();
+  assert.equal(await admin.getByText('Sin miembros actuales.', { exact: true }).count(), membershipSnapshot.organizations.length);
+  await admin.unroute('**/api/operations-pilot');
+  await refresh(admin);
+  await admin.getByText('operator@example.test', { exact: true }).waitFor();
+  await admin.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'patient' })));
+  await admin.getByText('patient@example.test', { exact: true }).waitFor();
+  await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).waitFor({ state: 'hidden' });
+  assert.equal(await admin.getByText('operator@example.test', { exact: true }).count(), 0, 'previous admin contacts disappear on identity change');
+  await admin.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'admin' })));
+  await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).click();
+  await admin.getByText('operator@example.test', { exact: true }).waitFor();
   const recover = await (await browser.newContext()).newPage();
   await recover.goto(`${baseUrl}/?operations&role=dispensaryRecovery`);
   await command(recover, 'Aceptar y participar');
