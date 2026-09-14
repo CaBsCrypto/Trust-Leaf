@@ -1,6 +1,6 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-Fecha de corte: 2026-09-09. Estado: piloto operativo integrado a main; respaldo
+Fecha de corte: 2026-09-14. Estado: piloto operativo integrado a main; respaldo
 restaurado, migracion aplicada y activacion alojada confirmada. Aceptacion
 del recorrido completo con usuarios pendiente.
 Este documento es el punto de entrada para el nuevo alcance. No certifica
@@ -15,11 +15,11 @@ supervision minima mas POV sintetico. Pagos y contabilidad quedan fuera.
 
 | Fase | Implementado / evidencia local | Despliegue y aceptacion |
 |---|---|---|
-| 0 Consolidar base | PR #23 y #24 integrados; baseline `03b2dcf`, CI main `34328580205` aprobada; respaldo de aplicacion restaurado y 28 migraciones remotas en el corte de invitaciones | URL oficial READY sobre `03b2dcf`, comprobada el 09-09. No se aplica ni modifica el borrador mensual |
-| 1 Activar actores/equipos | Alta/aprobacion/agenda y aceptacion por correo pasan SQL; consentimiento, organizacion, encargado/operador y retiro de acceso probados en aislamiento | B invita y trabajador acepta; membresia unica staff-only, recarga y nueva sesion Privy comprobadas el 09-09. Equipo e inventario del trabajador sin gestion ni ajustes; peticiones directas, retirada y reincorporacion alojadas pendientes |
+| 0 Consolidar base | PR #23 a #26 integrados; CI main `34808383205` aprobada; respaldo y migraciones documentados en su corte historico | URL oficial READY sobre `282c690`, comprobada el 14-09; CI de ese commit documental en curso al corte. Borrador mensual intacto |
+| 1 Activar actores/equipos | Alta/aprobacion y aceptacion por correo pasan SQL; retirada y reincorporacion por invitacion nueva pasan CI | B invita, trabajador acepta; retirada elimina datos y nueva invitacion restaura una sola membresia, rol y recarga comprobados el 14-09. Pendientes: peticiones directas autenticadas alojadas, enlace antiguo, cancelacion y reenvio alojados |
 | 2 Agenda/consulta | Agenda existente reutilizada; inicio y cierre de consulta persistentes, independientes de abrir Meet | Publicacion, reserva entre cuentas separadas y Meet generado observados el 08-09; cancelacion del nuevo piloto pendiente |
-| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion; regresion de reemplazo e historial en CI | Medico revoca el tratamiento agotado, conserva historial y emite otro de 30g/3 periodos tras una nueva reserva confirmada por paciente. Permiso del nuevo tratamiento pendiente. Resumen historico corregido mediante PR #25, sin reset de datos |
-| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL 17 con conexiones independientes: cuota/stock compartidos, reintento concurrente, respuesta perdida, permisos, cuarentena y vencimiento pasan | A entrega 10g y B 20g desde cuentas separadas; paciente confirma 30g retirados, saldo 0g y dos comprobantes persistentes. Usuario confirma stock B de 80g y formulario bloqueado con cupo agotado; admin observa ambas entregas y auditoria |
+| 3 Atencion/tratamiento | Nota privada versionada, cierre con/sin tratamiento, emision simulada y revocacion; regresion de reemplazo e historial en CI | Tratamiento anterior revocado sin reset; nuevo de 30g/3 periodos emitido. Autorizacion y revocacion del paciente verificadas el 14-09; reincorporar al trabajador no renueva ese permiso |
+| 4 Entregas/stock | Caso 10g A + 20g B y PostgreSQL independiente: cuota/stock, reintento, concurrencia, permisos y vencimiento pasan | Caso anterior agotado conservado. Operador B entrega 10g del nuevo tratamiento: saldo 20g, stock 70g, comprobante y movimiento persistentes despues de retirada/reincorporacion; no hubo una segunda entrega |
 | 5 Paneles diarios | Browser + SQL local completa solicitud de cita, consulta, tratamiento, permisos y entregas; captura desktop/movil de 5 identidades, recarga e invalidacion de identidad | Recorrido real parcial de cuatro roles; admin observa dos entregas, dos cierres y auditoria. Recarga y movil administrativos comprobados en el recorrido previo a B; no sustituye todos los escenarios pendientes |
 
 Version integrada: `src/features/operations`, API `/api/operations-pilot`,
@@ -868,3 +868,18 @@ sin una nueva entrega. Equipo solo muestra miembros, sin gestion; inventario no
 ofrece ajustes. Atenciones sigue sin pacientes autorizados: no se restauro el
 permiso revocado del paciente al reincorporar al trabajador. Prueba del enlace
 antiguo pendiente por no disponer del correo original; no se considera aprobada.
+
+### Cierre transversal pendiente: 14-09-2026
+
+- Invitaciones negativas alojadas: pendientes. Un envio al destinatario en 24h;
+  reservar tres para cancelacion + invitacion + reenvio. Capacidad completa desde
+  15-09-2026 02:15:36 Chile si no hay nuevos envios. No retirar antes ni subir limites.
+- Conservar privadamente el enlace recien aceptado antes de retirar: abrirlo con
+  membresia activa no prueba que sea incapaz de restaurar una membresia retirada.
+- Peticiones directas autenticadas del operador en produccion: pendientes; no
+  inferirlas de botones ocultos ni de pruebas aisladas. No extraer tokens ocultos
+  del navegador ni usar credenciales privilegiadas para simular este resultado.
+- Cierre transversal de medico/paciente/admin y movil: reutilizar evidencia
+  compatible y registrar escenarios faltantes antes de nuevas operaciones.
+- Mejoras de jornada diaria: priorizacion posterior al cierre, sin redisenar en
+  esta fase. Conservar stock, comprobantes, cuentas y permiso revocado.
