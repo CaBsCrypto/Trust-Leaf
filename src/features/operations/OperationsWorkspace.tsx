@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Activity, CalendarDays, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
+import AdminOrganizationTeams from './AdminOrganizationTeams';
 import PrivyAgenda from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
@@ -208,7 +209,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           {role === 'admin' && !data.organizations?.length && <Empty>No hay organizaciones registradas.</Empty>}
           {role === 'dispensary' && !data.staffOnly && !data.membership?.organization_ref && <CommandForm label="Crear dispensario de prueba" disabled={disabled} fields={[{ name: 'name', label: 'Nombre del dispensario', maxLength: 100 }]} submit={v => mutate('create-organization', v)}/>}
           {role === 'dispensary' && data.membership?.organization_ref && <TeamPanel search={search} revision={revision} disabled={disabled} remove={actorRef => mutate('remove-operator', { resourceRef: actorRef })}/>}
-          {role === 'admin' && data.organizations?.filter(o => matches(`${o.name} ${o.organization_ref}`)).map(o => <article className="op-row" key={o.organization_ref}><h3>{o.name}</h3><p className="op-reference">{o.organization_ref}</p></article>)}
+          {role === 'admin' && <AdminOrganizationTeams organizations={data.organizations ?? []} members={data.members ?? []} search={search} revision={revision}/>}
         </>}
         {tab === 'history' && <>
           <h2>Historial de entregas</h2>{(data.deliveries ?? []).filter(d => matches(`${d.treatment_ref} ${d.delivery_ref}`)).map(d => <article className="op-row" key={d.delivery_ref}><h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3><p>Dispensario {short(d.organization_ref)} · Lote {short(d.batch_ref)} · Periodo {d.period_index}</p><p className="op-reference">Comprobante: {d.delivery_ref}</p><p className="op-reference">Tratamiento: {d.treatment_ref}</p></article>)}

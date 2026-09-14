@@ -1,5 +1,6 @@
 import { operationsDatabase } from '../sql/operations-db.mjs';
 import { executeTeamCommand } from '../../api/_lib/team-invitations.ts';
+import { readActorDirectory } from '../../api/_lib/privy-actor-directory.ts';
 
 // Synthetic identity injection lives only in this loopback QA server, never in app code.
 export function operationsFixture() { return { name: 'operations-sql-fixture', async configureServer(server) {
@@ -15,6 +16,12 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
       return Response.json({ id: subject, linked_accounts: [{ type: 'email', address: `${key}@example.test`, latest_verified_at: 1 }] });
     }
     const payload = JSON.parse(init.body);
+    if (address.endsWith('/trustleaf_resolve_privy_actor')) {
+      return Response.json((await db.query('select * from public.trustleaf_resolve_privy_actor($1)', [payload.subject])).rows);
+    }
+    if (address.endsWith('/trustleaf_privy_actor_directory')) {
+      return Response.json((await db.query('select * from public.trustleaf_privy_actor_directory($1,$2)', [payload.admin_subject, payload.page_offset])).rows);
+    }
     if (address === 'https://api.resend.com/emails') {
       const id = `fixture-${deliveries.length}`; deliveries.push({ ...payload, id }); return Response.json({ id });
     }
@@ -28,11 +35,16 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
   server.middlewares.use(async (req, res, next) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     if (url.pathname === '/__team-mail') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(deliveries)); return; }
-    if (!['/api/agenda', '/api/operations-pilot', '/api/team-invitations'].includes(url.pathname)) return next();
+    if (!['/api/agenda', '/api/operations-pilot', '/api/team-invitations', '/api/auth/privy/admin/actors'].includes(url.pathname)) return next();
     res.setHeader('content-type', 'application/json'); res.setHeader('Cache-Control', 'no-store');
     const key = String(req.headers['privy-id-token'] ?? '').replace(/^fixture-/, '');
     if (!(key in subjects)) { res.statusCode = 401; res.end('{}'); return; }
     try {
+      if (url.pathname === '/api/auth/privy/admin/actors') {
+        const result = await readActorDirectory({ env, fetcher, token: `fixture-${key}`, offset: Number(url.searchParams.get('offset') ?? 0),
+          verifier: { verify: async () => ({ subject: subjects[key], emails: [`${key}@example.test`] }) } });
+        res.end(JSON.stringify(result)); return;
+      }
       let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 12000) throw new Error('request too large'); }
       const command = req.method === 'GET' ? url.pathname === '/api/agenda' ? { action: 'list', input: { from: url.searchParams.get('from'), to: url.searchParams.get('to') } } : { action: 'snapshot', input: {} } : JSON.parse(body);
       if (url.pathname === '/api/team-invitations') {

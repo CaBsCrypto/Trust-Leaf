@@ -242,6 +242,10 @@ try {
   await refresh(operator);
   dispensary.once('dialog', dialog => dialog.accept());
   await command(dispensary, 'Retirar operator@example.test');
+  await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).click();
+  await refresh(admin);
+  await admin.getByText('dispensary@example.test', { exact: true }).waitFor();
+  assert.equal(await admin.getByText('operator@example.test', { exact: true }).count(), 0, 'admin reflects removed current membership');
   await refresh(operator);
   async function assertWithoutTeam() {
     await operator.getByRole('heading', { name: 'Sin acceso a un dispensario', exact: true }).waitFor();
@@ -287,6 +291,27 @@ try {
   await operator.getByText('90 g', { exact: false }).waitFor();
   await operator.getByRole('tab', { name: 'Historial', exact: true }).click();
   assert.equal(await operator.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 1);
+  await refresh(admin);
+  await admin.getByText('operator@example.test', { exact: true }).waitFor();
+  assert.equal(await admin.getByText('operator@example.test', { exact: true }).count(), 1, 'admin shows one rejoined membership');
+  const adminTeam = admin.locator('article').filter({ has: admin.getByRole('heading', { name: 'Dispensario A QA', exact: true }) });
+  assert.match(await adminTeam.innerText(), /dispensary@example.test/);
+  assert.match(await adminTeam.innerText(), /Encargado/);
+  assert.match(await adminTeam.innerText(), /Operador/);
+  assert.equal(await adminTeam.getByRole('button').count(), 0, 'administrative team supervision is read only');
+  await admin.route('**/api/auth/privy/admin/actors?*', route => route.fulfill({ status: 503, json: {} }));
+  await refresh(admin);
+  await admin.getByRole('alert').filter({ hasText: 'No fue posible cargar los correos' }).waitFor();
+  assert.equal(await admin.getByText('Sin miembros actuales.', { exact: true }).count(), 0, 'directory failure is not an empty team');
+  await admin.unroute('**/api/auth/privy/admin/actors?*');
+  await admin.evaluate(() => window.dispatchEvent(new Event('online')));
+  await admin.getByText('operator@example.test', { exact: true }).waitFor();
+  for (const [name, width, height] of [['desktop', 1365, 900], ['mobile', 390, 844]]) {
+    await admin.setViewportSize({ width, height });
+    assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+    await admin.screenshot({ path: fileURLToPath(new URL(`admin-organization-teams-${name}.png`, output)), fullPage: true });
+  }
+  await admin.setViewportSize({ width: 1365, height: 900 });
   const recover = await (await browser.newContext()).newPage();
   await recover.goto(`${baseUrl}/?operations&role=dispensaryRecovery`);
   await command(recover, 'Aceptar y participar');

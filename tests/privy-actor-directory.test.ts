@@ -19,10 +19,12 @@ const verifier = { async verify() { return { subject, emails: [] }; } };
 const binding = (role = 'admin') => ({ actor_ref: actorRef, role, actor_state: 'active' });
 const row = { ...binding('doctor'), external_subject: 'did:privy:doctor-test' };
 test('directory checks admin before querying identities or contacts', async () => {
-  let calls = 0;
-  const fetcher: typeof fetch = async () => { calls++; return Response.json([binding('patient')]); };
-  await assert.rejects(readActorDirectory({ token: 'fixture', offset: 0, env, verifier, fetcher }), { code: 'PRIVY_ROLE_FORBIDDEN' });
-  assert.equal(calls, 1);
+  for (const role of ['patient', 'doctor', 'dispensary']) {
+    let calls = 0;
+    const fetcher: typeof fetch = async () => { calls++; return Response.json([binding(role)]); };
+    await assert.rejects(readActorDirectory({ token: 'fixture', offset: 0, env, verifier, fetcher }), { code: 'PRIVY_ROLE_FORBIDDEN' });
+    assert.equal(calls, 1);
+  }
 });
 test('directory returns only contact, role, state and actor reference', async () => {
   const fetcher: typeof fetch = async (url, init) => {
