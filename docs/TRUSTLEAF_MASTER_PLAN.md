@@ -883,3 +883,25 @@ antiguo pendiente por no disponer del correo original; no se considera aprobada.
   compatible y registrar escenarios faltantes antes de nuevas operaciones.
 - Mejoras de jornada diaria: priorizacion posterior al cierre, sin redisenar en
   esta fase. Conservar stock, comprobantes, cuentas y permiso revocado.
+
+### Supervision administrativa de equipos: 14-09-2026
+
+Implementacion local: Organizaciones agrupa las membresias vigentes del snapshot
+Supabase y resuelve sus correos con el directorio administrativo existente. Solo
+lectura, sin nuevas APIs, migraciones ni acciones de gestion. No usa la auditoria
+para reconstruir equipos. Cambios de membresia, actualizacion manual, foco y
+reconexion vuelven a cargar los contactos; los errores no se presentan como un
+equipo vacio.
+
+Evidencia aislada: tipos aprobados; cinco pruebas del directorio aprobadas,
+incluido rechazo de paciente, medico y dispensario antes de consultar contactos.
+Suite operations-browser aprobada con SQL aislado: retirada y reincorporacion
+visibles en admin, una sola membresia, fallo 503 de contactos y recuperacion por
+reconexion. Capturas admin-organization-teams-desktop.png y
+admin-organization-teams-mobile.png en scratch/operations-qa; movil sin desborde.
+Estas operaciones pertenecen exclusivamente a identidades ficticias locales.
+
+Pendiente de cierre: compilacion final, CI, merge, despliegue y contraste de B
+desde la sesion administrativa oficial. No se han modificado saldos, existencias,
+entregas ni membresias publicadas durante este cambio. Las validaciones negativas
+de invitaciones anteriores conservan su estado pendiente.
