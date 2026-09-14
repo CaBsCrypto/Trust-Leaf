@@ -57,6 +57,7 @@ try {
   await doctor.getByRole('searchbox').fill('no-existing-booking-qa');
   await doctor.getByText('No hay consultas para esta busqueda.', { exact: true }).waitFor();
   await doctor.getByRole('tab', { name: 'Tratamientos', exact: true }).click();
+  await doctor.locator('[role="tab"][aria-selected="true"]').filter({ hasText: 'Tratamientos' }).waitFor();
   assert.equal(await doctor.getByRole('searchbox').inputValue(), '', 'section change clears unrelated search');
   await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click();
   await doctor.getByText('Atencion finalizada', { exact: true }).waitFor();

@@ -22,8 +22,9 @@ export default function OperationsWorkspace({ email, onSignOut, embedded = false
 function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSignOut?: () => void; embedded: boolean }) {
   const identity = useTrustLeafPrivyIdentity();
   const [data, setData] = useState<PilotSnapshot | null>(null);
-  const [tab, setTab] = useState('today');
+  const [tab, setSelectedTab] = useState('today');
   const [search, setSearch] = useState('');
+  const setTab = (next: string) => { setSearch(''); setSelectedTab(next); };
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
@@ -112,7 +113,6 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const visibleError = readError || error;
   const role = data?.role;
   const withoutTeam = role === 'dispensary' && data?.staffOnly && !data.membership?.organization_ref;
-  useEffect(() => { setSearch(''); }, [tab]);
   const searchHint = tab === 'inventory' ? 'Codigo de lote o producto'
     : tab === 'team' ? role === 'admin' ? 'Nombre o referencia del dispensario' : 'Correo del equipo'
     : tab === 'today' && role === 'patient' ? 'Referencia de cita o texto de nota'
