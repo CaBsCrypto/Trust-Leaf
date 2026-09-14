@@ -905,3 +905,13 @@ Pendiente de cierre: compilacion final, CI, merge, despliegue y contraste de B
 desde la sesion administrativa oficial. No se han modificado saldos, existencias,
 entregas ni membresias publicadas durante este cambio. Las validaciones negativas
 de invitaciones anteriores conservan su estado pendiente.
+
+Publicacion confirmada: PR #27 fusionado en
+`a483133731f12d0094432a9b52becab766410342`; CI del PR `34811833282`
+aprobado (5m17s), compilacion local aprobada. Vercel production READY
+`dpl_6PkErncoYR61EZ136dyZFe6t44gC`, alias www.trustleaf.org al mismo commit.
+Validacion autenticada en /admin, 14-09 03:11 Chile: Organizaciones muestra
+un encargado de A y, en B, un encargado y un operador reincorporado, cada uno
+una vez, con sus correos correctos. La primera recarga quedo temporalmente
+en blanco; una segunda recupero la aplicacion y la sesion sin cambiar datos.
+Esta observacion no equivale a completar los negativos de invitaciones alojadas.
