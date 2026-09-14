@@ -110,6 +110,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const disabled = busy || pending !== null;
   const visibleError = readError || error;
   const role = data?.role;
+  const withoutTeam = role === 'dispensary' && data?.staffOnly && !data.membership?.organization_ref;
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref}`));
   const now = Date.now();
   const availableBatches = (data?.batches ?? []).filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0);
@@ -121,20 +122,23 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   return <section className={`tl-operations ${embedded ? '' : 'tl-operations-page'}`}>
     <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role ? titles[role] : 'Panel operativo'}</h1>
       <p className="op-email">{email ?? identity.email ?? 'Cuenta conectada'}</p>
-      {role === 'dispensary' && data?.membership && <p className="op-email">{data.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name} · {data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
+      {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name} · {data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
       <div className="op-toolbar"><span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
         {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" onClick={onSignOut}><LogOut size={18}/></button>}</div></header>
     <div className="op-content">
-      {notice && <p role="status" className="op-success">{notice}</p>}
+      {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
       {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
-      {pending && !busy && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
+      {pending && !busy && !withoutTeam && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
       {!data && !visibleError && <p role="status">Verificando permisos...</p>}
-      {data && !data.joined && <div className="op-empty"><ShieldCheck size={32}/><h2>Participar en el piloto</h2>
+      {data && !data.joined && !withoutTeam && <div className="op-empty"><ShieldCheck size={32}/><h2>Participar en el piloto</h2>
         <p>Solo datos ficticios. Sin atencion clinica ni entrega real de medicamentos.</p>
         <button className="op-command" disabled={disabled} onClick={() => mutate('join', { acceptSyntheticOnly: true })}>Aceptar y participar</button></div>}
-      {data?.joined && <>
-        {data.staffOnly && !data.membership?.organization_ref && <p className="op-error" role="status">Sin acceso a un dispensario. Pide una nueva invitacion al encargado.</p>}
+      {withoutTeam && <div className="op-empty" role="status"><ShieldCheck size={32}/>
+        <h2>Sin acceso a un dispensario</h2>
+        <p>Tu cuenta sigue activa. Para incorporarte a un equipo, necesitas una nueva invitación del encargado. Las operaciones anteriores se conservan en el historial del dispensario.</p>
+      </div>}
+      {data?.joined && !withoutTeam && <>
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Referencia, paciente o lote"/></label>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email}/>}
