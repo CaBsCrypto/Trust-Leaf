@@ -71,6 +71,7 @@ try {
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'admin' })));
     await page.getByRole('heading', { name: 'Supervision del piloto' }).waitFor();
     assert.equal(await page.locator('li[aria-current="true"]').count(), 0);
+    booking.state = 'confirmed';
     await page.evaluate(actor => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: actor })), role);
     await page.getByRole('button', { name: 'Ver en agenda' }).waitFor();
     await page.getByRole('tab', { name: 'Agenda', exact: true }).click();

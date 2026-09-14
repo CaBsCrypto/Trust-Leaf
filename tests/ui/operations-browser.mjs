@@ -48,10 +48,12 @@ try {
   await patient.getByText('Cita confirmada', { exact: true }).waitFor();
   await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click(); await refresh(doctor);
   await command(doctor, 'Iniciar consulta simulada');
+  await doctor.getByRole('button', { name: /^En atención/ }).click();
   await doctor.getByLabel('Nota de prueba', { exact: true }).fill('NOTA FICTICIA PARA QA: consulta simulada, sin datos reales.');
   await command(doctor, 'Guardar borrador');
   assert.deepEqual((await refresh(patient)).notes, [], 'patient cannot read an unfinished clinical draft');
   await command(doctor, 'Finalizar con tratamiento simulado');
+  await doctor.getByRole('button', { name: /^Finalizadas/ }).click();
   assert.equal((await refresh(patient)).notes.length, 1, 'completed notes are available to the related patient');
   await doctor.getByText('Atencion finalizada', { exact: true }).waitFor();
   await doctor.getByRole('searchbox').fill('no-existing-booking-qa');
@@ -81,6 +83,7 @@ try {
       await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click();
       const cancelled = await refresh(doctor);
       assert.equal(cancelled.bookings.find(b => b.booking_ref === booking.booking_ref).state, 'cancelled');
+      await doctor.getByRole('button', { name: /^Canceladas/ }).click();
       const row = doctor.locator('article').filter({ hasText: booking.booking_ref });
       await row.getByText('Cancelada', { exact: true }).waitFor();
       assert.equal(await row.getByRole('button', { name: 'Iniciar consulta simulada' }).count(), 0);
@@ -89,7 +92,9 @@ try {
       await agendaCommand(doctor, doctor.getByRole('button', { name: 'Retirar horario', exact: true }));
     } else {
       await doctor.getByRole('tab', { name: 'Consultas', exact: true }).click(); await refresh(doctor);
+      await doctor.getByRole('button', { name: /^Pendientes/ }).click();
       await command(doctor, 'Iniciar consulta simulada');
+      await doctor.getByRole('button', { name: /^En atención/ }).click();
       doctor.once('dialog', dialog => dialog.accept());
       await command(doctor, 'Finalizar sin tratamiento');
       const completed = await refresh(patient);

@@ -4,12 +4,14 @@ import TeamPanel from './TeamPanel';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
 import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
-import { currentPeriod, formatGrams, gramsToMg, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
+import { currentPeriod, formatGrams, gramsToMg, type Booking, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
 import './operations.css';
 
 const titles: Record<PilotRole, string> = { doctor: 'Mi consulta', patient: 'Mi atencion', dispensary: 'Mi dispensario', admin: 'Supervision del piloto' };
 const date = (value: string) => new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago', dateStyle: 'short', timeStyle: 'short' });
 const short = (value: string) => value.slice(0, 8);
+const consultationFilters = [['pending', 'Pendientes'], ['active', 'En atención'], ['completed', 'Finalizadas'], ['cancelled', 'Canceladas'], ['all', 'Todas']] as const;
+type ConsultationFilter = typeof consultationFilters[number][0];
 type Mutate = (action: PilotAction, input: Record<string, unknown>) => void;
 type Field = { name: string; label: string; type?: 'text' | 'number' | 'textarea' | 'select' | 'datetime-local'; value?: string;
   choices?: { value: string; label: string }[]; min?: number; max?: number; maxLength?: number };
@@ -24,6 +26,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
   const [search, setSearch] = useState('');
+  const [consultationFilter, setConsultationFilter] = useState<ConsultationFilter>('pending');
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
   const setTab = (next: string, target?: AgendaTarget) => { setSearch(''); setAgendaTarget(target); setSelectedTab(next); };
   const [error, setError] = useState('');
@@ -119,7 +122,16 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     : tab === 'today' && role === 'patient' ? 'Referencia de cita o texto de nota'
     : role === 'doctor' || tab === 'treatment' || role === 'dispensary' && tab === 'today' ? 'Referencia de paciente o registro'
     : 'Referencia del registro';
-  const visibleBookings = (data?.bookings ?? []).filter(b => matches(role === 'doctor' ? `${b.booking_ref} ${b.patient_ref}` : b.booking_ref));
+  const consultationState = (b: Booking) => b.state === 'cancelled' ? 'cancelled'
+    : data?.encounters?.find(e => e.booking_ref === b.booking_ref)?.state ?? (b.state === 'confirmed' ? 'pending' : 'other');
+  const consultationCounts = Object.fromEntries(consultationFilters.map(([id]) => [id,
+    (data?.bookings ?? []).filter(b => id === 'all' || consultationState(b) === id).length]));
+  const filteredBookings = (data?.bookings ?? []).filter(b => role !== 'doctor' || consultationFilter === 'all' || consultationState(b) === consultationFilter);
+  const visibleBookings = filteredBookings.filter(b => matches(role === 'doctor' ? `${b.booking_ref} ${b.patient_ref}` : b.booking_ref));
+  if (role === 'doctor') visibleBookings.sort((a, b) => {
+    const direction = consultationFilter === 'pending' || consultationFilter === 'active' ? 1 : -1;
+    return direction * (Date.parse(a.starts_at) - Date.parse(b.starts_at)) || a.booking_ref.localeCompare(b.booking_ref);
+  });
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref}`));
   const now = Date.now();
   const availableBatches = (data?.batches ?? []).filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0);
@@ -153,6 +165,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
+          <div className="op-tabs" role="group" aria-label="Estado de consultas">{consultationFilters.map(([id, label]) =>
+            <button key={id} aria-pressed={consultationFilter === id} onClick={() => setConsultationFilter(id)}>{label} ({consultationCounts[id]})</button>)}</div>
           {visibleBookings.map(b => {
             const encounter = data.encounters?.find(e => e.booking_ref === b.booking_ref);
             const notes = data.notes?.filter(n => n.booking_ref === b.booking_ref).sort((a, b) => b.version - a.version) ?? [];
@@ -171,8 +185,9 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
               {notes.length > 0 && <details><summary>Historial de notas ({notes.length})</summary>{notes.map(n => <div className="op-note" key={n.version}><strong>Version {n.version} · {date(n.created_at)}</strong><p>{n.body}</p></div>)}</details>}
             </article>;
           })}
-          {!data.bookings?.length && <Empty>No hay consultas. Publica un horario desde Agenda.</Empty>}
-          {!!data.bookings?.length && !visibleBookings.length && <Empty>No hay consultas para esta busqueda.</Empty>}
+          {!visibleError && !data.bookings?.length && <Empty>No hay consultas. Publica un horario desde Agenda.</Empty>}
+          {!visibleError && !!data.bookings?.length && !filteredBookings.length && <Empty>No hay consultas en este estado.</Empty>}
+          {!visibleError && !!filteredBookings.length && !visibleBookings.length && <Empty>No hay consultas para esta busqueda.</Empty>}
         </>}
         {tab === 'today' && role === 'patient' && <>
           <h2><CalendarDays size={20}/>Mis citas</h2>
