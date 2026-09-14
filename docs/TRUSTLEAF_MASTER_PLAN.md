@@ -953,4 +953,34 @@ Cada entrega requiere regresion de navegacion, escritorio/movil, nueva sesion,
 tipos, compilacion y CI antes de main. Registrar fricciones observadas y resultados
 por actor. La primera correccion paso tipos y la suite de navegador con SQL
 aislado, incluida busqueda sin coincidencias y limpieza al cambiar de seccion.
-Aun no publicada. No se cambian limites de correo, saldos o membresias.
+PR #28 publicado el 14-09-2026: commit
+`c3713614a9cb8452c3854c449f00607818762f46`, CI `34883231633` y preview
+aprobados. Despliegue production READY `dpl_EXNoBdGAaFDNxuaB9aGqyfCD9ZQv`;
+alias www.trustleaf.org consultado y confirmado en ese commit. La publicacion
+se solicito desde Git porque no habia despliegue automatico del merge.
+Esta comprobacion de version no sustituye el recorrido autenticado de la UI.
+No se cambian limites de correo, saldos o membresias.
+
+### Consulta a su agenda: entrega en curso
+
+Rama `feat/consultation-agenda-target`. Conectar medico y paciente mediante
+`Ver en agenda`, fecha local del calendario y reserva destacada. La seleccion
+es estado de interfaz; no inicia atencion ni crea reservas. Fechas manuales y
+navegacion ordinaria eliminan el destino, y el workspace se reinicia al cambiar
+de identidad. Reserva ausente se informa solo tras una lectura correcta, con
+actualizacion explicita. Mantener los estados existentes de Meet.
+
+Pendientes: regresiones de ambos roles, fechas antiguas/futuras y limites de dia,
+errores, cambio de cuenta, escritorio/movil, compilacion, CI y publicacion de
+esta entrega separada. No se considera validada en produccion todavia.
+
+Validacion local 14-09: tipos y compilacion aprobados (persisten advertencias
+conocidas de dependencias y paquetes grandes). `consultation-agenda-browser.mjs`
+aprobado para medico/paciente, Santiago/Tokio y fechas 2025/2030 cruzando dias:
+consulta, busqueda previa, fecha/rango, reserva destacada visible, apertura de
+destino Meet interceptado, error 503, reserva ausente y recuperacion, cancelacion,
+cambio de identidad y cero peticiones de escritura. Capturas agenda-target-*
+en scratch/operations-qa; revision visual de medico movil y paciente escritorio.
+Regresion calendar-agenda-browser aprobada para ambos roles; operations-browser
+con SQL aislado aprobado para el recorrido operativo existente. Nueva suite
+incluida en CI. Pendientes CI, preview, publicacion y recorrido autenticado real.

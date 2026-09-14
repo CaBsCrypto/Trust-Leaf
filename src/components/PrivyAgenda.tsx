@@ -4,20 +4,24 @@ import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 
 type Slot = { slotRef: string; doctorRef: string; startsAt: string; endsAt: string; state: string; version: number; bookingRef: string | null; bookingState: string | null; conference?: {state: string | null; meetUrl?: string | null} | null };
 type Command = { action: string; input: Record<string, unknown> };
+export type AgendaTarget = { bookingRef: string; startsAt: string };
 const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const inputStyle = 'min-w-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm';
 const iconStyle = 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-gray-300 bg-white disabled:opacity-40';
 const commandStyle = 'inline-flex items-center justify-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-40';
 
-export default function PrivyAgenda({ email }: { email?: string }) {
+export default function PrivyAgenda({ email, target }: { email?: string; target?: AgendaTarget }) {
   const identity = useTrustLeafPrivyIdentity();
   // Commands, notices and rows must never survive an identity transition.
-  return <IdentityAgenda key={`${identity.subject ?? 'signed-out'}:${identity.authenticated}:${identity.ready}`} email={email}/>;
+  return <IdentityAgenda key={`${identity.subject ?? 'signed-out'}:${identity.authenticated}:${identity.ready}:${target?.bookingRef ?? ''}`} email={email} target={target}/>;
 }
 
-function IdentityAgenda({ email }: { email?: string }) {
+function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarget }) {
   const identity = useTrustLeafPrivyIdentity();
-  const [date,setDate] = useState(() => localDate(new Date()));
+  const [date,setDate] = useState(() => localDate(target && Number.isFinite(Date.parse(target.startsAt)) ? new Date(target.startsAt) : new Date()));
+  const [selectedBooking,setSelectedBooking] = useState(target?.bookingRef);
+  const selectedRow = useRef<HTMLLIElement | null>(null);
+  const scrolled = useRef(false);
   const [publishDate,setPublishDate] = useState(() => localDate(new Date(Date.now()+86400000)));
   const [time,setTime] = useState('09:00');
   const [duration,setDuration] = useState(30);
@@ -34,6 +38,12 @@ function IdentityAgenda({ email }: { email?: string }) {
   const commandLock = useRef(false);
   const commandController = useRef<AbortController | null>(null);
   useEffect(() => () => commandController.current?.abort(), []);
+  useEffect(() => {
+    if (!loading && !readError && selectedRow.current && !scrolled.current) {
+      selectedRow.current.scrollIntoView({ block: 'center' });
+      scrolled.current = true;
+    }
+  }, [loading, readError, slots]);
 
   async function request(path: string, command?: Command, signal?: AbortSignal) {
     let token = await identity.getIdentityToken();
@@ -107,7 +117,7 @@ function IdentityAgenda({ email }: { email?: string }) {
     if(!Number.isFinite(start.getTime()) || start.getTime()<=Date.now()){setError('Selecciona un horario futuro.');return;}
     mutate('publish',{slotRef:crypto.randomUUID(),startsAt:start.toISOString(),endsAt:new Date(start.getTime()+duration*60000).toISOString()});
   }
-  const move=(days:number)=>{const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+days);setDate(localDate(next));};
+  const move=(days:number)=>{const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+days);setSelectedBooking(undefined);setDate(localDate(next));};
   const disabled=busy || loading || pending!==null;
   const visibleError = readError || error;
   const zone=Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -119,7 +129,7 @@ function IdentityAgenda({ email }: { email?: string }) {
     <p className="break-words text-sm text-gray-600">{email ? `${email} · ` : ''}{zone}</p>
     <div className="flex flex-wrap items-center gap-2">
       <button title="Semana anterior" aria-label="Semana anterior" className={iconStyle} disabled={busy} onClick={()=>move(-7)}><ChevronLeft size={18}/></button>
-      <label className="flex min-w-0 items-center gap-2 text-sm">Desde<input aria-label="Inicio de semana" type="date" required value={date} className={inputStyle} disabled={busy} onChange={e=>{if(e.target.value)setDate(e.target.value);}}/></label>
+      <label className="flex min-w-0 items-center gap-2 text-sm">Desde<input aria-label="Inicio de semana" type="date" required value={date} className={inputStyle} disabled={busy} onChange={e=>{if(e.target.value){setSelectedBooking(undefined);setDate(e.target.value);}}}/></label>
       <button title="Semana siguiente" aria-label="Semana siguiente" className={iconStyle} disabled={busy} onClick={()=>move(7)}><ChevronRight size={18}/></button>
     </div>
     {role==='doctor' && <form onSubmit={publish} className="flex flex-wrap items-end gap-3 border-y border-gray-200 py-4">
@@ -130,11 +140,14 @@ function IdentityAgenda({ email }: { email?: string }) {
     </form>}
     {notice && <p role="status" className="text-sm text-green-800">{notice}</p>}
     {visibleError && <p role="alert" className="text-sm text-red-700">{notice && readError ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. ' : ''}{visibleError}</p>}
+    {!loading && !visibleError && selectedBooking && !slots.some(slot => slot.bookingRef === selectedBooking) && <div role="status" className="flex flex-wrap items-center gap-3 text-sm"><p>No se encontro la reserva seleccionada. Actualiza la agenda para comprobar su estado.</p><button className={commandStyle} disabled={busy} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={16}/>Actualizar reserva</button></div>}
     {pending && !busy && <button className={commandStyle} onClick={()=>void execute(pending)}><RefreshCw size={16}/>Reintentar cambio</button>}
     {loading ? <p role="status">Cargando agenda...</p> : !visibleError && slots.length===0 ? <p className="text-sm text-gray-600">No hay horarios ni citas en esta semana.</p> : <ul className="divide-y divide-gray-200">
       {slots.map(slot=>{const future=Date.parse(slot.startsAt)>Date.now();const confirmed=slot.bookingState==='confirmed';
         const label=confirmed?'Cita confirmada':slot.state==='published'?'Disponible':slot.bookingState==='cancelled'||slot.state==='cancelled'?'Cancelada':'Reservada';
-        return <li key={slot.slotRef} className="flex flex-wrap items-center justify-between gap-3 py-4">
+        const selected = slot.bookingRef === selectedBooking && !!selectedBooking;
+        return <li key={slot.slotRef} ref={selected ? selectedRow : undefined} aria-current={selected ? 'true' : undefined} className={`flex flex-wrap items-center justify-between gap-3 py-4 ${selected ? 'border-l-4 border-green-700 bg-green-50 px-3' : ''}`}>
+          {selected && <p className="w-full text-sm font-semibold text-green-800">Reserva seleccionada</p>}
           <div className="min-w-0"><p className="text-sm font-semibold">{new Date(slot.startsAt).toLocaleString('es-CL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} – {new Date(slot.endsAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}</p>
           {role==='patient' && <p title={slot.doctorRef} className="text-xs text-gray-600">Medico · {slot.doctorRef.slice(0,8)}</p>}
           <p className={`text-sm ${confirmed?'text-blue-700':'text-gray-600'}`}>{label}</p>

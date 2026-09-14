@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Activity, CalendarDays, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
-import PrivyAgenda from '../../components/PrivyAgenda';
+import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
 import './operations.css';
@@ -24,7 +24,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
   const [search, setSearch] = useState('');
-  const setTab = (next: string) => { setSearch(''); setSelectedTab(next); };
+  const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
+  const setTab = (next: string, target?: AgendaTarget) => { setSearch(''); setAgendaTarget(target); setSelectedTab(next); };
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
@@ -149,7 +150,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       {data?.joined && !withoutTeam && <>
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
-        {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email}/>}
+        {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
           {visibleBookings.map(b => {
@@ -158,6 +159,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             return <article className="op-row" key={b.booking_ref}>
               <h3>{date(b.starts_at)} <span className="op-muted">Paciente {short(b.patient_ref)}</span></h3>
               <p className="op-reference">{b.booking_ref}</p><p>{b.state === 'cancelled' ? 'Cancelada' : encounter?.state === 'completed' ? 'Atencion finalizada' : encounter ? 'En atencion' : 'Confirmada'}</p>
+              <button className="op-command" onClick={() => setTab('agenda', { bookingRef: b.booking_ref, startsAt: b.starts_at })}><CalendarDays size={16}/>Ver en agenda</button>
               {b.state === 'confirmed' && !encounter && <button className="op-command" disabled={disabled} onClick={() => mutate('start-encounter', { resourceRef: b.booking_ref })}><Plus size={16}/>Iniciar consulta simulada</button>}
               {encounter?.state === 'active' && b.state === 'confirmed' && <>
                 <CommandForm key={`note-${encounter.version}`} label="Guardar borrador" disabled={disabled} fields={[{ name: 'note', label: 'Nota de prueba', type: 'textarea', value: notes[0]?.body, maxLength: 4000 }]}
@@ -174,7 +176,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'today' && role === 'patient' && <>
           <h2><CalendarDays size={20}/>Mis citas</h2>
-          {visibleBookings.map(b => <article className="op-row" key={b.booking_ref}><h3>{date(b.starts_at)}</h3><p>Medico {short(b.doctor_ref)} · {b.state === 'cancelled' ? 'Cancelada' : data.encounters?.some(e => e.booking_ref === b.booking_ref && e.state === 'completed') ? 'Atencion finalizada' : 'Confirmada'}</p><button className="op-command" onClick={() => setTab('agenda')}>Ver en agenda</button></article>)}
+          {visibleBookings.map(b => <article className="op-row" key={b.booking_ref}><h3>{date(b.starts_at)}</h3><p>Medico {short(b.doctor_ref)} · {b.state === 'cancelled' ? 'Cancelada' : data.encounters?.some(e => e.booking_ref === b.booking_ref && e.state === 'completed') ? 'Atencion finalizada' : 'Confirmada'}</p><button className="op-command" onClick={() => setTab('agenda', { bookingRef: b.booking_ref, startsAt: b.starts_at })}><CalendarDays size={16}/>Ver en agenda</button></article>)}
           {!data.bookings?.length && <Empty>No tienes citas reservadas.</Empty>}
           {!!data.bookings?.length && !visibleBookings.length && <Empty>No hay citas para esta busqueda.</Empty>}
           <h2>Notas de mi atencion</h2>{data.notes?.filter(n => matches(`${n.booking_ref} ${n.body}`)).map(n => <article className="op-row" key={`${n.booking_ref}-${n.version}`}><strong>{date(n.created_at)} · Version {n.version}</strong><p className="op-note">{n.body}</p></article>)}
