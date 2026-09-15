@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Activity, CalendarDays, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
-import { Preparation, ProfileForm, DispensingForm, DailyOverview } from './DispensaryDaily';
+import DispensaryAttention from './DispensaryAttention';
+import { Preparation, ProfileForm, DailyOverview } from './DispensaryDaily';
 import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type Booking, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
@@ -36,6 +37,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
+  const [receiptRef, setReceiptRef] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PilotCommand | null>(null);
   const [revision, setRevision] = useState(0);
@@ -101,6 +103,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       const result = await request(command);
       if (controller.current.signal.aborted) return;
       setPending(null); setNotice(command.action === 'dispense' ? `Entrega guardada. Comprobante: ${result.resourceRef}` : 'Cambio guardado.');
+      if (command.action === 'dispense') setReceiptRef(result.resourceRef);
     } catch (e) {
       if (controller.current.signal.aborted) return;
       setError((e as Error).message);
@@ -124,7 +127,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const searchHint = tab === 'inventory' ? 'Codigo de lote o producto'
     : tab === 'team' ? role === 'admin' ? 'Nombre o referencia del dispensario' : 'Correo del equipo'
     : tab === 'today' && role === 'patient' ? 'Referencia de cita o texto de nota'
-    : role === 'doctor' || tab === 'treatment' || role === 'dispensary' && tab === 'today' ? 'Referencia de paciente o registro'
+    : role === 'dispensary' && tab === 'today' ? 'Nombre o referencia del paciente'
+    : role === 'doctor' || tab === 'treatment' ? 'Referencia de paciente o registro'
     : 'Referencia del registro';
   const consultationState = (b: Booking) => b.state === 'cancelled' ? 'cancelled'
     : data?.encounters?.find(e => e.booking_ref === b.booking_ref)?.state ?? (b.state === 'confirmed' ? 'pending' : 'other');
@@ -146,7 +150,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     : role === 'dispensary' ? [['today', 'Atenciones'], ['inventory', 'Inventario'], ['team', 'Equipo'], ['history', 'Historial']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
 
-  return <section className={`tl-operations ${embedded ? '' : 'tl-operations-page'}`}>
+  return <section className={`tl-operations ${role === 'dispensary' ? 'op-dispensary' : ''} ${embedded ? '' : 'tl-operations-page'}`}>
     <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role ? titles[role] : 'Panel operativo'}</h1>
       <p className="op-email">{email ?? identity.email ?? 'Cuenta conectada'}</p>
       {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name} · {data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
@@ -169,7 +173,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {role === 'dispensary' && data.membership?.organization_ref && <DailyOverview data={data} navigate={setTab}/>}
         {role === 'dispensary' && !data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && tab === 'today' && <Preparation data={data} navigate={setTab}/>}
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
-        {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
+        {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
+        {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} disabled={disabled} readError={readError} receiptRef={receiptRef} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
@@ -205,14 +210,10 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           {!!data.bookings?.length && !visibleBookings.length && <Empty>No hay citas para esta busqueda.</Empty>}
           <h2>Notas de mi atencion</h2>{data.notes?.filter(n => matches(`${n.booking_ref} ${n.body}`)).map(n => <article className="op-row" key={`${n.booking_ref}-${n.version}`}><strong>{date(n.created_at)} · Version {n.version}</strong><p className="op-note">{n.body}</p></article>)}
         </>}
-        {(tab === 'treatment' || tab === 'today' && role === 'dispensary') && <>
-          <h2><Activity size={20}/>{role === 'dispensary' ? 'Pacientes con permiso vigente' : 'Tratamientos simulados'}</h2>
-          {!treatments.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : role === 'dispensary' ? 'No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.' : 'No hay tratamientos emitidos.'}</Empty>}
+        {tab === 'treatment' && <>
+          <h2><Activity size={20}/>Tratamientos simulados</h2>
+          {!treatments.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : 'No hay tratamientos emitidos.'}</Empty>}
           {treatments.map(t => <article className="op-row" key={t.treatment_ref}>
-            {role === 'dispensary' && <><h3>{data.patientProfiles?.find(p => p.patient_ref === t.patient_ref)?.name ?? 'Perfil de prueba pendiente'}</h3>
-              <p className="op-reference">Paciente {t.patient_ref}</p>
-              <p>Permiso hasta {data.grants?.find(g => g.treatment_ref === t.treatment_ref) ? date(data.grants.find(g => g.treatment_ref === t.treatment_ref)!.expires_at) : 'actualizacion pendiente'}</p>
-              {data.patientProfiles?.filter(p => p.patient_ref === t.patient_ref).map(p => <p key={p.patient_ref}>{p.email} · {p.phone}</p>)}</>}
             <TreatmentSummary treatment={t} time={now}/>
             {role === 'doctor' && t.state === 'active' && <button className="op-command" disabled={disabled} onClick={() => { if (confirm('Revocar este tratamiento simulado?')) mutate('revoke-treatment', { resourceRef: t.treatment_ref, version: t.version }); }}><X size={16}/>Revocar tratamiento</button>}
             {role === 'patient' && <div className="op-grants"><h3>Permisos de dispensacion</h3>
@@ -222,11 +223,6 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
               })}
               {(data.grants ?? []).filter(g => g.treatment_ref === t.treatment_ref && Date.parse(g.expires_at) > now && !data.organizations?.some(o => o.organization_ref === g.organization_ref)).map(g => <div className="op-line" key={g.organization_ref}><span>Dispensario {short(g.organization_ref)}</span><button className="op-command" disabled={disabled} onClick={() => mutate('revoke-grant', { resourceRef: t.treatment_ref, organizationRef: g.organization_ref })}>Revocar permiso</button></div>)}
             </div>}
-            {role === 'dispensary' && <details><summary>Atender paciente</summary>
-              <h3>Entregas autorizadas del tratamiento</h3>
-              {(data.deliveries ?? []).filter(d => d.treatment_ref === t.treatment_ref).map(d => <p key={d.delivery_ref}>{formatGrams(d.quantity_mg)} · {date(d.created_at)} · Comprobante {d.delivery_ref}</p>)}
-              <DispensingForm data={data} treatment={t} disabled={disabled || !!readError} submit={input => mutate('dispense', input)}/>
-            </details>}
           </article>)}
         </>}
         {tab === 'inventory' && role === 'dispensary' && <>

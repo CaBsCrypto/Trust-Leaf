@@ -36,7 +36,7 @@ try {
     await command(page, 'Aceptar y participar');
   }
   const { doctor, patient, dispensary, dispensaryB, admin } = pages;
-  await dispensary.getByRole('heading', {name:'Preparacion del dispensario'}).waitFor();
+  await dispensary.locator('.op-preparation summary').click();
   assert.equal(await dispensary.getByLabel('Pendiente', {exact:true}).count(), 4);
   await patient.getByRole('tab', {name:'Tratamientos',exact:true}).click();
   await patient.getByLabel('Nombre ficticio', {exact:true}).fill('Paciente QA');
@@ -185,14 +185,12 @@ try {
     await row.getByRole('button', { name: 'Autorizar 24 horas' }).click(); assert.equal((await response).status(), 200); await refresh(patient);
   }
   await operator.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(operator);
-  await operator.getByRole('heading', {name:'Paciente QA',exact:true}).waitFor();
-  await operator.getByText('Atender paciente', {exact:true}).click();
+  await operator.getByRole('button', {name:/Paciente QA/}).click();
   await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
-  await operator.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('NO-MATCH-QA');
-  await operator.getByText('No hay resultados para esta busqueda.', { exact: true }).waitFor();
+  await operator.getByRole('searchbox').fill('NO-MATCH-QA');
+  await operator.getByText('No hay pacientes para esta busqueda.', { exact: true }).waitFor();
   assert.equal(await operator.getByText('No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.', { exact: true }).count(), 0);
-  await operator.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('   ');
-  await operator.getByText('Atender paciente', {exact:true}).click();
+  await operator.getByRole('searchbox').fill('   ');
   await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
   await operator.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
   await dispensary.getByRole('tab', { name: 'Inventario', exact: true }).click();
@@ -224,7 +222,7 @@ try {
   await revoke.getByRole('button', { name: 'Autorizar 24 horas', exact: true }).click(); assert.equal((await granted).status(), 200);
   for (const [page, grams] of [[operator, '10'], [dispensaryB, '20']]) {
     await page.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(page);
-    await page.getByText('Atender paciente', {exact:true}).click();
+    await page.getByRole('button', {name:/Paciente QA/}).click();
     const delivery = form(page, 'Registrar entrega simulada');
     await delivery.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
     await delivery.getByLabel('Cantidad en gramos', { exact: true }).fill(grams);
@@ -235,10 +233,10 @@ try {
   assert.equal((await refresh(dispensary)).batches[0].stock_mg, 90000);
   assert.equal((await refresh(dispensaryB)).batches[0].stock_mg, 80000);
   await operator.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await operator.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('0 g', { exact: true }).waitFor({ timeout: 5000 });
+  await operator.locator('.op-balance div').filter({ hasText: 'Disponible' }).getByText('0 g', { exact: true }).waitFor({ timeout: 5000 });
   await patient.reload(); await patient.getByRole('tab', { name: 'Tratamientos', exact: true }).click();
   await patient.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('0 g', { exact: true }).waitFor();
-  assert.equal(await dispensaryB.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).isDisabled(), true, 'exhausted period disables another delivery');
+  assert.equal(await dispensaryB.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).count(), 0, 'saved receipt does not restart delivery');
   await patient.getByRole('tab', { name: 'Historial', exact: true }).click();
   assert.equal(await patient.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 2);
   for (const d of (await refresh(patient)).deliveries) {
