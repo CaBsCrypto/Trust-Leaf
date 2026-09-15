@@ -1151,3 +1151,32 @@ fallback explicito en interfaz para compatibilidad. Perfil controlado conserva
 borrador y version original ante refresco; se limpia solo tras guardar y leer
 la version correspondiente. SQL aislado aprobado; publicacion y pruebas de
 navegador/CI pendientes. No aplicar ni modificar el borrador mensual.
+
+Publicacion de comprobantes: PR #34 fusionado, commit
+e39c28e3b156efe3ff916269bfd107efa6331199. CI 34938977832 aprobado
+(5m14s, tipos, regresiones, PostgreSQL independiente, PostgREST, compilacion
+habilitada/deshabilitada y navegador), preview aprobado para 672a094.
+Respaldo application-20260915-035343.dpapi, Windows DPAPI CurrentUser, fuera
+de Git; SHA256 36E21C19CA2081E8018D62CB44F6D6268E648977E5B9899AC6B89E864C76C192.
+Restauracion aislada de 37 tablas y 220 registros aprobada; alcance aplicacion,
+no incluye Auth, Storage, Vault ni configuracion de plataforma.
+Historial remoto de 30 migraciones comprobado; aplicada exclusivamente
+20260915030000 con registro atomico y control de historial. RPC sin EXECUTE
+para authenticated; wrapper privado sin EXECUTE para service_role.
+Mensual intacto (SHA256 BDDBAAC808C90B672D5EE72A0F260B8BA23BEA21C2ECA12A2C226728B486BEC8).
+Despliegue dpl_5noyt19s6JikXchPj6TvhhtLA37K READY; dominio www.trustleaf.org
+confirmado en e39c28e. API anonima 401 AUTH_REQUIRED, no-store/private,
+Vary privy-id-token.
+
+Validacion alojada del paciente tras recargar: recibo 3150a49a... muestra
+Dispensario B - pruebas, Flor ficticia - no real, Piloto-B-20260908, cantidad,
+fecha y periodo correctos; referencias completas dentro del detalle. Los cuatro
+recibos anteriores/actuales siguen presentes, incluyendo el tratamiento revocado.
+Captura movil a 390px sin solapamiento; ancho de documento 390px y cuatro
+articulos comprobados en DOM. Vista normal restaurada. Tratamiento conserva
+20 g retirados/10 g disponibles. No hubo escrituras de entregas ni de stock.
+Captura visual del formulario confirma correo y telefono completos, aunque
+la representacion de accesibilidad omite sus valores: no atribuirlo a perdida
+en servidor. Regresion local prueba contactos tras recarga y borrador durante
+actualizacion. Pendiente comprobar este nuevo formato con operador autenticado
+en produccion y confirmacion del usuario; no cerrar aun el hito completo.
