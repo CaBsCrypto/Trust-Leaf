@@ -145,15 +145,16 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
     {notice && <p role="status" className="text-sm text-green-800">{notice}</p>}
     {visibleError && <p role="alert" className="text-sm text-red-700">{notice && readError ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. ' : ''}{visibleError}</p>}
     {!loading && !visibleError && selectedBooking && !slots.some(slot => slot.bookingRef === selectedBooking) && (historicalBooking?.bookingRef === selectedBooking
-      ? <div ref={historicalRow} aria-current="true" className="border-l-4 border-green-700 bg-green-50 p-3"><p className="font-semibold">Reserva seleccionada · {historicalBooking.bookingState === 'cancelled' ? 'Cancelada' : 'Confirmada'}</p><p>{new Date(historicalBooking.startsAt).toLocaleString('es-CL')}</p><p className="break-all text-xs">Reserva {historicalBooking.bookingRef}</p></div>
+      ? <div ref={historicalRow} aria-current="true" className={`border-l-4 p-3 ${historicalBooking.bookingState === 'cancelled' ? 'border-red-700 bg-red-50' : 'border-green-700 bg-green-50'}`}><p className={`font-semibold ${historicalBooking.bookingState === 'cancelled' ? 'text-red-800' : 'text-green-800'}`}>Reserva seleccionada · {historicalBooking.bookingState === 'cancelled' ? 'Cancelada' : 'Confirmada'}</p><p>{new Date(historicalBooking.startsAt).toLocaleString('es-CL')}</p><p className="break-all text-xs">Reserva {historicalBooking.bookingRef}</p></div>
       : <div role="status" className="flex flex-wrap items-center gap-3 text-sm"><p>No se encontro la reserva seleccionada. Actualiza la agenda para comprobar su estado.</p><button className={commandStyle} disabled={busy} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={16}/>Actualizar reserva</button></div>)}
     {pending && !busy && <button className={commandStyle} onClick={()=>void execute(pending)}><RefreshCw size={16}/>Reintentar cambio</button>}
     {loading ? <p role="status">Cargando agenda...</p> : !visibleError && slots.length===0 ? <p className="text-sm text-gray-600">No hay horarios ni citas en esta semana.</p> : <ul className="divide-y divide-gray-200">
       {slots.map(slot=>{const future=Date.parse(slot.startsAt)>Date.now();const confirmed=slot.bookingState==='confirmed';
         const label=confirmed?'Cita confirmada':slot.state==='published'?'Disponible':slot.bookingState==='cancelled'||slot.state==='cancelled'?'Cancelada':'Reservada';
         const selected = slot.bookingRef === selectedBooking && !!selectedBooking;
-        return <li key={slot.slotRef} ref={selected ? selectedRow : undefined} aria-current={selected ? 'true' : undefined} className={`flex flex-wrap items-center justify-between gap-3 py-4 ${selected ? 'border-l-4 border-green-700 bg-green-50 px-3' : ''}`}>
-          {selected && <p className="w-full text-sm font-semibold text-green-800">Reserva seleccionada</p>}
+        const cancelled = slot.bookingState === 'cancelled';
+        return <li key={slot.slotRef} ref={selected ? selectedRow : undefined} aria-current={selected ? 'true' : undefined} className={`flex flex-wrap items-center justify-between gap-3 py-4 ${selected ? `border-l-4 px-3 ${cancelled ? 'border-red-700 bg-red-50' : 'border-green-700 bg-green-50'}` : ''}`}>
+          {selected && <p className={`w-full text-sm font-semibold ${cancelled ? 'text-red-800' : 'text-green-800'}`}>Reserva seleccionada{cancelled ? ' · Cancelada' : ''}</p>}
           <div className="min-w-0"><p className="text-sm font-semibold">{new Date(slot.startsAt).toLocaleString('es-CL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} – {new Date(slot.endsAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}</p>
           {role==='patient' && <p title={slot.doctorRef} className="text-xs text-gray-600">Medico · {slot.doctorRef.slice(0,8)}</p>}
           <p className={`text-sm ${confirmed?'text-blue-700':'text-gray-600'}`}>{label}</p>

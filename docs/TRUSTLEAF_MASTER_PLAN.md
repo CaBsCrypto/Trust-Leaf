@@ -1071,3 +1071,10 @@ GET agenda con selectedBookingRef sin sesion devuelve 401 AUTH_REQUIRED,
 Cache-Control no-store y cache MISS. Pendiente verificar con medico y paciente
 las reservas existentes canceladas y una confirmada. Se solicito comprobacion
 al medico en dispositivo separado. No se considera cerrado el caso real.
+
+Feedback visual: el usuario encontro sus dos canceladas al abrir Ver en agenda,
+pero el resaltado verde resultaba ambiguo. Ajuste puntual: seleccion cancelada
+con fondo rojo suave, borde rojo y etiqueta textual Cancelada; confirmadas
+conservan verde. Regresion de ambos roles/zonas horarias aprobada localmente,
+capturas movil/escritorio revisadas. Sin cambios de datos, API ni permisos.
+Pendiente publicacion del ajuste y confirmacion final del paciente.

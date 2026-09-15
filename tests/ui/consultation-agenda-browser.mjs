@@ -33,6 +33,7 @@ try {
       await page.getByRole('button', { name: 'Ver en agenda' }).click();
       const selected = page.locator('li[aria-current="true"]');
       await selected.waitFor();
+      assert.match(await selected.getAttribute('class'), /bg-green-50/);
       const expected = await page.evaluate(value => { const d = new Date(value); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }, startsAt);
       assert.equal(await page.getByLabel('Inicio de semana').inputValue(), expected);
       assert.equal(await page.getByRole('searchbox').count(), 0);
@@ -64,11 +65,15 @@ try {
     missing = false; booking.state = 'cancelled';
     await page.getByRole('button', { name: 'Actualizar reserva' }).click();
     await page.locator('li[aria-current="true"]').waitFor();
+    await page.locator('li[aria-current="true"]').getByText('Reserva seleccionada · Cancelada', { exact: true }).waitFor();
+    assert.match(await page.locator('li[aria-current="true"]').getAttribute('class'), /border-red-700 bg-red-50/);
     assert.equal(await page.getByRole('link', { name: 'Unirse a consulta' }).count(), 0);
     historical = true;
     await page.getByRole('button', { name: 'Actualizar agenda', exact: true }).click();
     const history = page.locator('div[aria-current="true"]');
     await history.getByText('Reserva seleccionada · Cancelada', { exact: true }).waitFor();
+    assert.match(await history.getAttribute('class'), /border-red-700 bg-red-50/);
+    if (timezoneId === 'America/Santiago') await page.screenshot({ path: `scratch/operations-qa/agenda-cancelled-${role}-mobile.png`, fullPage: true });
     assert.equal(await page.locator('[aria-current="true"]').count(),1);
     assert.equal(await history.locator('button,a').count(),0);
     assert.equal(await page.locator('li').filter({hasText:'replacement'}).getByRole('link',{name:'Unirse a consulta'}).count(),1);
