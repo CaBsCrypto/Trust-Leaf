@@ -53,6 +53,7 @@ try {
     assert.equal(await page.getByLabel('Lote', {exact:true}).inputValue(), 'batch');
     page.once('dialog', d => d.accept());
     await page.getByRole('button', {name:'Volver a pacientes'}).click();
+    await page.locator('.op-patient:focus').waitFor();
     assert.equal(await search.inputValue(), '11111111');
     await search.fill('');
     await page.locator('.op-patient').nth(1).click();
