@@ -1213,3 +1213,21 @@ Pendientes: CI y preview del commit final, despliegue y recorrido oficial de sol
 lectura; preservar 10 g disponibles y 60 g de stock. Comprension de la nueva
 navegacion por encargado y operador requiere validacion del usuario. No cerrar
 las pruebas anteriores de invitaciones ni habilitar atencion real.
+
+Publicacion y comprobacion posterior, 2026-09-15 13:49 America/Santiago:
+- PR #35 fusionado; codigo main 7cb3290e25bbf5f8199e24cc23522461f3d1ce2f.
+- CI 34996411734 aprobado (5m7s), incluido PostgreSQL independiente y navegador.
+  La primera ejecucion encontro una carrera del test al escribir antes del
+  retorno del foco; se corrigio esperando el foco restaurado, sin pausas fijas.
+- Preview dpl_EcbiPzRfTrj3vJBHq5cnuvFcozYY aprobado; produccion
+  dpl_EPjnVWeVuKnhJe5jR9wM6upnzMyQ READY con alias www.trustleaf.org.
+- Sesion publicada digitalmoneychile8@gmail.com / Operador de B: busqueda sin
+  resultados, busqueda por nombre y referencia, apertura explicita, revision
+  sin confirmar y retorno al listado conservando busqueda comprobados.
+- Desktop 1440 y movil 390 revisados visualmente; sin desbordamiento. Tamano
+  normal restaurado. No se crearon entregas ni se modificaron permisos.
+- Comprobante existente 3150a49a-a8b2-4e19-a46b-a453adb7c15f, producto y lote
+  conservados; 20 g retirados, 10 g disponibles y stock B de 60 g tras refrescar.
+- Los cinco anchos y ambos roles tienen evidencia automatizada aislada; falta
+  validar comprension y facilidad de uso con encargado y operador reales.
+  Las pruebas pendientes de invitaciones permanecen abiertas y separadas.
