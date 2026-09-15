@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Activity, CalendarDays, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
+import { Preparation, ProfileForm, DispensingForm } from './DispensaryDaily';
 import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type Booking, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
@@ -27,6 +28,9 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [tab, setSelectedTab] = useState('today');
   const [search, setSearch] = useState('');
   const [consultationFilter, setConsultationFilter] = useState<ConsultationFilter>('pending');
+  const [inventoryFilter, setInventoryFilter] = useState('all');
+  const [historyDate, setHistoryDate] = useState('');
+  const [historyBatch, setHistoryBatch] = useState('');
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
   const setTab = (next: string, target?: AgendaTarget) => { setSearch(''); setAgendaTarget(target); setSelectedTab(next); };
   const [error, setError] = useState('');
@@ -94,9 +98,9 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     if (lock.current) return;
     lock.current = true; setBusy(true); setPending(command); setError(''); setReadError(''); setNotice(''); requestNumber.current++;
     try {
-      await request(command);
+      const result = await request(command);
       if (controller.current.signal.aborted) return;
-      setPending(null); setNotice('Cambio guardado.');
+      setPending(null); setNotice(command.action === 'dispense' ? `Entrega guardada. Comprobante: ${result.resourceRef}` : 'Cambio guardado.');
     } catch (e) {
       if (controller.current.signal.aborted) return;
       setError((e as Error).message);
@@ -132,10 +136,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     const direction = consultationFilter === 'pending' || consultationFilter === 'active' ? 1 : -1;
     return direction * (Date.parse(a.starts_at) - Date.parse(b.starts_at)) || a.booking_ref.localeCompare(b.booking_ref);
   });
-  const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref}`));
+  const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref} ${data?.patientProfiles?.find(p => p.patient_ref === t.patient_ref)?.name ?? ''}`));
   const now = Date.now();
-  const availableBatches = (data?.batches ?? []).filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0);
-  const visibleBatches = (data?.batches ?? []).filter(b => matches(`${b.lot_code} ${b.product}`));
+  const batchState = (b: NonNullable<PilotSnapshot['batches']>[number]) => b.state === 'quarantined' ? 'quarantined' : Date.parse(b.expires_at) <= now ? 'expired' : b.stock_mg <= 0 ? 'empty' : 'available';
+  const visibleBatches = (data?.batches ?? []).filter(b => matches(`${b.lot_code} ${b.product}`) && (inventoryFilter === 'all' || batchState(b) === inventoryFilter));
+  const historyMatches = (batchRef: string, createdAt: string) => role !== 'dispensary' || ((!historyBatch || batchRef === historyBatch) && (!historyDate || new Intl.DateTimeFormat('en-CA', {timeZone:'America/Santiago'}).format(new Date(createdAt)) === historyDate));
+  const visibleDeliveries = (data?.deliveries ?? []).filter(d => matches(`${d.treatment_ref} ${d.delivery_ref}`) && historyMatches(d.batch_ref,d.created_at)).sort((a,b) => b.created_at.localeCompare(a.created_at));
   const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ['demo', 'POV de prueba']]
     : role === 'dispensary' ? [['today', 'Atenciones'], ['inventory', 'Inventario'], ['team', 'Equipo'], ['history', 'Historial']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
@@ -160,9 +166,11 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         <p>Tu cuenta sigue activa. Para incorporarte a un equipo, necesitas una nueva invitación del encargado. Las operaciones anteriores se conservan en el historial del dispensario.</p>
       </div>}
       {data?.joined && !withoutTeam && <>
+        {role === 'dispensary' && !data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && tab === 'today' && <Preparation data={data} navigate={setTab}/>}
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
+        {tab === 'treatment' && role === 'patient' && <ProfileForm key={data.profile?.version ?? 0} profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
           <div className="op-tabs" role="group" aria-label="Estado de consultas">{consultationFilters.map(([id, label]) =>
@@ -200,24 +208,29 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           <h2><Activity size={20}/>{role === 'dispensary' ? 'Pacientes con permiso vigente' : 'Tratamientos simulados'}</h2>
           {!treatments.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : role === 'dispensary' ? 'No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.' : 'No hay tratamientos emitidos.'}</Empty>}
           {treatments.map(t => <article className="op-row" key={t.treatment_ref}>
+            {role === 'dispensary' && <><h3>{data.patientProfiles?.find(p => p.patient_ref === t.patient_ref)?.name ?? 'Perfil de prueba pendiente'}</h3>
+              <p className="op-reference">Paciente {t.patient_ref}</p>
+              <p>Permiso hasta {data.grants?.find(g => g.treatment_ref === t.treatment_ref) ? date(data.grants.find(g => g.treatment_ref === t.treatment_ref)!.expires_at) : 'actualizacion pendiente'}</p>
+              {data.patientProfiles?.filter(p => p.patient_ref === t.patient_ref).map(p => <p key={p.patient_ref}>{p.email} · {p.phone}</p>)}</>}
             <TreatmentSummary treatment={t} time={now}/>
             {role === 'doctor' && t.state === 'active' && <button className="op-command" disabled={disabled} onClick={() => { if (confirm('Revocar este tratamiento simulado?')) mutate('revoke-treatment', { resourceRef: t.treatment_ref, version: t.version }); }}><X size={16}/>Revocar tratamiento</button>}
             {role === 'patient' && <div className="op-grants"><h3>Permisos de dispensacion</h3>
+              <p>Al autorizar compartes tu nombre, correo y telefono ficticios, tratamiento y entregas durante 24 horas. No se comparte tu ficha clinica.</p>
               {(data.organizations ?? []).map(org => { const grant = data.grants?.find(g => g.treatment_ref === t.treatment_ref && g.organization_ref === org.organization_ref && Date.parse(g.expires_at) > now);
                 return <div className="op-line" key={org.organization_ref}><span>{org.name}{grant && <small>Hasta {date(grant.expires_at)}</small>}</span><button className="op-command" disabled={disabled || !currentPeriod(t, now)} onClick={() => mutate(grant ? 'revoke-grant' : 'grant', { resourceRef: t.treatment_ref, organizationRef: org.organization_ref })}>{grant ? 'Revocar permiso' : 'Autorizar 24 horas'}</button></div>;
               })}
               {(data.grants ?? []).filter(g => g.treatment_ref === t.treatment_ref && Date.parse(g.expires_at) > now && !data.organizations?.some(o => o.organization_ref === g.organization_ref)).map(g => <div className="op-line" key={g.organization_ref}><span>Dispensario {short(g.organization_ref)}</span><button className="op-command" disabled={disabled} onClick={() => mutate('revoke-grant', { resourceRef: t.treatment_ref, organizationRef: g.organization_ref })}>Revocar permiso</button></div>)}
             </div>}
-            {role === 'dispensary' && <>
-              {!availableBatches.length && <Empty>No hay lotes disponibles con stock y vigencia para esta entrega.</Empty>}
-              <CommandForm label="Registrar entrega simulada" disabled={disabled || !availableBatches.length || !currentPeriod(t, now) || currentPeriod(t, now)!.used_mg >= currentPeriod(t, now)!.allowance_mg} fields={[
-              { name: 'batch', label: 'Lote', type: 'select', choices: availableBatches.map(b => ({ value: b.batch_ref, label: `${b.lot_code} · ${formatGrams(b.stock_mg)}` })) },
-              { name: 'grams', label: 'Cantidad en gramos', value: '10' }]}
-              submit={values => mutate('dispense', { resourceRef: t.treatment_ref, batchRef: values.batch, quantityMg: gramsToMg(values.grams) })}/></>}
+            {role === 'dispensary' && <details><summary>Atender paciente</summary>
+              <h3>Entregas autorizadas del tratamiento</h3>
+              {(data.deliveries ?? []).filter(d => d.treatment_ref === t.treatment_ref).map(d => <p key={d.delivery_ref}>{formatGrams(d.quantity_mg)} · {date(d.created_at)} · Comprobante {d.delivery_ref}</p>)}
+              <DispensingForm data={data} treatment={t} disabled={disabled || !!readError} submit={input => mutate('dispense', input)}/>
+            </details>}
           </article>)}
         </>}
         {tab === 'inventory' && role === 'dispensary' && <>
           <h2><Package size={20}/>Inventario por lote</h2>
+          <div className="op-tabs" role="group" aria-label="Estado de inventario">{[['available','Disponibles'],['quarantined','Cuarentena'],['expired','Vencidos'],['empty','Agotados'],['all','Todos']].map(([id,label]) => <button key={id} aria-pressed={inventoryFilter === id} onClick={() => setInventoryFilter(id)}>{label}</button>)}</div>
           {data.membership?.role === 'manager' && <CommandForm label="Recibir lote simulado" disabled={disabled} fields={[
             { name: 'lotCode', label: 'Codigo de lote', maxLength: 80 }, { name: 'product', label: 'Producto', value: 'Flor de prueba', maxLength: 100 },
             { name: 'sourceReference', label: 'Referencia de origen', maxLength: 160 }, { name: 'expiresAt', label: 'Vencimiento', type: 'datetime-local' }, { name: 'grams', label: 'Cantidad en gramos', value: '100' }]}
@@ -228,7 +241,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
               <CommandForm label="Registrar ajuste" disabled={disabled} fields={[{ name: 'grams', label: 'Variacion en gramos (+/-)' }, { name: 'reason', label: 'Motivo del ajuste', maxLength: 160 }]}
                 submit={v => mutate('adjust-stock', { resourceRef: b.batch_ref, version: b.version, quantityMg: gramsToMg(v.grams, true), reason: v.reason })}/></>}
           </article>)}
-          {!visibleBatches.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : 'No hay lotes registrados.'}</Empty>}
+          {!visibleBatches.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : data.batches?.length ? 'No hay lotes en este estado.' : 'No hay lotes registrados.'}</Empty>}
         </>}
         {tab === 'team' && <>
           <h2><Users size={20}/>Organizacion y equipo</h2>
@@ -238,9 +251,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           {role === 'admin' && <AdminOrganizationTeams organizations={data.organizations ?? []} members={data.members ?? []} search={search} revision={revision}/>}
         </>}
         {tab === 'history' && <>
-          <h2>Historial de entregas</h2>{(data.deliveries ?? []).filter(d => matches(`${d.treatment_ref} ${d.delivery_ref}`)).map(d => <article className="op-row" key={d.delivery_ref}><h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3><p>Dispensario {short(d.organization_ref)} · Lote {short(d.batch_ref)} · Periodo {d.period_index}</p><p className="op-reference">Comprobante: {d.delivery_ref}</p><p className="op-reference">Tratamiento: {d.treatment_ref}</p></article>)}
+          <h2>Historial de entregas</h2>
+          {role === 'dispensary' && <div className="op-form"><fieldset><label>Fecha de entrega<input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)}/></label><label>Lote del historial<select value={historyBatch} onChange={e => setHistoryBatch(e.target.value)}><option value="">Todos</option>{data.batches?.map(b => <option key={b.batch_ref} value={b.batch_ref}>{b.product} · {b.lot_code}</option>)}</select></label></fieldset></div>}
+          {visibleDeliveries.map(d => <article className="op-row" key={d.delivery_ref}><h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3><p>{data.batches?.find(b => b.batch_ref === d.batch_ref)?.product} · Lote {data.batches?.find(b => b.batch_ref === d.batch_ref)?.lot_code ?? short(d.batch_ref)} · Periodo {d.period_index}</p><p className="op-reference">Dispensario: {d.organization_ref} · Operador: {d.operator_ref}</p><p className="op-reference">Comprobante: {d.delivery_ref}</p><p className="op-reference">Tratamiento: {d.treatment_ref}</p></article>)}
+          {!!data.deliveries?.length && !visibleDeliveries.length && <Empty>No hay entregas para estos filtros.</Empty>}
           {!data.deliveries?.length && <Empty>No hay entregas registradas.</Empty>}
-          {role === 'dispensary' && <><h2>Movimientos de stock</h2>{data.movements?.filter(m => matches(`${m.batch_ref} ${m.reason}`)).map(m => <article className="op-row" key={m.movement_ref}><strong>{formatGrams(m.quantity_mg)} · {date(m.created_at)}</strong><p>{m.reason} · Lote {short(m.batch_ref)}</p></article>)}</>}
+          {role === 'dispensary' && <><h2>Movimientos de stock</h2>{data.movements?.filter(m => matches(`${m.batch_ref} ${m.reason}`) && historyMatches(m.batch_ref,m.created_at)).map(m => <article className="op-row" key={m.movement_ref}><strong>{formatGrams(m.quantity_mg)} · {date(m.created_at)}</strong><p>{m.reason} · Lote {data.batches?.find(b => b.batch_ref === m.batch_ref)?.lot_code ?? short(m.batch_ref)}</p><p className="op-reference">Operador: {m.operator_ref} · Movimiento: {m.movement_ref}</p></article>)}</>}
         </>}
         {tab === 'today' && role === 'admin' && <>
           <div className="op-stats">{Object.entries(data.counts ?? {}).map(([key, value]) => <div key={key}><span>{{ participants: 'Participantes', encounters: 'Consultas', completed: 'Finalizadas', deliveries: 'Entregas' }[key] ?? key}</span><strong>{value}</strong></div>)}</div>

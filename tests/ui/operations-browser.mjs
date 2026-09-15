@@ -36,6 +36,18 @@ try {
     await command(page, 'Aceptar y participar');
   }
   const { doctor, patient, dispensary, dispensaryB, admin } = pages;
+  await dispensary.getByRole('heading', {name:'Preparacion del dispensario'}).waitFor();
+  assert.equal(await dispensary.getByLabel('Pendiente', {exact:true}).count(), 4);
+  await patient.getByRole('tab', {name:'Tratamientos',exact:true}).click();
+  await patient.getByLabel('Nombre ficticio', {exact:true}).fill('Paciente QA');
+  await patient.getByLabel('Correo ficticio', {exact:true}).fill('paciente@example.test');
+  await patient.getByLabel('Telefono ficticio', {exact:true}).fill('000000000');
+  await patient.getByRole('checkbox').check();
+  await command(patient, 'Guardar perfil de prueba');
+  assert.equal((await refresh(patient)).profile.name, 'Paciente QA');
+  await patient.reload();
+  await patient.getByRole('tab', {name:'Tratamientos',exact:true}).click();
+  assert.equal(await patient.getByLabel('Nombre ficticio', {exact:true}).inputValue(), 'Paciente QA');
   await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).click();
   await admin.getByText('No hay organizaciones registradas.', { exact: true }).waitFor();
   await admin.getByRole('tab', { name: 'Actividad', exact: true }).click();
@@ -167,11 +179,14 @@ try {
     await row.getByRole('button', { name: 'Autorizar 24 horas' }).click(); assert.equal((await response).status(), 200); await refresh(patient);
   }
   await operator.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(operator);
+  await operator.getByRole('heading', {name:'Paciente QA',exact:true}).waitFor();
+  await operator.getByText('Atender paciente', {exact:true}).click();
   await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
   await operator.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('NO-MATCH-QA');
   await operator.getByText('No hay resultados para esta busqueda.', { exact: true }).waitFor();
   assert.equal(await operator.getByText('No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.', { exact: true }).count(), 0);
   await operator.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('   ');
+  await operator.getByText('Atender paciente', {exact:true}).click();
   await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
   await operator.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
   await dispensary.getByRole('tab', { name: 'Inventario', exact: true }).click();
@@ -203,10 +218,12 @@ try {
   await revoke.getByRole('button', { name: 'Autorizar 24 horas', exact: true }).click(); assert.equal((await granted).status(), 200);
   for (const [page, grams] of [[operator, '10'], [dispensaryB, '20']]) {
     await page.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(page);
+    await page.getByText('Atender paciente', {exact:true}).click();
     const delivery = form(page, 'Registrar entrega simulada');
     await delivery.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
     await delivery.getByLabel('Cantidad en gramos', { exact: true }).fill(grams);
-    await command(page, 'Registrar entrega simulada');
+    await page.getByRole('button', {name:'Registrar entrega simulada',exact:true}).click();
+    await command(page, 'Confirmar entrega');
   }
   assert.equal((await refresh(dispensary)).deliveries[0].operator_ref, operatorRef, 'delivery retains the responsible team member');
   assert.equal((await refresh(dispensary)).batches[0].stock_mg, 90000);
@@ -218,6 +235,18 @@ try {
   assert.equal(await dispensaryB.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).isDisabled(), true, 'exhausted period disables another delivery');
   await patient.getByRole('tab', { name: 'Historial', exact: true }).click();
   assert.equal(await patient.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 2);
+  await dispensary.getByRole('tab', {name:'Inventario',exact:true}).click();
+  for (const state of ['Cuarentena','Vencidos','Agotados']) {
+    await dispensary.getByRole('button', {name:state,exact:true}).click();
+    await dispensary.getByText('No hay lotes en este estado.', {exact:true}).waitFor();
+  }
+  await dispensary.getByRole('button', {name:'Disponibles',exact:true}).click();
+  await dispensary.getByRole('button', {name:'Poner en cuarentena',exact:true}).waitFor();
+  await dispensary.getByRole('tab', {name:'Historial',exact:true}).click();
+  await dispensary.getByLabel('Fecha de entrega', {exact:true}).fill('2040-01-01');
+  await dispensary.getByText('No hay entregas para estos filtros.', {exact:true}).waitFor();
+  await dispensary.getByLabel('Fecha de entrega', {exact:true}).fill('');
+  assert.ok(await dispensary.locator('.op-reference').filter({hasText:'Comprobante:'}).count() > 0);
   await refresh(admin); assert.equal(await admin.getByText('NOTA FICTICIA', { exact: false }).count(), 0);
   for (const [role, page] of Object.entries(pages)) {
     for (const [size, viewport] of [['desktop', { width: 1365, height: 900 }], ['mobile', { width: 390, height: 844 }]]) {
