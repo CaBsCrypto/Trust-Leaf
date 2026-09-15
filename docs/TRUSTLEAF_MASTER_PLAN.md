@@ -1077,4 +1077,7 @@ pero el resaltado verde resultaba ambiguo. Ajuste puntual: seleccion cancelada
 con fondo rojo suave, borde rojo y etiqueta textual Cancelada; confirmadas
 conservan verde. Regresion de ambos roles/zonas horarias aprobada localmente,
 capturas movil/escritorio revisadas. Sin cambios de datos, API ni permisos.
-Pendiente publicacion del ajuste y confirmacion final del paciente.
+Publicado mediante PR #32, commit 7ce80bf4c849b96ca182ca671bf8ba2049ddbfe7.
+CI 34917948123 y preview aprobados. Despliegue dpl_FAaYGoDPsbzuXXjDT2TRMPvQBM5z
+READY, commit comprobado mediante el dominio www.trustleaf.org.
+Pendiente confirmacion visual del usuario y comprobacion final del paciente.
