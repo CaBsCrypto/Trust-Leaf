@@ -1180,3 +1180,15 @@ la representacion de accesibilidad omite sus valores: no atribuirlo a perdida
 en servidor. Regresion local prueba contactos tras recarga y borrador durante
 actualizacion. Pendiente comprobar este nuevo formato con operador autenticado
 en produccion y confirmacion del usuario; no cerrar aun el hito completo.
+
+Validacion posterior del operador, 2026-09-15 04:09 America/Santiago:
+sesion nueva de digitalmoneychile8@gmail.com, Dispensario B - pruebas / Operador.
+Historial muestra el mismo comprobante 3150a49a-a8b2-4e19-a46b-a453adb7c15f,
+producto Flor ficticia - no real y lote Piloto-B-20260908. Movimiento asociado
+0d44d3aa-22e9-4fce-a4f8-87a52c8f182d, cantidad -10 g, responsable conservado.
+Stock 60 g, una entrega del dia; tratamiento 20 g retirados/10 g disponibles.
+Vista movil de 390px revisada sin desbordamiento horizontal; vista normal
+restaurada y actualizacion sin duplicados ni cambios de saldo. Se cierra la
+comprobacion tecnica cruzada del nuevo formato paciente/operador. No hubo
+entregas adicionales. Queda confirmar comprension con el usuario; invitaciones
+y otras validaciones del piloto siguen separadas.
