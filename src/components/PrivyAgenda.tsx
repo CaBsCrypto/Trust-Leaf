@@ -4,6 +4,7 @@ import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 
 type Slot = { slotRef: string; doctorRef: string; startsAt: string; endsAt: string; state: string; version: number; bookingRef: string | null; bookingState: string | null; conference?: {state: string | null; meetUrl?: string | null} | null };
 type Command = { action: string; input: Record<string, unknown> };
+type HistoricalBooking = Pick<Slot, 'slotRef' | 'bookingRef' | 'doctorRef' | 'startsAt' | 'endsAt' | 'bookingState'>;
 export type AgendaTarget = { bookingRef: string; startsAt: string };
 const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const inputStyle = 'min-w-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm';
@@ -21,6 +22,8 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
   const [date,setDate] = useState(() => localDate(target && Number.isFinite(Date.parse(target.startsAt)) ? new Date(target.startsAt) : new Date()));
   const [selectedBooking,setSelectedBooking] = useState(target?.bookingRef);
   const selectedRow = useRef<HTMLLIElement | null>(null);
+  const historicalRow = useRef<HTMLDivElement | null>(null);
+  const [historicalBooking,setHistoricalBooking] = useState<HistoricalBooking | null>(null);
   const scrolled = useRef(false);
   const [publishDate,setPublishDate] = useState(() => localDate(new Date(Date.now()+86400000)));
   const [time,setTime] = useState('09:00');
@@ -39,11 +42,12 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
   const commandController = useRef<AbortController | null>(null);
   useEffect(() => () => commandController.current?.abort(), []);
   useEffect(() => {
-    if (!loading && !readError && selectedRow.current && !scrolled.current) {
-      selectedRow.current.scrollIntoView({ block: 'center' });
+    const row = selectedRow.current ?? historicalRow.current;
+    if (!loading && !readError && row && !scrolled.current) {
+      row.scrollIntoView({ block: 'center' });
       scrolled.current = true;
     }
-  }, [loading, readError, slots]);
+  }, [loading, readError, slots, historicalBooking]);
 
   async function request(path: string, command?: Command, signal?: AbortSignal) {
     let token = await identity.getIdentityToken();
@@ -61,7 +65,7 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
   useEffect(() => {
     const current=++generation.current;
     const controller=new AbortController();
-    setSlots([]); setRole(null); setReadError(''); setLoading(true);
+    setSlots([]); setHistoricalBooking(null); setRole(null); setReadError(''); setLoading(true);
     if(!identity.ready || !identity.authenticated) {
       const timeout=setTimeout(()=>{setLoading(false);setReadError('La sesion no esta disponible. Reintenta la consulta.');},10000);
       return ()=>{clearTimeout(timeout);controller.abort();};
@@ -73,14 +77,14 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
       if (reading || controller.signal.aborted) return;
       reading = true;
       try {
-        const data = await request(`/api/agenda?${new URLSearchParams({from:start.toISOString(),to:end.toISOString()})}`, undefined, controller.signal);
+        const data = await request(`/api/agenda?${new URLSearchParams({from:start.toISOString(),to:end.toISOString(),...(selectedBooking ? {selectedBookingRef:selectedBooking} : {})})}`, undefined, controller.signal);
         if (controller.signal.aborted || current !== generation.current) return;
         if (!Array.isArray(data.slots) || !['doctor','patient'].includes(data.role)) throw new Error('Respuesta de agenda no disponible.');
-        setSlots(data.slots); setRole(data.role); setReadError('');
+        setSlots(data.slots); setHistoricalBooking(data.selectedBooking ?? null); setRole(data.role); setReadError('');
       } catch (e) {
         if (controller.signal.aborted || current !== generation.current) return;
         const failure = e as Error & { status?: number };
-        if ([401,403].includes(failure.status ?? 0)) { setSlots([]); setRole(null); }
+        if ([401,403].includes(failure.status ?? 0)) { setSlots([]); setHistoricalBooking(null); setRole(null); }
         setReadError(failure.message);
       } finally {
         reading = false;
@@ -94,7 +98,7 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
     document.addEventListener('visibilitychange', resume);
     return () => { clearInterval(timer); controller.abort(); window.removeEventListener('focus', resume);
       window.removeEventListener('online', resume); document.removeEventListener('visibilitychange', resume); };
-  },[date,revision,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
+  },[date,revision,selectedBooking,identity.subject,identity.ready,identity.authenticated,identity.tokenReady]);
 
   async function execute(command: Command) {
     if(commandLock.current)return;
@@ -140,7 +144,9 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
     </form>}
     {notice && <p role="status" className="text-sm text-green-800">{notice}</p>}
     {visibleError && <p role="alert" className="text-sm text-red-700">{notice && readError ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. ' : ''}{visibleError}</p>}
-    {!loading && !visibleError && selectedBooking && !slots.some(slot => slot.bookingRef === selectedBooking) && <div role="status" className="flex flex-wrap items-center gap-3 text-sm"><p>No se encontro la reserva seleccionada. Actualiza la agenda para comprobar su estado.</p><button className={commandStyle} disabled={busy} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={16}/>Actualizar reserva</button></div>}
+    {!loading && !visibleError && selectedBooking && !slots.some(slot => slot.bookingRef === selectedBooking) && (historicalBooking?.bookingRef === selectedBooking
+      ? <div ref={historicalRow} aria-current="true" className="border-l-4 border-green-700 bg-green-50 p-3"><p className="font-semibold">Reserva seleccionada · {historicalBooking.bookingState === 'cancelled' ? 'Cancelada' : 'Confirmada'}</p><p>{new Date(historicalBooking.startsAt).toLocaleString('es-CL')}</p><p className="break-all text-xs">Reserva {historicalBooking.bookingRef}</p></div>
+      : <div role="status" className="flex flex-wrap items-center gap-3 text-sm"><p>No se encontro la reserva seleccionada. Actualiza la agenda para comprobar su estado.</p><button className={commandStyle} disabled={busy} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={16}/>Actualizar reserva</button></div>)}
     {pending && !busy && <button className={commandStyle} onClick={()=>void execute(pending)}><RefreshCw size={16}/>Reintentar cambio</button>}
     {loading ? <p role="status">Cargando agenda...</p> : !visibleError && slots.length===0 ? <p className="text-sm text-gray-600">No hay horarios ni citas en esta semana.</p> : <ul className="divide-y divide-gray-200">
       {slots.map(slot=>{const future=Date.parse(slot.startsAt)>Date.now();const confirmed=slot.bookingState==='confirmed';
@@ -155,8 +161,8 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
           {confirmed && slot.conference && (slot.conference.state==='ready' && /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(slot.conference.meetUrl??'')
             ? <a className={commandStyle} href={slot.conference.meetUrl!} target="_blank" rel="noopener noreferrer"><Video size={16}/>Unirse a consulta</a>
             : <p role="status" className="text-sm text-gray-600">{['error','unavailable'].includes(slot.conference.state??'')?'Videollamada no disponible temporalmente':'Preparando videollamada'}</p>)}
-          {future && role==='patient' && slot.state==='published' && <button disabled={disabled} className={commandStyle} onClick={()=>mutate('reserve',{slotRef:slot.slotRef,bookingRef:crypto.randomUUID(),version:slot.version})}>Reservar</button>}
-          {future && (confirmed || role==='doctor' && slot.state==='published') && <button disabled={disabled} className={commandStyle} onClick={()=>{if(window.confirm(confirmed?'¿Cancelar esta cita?':'¿Retirar este horario?'))mutate(confirmed?'cancel-booking':'cancel-slot',{slotRef:slot.slotRef,bookingRef:slot.bookingRef,version:slot.version});}}><X size={16}/>{confirmed?'Cancelar cita':'Retirar horario'}</button>}
+          {future && !(selected && slot.bookingState==='cancelled') && role==='patient' && slot.state==='published' && <button disabled={disabled} className={commandStyle} onClick={()=>mutate('reserve',{slotRef:slot.slotRef,bookingRef:crypto.randomUUID(),version:slot.version})}>Reservar</button>}
+          {future && !(selected && slot.bookingState==='cancelled') && (confirmed || role==='doctor' && slot.state==='published') && <button disabled={disabled} className={commandStyle} onClick={()=>{if(window.confirm(confirmed?'¿Cancelar esta cita?':'¿Retirar este horario?'))mutate(confirmed?'cancel-booking':'cancel-slot',{slotRef:slot.slotRef,bookingRef:slot.bookingRef,version:slot.version});}}><X size={16}/>{confirmed?'Cancelar cita':'Retirar horario'}</button>}
         </li>;})}
     </ul>}
   </section>;

@@ -8,6 +8,8 @@ export async function executePrivyAgenda(input: {
 }) {
   const fetcher = input.fetcher ?? fetch;
   if (!['list', 'publish', 'reserve', 'cancel-slot', 'cancel-booking'].includes(input.action)) throw failure(400);
+  const selected = input.input.selectedBookingRef;
+  if (selected !== undefined && (input.action !== 'list' || typeof selected !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selected))) throw failure(400);
   const roles = input.action === 'publish' || input.action === 'cancel-slot' ? ['doctor'] as const
     : input.action === 'reserve' ? ['patient'] as const : ['doctor', 'patient'] as const;
   const principal = await createPrivyRbacAuthorizer({ verifier: input.verifier, store: createSupabasePrivyActorStore(input.env, fetcher) }).authorize(input.token, [...roles]);
@@ -24,6 +26,28 @@ export async function executePrivyAgenda(input: {
     throw failure(status);
   }
   const result = await response.json();
+  if (selected !== undefined) {
+    const historical = await fetcher(new URL('/rest/v1/rpc/trustleaf_privy_agenda_booking', input.env.SUPABASE_URL ?? input.env.VITE_SUPABASE_URL), {
+      method: 'POST', headers: { apikey: (input.env.SUPABASE_SECRET_KEY ?? input.env.SUPABASE_SERVICE_ROLE_KEY)!.trim(), 'content-type': 'application/json' },
+      body: JSON.stringify({ p_subject: principal.subject, p_booking_ref: selected }), signal: AbortSignal.timeout(10000),
+    });
+    if (!historical.ok) {
+      const diagnostic = await historical.json().catch(() => ({}));
+      throw failure(diagnostic.code === '42501' ? 403 : 503);
+    }
+    const row: unknown = await historical.json();
+    if (row === null) result.selectedBooking = null;
+    else {
+      if (typeof row !== 'object' || Array.isArray(row)) throw failure(503);
+      const value = row as Record<string, unknown>;
+      if (value.bookingRef !== selected || typeof value.slotRef !== 'string' || typeof value.doctorRef !== 'string'
+        || typeof value.startsAt !== 'string' || !Number.isFinite(Date.parse(value.startsAt))
+        || typeof value.endsAt !== 'string' || !Number.isFinite(Date.parse(value.endsAt))
+        || !['confirmed','cancelled'].includes(String(value.bookingState))) throw failure(503);
+      result.selectedBooking = { bookingRef: value.bookingRef, slotRef: value.slotRef, doctorRef: value.doctorRef,
+        startsAt: value.startsAt, endsAt: value.endsAt, bookingState: value.bookingState };
+    }
+  }
   if (['reserve', 'cancel-booking'].includes(input.action) && input.env.GOOGLE_CALENDAR_AUTOMATION_ENABLED === 'true') {
     try {
       const { calendarWorkStore } = await import('./google-calendar-store.js');

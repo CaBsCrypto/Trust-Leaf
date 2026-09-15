@@ -12,14 +12,14 @@ try {
     const writes = [], errors = [];
     page.on('pageerror', e => errors.push(e.message));
     const booking = { booking_ref: 'selected-booking', starts_at: '2025-01-02T01:30:00Z', patient_ref: 'patient', doctor_ref: 'doctor', state: 'confirmed' };
-    let missing = false, failed = false, requests = [];
+    let missing = false, failed = false, historical = false, requests = [];
     await page.route('**/api/**', async route => {
       const r = route.request();
       if (r.method() !== 'GET') writes.push(r.url());
       if (r.url().includes('/api/operations-pilot')) return route.fulfill({ json: { synthetic: true, joined: true, role: r.headers()['privy-id-token'] === 'fixture-admin' ? 'admin' : role, bookings: [booking], encounters: [], notes: [], treatments: [], deliveries: [], organizations: [] } });
       if (r.url().includes('/api/agenda?')) {
         requests.push(new URL(r.url()));
-        return route.fulfill({ status: failed ? 503 : 200, json: { role, slots: missing ? [] : [{ slotRef: 'slot', doctorRef: 'doctor', startsAt: booking.starts_at, endsAt: new Date(Date.parse(booking.starts_at) + 1800000).toISOString(), state: 'reserved', version: 1, bookingRef: booking.booking_ref, bookingState: booking.state, conference: { state: 'ready', meetUrl: 'https://meet.google.com/abc-defg-hij' } }] } });
+        return route.fulfill({ status: failed ? 503 : 200, json: { role, selectedBooking: historical ? {slotRef:'slot',doctorRef:'doctor',startsAt:booking.starts_at,endsAt:booking.starts_at,bookingRef:booking.booking_ref,bookingState:'cancelled'} : null, slots: missing ? [] : [{ slotRef: 'slot', doctorRef: 'doctor', startsAt: booking.starts_at, endsAt: new Date(Date.parse(booking.starts_at) + 1800000).toISOString(), state: 'reserved', version: 1, bookingRef: historical ? 'replacement' : booking.booking_ref, bookingState: historical ? 'confirmed' : booking.state, conference: { state: 'ready', meetUrl: 'https://meet.google.com/abc-defg-hij' } }] } });
       }
       return route.fulfill({ json: {} });
     });
@@ -65,12 +65,26 @@ try {
     await page.getByRole('button', { name: 'Actualizar reserva' }).click();
     await page.locator('li[aria-current="true"]').waitFor();
     assert.equal(await page.getByRole('link', { name: 'Unirse a consulta' }).count(), 0);
+    historical = true;
+    await page.getByRole('button', { name: 'Actualizar agenda', exact: true }).click();
+    const history = page.locator('div[aria-current="true"]');
+    await history.getByText('Reserva seleccionada · Cancelada', { exact: true }).waitFor();
+    assert.equal(await page.locator('[aria-current="true"]').count(),1);
+    assert.equal(await history.locator('button,a').count(),0);
+    assert.equal(await page.locator('li').filter({hasText:'replacement'}).getByRole('link',{name:'Unirse a consulta'}).count(),1);
+    missing = true;
+    await page.getByRole('button', { name: 'Actualizar agenda', exact: true }).click();
+    await history.waitFor();
+    assert.equal(await page.locator('li').count(),0);
+    assert.equal(await history.locator('button,a').count(),0);
     await page.setViewportSize({ width: 1365, height: 900 });
     if (timezoneId === 'America/Santiago') await page.screenshot({ path: `scratch/operations-qa/agenda-target-${role}-desktop.png`, fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'admin' })));
     await page.getByRole('heading', { name: 'Supervision del piloto' }).waitFor();
     assert.equal(await page.locator('li[aria-current="true"]').count(), 0);
+    assert.equal(await page.locator('div[aria-current="true"]').count(), 0);
+    historical = false; missing = false;
     booking.state = 'confirmed';
     await page.evaluate(actor => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: actor })), role);
     await page.getByRole('button', { name: 'Ver en agenda' }).waitFor();
