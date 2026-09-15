@@ -1026,3 +1026,33 @@ Publicacion 14-09: PR #30 fusionado en
 Pendiente exclusivo de cierre: recorrido autenticado del medico en produccion
 por Pendientes, En atencion, Finalizadas, Canceladas y Todas, con busqueda y
 Ver en agenda. No se han creado ni cerrado consultas publicadas para esta prueba.
+
+Usuario confirma filtros 4 pendientes, 0 activas, 3 finalizadas, 2 canceladas,
+9 totales; vacio de activas, orden de finalizadas, busqueda conservada entre
+filtros y limpia entre secciones, recarga, notas y navegacion desde finalizadas.
+Detectado defecto separado: una cancelada no aparece en agenda aunque si en
+Consultas. No se registra ese caso como aprobado.
+
+### Lectura historica de reservas canceladas (en curso)
+
+Rama fix/cancelled-agenda-history. Reproducido con SQL aislado: tras reservar,
+cancelar y reservar con otro paciente, la lista del medico prioriza el reemplazo.
+Nueva RPC de solo lectura y migracion incremental, referencia opcional en GET
+agenda y detalle historico separado sin acciones. Pruebas SQL locales aprueban
+acceso medico/paciente propietario y no revelacion a otro paciente/medico ni
+roles ajenos. No aplicado en produccion. Pendientes pruebas API/navegador,
+compilacion, CI, respaldo cifrado y restauracion, revision remota de migraciones,
+publicacion compatible y contraste autenticado del caso real.
+
+Avance local: seis pruebas API aprobadas (referencia, identidad, respuesta
+validada y filtrada, errores y ausencia de trabajador Calendar en lecturas),
+SQL ampliado aprobado (tres reservas del mismo horario, mismo/otro paciente,
+suspension y roles directos), navegador de agenda historica para ambos roles
+y zonas horarias aprobado, filtros medicos aprobados, tipos y compilacion
+aprobados. Detalle historico sin acciones y reemplazo independiente.
+Respaldo application-20260914-220952.dpapi en .backups/trustleaf fuera de Git,
+DPAPI CurrentUser, SHA256 7E09B11D7BEB54E8A34F34521ECDC53ED1725101D9CCF6DC5ABAE29D82586CED:
+restauracion aislada de 36 tablas/210 filas aprobada. Historial remoto termina
+en 20260909030000; no contiene borrador mensual ni nueva lectura historica.
+Pendientes CI/preview, aplicar exclusivamente la nueva migracion y publicar;
+la comprobacion autenticada real sigue pendiente.

@@ -37,7 +37,7 @@ export default async function handler(req: any, res: any) {
     if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
     const token = readPrivyToken(req.headers ?? {});
     if (!token) return res.status(401).json({ code: 'AUTH_REQUIRED' });
-    const body = req.method === 'GET' ? { action: 'list', input: { from: req.query.from, to: req.query.to } } : readJsonBody(req.body);
+    const body = req.method === 'GET' ? { action: 'list', input: { from: req.query.from, to: req.query.to, selectedBookingRef: req.query.selectedBookingRef } } : readJsonBody(req.body);
     if (!body || typeof body.action !== 'string' || !body.input || typeof body.input !== 'object' || Array.isArray(body.input)
       || JSON.stringify(body).length > 4000 || (req.method === 'POST' && body.action === 'list')) return res.status(400).json({ code: 'AGENDA_INPUT_INVALID' });
     try {

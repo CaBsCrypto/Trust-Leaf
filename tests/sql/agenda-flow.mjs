@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 
 export async function testAgenda(db, subjects) {
+  const history = async (subject, ref) => (await db.query('select public.trustleaf_privy_agenda_booking($1,$2) as data',[subject,ref])).rows[0].data;
   const call = async (subject, action, input, role = 'service_role') => {
     await db.exec(`set role ${role}`);
     try { return (await db.query('select public.trustleaf_privy_agenda($1,$2,$3) as data', [subject, action, input])).rows[0].data; }
@@ -39,12 +40,36 @@ export async function testAgenda(db, subjects) {
   await assert.rejects(call(patient2,'cancel-booking',{...reserve,version:2,operationId:randomUUID()}),{code:'42501'});
   await call(subjects.patient,'cancel-booking',{...reserve,version:2,operationId:randomUUID()});
   assert.equal((await list(patient2)).slots[0].state,'published');
-  const reserve2={...reserve,bookingRef:randomUUID(),version:3,operationId:randomUUID()};
+  let reserve2={...reserve,bookingRef:randomUUID(),version:3,operationId:randomUUID()};
   await call(patient2,'reserve',reserve2);
-  await call(subjects.doctor,'cancel-booking',{...reserve2,version:4,operationId:randomUUID()});
+  assert.equal((await list(subjects.doctor)).slots[0].bookingRef,reserve2.bookingRef,'normal agenda prefers replacement; original cancellation is absent');
+  console.log('REPRODUCED: cancelled booking hidden from doctor agenda after replacement.');
+  for (const subject of [subjects.doctor, subjects.patient]) {
+    const original = await history(subject,reserve.bookingRef);
+    assert.equal(original.bookingRef,reserve.bookingRef);
+    assert.equal(original.bookingState,'cancelled');
+    assert.equal(original.conference,undefined);
+    assert.equal(original.patientRef,undefined);
+  }
+  assert.equal(await history(patient2,reserve.bookingRef),null);
+  assert.equal(await history(subjects.patient,reserve2.bookingRef),null);
+  assert.equal(await history(subjects.doctor,randomUUID()),null);
+  for (const subject of [subjects.admin,subjects.dispensary]) await assert.rejects(history(subject,reserve.bookingRef),{code:'42501'});
+  const previousRef=reserve2.bookingRef;
+  await call(patient2,'cancel-booking',{...reserve2,version:4,operationId:randomUUID()});
+  reserve2={...reserve2,bookingRef:randomUUID(),version:5,operationId:randomUUID()};
+  await call(patient2,'reserve',reserve2);
+  assert.equal((await history(patient2,previousRef)).bookingState,'cancelled','same patient can retrieve earlier cancellation after rebooking');
+  assert.equal((await history(patient2,reserve2.bookingRef)).bookingState,'confirmed');
+  for(const role of ['anon','authenticated']) {
+    await db.exec(`set role ${role}`);
+    try { await assert.rejects(history(subjects.doctor,previousRef),{code:'42501'}); }
+    finally { await db.exec('reset role'); }
+  }
+  await call(subjects.doctor,'cancel-booking',{...reserve2,version:6,operationId:randomUUID()});
   assert.equal((await list(subjects.doctor)).slots[0].state,'cancelled');
   assert.equal((await list(patient2)).slots[0].bookingState,'cancelled','patient retains cancellation history');
-  assert.equal((await db.query('select count(*)::int n from trustleaf_private.appointment_bookings where slot_ref=$1',[slot.slotRef])).rows[0].n,2,'cancelled history retained');
+  assert.equal((await db.query('select count(*)::int n from trustleaf_private.appointment_bookings where slot_ref=$1',[slot.slotRef])).rows[0].n,3,'cancelled history retained');
   const pending='did:privy:agenda-pending';
   await db.query('select * from public.trustleaf_enroll_privy_actor($1,$2)',[pending,'doctor']);
   await assert.rejects(list(pending),{code:'42501'});
@@ -55,6 +80,7 @@ export async function testAgenda(db, subjects) {
   const slot2={...slot,slotRef:randomUUID(),operationId:randomUUID()};
   await call(subjects.doctor,'publish',slot2);
   assert.equal((await list(otherDoctor)).slots.length,0,'doctor cannot list another agenda');
+  assert.equal(await history(otherDoctor,reserve.bookingRef),null);
   await assert.rejects(call(otherDoctor,'cancel-slot',{slotRef:slot2.slotRef,version:1,operationId:randomUUID()}),{code:'42501'});
   const slot3={...slot,slotRef:randomUUID(),operationId:randomUUID()};
   await call(otherDoctor,'publish',slot3);
@@ -62,6 +88,7 @@ export async function testAgenda(db, subjects) {
   await assert.rejects(call(subjects.patient,'reserve',{slotRef:slot3.slotRef,bookingRef:randomUUID(),version:1,operationId:randomUUID()}),{code:'40001'});
   await db.query("update trustleaf_private.actor_bindings set state='suspended' where actor_ref=$1",[other.actor_ref]);
   await assert.rejects(list(otherDoctor),{code:'42501'});
+  await assert.rejects(history(otherDoctor,reserve.bookingRef),{code:'42501'});
   await assert.rejects(call(patient2,'reserve',{slotRef:slot3.slotRef,bookingRef:randomUUID(),version:1,operationId:randomUUID()}),{code:'40001'});
   await assert.rejects(call(subjects.patient,'list',{from,to:new Date(Date.now()+100*86400000).toISOString()}),{code:'22023'});
   console.log('PASS: SQL Privy agenda publish, overlap, competing reservations, role isolation, replay, cancellation and rebooking.');

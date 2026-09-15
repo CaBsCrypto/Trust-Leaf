@@ -7,6 +7,46 @@ const env={SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'synth
 const subject='did:privy:agenda-fixture';
 const verifier={async verify(){return {subject,emails:[]};}};
 const binding=(role:string,state='active')=>[{actor_ref:'11111111-1111-4111-8111-111111111111',role,actor_state:state}];
+const selectedBookingRef='22222222-2222-4222-8222-222222222222';
+
+test('historical selection validates input before requesting data',async()=>{
+  for (const selected of ['', 'bad-ref', ['bad-ref']]) {
+    let calls=0;
+    await assert.rejects(executePrivyAgenda({token:'fixture',action:'list',input:{selectedBookingRef:selected},env,verifier,fetcher:async()=>{calls++;return Response.json({});}}),{statusCode:400});
+    assert.equal(calls,0);
+  }
+});
+
+test('historical read uses verified identity, strips extra fields and never runs calendar worker',async()=>{
+  const expected={bookingRef:selectedBookingRef,slotRef:'slot',doctorRef:'doctor',startsAt:'2026-09-10T12:00:00Z',endsAt:'2026-09-10T12:30:00Z',bookingState:'cancelled'};
+  for (const value of [null,{...expected,conference:{meetUrl:'secret'},patientRef:'other'}]) {
+    const paths:string[]=[];
+    const result=await executePrivyAgenda({token:'fixture',action:'list',input:{selectedBookingRef,subject:'forged'},env:{...env,GOOGLE_CALENDAR_AUTOMATION_ENABLED:'true'},verifier,fetcher:async(url,init)=>{
+      const path=new URL(String(url)).pathname;paths.push(path);
+      if(path.includes('resolve_privy'))return Response.json(binding('doctor'));
+      const body=JSON.parse(String(init?.body));assert.equal(body.p_subject,subject);
+      if(path.endsWith('trustleaf_privy_agenda_booking')) {assert.equal(body.p_booking_ref,selectedBookingRef);return Response.json(value);}
+      assert.ok(path.endsWith('trustleaf_privy_agenda'));return Response.json({slots:[]});
+    }});
+    assert.deepEqual(result.selectedBooking,value===null?null:expected);
+    assert.equal(paths.length,3);
+  }
+});
+
+test('historical failure and malformed response cannot become a missing booking',async()=>{
+  for(const value of [{},[],{bookingRef:'wrong'}]) {
+    await assert.rejects(executePrivyAgenda({token:'fixture',action:'list',input:{selectedBookingRef},env,verifier,fetcher:async url=>{
+      if(String(url).includes('resolve_privy'))return Response.json(binding('patient'));
+      return Response.json(String(url).endsWith('agenda_booking')?value:{slots:[]});
+    }}),{statusCode:503});
+  }
+  for(const [code,statusCode] of [['XX000',503],['42501',403]]) {
+    await assert.rejects(executePrivyAgenda({token:'fixture',action:'list',input:{selectedBookingRef},env,verifier,fetcher:async url=>{
+      if(String(url).includes('resolve_privy'))return Response.json(binding('patient'));
+      return String(url).endsWith('agenda_booking')?Response.json({code},{status:400}):Response.json({slots:[]});
+    }}),{statusCode});
+  }
+});
 test('agenda derives subject from verified identity, not submitted actor',async()=>{
   const fetcher:typeof fetch=async(url,init)=>{
     if(String(url).includes('resolve_privy'))return Response.json(binding('patient'));
