@@ -14,6 +14,15 @@ try {
   await forbidden(mutation('doctor', 'start-encounter', { resourceRef: randomUUID() }));
   for (const key of Object.keys(subjects)) await mutation(key, 'join', { acceptSyntheticOnly: true });
   assert.equal((await snapshot('doctor')).joined, true);
+  const profileInput = { name: 'Paciente Ficticio', email: 'paciente@example.test', phone: '000000000', version: 0, syntheticOnly: true, operationId: randomUUID(), patientRef: actors.otherPatient };
+  await call('patient', 'save-profile', profileInput);
+  assert.equal((await call('patient', 'save-profile', profileInput)).replayed, true);
+  assert.equal((await snapshot('patient')).profile.patient_ref, actors.patient, 'profile owner derived from identity');
+  assert.equal((await snapshot('otherPatient')).profile, null);
+  await forbidden(mutation('operator', 'save-profile', profileInput));
+  await assert.rejects(mutation('patient', 'save-profile', {...profileInput, operationId: randomUUID()}), {code:'40001'});
+  assert.equal((await snapshot('admin')).profile, undefined);
+  await forbidden(db.query('select * from trustleaf_private.pilot_patient_profiles'));
   for (const role of ['anon', 'authenticated']) {
     await db.exec(`set role ${role}`);
     await forbidden(snapshot('admin'));
@@ -55,6 +64,8 @@ try {
   await mutation('patient', 'grant', { resourceRef: t.treatment_ref, organizationRef: orgA });
   await mutation('patient', 'grant', { resourceRef: t.treatment_ref, organizationRef: orgB });
   const minimal = await snapshot('operator');
+  assert.equal(minimal.patientProfiles[0].name, 'Paciente Ficticio');
+  assert.equal(minimal.grants.length, 1);
   assert.equal(minimal.treatments.length, 1);
   assert.deepEqual(minimal.notes, []);
   assert.equal(minimal.treatments[0].booking_ref, undefined);
@@ -82,6 +93,7 @@ try {
   await owner("update trustleaf_private.pilot_periods set starts_at=starts_at-interval '720 hours', ends_at=ends_at-interval '720 hours' where treatment_ref=$1", [t.treatment_ref]);
   assert.equal((await snapshot('patient')).treatments[0].periods[1].used_mg, 0, 'no carryover');
   await mutation('patient', 'revoke-grant', { resourceRef: t.treatment_ref, organizationRef: orgA });
+  assert.deepEqual((await snapshot('operator')).patientProfiles, []);
   await forbidden(mutation('operator', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1000 }));
   assert.equal((await snapshot('operator')).treatments.length, 0);
   assert.equal((await snapshot('operator')).deliveries.length, 1, 'own immutable delivery remains, shared history disappears');

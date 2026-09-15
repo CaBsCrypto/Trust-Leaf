@@ -1,4 +1,4 @@
-export const pilotActions = ['snapshot', 'join', 'create-organization', 'add-operator', 'remove-operator',
+export const pilotActions = ['snapshot', 'join', 'save-profile', 'create-organization', 'add-operator', 'remove-operator',
   'start-encounter', 'save-note', 'complete-encounter', 'revoke-treatment', 'grant', 'revoke-grant',
   'receive-batch', 'adjust-stock', 'set-batch-state', 'dispense'] as const;
 export type PilotAction = typeof pilotActions[number];
@@ -18,7 +18,9 @@ export type Delivery = { delivery_ref: string; treatment_ref: string; organizati
   batch_ref: string; period_index: number; quantity_mg: number; created_at: string };
 export type Movement = { movement_ref: string; batch_ref: string; operator_ref: string; quantity_mg: number; reason: string; created_at: string };
 export type Grant = { treatment_ref: string; organization_ref: string; expires_at: string };
+export type PatientProfile = { patient_ref: string; name: string; email: string; phone: string; version: number };
 export type PilotSnapshot = { joined: boolean; synthetic: true; role: PilotRole; actorRef: string; asOf?: string; staffOnly?: boolean;
+  profile?: PatientProfile | null; patientProfiles?: PatientProfile[];
   membership?: Membership | null; bookings?: Booking[]; encounters?: Encounter[]; notes?: ClinicalNote[];
   treatments?: Treatment[]; organizations?: Organization[]; members?: Membership[]; batches?: Batch[];
   movements?: Movement[]; deliveries?: Delivery[]; grants?: Grant[]; counts?: Record<string, number>;
