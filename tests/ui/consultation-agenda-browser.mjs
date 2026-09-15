@@ -74,6 +74,7 @@ try {
     assert.equal(await page.locator('li').filter({hasText:'replacement'}).getByRole('link',{name:'Unirse a consulta'}).count(),1);
     missing = true;
     await page.getByRole('button', { name: 'Actualizar agenda', exact: true }).click();
+    await page.locator('li').waitFor({ state: 'detached' });
     await history.waitFor();
     assert.equal(await page.locator('li').count(),0);
     assert.equal(await history.locator('button,a').count(),0);
