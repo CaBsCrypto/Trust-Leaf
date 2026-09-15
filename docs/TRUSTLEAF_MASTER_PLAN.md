@@ -1056,3 +1056,18 @@ restauracion aislada de 36 tablas/210 filas aprobada. Historial remoto termina
 en 20260909030000; no contiene borrador mensual ni nueva lectura historica.
 Pendientes CI/preview, aplicar exclusivamente la nueva migracion y publicar;
 la comprobacion autenticada real sigue pendiente.
+
+Publicacion tecnica: PR #31 fusionado como
+c03c8985e6347ccae4a6be3a1fbecd5fda42720f. CI 34916878020 aprobado
+(tipos, SQL, conexiones independientes, compilacion y navegador); preview aprobado.
+La primera ejecucion detecto una espera insuficiente en la prueba de refresco:
+corregida esperando la retirada de la fila, sin pausas artificiales.
+Aplicada exclusivamente 20260915010000_selected_agenda_booking y registrada en
+la misma transaccion. Verificacion remota: anon/authenticated sin EXECUTE,
+service_role autorizado; borrador mensual no aplicado ni modificado.
+Despliegue dpl_6ieGJAUNwMdn328vE2LxG9UsuGcb READY en www.trustleaf.org y
+trustleaf.org; commit remoto confirmado c03c8985e6347ccae4a6be3a1fbecd5fda42720f.
+GET agenda con selectedBookingRef sin sesion devuelve 401 AUTH_REQUIRED,
+Cache-Control no-store y cache MISS. Pendiente verificar con medico y paciente
+las reservas existentes canceladas y una confirmada. Se solicito comprobacion
+al medico en dispositivo separado. No se considera cerrado el caso real.
