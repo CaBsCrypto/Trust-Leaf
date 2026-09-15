@@ -23,6 +23,7 @@ try {
   await assert.rejects(mutation('patient', 'save-profile', {...profileInput, operationId: randomUUID()}), {code:'40001'});
   assert.equal((await snapshot('admin')).profile, undefined);
   await forbidden(db.query('select * from trustleaf_private.pilot_patient_profiles'));
+  await forbidden(db.query("select trustleaf_private.pilot_before_delivery_descriptions($1,'snapshot','{}')", [subjects.patient]));
   for (const role of ['anon', 'authenticated']) {
     await db.exec(`set role ${role}`);
     await forbidden(snapshot('admin'));
@@ -83,7 +84,16 @@ try {
     const s = await snapshot(key);
     assert.equal(s.treatments[0].periods[0].used_mg, 30000);
     assert.equal(s.deliveries.length, 2, 'both dispensaries see permitted cross-dispensary history');
+    for (const d of s.deliveries) {
+      assert.equal(d.product, 'Flor ficticia');
+      assert.equal(d.lot_code, 'TEST-001');
+      assert.equal(d.organization_name, d.organization_ref === orgA ? 'Dispensario A simulado' : 'Dispensario B simulado');
+      for (const field of ['stock_mg', 'source_reference', 'email', 'phone', 'notes']) assert.equal(d[field], undefined);
+    }
   }
+  assert.deepEqual((await snapshot('patient')).batches, [], 'descriptions do not expose inventory');
+  assert.deepEqual((await snapshot('otherPatient')).deliveries, []);
+  assert.deepEqual((await call('otherPatient', 'snapshot', { patientRef: actors.patient })).deliveries, []);
   assert.equal((await snapshot('dispensary')).batches[0].stock_mg, 90000);
   assert.equal((await snapshot('dispensaryB')).batches[0].stock_mg, 80000);
   await conflict(mutation('operator', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1 }));
@@ -97,6 +107,8 @@ try {
   await forbidden(mutation('operator', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1000 }));
   assert.equal((await snapshot('operator')).treatments.length, 0);
   assert.equal((await snapshot('operator')).deliveries.length, 1, 'own immutable delivery remains, shared history disappears');
+  assert.equal((await snapshot('patient')).deliveries.length, 2, 'patient receipts survive grant revocation');
+  assert.equal((await snapshot('operator')).deliveries[0].product, 'Flor ficticia');
   await mutation('patient', 'grant', { resourceRef: t.treatment_ref, organizationRef: orgA });
   await owner("update trustleaf_private.pilot_grants set expires_at=statement_timestamp()-interval '1 second' where treatment_ref=$1 and organization_ref=$2", [t.treatment_ref, orgA]);
   await forbidden(mutation('operator', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1000 }));
@@ -109,12 +121,16 @@ try {
   await mutation('dispensary', 'adjust-stock', { resourceRef: batchA, version: 4, quantityMg: 1000, reason: 'Ajuste simulado de inventario' });
   assert.equal((await snapshot('patient')).treatments[0].periods[0].used_mg, 30000, 'stock adjustment never restores quota');
   await mutation('dispensary', 'remove-operator', { resourceRef: actors.operator });
+  assert.equal((await snapshot('operator')).deliveries?.length ?? 0, 0, 'removed operator receives no receipt metadata');
   await forbidden(mutation('operator', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1000 }));
   await owner("update trustleaf_private.pilot_batches set expires_at=statement_timestamp()-interval '1 hour' where batch_ref=$1", [batchA]);
   await conflict(mutation('dispensary', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1000 }));
   await mutation('doctor', 'revoke-treatment', { resourceRef: t.treatment_ref, version: 1 });
   await conflict(mutation('dispensaryB', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchB, quantityMg: 1000 }));
   assert.equal((await snapshot('patient')).treatments[0].state, 'revoked');
+  assert.equal((await snapshot('patient')).deliveries[0].product, 'Flor ficticia', 'revoked treatment retains patient receipt');
+  await owner("update trustleaf_private.pilot_treatments set issued_at=issued_at-interval '100 days', prescription_valid_until=prescription_valid_until-interval '100 days', treatment_ends_at=treatment_ends_at-interval '100 days' where treatment_ref=$1", [t.treatment_ref]);
+  assert.equal((await snapshot('patient')).deliveries.length, 2, 'expired treatment retains patient receipts');
   assert.equal((await snapshot('admin')).counts.deliveries, 2);
   const slot2 = randomUUID(), booking2 = randomUUID();
   await agenda('otherDoctor', 'publish', { slotRef: slot2, startsAt, endsAt, operationId: randomUUID() });

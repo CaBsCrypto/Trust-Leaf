@@ -171,7 +171,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
-        {tab === 'treatment' && role === 'patient' && <ProfileForm key={data.profile?.version ?? 0} profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
+        {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
           <div className="op-tabs" role="group" aria-label="Estado de consultas">{consultationFilters.map(([id, label]) =>
@@ -260,7 +260,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             return <article className="op-row" key={d.delivery_ref}>
               <h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3>
               {role === 'dispensary' && <p>{own ? 'Entrega de este dispensario' : 'Entrega compartida de otro dispensario'}</p>}
-              <p>{batch ? `${batch.product} · Lote ${batch.lot_code}` : 'Detalle de producto y lote no disponible'} · Periodo {d.period_index}</p>
+              <p>{d.organization_name ?? data.organizations?.find(o => o.organization_ref === d.organization_ref)?.name ?? 'Nombre del dispensario no disponible'}</p>
+              <p>{d.product ?? batch?.product ?? 'Producto no disponible'} · Lote {d.lot_code ?? batch?.lot_code ?? 'no disponible'} · Periodo {d.period_index}</p>
               <details><summary>Ver comprobante y trazabilidad</summary>
                 <p className="op-reference">Dispensario: {d.organization_ref} · Operador: {d.operator_ref}</p>
                 <p className="op-reference">Lote: {d.batch_ref}</p>
