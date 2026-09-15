@@ -1192,3 +1192,24 @@ restaurada y actualizacion sin duplicados ni cambios de saldo. Se cierra la
 comprobacion tecnica cruzada del nuevo formato paciente/operador. No hubo
 entregas adicionales. Queda confirmar comprension con el usuario; invitaciones
 y otras validaciones del piloto siguen separadas.
+
+### Atenciones del dispensario responsive: 2026-09-15
+
+Entrega en preparacion, rama feat/dispensary-attention-workspace. Lista agrupada
+por paciente autorizado y detalle explicito; desktop desde 1024px y vistas
+consecutivas por debajo. Busqueda conservada al volver, seleccion de tratamiento
+sin sumar cupos, confirmacion antes de descartar un formulario y comprobante
+persistente tras guardar. Resumen y preparacion compactos; contactos, periodos
+e historial desplegables. Sin cambios de API, migraciones, permisos o inventario.
+
+Evidencia local: tipos y compilacion aprobados; regresion integral con SQL aislado
+aprobada (incluye entregas, revocacion, retirada, reincorporacion y cambio de cuenta).
+Prueba responsive nueva con encargado y operador a 360/390/768/1024/1440px,
+varios pacientes, nombres repetidos, perfil pendiente, dos tratamientos,
+error de lectura y recuperacion, retiro del permiso y navegacion sin escrituras.
+Capturas locales en scratch/operations-qa/attention-*.png.
+
+Pendientes: CI y preview del commit final, despliegue y recorrido oficial de solo
+lectura; preservar 10 g disponibles y 60 g de stock. Comprension de la nueva
+navegacion por encargado y operador requiere validacion del usuario. No cerrar
+las pruebas anteriores de invitaciones ni habilitar atencion real.

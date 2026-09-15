@@ -33,10 +33,10 @@ export function Preparation({ data, navigate }: { data: PilotSnapshot; navigate:
     { label: 'Lote disponible', done: !!data.batches?.some(b => b.organization_ref === org && b.state === 'active' && Date.parse(b.expires_at) > Date.now() && b.stock_mg > 0), tab: 'inventory' },
     { label: 'Primera entrega realizada', done: !!data.deliveries?.some(d => d.organization_ref === org), tab: 'history' },
   ];
-  return <section aria-label="Preparacion del dispensario"><h2>Preparacion del dispensario</h2>
+  return <details className="op-preparation" aria-label="Preparacion del dispensario"><summary>Preparacion del dispensario · {steps.filter(s => s.done).length}/{steps.length} completados</summary>
     {steps.map(s => <div className="op-line" key={s.label}><span>{s.done ? <CheckCircle2 size={16} aria-label="Completado"/> : <Circle size={16} aria-label="Pendiente"/>} {s.label}</span>
       <button className="op-command" onClick={() => navigate(s.done || s.tab !== 'history' ? s.tab : 'today')}><ArrowRight size={16}/>{s.done ? 'Ver' : 'Continuar'}<span className="sr-only"> {s.label}</span></button></div>)}
-  </section>;
+  </details>;
 }
 
 export function ProfileForm({ profile, disabled, save }: { profile?: PatientProfile | null; disabled: boolean; save: (input: Record<string, unknown>) => void }) {
@@ -67,7 +67,7 @@ export function ProfileForm({ profile, disabled, save }: { profile?: PatientProf
   </fieldset></form></section>;
 }
 
-export function DispensingForm({ data, treatment, disabled, submit }: { data: PilotSnapshot; treatment: Treatment; disabled: boolean; submit: (input: Record<string, unknown>) => void }) {
+export function DispensingForm({ data, treatment, disabled, submit, onDirty }: { data: PilotSnapshot; treatment: Treatment; disabled: boolean; submit: (input: Record<string, unknown>) => void; onDirty?: () => void }) {
   const [review, setReview] = useState<{ batch: string; quantity: number } | null>(null);
   const [error, setError] = useState('');
   const period = currentPeriod(treatment, Date.now());
@@ -78,7 +78,7 @@ export function DispensingForm({ data, treatment, disabled, submit }: { data: Pi
   const valid = !!review && !!batch && review.quantity > 0 && review.quantity <= remaining && review.quantity <= batch.stock_mg;
   return <>
     {!batches.length && <p className="op-empty">No hay lotes disponibles con stock y vigencia para esta entrega.</p>}
-    <form className="op-form" onSubmit={event => { event.preventDefault(); setError(''); try {
+    <form className="op-form" onChange={onDirty} onSubmit={event => { event.preventDefault(); setError(''); try {
       const values = new FormData(event.currentTarget); const quantity = gramsToMg(String(values.get('grams')));
       if (quantity <= 0 || quantity > remaining || quantity > (batches.find(b => b.batch_ref === values.get('batch'))?.stock_mg ?? 0)) throw new Error('La cantidad supera el saldo o stock disponible.');
       setReview({ batch: String(values.get('batch')), quantity });
@@ -91,7 +91,7 @@ export function DispensingForm({ data, treatment, disabled, submit }: { data: Pi
     </form>
     {error && <p role="alert" className="op-error">{error}</p>}
     {review && <section className="op-invitation-review" aria-label="Confirmar entrega"><h3>Confirmar entrega simulada</h3>
-      <p>{profile?.name ?? 'Perfil de prueba pendiente'} · Paciente {treatment.patient_ref}</p>
+      <p>{profile?.name ?? 'Perfil de prueba pendiente'} · Paciente {treatment.patient_ref.slice(0, 8)}</p>
       <p>{batch?.product ?? 'Lote no disponible'} · {batch?.lot_code}</p>
       <p>Entrega: {formatGrams(review.quantity)} · Saldo resultante: {formatGrams(Math.max(0, remaining - review.quantity))}</p>
       {!valid && <p role="alert">Cambio el saldo o la disponibilidad del lote. Revisa la entrega.</p>}

@@ -1,4 +1,40 @@
 .tl-operations { color: #202727; background: #fff; font-family: Arial, sans-serif; letter-spacing: 0; min-width: 0; }
+.op-dispensary .op-header { padding: 12px 16px; gap: 8px; }
+.op-dispensary .op-header h1 { font-size: 20px; }
+.op-dispensary .op-content { max-width: 1440px; padding: 12px 16px; }
+.op-dispensary .op-daily h2 { display: none; }
+.op-dispensary .op-daily-metrics { gap: 6px; }
+.tl-operations.op-dispensary .op-daily-metrics button { min-height: 48px; padding: 8px; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+.op-dispensary .op-daily-metrics svg { display: none; }
+.op-dispensary .op-daily-metrics strong { flex-shrink: 0; }
+.op-dispensary .op-daily-alert { padding: 6px 8px; font-size: 12px; gap: 6px; }
+.op-dispensary .op-daily-metrics strong { font-size: 18px; margin-top: 2px; }
+.op-dispensary nav.op-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; }
+.op-dispensary nav.op-tabs button { min-width: 0; padding: 8px 2px; font-size: 13px; }
+.op-dispensary .op-search { flex-direction: column; align-items: stretch; gap: 6px; margin: 12px 0; }
+.op-dispensary .op-search input { max-width: 480px; }
+.op-attention { display: grid; grid-template-columns: minmax(260px, 2fr) minmax(0, 3fr); gap: 24px; }
+.op-attention > * { min-width: 0; }
+.op-attention h2 { margin: 8px 0 12px; }
+.op-dispensary button.op-patient { width: 100%; border: 0; border-bottom: 1px solid #dce2df; border-radius: 0; justify-content: space-between; text-align: left; padding: 14px 8px; gap: 8px; }
+.op-patient span { min-width: 0; overflow-wrap: anywhere; }
+.op-patient strong, .op-patient small { display: block; }
+.op-patient small { margin-top: 6px; font-size: 12px; color: #58635e; }
+.op-patient svg { flex-shrink: 0; }
+.op-dispensary button.op-patient[aria-pressed=true] { background: #edf5f0; box-shadow: inset 3px 0 #258054; }
+.op-balance { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding: 16px 0; border-block: 1px solid #dce2df; }
+.op-balance span { display: block; font-size: 12px; }
+.op-balance strong { display: block; font-size: 22px; margin-top: 4px; overflow-wrap: anywhere; }
+.op-balance > div:first-child { color: #175f40; }
+.op-patient-detail { border-left: 1px solid #dce2df; padding-left: 24px; }
+.op-dispensary summary { min-height: 44px; }
+.op-dispensary details.op-preparation { margin: 4px 0; }
+.op-dispensary summary:focus-visible { outline: 2px solid #2179af; outline-offset: 2px; }
+@media(max-width: 1023px) {
+  .op-attention { display: block; }
+  .op-attention:not(.op-attention-selected) .op-patient-detail, .op-attention-selected .op-patient-list { display: none; }
+  .op-patient-detail { border: 0; padding: 0; }
+}
 .tl-operations * { box-sizing: border-box; letter-spacing: 0; }
 .tl-operations-page { min-height: 100vh; }
 .op-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 20px 24px; border-bottom: 1px solid #dce2df; }
