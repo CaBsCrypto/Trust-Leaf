@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CheckCircle2, Circle, ArrowRight, Save, ClipboardCheck } from 'lucide-react';
 import { currentPeriod, formatGrams, gramsToMg, type PatientProfile, type PilotSnapshot, type Treatment } from './contracts';
 
@@ -40,14 +40,29 @@ export function Preparation({ data, navigate }: { data: PilotSnapshot; navigate:
 }
 
 export function ProfileForm({ profile, disabled, save }: { profile?: PatientProfile | null; disabled: boolean; save: (input: Record<string, unknown>) => void }) {
+  type Draft = { name: string; email: string; phone: string; version: number };
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const submitted = useRef<Draft | null>(null);
+  const values = draft ?? { name: profile?.name ?? '', email: profile?.email ?? '', phone: profile?.phone ?? '', version: profile?.version ?? 0 };
+  const edit = (field: 'name' | 'email' | 'phone', value: string) => setDraft({ ...values, [field]: value });
+  useEffect(() => {
+    const sent = submitted.current;
+    // Only a matching persisted save clears the draft; background refreshes must not overwrite edits.
+    if (sent && profile && profile.version > sent.version && profile.name === sent.name.trim()
+      && profile.email === sent.email.trim().toLowerCase() && profile.phone === sent.phone.trim()) {
+      setDraft(current => current === sent ? null : current);
+      setConfirmed(false); submitted.current = null;
+    }
+  }, [profile]);
   return <section><h2>Perfil de prueba</h2><form className="op-form" onSubmit={(event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); const fields = new FormData(event.currentTarget);
-    save({ name: fields.get('name'), email: fields.get('email'), phone: fields.get('phone'), version: profile?.version ?? 0, syntheticOnly: true });
+    event.preventDefault(); submitted.current = values;
+    save({ ...values, syntheticOnly: true });
   }}><fieldset disabled={disabled}>
-    <label>Nombre ficticio<input name="name" defaultValue={profile?.name} required minLength={2} maxLength={100}/></label>
-    <label>Correo ficticio<input name="email" type="email" defaultValue={profile?.email} required maxLength={160}/></label>
-    <label>Telefono ficticio<input name="phone" defaultValue={profile?.phone} required minLength={3} maxLength={40}/></label>
-    <label className="op-check"><input type="checkbox" required/>Confirmo que estos datos son ficticios.</label>
+    <label>Nombre ficticio<input name="name" value={values.name} onChange={e => edit('name',e.target.value)} required minLength={2} maxLength={100}/></label>
+    <label>Correo ficticio<input name="email" type="email" value={values.email} onChange={e => edit('email',e.target.value)} required maxLength={160}/></label>
+    <label>Telefono ficticio<input name="phone" value={values.phone} onChange={e => edit('phone',e.target.value)} required minLength={3} maxLength={40}/></label>
+    <label className="op-check"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} required/>Confirmo que estos datos son ficticios.</label>
     <button className="op-command" type="submit"><Save size={16}/>Guardar perfil de prueba</button>
   </fieldset></form></section>;
 }

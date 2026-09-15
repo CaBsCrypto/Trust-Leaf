@@ -48,6 +48,12 @@ try {
   await patient.reload();
   await patient.getByRole('tab', {name:'Tratamientos',exact:true}).click();
   assert.equal(await patient.getByLabel('Nombre ficticio', {exact:true}).inputValue(), 'Paciente QA');
+  assert.equal(await patient.getByLabel('Correo ficticio', {exact:true}).inputValue(), 'paciente@example.test');
+  assert.equal(await patient.getByLabel('Telefono ficticio', {exact:true}).inputValue(), '000000000');
+  await patient.getByLabel('Correo ficticio', {exact:true}).fill('borrador@example.test');
+  await refresh(patient);
+  assert.equal(await patient.getByLabel('Correo ficticio', {exact:true}).inputValue(), 'borrador@example.test', 'refresh preserves unsaved contact edits');
+  await patient.getByLabel('Correo ficticio', {exact:true}).fill('paciente@example.test');
   await admin.getByRole('tab', { name: 'Organizaciones', exact: true }).click();
   await admin.getByText('No hay organizaciones registradas.', { exact: true }).waitFor();
   await admin.getByRole('tab', { name: 'Actividad', exact: true }).click();
@@ -235,6 +241,11 @@ try {
   assert.equal(await dispensaryB.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).isDisabled(), true, 'exhausted period disables another delivery');
   await patient.getByRole('tab', { name: 'Historial', exact: true }).click();
   assert.equal(await patient.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 2);
+  for (const d of (await refresh(patient)).deliveries) {
+    const receiptRow = patient.locator('article').filter({hasText:d.delivery_ref});
+    await receiptRow.getByText(d.organization_name, {exact:true}).waitFor();
+    assert.ok((await receiptRow.innerText()).includes(`${d.product} · Lote ${d.lot_code}`));
+  }
   await dispensary.getByRole('tab', {name:'Inventario',exact:true}).click();
   for (const state of ['Cuarentena','Vencidos','Agotados']) {
     await dispensary.getByRole('button', {name:state,exact:true}).click();

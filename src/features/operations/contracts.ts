@@ -15,7 +15,8 @@ export type Membership = { organization_ref: string; actor_ref: string; role: 'm
 export type Batch = { batch_ref: string; organization_ref: string; lot_code: string; product: string; source_reference: string;
   expires_at: string; state: 'active' | 'quarantined'; version: number; stock_mg: number };
 export type Delivery = { delivery_ref: string; treatment_ref: string; organization_ref: string; operator_ref: string;
-  batch_ref: string; period_index: number; quantity_mg: number; created_at: string };
+  batch_ref: string; period_index: number; quantity_mg: number; created_at: string;
+  organization_name?: string | null; product?: string | null; lot_code?: string | null };
 export type Movement = { movement_ref: string; batch_ref: string; operator_ref: string; quantity_mg: number; reason: string; created_at: string };
 export type Grant = { treatment_ref: string; organization_ref: string; expires_at: string };
 export type PatientProfile = { patient_ref: string; name: string; email: string; phone: string; version: number };

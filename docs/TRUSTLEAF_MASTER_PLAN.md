@@ -1122,3 +1122,32 @@ Vary privy-id-token, cache MISS.
 Pendiente jornada alojada del objetivo actual: encargado/operador separados,
 perfil ficticio del paciente, autorizacion, entrega confirmada y comprobante,
 revocacion y retiro. La evidencia sintetica no cierra esta validacion humana.
+
+### Jornada alojada y comprobantes: 2026-09-15
+
+Evidencia del navegador oficial sobre la version 5f8f47c: encargado B y
+operador autenticados en sesiones sucesivas, organizacion B y dos miembros.
+Perfil ficticio Paciente Piloto Uno visible en B con correo/telefono ficticios;
+permiso del tratamiento 4119236d-32a6-495b-ab18-7dd51d1f10a6 hasta
+2026-09-16 03:13 America/Santiago. No se compartieron notas clinicas.
+Operador confirmo entrega simulada de 10 g a las 03:28 del 15 de septiembre:
+comprobante 3150a49a-a8b2-4e19-a46b-a453adb7c15f y movimiento
+0d44d3aa-22e9-4fce-a4f8-87a52c8f182d. Stock B paso de 70 g a 60 g;
+tratamiento de 10 g retirados/20 g disponibles a 20 g retirados/10 g disponibles.
+Nueva sesion del paciente verifico el mismo comprobante y saldo; entregas
+anteriores conservadas. No repetir entregas para obtener evidencia.
+
+Pendiente: recarga/movil de esta entrega, comprobacion con nombres de producto,
+lote y dispensario tras publicar la siguiente lectura. Invitaciones, revocacion
+y retirada pendientes de otras fases se mantienen separadas; no se cierra todo
+el piloto. El formulario mostro campos de contacto vacios, pero B recibio los
+valores persistidos: no hay evidencia de perdida del dato almacenado.
+
+Correccion en fix/patient-delivery-receipts: migracion incremental
+20260915030000_pilot_delivery_descriptions agrega organization_name, product y
+lot_code solo a entregas previamente autorizadas, sin inventario ni contactos.
+Son nombres actuales, no instantaneas inmutables. Campos opcionales/nulos y
+fallback explicito en interfaz para compatibilidad. Perfil controlado conserva
+borrador y version original ante refresco; se limpia solo tras guardar y leer
+la version correspondiente. SQL aislado aprobado; publicacion y pruebas de
+navegador/CI pendientes. No aplicar ni modificar el borrador mensual.
