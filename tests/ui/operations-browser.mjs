@@ -161,7 +161,7 @@ try {
   await operator.getByText('Operador', { exact: true }).first().waitFor();
   assert.equal(await operator.getByRole('button', { name: 'Agregar operador', exact: true }).count(), 0);
   await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
-  await operator.getByText('100 g', { exact: false }).waitFor();
+  await operator.locator('.op-row').getByText('100 g', { exact: false }).waitFor();
   for (const name of ['Recibir lote simulado', 'Registrar ajuste', 'Poner en cuarentena']) {
     assert.equal(await operator.getByRole('button', { name, exact: true }).count(), 0, `operator cannot ${name}`);
   }
@@ -243,6 +243,11 @@ try {
   await dispensary.getByRole('button', {name:'Disponibles',exact:true}).click();
   await dispensary.getByRole('button', {name:'Poner en cuarentena',exact:true}).waitFor();
   await dispensary.getByRole('tab', {name:'Historial',exact:true}).click();
+  await dispensary.getByText('Entrega de este dispensario', {exact:true}).waitFor();
+  await dispensary.getByText('Entrega compartida de otro dispensario', {exact:true}).waitFor();
+  const ownReceipt = dispensary.locator('article').filter({hasText:'Entrega de este dispensario'});
+  await ownReceipt.getByText('Ver comprobante y trazabilidad', {exact:true}).click();
+  await ownReceipt.locator('.op-reference').filter({hasText:'Comprobante:'}).waitFor();
   await dispensary.getByLabel('Fecha de entrega', {exact:true}).fill('2040-01-01');
   await dispensary.getByText('No hay entregas para estos filtros.', {exact:true}).waitFor();
   await dispensary.getByLabel('Fecha de entrega', {exact:true}).fill('');
@@ -329,7 +334,7 @@ try {
   assert.equal((await reaccepted).status(), 200);
   await operator.goto(`${baseUrl}/?operations&role=operator`);
   await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
-  await operator.getByText('90 g', { exact: false }).waitFor();
+  await operator.locator('.op-row').getByText('90 g', { exact: false }).waitFor();
   await operator.getByRole('tab', { name: 'Historial', exact: true }).click();
   assert.equal(await operator.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 1);
   await refresh(admin);
@@ -400,7 +405,7 @@ try {
   otherSession.on('pageerror', e => errors.push(e.message));
   await otherSession.goto(`${baseUrl}/?operations&role=dispensaryRecovery`);
   await otherSession.getByRole('tab', { name: 'Inventario', exact: true }).click();
-  await otherSession.getByText('100 g', { exact: false }).waitFor();
+  await otherSession.locator('.op-row').getByText('100 g', { exact: false }).waitFor();
 
   // A rejected write must not invalidate every subsequent background read.
   const adjustment = form(recover, 'Registrar ajuste');
@@ -415,7 +420,7 @@ try {
   await otherAdjustment.getByLabel('Motivo del ajuste', { exact: true }).fill('AJUSTE FICTICIO OTRA SESION');
   await command(otherSession, 'Registrar ajuste');
   await recover.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await recover.getByText('110 g', { exact: false }).waitFor({ timeout: 5000 });
+  await recover.locator('.op-row').getByText('110 g', { exact: false }).waitFor({ timeout: 5000 });
   assert.match(await recover.getByRole('alert').innerText(), /El registro cambio/, 'background success does not hide a rejected action');
   await refresh(recover);
   await recover.getByRole('alert').waitFor({ state: 'hidden' });
@@ -475,7 +480,7 @@ try {
   assert.equal(await newcomer.getByLabel('Correo del trabajador', { exact: true }).count(), 0);
   assert.equal(await newcomer.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
   await newcomer.getByRole('tab', { name: 'Inventario', exact: true }).click();
-  await newcomer.getByText('80 g', { exact: false }).waitFor();
+  await newcomer.locator('.op-row').getByText('80 g', { exact: false }).waitFor();
   await newcomer.screenshot({ path: fileURLToPath(new URL('team-new-worker-mobile.png', output)), fullPage: true });
   await patient.route('**/api/operations-pilot', route => route.fulfill({ status: 403, json: {} }));
   await refresh(patient);

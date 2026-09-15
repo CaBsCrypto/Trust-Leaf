@@ -2,6 +2,29 @@ import { useState, type FormEvent } from 'react';
 import { CheckCircle2, Circle, ArrowRight, Save, ClipboardCheck } from 'lucide-react';
 import { currentPeriod, formatGrams, gramsToMg, type PatientProfile, type PilotSnapshot, type Treatment } from './contracts';
 
+export function DailyOverview({ data, navigate }: { data: PilotSnapshot; navigate: (tab: string) => void }) {
+  const now = Date.now();
+  const org = data.membership?.organization_ref;
+  const batches = (data.batches ?? []).filter(b => b.organization_ref === org);
+  const usable = batches.filter(b => b.state === 'active' && Date.parse(b.expires_at) > now && b.stock_mg > 0);
+  const day = (value: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(value));
+  const today = day(new Date(now).toISOString());
+  const deliveries = (data.deliveries ?? []).filter(d => d.organization_ref === org && day(d.created_at) === today);
+  const metrics = [
+    { label: 'Pacientes autorizados', value: new Set(data.treatments?.map(t => t.patient_ref)).size, tab: 'today' },
+    { label: 'Stock disponible', value: formatGrams(usable.reduce((sum,b) => sum + b.stock_mg, 0)), tab: 'inventory' },
+    { label: 'Entregas de hoy', value: deliveries.length, tab: 'history' },
+    { label: 'Equipo activo', value: data.members?.filter(m => m.organization_ref === org).length ?? 0, tab: 'team' },
+  ];
+  const expiring = usable.filter(b => Date.parse(b.expires_at) <= now + 7 * 86400000);
+  return <section aria-label="Resumen del dispensario" className="op-daily">
+    <h2>Jornada del dispensario</h2>
+    <div className="op-daily-metrics">{metrics.map(m => <button key={m.label} onClick={() => navigate(m.tab)}><span>{m.label}</span><strong>{m.value}</strong><ArrowRight size={16} aria-hidden="true"/></button>)}</div>
+    {!!expiring.length && <div className="op-daily-alert"><span>{expiring.length} lote(s) disponibles vencen en los proximos 7 dias.</span><button className="op-command" onClick={() => navigate('inventory')}>Revisar inventario</button></div>}
+    {!usable.length && <p className="op-daily-alert">Sin lotes disponibles para entregar.</p>}
+  </section>;
+}
+
 export function Preparation({ data, navigate }: { data: PilotSnapshot; navigate: (tab: string) => void }) {
   const org = data.membership?.organization_ref;
   const steps = [

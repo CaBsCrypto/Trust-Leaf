@@ -1098,3 +1098,11 @@ entregas parciales, recuperacion y retirada; tipos aprobados. Migracion nueva
 20260915020000_pilot_patient_profiles todavia no aplicada. Pendientes CI,
 preview, respaldo restaurado y publicacion, y jornada acompanada real.
 No modifica el borrador mensual ni cierra validaciones anteriores pendientes.
+
+Resumen diario incorporado: pacientes autorizados, stock utilizable, entregas
+propias del dia (America/Santiago), equipo activo y aviso de vencimiento a siete
+dias. Historial diferencia entregas propias/compartidas; referencias completas
+en detalle desplegable y ausencia de producto ajeno indicada sin inventar datos.
+Tipos y navegador con SQL aislado aprobados tras estos cambios, incluyendo
+permisos, retiro/reincorporacion y escritorio/movil. PR #33 necesita CI/preview
+del nuevo commit antes de publicar. Migracion y jornada real siguen pendientes.

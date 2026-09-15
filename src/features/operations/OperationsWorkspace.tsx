@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Activity, CalendarDays, ClipboardList, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
-import { Preparation, ProfileForm, DispensingForm } from './DispensaryDaily';
+import { Preparation, ProfileForm, DispensingForm, DailyOverview } from './DispensaryDaily';
 import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type Booking, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
@@ -166,6 +166,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         <p>Tu cuenta sigue activa. Para incorporarte a un equipo, necesitas una nueva invitación del encargado. Las operaciones anteriores se conservan en el historial del dispensario.</p>
       </div>}
       {data?.joined && !withoutTeam && <>
+        {role === 'dispensary' && data.membership?.organization_ref && <DailyOverview data={data} navigate={setTab}/>}
         {role === 'dispensary' && !data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && tab === 'today' && <Preparation data={data} navigate={setTab}/>}
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
         {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">Buscar<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
@@ -253,7 +254,21 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {tab === 'history' && <>
           <h2>Historial de entregas</h2>
           {role === 'dispensary' && <div className="op-form"><fieldset><label>Fecha de entrega<input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)}/></label><label>Lote del historial<select value={historyBatch} onChange={e => setHistoryBatch(e.target.value)}><option value="">Todos</option>{data.batches?.map(b => <option key={b.batch_ref} value={b.batch_ref}>{b.product} · {b.lot_code}</option>)}</select></label></fieldset></div>}
-          {visibleDeliveries.map(d => <article className="op-row" key={d.delivery_ref}><h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3><p>{data.batches?.find(b => b.batch_ref === d.batch_ref)?.product} · Lote {data.batches?.find(b => b.batch_ref === d.batch_ref)?.lot_code ?? short(d.batch_ref)} · Periodo {d.period_index}</p><p className="op-reference">Dispensario: {d.organization_ref} · Operador: {d.operator_ref}</p><p className="op-reference">Comprobante: {d.delivery_ref}</p><p className="op-reference">Tratamiento: {d.treatment_ref}</p></article>)}
+          {visibleDeliveries.map(d => {
+            const batch = data.batches?.find(b => b.batch_ref === d.batch_ref);
+            const own = d.organization_ref === data.membership?.organization_ref;
+            return <article className="op-row" key={d.delivery_ref}>
+              <h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3>
+              {role === 'dispensary' && <p>{own ? 'Entrega de este dispensario' : 'Entrega compartida de otro dispensario'}</p>}
+              <p>{batch ? `${batch.product} · Lote ${batch.lot_code}` : 'Detalle de producto y lote no disponible'} · Periodo {d.period_index}</p>
+              <details><summary>Ver comprobante y trazabilidad</summary>
+                <p className="op-reference">Dispensario: {d.organization_ref} · Operador: {d.operator_ref}</p>
+                <p className="op-reference">Lote: {d.batch_ref}</p>
+                <p className="op-reference">Comprobante: {d.delivery_ref}</p>
+                <p className="op-reference">Tratamiento: {d.treatment_ref}</p>
+              </details>
+            </article>;
+          })}
           {!!data.deliveries?.length && !visibleDeliveries.length && <Empty>No hay entregas para estos filtros.</Empty>}
           {!data.deliveries?.length && <Empty>No hay entregas registradas.</Empty>}
           {role === 'dispensary' && <><h2>Movimientos de stock</h2>{data.movements?.filter(m => matches(`${m.batch_ref} ${m.reason}`) && historyMatches(m.batch_ref,m.created_at)).map(m => <article className="op-row" key={m.movement_ref}><strong>{formatGrams(m.quantity_mg)} · {date(m.created_at)}</strong><p>{m.reason} · Lote {data.batches?.find(b => b.batch_ref === m.batch_ref)?.lot_code ?? short(m.batch_ref)}</p><p className="op-reference">Operador: {m.operator_ref} · Movimiento: {m.movement_ref}</p></article>)}</>}
