@@ -1106,3 +1106,19 @@ en detalle desplegable y ausencia de producto ajeno indicada sin inventar datos.
 Tipos y navegador con SQL aislado aprobados tras estos cambios, incluyendo
 permisos, retiro/reincorporacion y escritorio/movil. PR #33 necesita CI/preview
 del nuevo commit antes de publicar. Migracion y jornada real siguen pendientes.
+
+Publicacion 2026-09-15: PR #33 fusionado, commit
+5f8f47c7845ab93ca616c4aa8ab4c89e7508f4ce. CI 34926029192 y preview
+aprobados para 2ef418b. Respaldo application-20260915-004328.dpapi, DPAPI
+CurrentUser fuera de Git, SHA256
+983DFEC4A033BA08E6F259605DB01C4F793F6BF255E7EBABC847C32AFFA9723B;
+restauracion aislada de 36 tablas y 210 registros aprobada.
+Historial remoto revisado (29 migraciones, ultima 20260915010000); aplicada
+exclusivamente 20260915020000 con registro atomico. Sin lectura directa de
+perfiles por service_role ni ejecucion RPC por authenticated; mensual no aplicado.
+Despliegue dpl_CMLGtFm1WoNo3mBsr1pD2GMY851A READY, commit confirmado en
+www.trustleaf.org. API sin sesion: 401 AUTH_REQUIRED, no-store/private,
+Vary privy-id-token, cache MISS.
+Pendiente jornada alojada del objetivo actual: encargado/operador separados,
+perfil ficticio del paciente, autorizacion, entrega confirmada y comprobante,
+revocacion y retiro. La evidencia sintetica no cierra esta validacion humana.
