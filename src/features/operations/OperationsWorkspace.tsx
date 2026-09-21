@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Activity, CalendarDays, ClipboardList, History, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
+import CommercePanel from '../commerce/CommercePanel';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
 import DispensaryAttention from './DispensaryAttention';
 import { Preparation, ProfileForm, DailyOverview } from './DispensaryDaily';
@@ -28,6 +29,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
   const [search, setSearch] = useState('');
+  const [managementView, setManagementView] = useState<'commerce' | 'team'>('commerce');
   const [consultationFilter, setConsultationFilter] = useState<ConsultationFilter>('pending');
   const [inventoryFilter, setInventoryFilter] = useState('all');
   const [historyDate, setHistoryDate] = useState('');
@@ -165,7 +167,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const historyLots = new Map((data?.deliveries ?? []).map(d => [d.batch_ref, `${d.product ?? 'Producto no disponible'} · ${d.lot_code ?? short(d.batch_ref)}`]));
   for (const b of data?.batches ?? []) historyLots.set(b.batch_ref, `${b.product} · ${b.lot_code}`);
   const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ['demo', 'POV de prueba']]
-    : role === 'dispensary' ? [['today', 'Atenciones'], ['inventory', 'Inventario'], ['team', 'Equipo'], ['history', 'Historial']]
+    : role === 'dispensary' ? [['today', 'Atenciones'], ['inventory', 'Inventario'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'], ['history', 'Historial']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
 
   return <section className={`tl-operations ${role === 'dispensary' ? 'op-dispensary' : ''} ${embedded ? '' : 'tl-operations-page'}`}>
@@ -191,7 +193,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {role === 'dispensary' && data.membership?.organization_ref && <DailyOverview data={data} navigate={setTab}/>}
         {role === 'dispensary' && !data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && tab === 'today' && <Preparation data={data} navigate={setTab}/>}
         <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
-        {tab !== 'agenda' && tab !== 'demo' && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
+        {tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
         {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} disabled={disabled} readError={readError} receiptRef={receiptRef} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
@@ -263,11 +265,17 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           {!visibleError && !visibleBatches.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : data.batches?.length ? 'No hay lotes en este estado.' : 'No hay lotes registrados.'}</Empty>}
         </>}
         {tab === 'team' && <>
+          {role === 'dispensary' && data.membership?.organization_ref && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' && <>
+            <div className="op-tabs" role="group" aria-label="Gestion del dispensario"><button aria-pressed={managementView === 'commerce'} onClick={() => { setManagementView('commerce'); setSearch(''); }}>Registros comerciales</button><button aria-pressed={managementView === 'team'} onClick={() => { setManagementView('team'); setSearch(''); }}>Equipo</button></div>
+            {managementView === 'commerce' && <CommercePanel key={data.membership.organization_ref} data={data} changed={() => setRevision(n => n + 1)}/>}
+          </>}
+          {(role !== 'dispensary' || !data.membership?.organization_ref || import.meta.env.VITE_COMMERCE_CATALOG_ENABLED !== 'true' || managementView === 'team') && <>
           <h2><Users size={20}/>Organizacion y equipo</h2>
           {role === 'admin' && !data.organizations?.length && <Empty>No hay organizaciones registradas.</Empty>}
           {role === 'dispensary' && !data.staffOnly && !data.membership?.organization_ref && <CommandForm label="Crear dispensario de prueba" disabled={disabled} fields={[{ name: 'name', label: 'Nombre del dispensario', maxLength: 100 }]} submit={v => mutate('create-organization', v)}/>}
           {role === 'dispensary' && data.membership?.organization_ref && <TeamPanel search={search} revision={revision} disabled={disabled} remove={actorRef => mutate('remove-operator', { resourceRef: actorRef })}/>}
           {role === 'admin' && <AdminOrganizationTeams organizations={data.organizations ?? []} members={data.members ?? []} search={search} revision={revision}/>}
+          </>}
         </>}
         {tab === 'history' && <>
           <h2>{role === 'dispensary' && historyView === 'movements' ? 'Movimientos de stock' : 'Historial de entregas'}</h2>

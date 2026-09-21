@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { mkdir } from 'node:fs/promises';
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
+const base = process.env.OPERATIONS_TEST_URL ?? 'http://127.0.0.1:4322';
+assert.match(base, /^http:\/\/127\.0\.0\.1:\d+$/);
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
+await mkdir('scratch/operations-qa', { recursive: true });
+try {
+  const page = await browser.newPage({ timezoneId: 'America/Santiago', viewport: { width: 1440, height: 900 } });
+  await page.goto(`${base}/?operations&role=dispensary`);
+  await page.getByRole('tab', { name: 'Gestion', exact: true }).click();
+  const panel = page.getByRole('region', { name: 'Gestion comercial' });
+  await panel.getByRole('button', { name: 'Nuevo producto', exact: true }).click();
+  await panel.getByLabel('Codigo interno', { exact: true }).fill(`DEMO-${Date.now()}`);
+  await panel.getByLabel('Nombre', { exact: true }).fill('Flor de prueba con nombre extenso para validar el catalogo');
+  await panel.getByLabel('Presentacion', { exact: true }).fill('Gramos');
+  await panel.getByLabel('Precio de referencia (CLP)', { exact: true }).fill('2500');
+  await panel.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await panel.getByRole('button', { name: 'Abrir producto' }).last().click();
+  await panel.getByText(/^Recibir lote de/).click();
+  await panel.getByLabel('Codigo de lote', { exact: true }).fill('COMMERCE-DEMO-1');
+  await panel.getByLabel('Referencia de origen', { exact: true }).fill('Origen sintetico');
+  await panel.getByLabel('Cantidad (g)', { exact: true }).fill('100');
+  await panel.getByLabel('Vencimiento', { exact: true }).fill('2099-01-01T12:00');
+  await panel.getByLabel('Costo total (CLP)', { exact: true }).fill('15000');
+  await panel.getByRole('button', { name: 'Registrar recepcion simulada' }).click();
+  await panel.getByText('Guardado.', { exact: false }).waitFor();
+  await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await page.getByText('COMMERCE-DEMO-1', { exact: false }).first().waitFor();
+  await page.reload();
+  await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await page.getByText('COMMERCE-DEMO-1', { exact: false }).first().waitFor();
+  await page.close();
+  for (const role of ['dispensary', 'operator']) for (const width of [360, 390, 768, 1024, 1440]) {
+    const view = await browser.newPage({ viewport: { width, height: 900 }, timezoneId: 'America/Santiago' });
+    const errors = []; view.on('pageerror', e => errors.push(e.message));
+    await view.goto(`${base}/?operations&role=${role}`);
+    await view.getByRole('tab', { name: 'Gestion', exact: true }).click();
+    const region = view.getByRole('region', { name: 'Gestion comercial' });
+    await region.getByText('Flor de prueba con nombre extenso para validar el catalogo', { exact: true }).waitFor();
+    assert.equal(await region.getByRole('button', { name: 'Nuevo producto', exact: true }).count(), role === 'dispensary' ? 1 : 0);
+    assert.equal(await region.getByRole('button', { name: 'Proveedores', exact: true }).count(), role === 'dispensary' ? 1 : 0);
+    assert.equal(await view.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await view.screenshot({ path: `scratch/operations-qa/commerce-${role}-${width}.png`, fullPage: true });
+    await region.getByRole('button', { name: 'Recepciones', exact: true }).click();
+    await region.getByRole('heading', { name: '100 g', exact: true }).waitFor();
+    assert.equal(await region.getByText(/^Costo:/).count(), role === 'dispensary' ? 1 : 0);
+    assert.deepEqual(errors, []); await view.close();
+  }
+  console.log('PASS commerce UI: SQL-backed product/receipt persistence; both roles at five widths; operator cost controls absent');
+} finally { await browser.close(); }

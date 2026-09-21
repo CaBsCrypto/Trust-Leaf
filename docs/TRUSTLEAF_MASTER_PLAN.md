@@ -1343,3 +1343,30 @@ Contraste de fecha, 2026-09-21 03:04 America/Santiago:
   crash. No se modifico codigo ni se declaro resuelta la incidencia.
 - Lectura posterior publicada: un paciente, 10 g disponibles, stock 60 g,
   dos miembros y cero entregas del dia. Sesion de encargado en Atenciones.
+
+## Suite integral: inicio de fases 0 y 1 (2026-09-21)
+
+Rama `feat/dispensary-commerce-foundation`, base `b6277bf`. Alcance y puertas
+de salida en [DISPENSARY_SUITE_ROADMAP.md](DISPENSARY_SUITE_ROADMAP.md).
+No se declara completa la suite ni se modifica el modelo comercial del piloto.
+
+- Implementado localmente: contratos comerciales separados, API paginada,
+  tablas privadas incrementales, catalogo/proveedores, archivo y versiones,
+  recepcion atomica sobre el inventario existente y vinculacion de lotes.
+- Activacion independiente y deshabilitada por defecto. Costos y proveedores
+  privados solo para encargado; el operador no tiene escrituras comerciales
+  durante esta fase. Caja y cobros pertenecen a fases posteriores.
+- PASS local SQL: aislamiento, permisos, paginacion, reintento sin duplicar
+  stock, rollback integral, archivo, vinculacion sin variar stock, retirada
+  y rechazo de acceso directo. PGlite NO demuestra concurrencia independiente.
+- PASS local API: ambas opciones de activacion, identidad derivada del token,
+  limites de entrada, no-cache, metodos, errores privados y sin reintento ciego.
+- PASS navegador SQL aislado: producto y recepcion persistentes tras recarga;
+  ambos roles a 360/390/768/1024/1440, sin overflow de pagina ni costos para
+  operador. Capturas locales en scratch/operations-qa/commerce-*.png.
+- PASS regresion SQL del piloto anterior y presupuesto de funciones Vercel.
+- Pendientes: concurrencia independiente, CI, preview, revision ampliada de
+  UX/errores y puertas de publicacion. No se aplico la migracion remota,
+  no hubo respaldo nuevo ni validacion de produccion para este modulo.
+- B, saldos, tratamientos, invitaciones y borrador mensual permanecen intactos.
+  El dispensario demostrativo creado existe solamente en la base aislada de QA.
