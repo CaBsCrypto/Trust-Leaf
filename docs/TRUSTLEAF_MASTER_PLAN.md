@@ -1317,3 +1317,29 @@ Encargado comprobado, 2026-09-21 02:57 America/Santiago:
 - Comprobacion tecnica de los dos roles realizada por el agente. Pendiente
   prueba humana de autonomia en ambos dispositivos; no equivale a cierre del
   piloto ni habilita atencion real. No se requirieron cambios de codigo.
+
+Seguimiento tecnico por el agente, 2026-09-21 03:00 America/Santiago:
+- Usuario solicita continuar la comprobacion tecnica en lugar de ejecutar
+  personalmente tareas de usabilidad. No convertir ese recorrido en evidencia
+  de autonomia humana.
+- Comprobante del 15 de septiembre: 10 g de Flor ficticia - no real, lote
+  Piloto-B-20260908. Busqueda por 3150a49a y detalle correctos. Movimiento
+  0d44d3aa: -10 g, misma fecha, lote y operador fc6cc6e1; stock sigue en 60 g.
+- Incidencia pendiente: fill de fecha en navegador interno no aplico el filtro;
+  abrir su selector nativo produjo una pagina de crash. Se recupero Trust Leaf
+  en otra pestana, con la identidad del encargado conservada. No hubo escrituras.
+  No atribuir aun a la aplicacion: contrastar selector en navegador externo o
+  prueba aislada. Filtro por fecha alojado NO aprobado en este intento; conservar
+  separada la evidencia previa de CI. Sesion recuperada queda en Historial.
+
+Contraste de fecha, 2026-09-21 03:04 America/Santiago:
+- La interaccion con el campo nativo volvio a cerrar la pagina en el navegador
+  interno. Se detuvo ese camino de automatizacion y se recupero una pestana
+  autenticada del encargado, sin escrituras ni cambio de identidad.
+- Reejecutado tests/ui/dispensary-daily-browser.mjs en Chrome headless local,
+  fixtures aislados: PASS para ambos roles y 360/390/768/1024/1440px, incluida
+  fecha America/Santiago combinada con lote y comprobante, limpieza y errores.
+  Esto valida el filtro aislado, no el selector nativo alojado ni la causa del
+  crash. No se modifico codigo ni se declaro resuelta la incidencia.
+- Lectura posterior publicada: un paciente, 10 g disponibles, stock 60 g,
+  dos miembros y cero entregas del dia. Sesion de encargado en Atenciones.
