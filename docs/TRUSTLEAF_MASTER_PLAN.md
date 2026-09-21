@@ -1380,3 +1380,26 @@ Entrega guardada en PR #37 (borrador), base de implementacion `3465dbc`:
   y permite recuperar datos. PASS aislado, no evidencia de produccion.
 - CI y preview del PR sujetos al ultimo commit. No fusionar este borrador
   como si hubieran terminado todas las fases de la suite.
+
+### Cierre de brechas fase 1, 2026-09-21
+
+- Plan ampliado aprobado: compras sin cuentas por pagar y conteos con bloqueo
+  de lotes antes de presentar. Hoja de ruta actualizada a fases 0-7; compras,
+  documentos, caja y conteos aun NO implementados por este cambio.
+- PR #37 sobre `1cdc6a4`: CI 35574560630 y preview aprobados. Cambios posteriores
+  requieren una nueva ejecucion antes de integrar.
+- Lectura paginada `batch-links`: Inventario muestra producto/codigo vinculado;
+  proveedor solo para encargado. Lotes antiguos sin vincular siguen disponibles.
+  PASS SQL para referencia ajena, inexistente, operador retirado y vincular
+  lote antiguo sin cambiar sus 5 g de prueba.
+- Formularios comerciales piden confirmar descarte; operacion incierta bloquea
+  salida y conserva reintento. PASS browser aislado para ambos casos, vinculacion
+  visible, proveedor, recepcion, recarga y cinco anchos.
+- Limites de nombre de producto y codigo de lote alineados con el inventario
+  existente (100 y 80 caracteres), evitando catalogos que no se puedan recibir.
+- Historial remoto revisado: 31 migraciones, ultima 20260915030000. Comercio y
+  borrador mensual no aplicados.
+- Respaldo application-20260921-062018.dpapi, fuera de Git, DPAPI CurrentUser;
+  SHA256 8B2E6C713A9194C79A7C17B37816C5C165FAD4B21943D669A0314516CEFD4EAD.
+  Restauracion aislada PASS: 37 tablas y 222 filas. Alcance de aplicacion,
+  no sustituye respaldo de Auth/Storage/configuracion de plataforma.

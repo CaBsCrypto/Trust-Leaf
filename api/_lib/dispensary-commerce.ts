@@ -1,7 +1,7 @@
 import { createPrivyRbacAuthorizer, createSupabasePrivyActorStore } from './privy-supabase-rbac.js';
 import type { PrivyIdentity } from './privy-identity.ts';
 
-const reads = ['products', 'suppliers', 'receipts'];
+const reads = ['products', 'suppliers', 'receipts', 'batch-links'];
 const actions = [...reads, 'save-product', 'save-supplier', 'receive', 'link-batch'];
 const failure = (statusCode: number, code: string) => Object.assign(new Error(code), { statusCode, code });
 type Verifier = { verify(token: string): Promise<PrivyIdentity> };
@@ -44,6 +44,7 @@ export async function dispensaryCommerceHandler(req: Request, res: Response, env
   try {
     const command = envelope(req.method === 'GET' ? { action: req.query?.collection, input: {
       limit: req.query?.limit ?? 25, offset: req.query?.offset ?? 0,
+      ...(req.query?.batchRef === undefined ? {} : { batchRef: req.query.batchRef }),
     } } : typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
     if ((req.method === 'GET') !== reads.includes(command.action)) throw failure(400, 'COMMERCE_INPUT_INVALID');
     return res.status(200).json(await executeDispensaryCommerce({ token, command, env, verifier }));

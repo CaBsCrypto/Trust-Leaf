@@ -6,7 +6,7 @@ create table trustleaf_private.commerce_products (
   product_ref uuid primary key default gen_random_uuid(),
   organization_ref uuid not null references trustleaf_private.pilot_organizations,
   code text not null check(length(code) between 1 and 64 and code = upper(btrim(code))),
-  name text not null check(length(btrim(name)) between 1 and 160),
+  name text not null check(length(btrim(name)) between 1 and 100),
   presentation text not null default '' check(length(presentation)<=160),
   reference_price_clp bigint check(reference_price_clp between 0 and 1000000000),
   reorder_mg bigint not null default 0 check(reorder_mg between 0 and 1000000000),
@@ -82,16 +82,25 @@ begin
     raise exception 'COMMERCE_FORBIDDEN' using errcode='42501';
   end if;
   if p_input is null or jsonb_typeof(p_input)<>'object' or octet_length(p_input::text)>12000
-    or p_action is null or p_action not in ('products','suppliers','receipts','save-product','save-supplier','receive','link-batch') then
+    or p_action is null or p_action not in ('products','suppliers','receipts','batch-links','save-product','save-supplier','receive','link-batch') then
     raise exception 'COMMERCE_INPUT_INVALID' using errcode='22023';
   end if;
-  if p_action in ('products','suppliers','receipts') then
+  if p_action in ('products','suppliers','receipts','batch-links') then
     page_size:=coalesce((p_input->>'limit')::integer,25);
     page_offset:=coalesce((p_input->>'offset')::integer,0);
     if page_size not between 1 and 100 or page_offset not between 0 and 100000 then
       raise exception 'COMMERCE_PAGE_INVALID' using errcode='22023';
     end if;
-    if p_action='products' then
+    if p_action='batch-links' then
+      select coalesce(jsonb_agg(case when m.role='manager' then to_jsonb(t) else to_jsonb(t)-'supplier_name' end),'[]') into items from (
+        select b.batch_ref,b.lot_code,p.product_ref,p.code as product_code,p.name as product_name,s.name as supplier_name
+        from trustleaf_private.pilot_batches b
+        left join trustleaf_private.commerce_batch_links l on l.batch_ref=b.batch_ref and l.organization_ref=b.organization_ref
+        left join trustleaf_private.commerce_products p on p.product_ref=l.product_ref and p.organization_ref=b.organization_ref
+        left join trustleaf_private.commerce_suppliers s on s.supplier_ref=l.supplier_ref and s.organization_ref=b.organization_ref
+        where b.organization_ref=m.organization_ref and (p_input->>'batchRef' is null or b.batch_ref=(p_input->>'batchRef')::uuid)
+        order by b.lot_code,b.batch_ref limit page_size+1 offset page_offset) t;
+    elsif p_action='products' then
       select coalesce(jsonb_agg(to_jsonb(t)),'[]') into items from (
         select product_ref,code,name,presentation,reference_price_clp,reorder_mg,archived,version
         from trustleaf_private.commerce_products where organization_ref=m.organization_ref

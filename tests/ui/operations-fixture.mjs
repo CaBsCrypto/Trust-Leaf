@@ -55,6 +55,7 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
       if (url.pathname === '/api/dispensary-commerce') {
         const command = req.method === 'GET' ? { action: url.searchParams.get('collection'), input: {
           limit: Number(url.searchParams.get('limit') ?? 25), offset: Number(url.searchParams.get('offset') ?? 0),
+          ...(url.searchParams.has('batchRef') ? { batchRef: url.searchParams.get('batchRef') } : {}),
         } } : JSON.parse(body);
         res.end(JSON.stringify((await db.query('select public.trustleaf_dispensary_commerce($1,$2,$3) as data',
           [subjects[key], command.action, command.input])).rows[0].data)); return;

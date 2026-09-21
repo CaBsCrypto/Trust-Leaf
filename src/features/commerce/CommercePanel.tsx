@@ -13,7 +13,7 @@ const amount = (value: FormDataEntryValue | null, optional = true): number | nul
   return Number(value);
 };
 
-export default function CommercePanel({ data, changed }: { data: PilotSnapshot; changed: () => void }) {
+export default function CommercePanel({ data, changed, guardChanged }: { data: PilotSnapshot; changed: () => void; guardChanged: (guard: { dirty: boolean; pending: boolean }) => void }) {
   const identity = useTrustLeafPrivyIdentity();
   const manager = data.membership?.role === 'manager';
   const [collection, setCollection] = useState<Collection>('products');
@@ -21,6 +21,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
   const [page, setPage] = useState<CommercePage<Item> | null>(null);
   const [selected, setSelected] = useState<Product | Supplier | null>(null);
   const [editor, setEditor] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
@@ -33,6 +34,17 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
   const [supplierError, setSupplierError] = useState('');
   const abort = useRef(new AbortController());
   const lock = useRef(false);
+  useEffect(() => { guardChanged({ dirty, pending: pending !== null }); }, [dirty, pending, guardChanged]);
+  useEffect(() => () => guardChanged({ dirty: false, pending: false }), [guardChanged]);
+  useEffect(() => {
+    if (!dirty && !pending) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, pending]);
+  const discard = () => {
+    if (pending || (dirty && !window.confirm('Descartar los cambios sin guardar?'))) return false;
+    setDirty(false); return true;
+  };
   useEffect(() => { abort.current = new AbortController(); return () => abort.current.abort(); }, []);
   async function request(command: CommerceCommand, signal: AbortSignal) {
     const token = await identity.getIdentityToken(); signal.throwIfAborted();
@@ -75,7 +87,6 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
   useEffect(() => {
     if (!manager || collection !== 'products') return;
     const controller = new AbortController();
-    setSupplierPage(null);
     void request({ action: 'suppliers', input: { offset: supplierOffset, limit: 25 } }, controller.signal)
       .then((result: CommercePage<Supplier>) => {
         if (!controller.signal.aborted) { setSupplierPage(result); setSupplierError(''); }
@@ -89,7 +100,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
       const result: CommerceMutationResult = await request(command, abort.current.signal);
       if (abort.current.signal.aborted) return;
       if (result.synthetic !== true || typeof result.resourceRef !== 'string') throw new Error('No se pudo confirmar el resultado. Reintenta la misma operacion.');
-      setPending(null); setSelected(null); setEditor(false); setFormRevision(n => n + 1);
+      setPending(null); setSelected(null); setEditor(false); setDirty(false); setFormRevision(n => n + 1);
       setNotice(`Guardado. Referencia: ${result.resourceRef}`); changed();
     } catch (e) {
       if (abort.current.signal.aborted) return;
@@ -132,7 +143,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
     <h2>Gestion comercial</h2>
     <div className="op-tabs" role="group" aria-label="Registros comerciales">
       {([['products', 'Catalogo'], ...(manager ? [['suppliers', 'Proveedores']] : []), ['receipts', 'Recepciones']] as [Collection, string][]).map(([id, label]) =>
-        <button key={id} disabled={!!pending} aria-pressed={collection === id} onClick={() => { setCollection(id); setOffset(0); setPage(null); setSelected(null); setEditor(false); setError(''); }}>{label}</button>)}
+        <button key={id} disabled={!!pending} aria-pressed={collection === id} onClick={() => { if (!discard()) return; setCollection(id); setOffset(0); setPage(null); setSelected(null); setEditor(false); setError(''); }}>{label}</button>)}
       <button aria-label="Actualizar registros comerciales" title="Actualizar registros comerciales" disabled={busy} onClick={() => setRevision(n => n + 1)}><RefreshCw size={18}/></button>
     </div>
     {(error || readError) && <p role="alert" className="op-error">{error || readError}</p>}
@@ -142,11 +153,11 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
     {page?.items.map(item => 'code' in item ? <article className="op-row" key={item.product_ref}>
       <h3>{item.name}</h3><p>{item.code} · {item.presentation} · {item.archived ? 'Archivado' : 'Activo'}</p>
       <p>Precio de referencia: {money(item.reference_price_clp)} · Reposicion: {formatGrams(item.reorder_mg)}</p>
-      {manager && <button className="op-command" disabled={disabled} onClick={() => { setSelected(item); setEditor(true); }}>Abrir producto</button>}
+      {manager && <button className="op-command" disabled={disabled} onClick={() => { if (!discard()) return; setSelected(item); setEditor(true); }}>Abrir producto</button>}
     </article> : 'internal_reference' in item ? <article className="op-row" key={item.supplier_ref}>
       <h3>{item.name}</h3><p>{item.internal_reference} · {item.archived ? 'Archivado' : 'Activo'}</p><p>{item.contact ?? 'Sin contacto'}</p>
       <details><summary>Referencia del proveedor</summary><p className="op-reference">{item.supplier_ref}</p></details>
-      <button className="op-command" disabled={disabled} onClick={() => { setSelected(item); setEditor(true); }}>Editar proveedor</button>
+      <button className="op-command" disabled={disabled} onClick={() => { if (!discard()) return; setSelected(item); setEditor(true); }}>Editar proveedor</button>
     </article> : <article className="op-row" key={item.receipt_ref}><h3>{formatGrams(item.quantity_mg)}</h3>
       <p>{item.product_name} · Lote {item.lot_code}</p>
       <p>{new Date(item.created_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' })}</p>
@@ -156,10 +167,10 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
     <div className="op-toolbar"><button aria-label="Pagina anterior" title="Pagina anterior" disabled={offset === 0 || !!pending} onClick={() => { setPage(null); setOffset(n => Math.max(0, n - 25)); }}><ChevronLeft size={18}/></button>
       <span>Pagina {offset / 25 + 1}</span><button aria-label="Pagina siguiente" title="Pagina siguiente" disabled={page?.nextOffset == null || !!pending} onClick={() => { setOffset(page!.nextOffset!); setPage(null); }}><ChevronRight size={18}/></button></div>
     {manager && collection !== 'receipts' && <>
-      <button className="op-command" disabled={disabled} onClick={() => { setSelected(null); setEditor(true); setFormRevision(n => n + 1); }}>Nuevo {collection === 'products' ? 'producto' : 'proveedor'}</button>
-      {editor && <form className="op-form" key={`${collection}-${selected?.version}-${product?.product_ref ?? supplier?.supplier_ref ?? 'new'}-${formRevision}`} onSubmit={e => submit(e, collection === 'products' ? 'save-product' : 'save-supplier')}>
+      <button className="op-command" disabled={disabled} onClick={() => { if (!discard()) return; setSelected(null); setEditor(true); setFormRevision(n => n + 1); }}>Nuevo {collection === 'products' ? 'producto' : 'proveedor'}</button>
+      {editor && <form className="op-form" onChangeCapture={() => setDirty(true)} key={`${collection}-${selected?.version}-${product?.product_ref ?? supplier?.supplier_ref ?? 'new'}-${formRevision}`} onSubmit={e => submit(e, collection === 'products' ? 'save-product' : 'save-supplier')}>
         <fieldset disabled={disabled}><legend>{selected ? 'Editar' : 'Nuevo'} {collection === 'products' ? 'producto' : 'proveedor'}</legend>
-          <label>Nombre<input name="name" required maxLength={160} defaultValue={selected?.name}/></label>
+          <label>Nombre<input name="name" required maxLength={collection === 'products' ? 100 : 160} defaultValue={selected?.name}/></label>
           {collection === 'products' ? <>
             <label>Codigo interno<input name="code" required maxLength={64} defaultValue={product?.code}/></label>
             <label>Presentacion<input name="presentation" maxLength={160} defaultValue={product?.presentation}/></label>
@@ -172,8 +183,8 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
       </form>}
       {product && !product.archived && <>
         <details><summary>Recibir lote de {product.name}</summary>
-          <form className="op-form" key={`receive-${product.product_ref}-${formRevision}`} onSubmit={e => submit(e, 'receive')}><fieldset disabled={disabled}>
-            <label>Codigo de lote<input name="lot" required maxLength={100}/></label>
+          <form className="op-form" onChangeCapture={() => setDirty(true)} key={`receive-${product.product_ref}-${formRevision}`} onSubmit={e => submit(e, 'receive')}><fieldset disabled={disabled}>
+            <label>Codigo de lote<input name="lot" required maxLength={80}/></label>
             <label>Referencia de origen<input name="source" required maxLength={160}/></label>
             <label>Proveedor (opcional)<select aria-label="Proveedor de la recepcion" name="supplier" key={`suppliers-${supplierOffset}`} defaultValue=""><option value="">Sin proveedor</option>{supplierPage?.items.filter(s => !s.archived).map(s => <option key={s.supplier_ref} value={s.supplier_ref}>{s.name}</option>)}</select></label>
             {supplierError && <p role="alert">{supplierError}</p>}
@@ -186,7 +197,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
           </fieldset></form>
         </details>
         <details><summary>Vincular lote existente sin cambiar stock</summary>
-          <form className="op-form" onSubmit={e => submit(e, 'link-batch')}><fieldset disabled={disabled}>
+          <form className="op-form" onChangeCapture={() => setDirty(true)} onSubmit={e => submit(e, 'link-batch')}><fieldset disabled={disabled}>
             <label>Lote<select name="batch" required defaultValue=""><option value="" disabled>Seleccionar lote</option>{data.batches?.map(b => <option key={b.batch_ref} value={b.batch_ref}>{b.product} · {b.lot_code}</option>)}</select></label>
             <label>Proveedor (opcional)<select aria-label="Proveedor del lote" name="supplier" defaultValue=""><option value="">Sin proveedor</option>{supplierPage?.items.filter(s => !s.archived).map(s => <option key={s.supplier_ref} value={s.supplier_ref}>{s.name}</option>)}</select></label>
             <button className="op-command" type="submit"><Save size={16}/>Vincular sin cambiar stock</button>

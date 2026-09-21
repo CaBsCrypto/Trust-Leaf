@@ -12,7 +12,13 @@ export type CommercialReceipt = {
   quantity_mg: number; product_name: string; lot_code: string; cost_clp?: number | null; created_at: string;
 };
 type Mutation = { operationId: string };
+export type BatchCatalogLink = {
+  batch_ref: string; lot_code: string; product_ref: string | null;
+  product_code: string | null; product_name: string | null;
+  supplier_name?: string | null;
+};
 export type CommerceCommand =
+  | { action: 'batch-links'; input: { batchRef?: string; offset?: number; limit?: number } }
   | { action: 'products' | 'suppliers' | 'receipts'; input: { offset?: number; limit?: number } }
   | { action: 'save-product'; input: Mutation & { resourceRef?: string; version?: number;
       code: string; name: string; presentation: string; referencePriceClp: number | null;

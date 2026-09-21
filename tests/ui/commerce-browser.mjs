@@ -25,6 +25,9 @@ try {
   await panel.getByLabel('Nombre', { exact: true }).fill('Flor de prueba con nombre extenso para validar el catalogo');
   await panel.getByLabel('Presentacion', { exact: true }).fill('Gramos');
   await panel.getByLabel('Precio de referencia (CLP)', { exact: true }).fill('2500');
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  assert.equal(await panel.getByLabel('Nombre', { exact: true }).inputValue(), 'Flor de prueba con nombre extenso para validar el catalogo');
   await panel.getByRole('button', { name: 'Guardar', exact: true }).click();
   await panel.getByRole('button', { name: 'Abrir producto' }).last().click();
   await panel.getByText(/^Recibir lote de/).click();
@@ -45,11 +48,16 @@ try {
     return route.continue();
   });
   await panel.getByRole('button', { name: 'Registrar recepcion simulada' }).click();
+  await panel.getByRole('button', { name: 'Reintentar la misma operacion' }).waitFor();
+  await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  assert.equal(await panel.isVisible(), true, 'uncertain write must remain recoverable in the current panel');
   await panel.getByRole('button', { name: 'Reintentar la misma operacion' }).click();
   await panel.getByText('Guardado.', { exact: false }).waitFor();
   assert.equal(receiptRequests, 2, 'lost response is retried with a stable operation identifier');
   await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await page.getByText('COMMERCE-DEMO-1', { exact: false }).first().waitFor();
+  await page.getByText('Vinculacion con catalogo', { exact: true }).click();
+  await page.getByText('Proveedor: Proveedor sintetico', { exact: true }).waitFor();
   const snapshot = await (await page.request.get(`${base}/api/operations-pilot`, { headers: { 'privy-id-token': 'fixture-dispensary' } })).json();
   assert.equal(snapshot.batches.length, 1); assert.equal(snapshot.batches[0].stock_mg, 100000);
   await page.reload();
