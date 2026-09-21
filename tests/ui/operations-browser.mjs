@@ -125,6 +125,7 @@ try {
     await page.getByLabel('Nombre del dispensario', { exact: true }).fill(name);
     await command(page, 'Crear dispensario de prueba');
     await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
+    await page.getByText('Recibir lote', {exact:true}).click();
     await page.getByLabel('Codigo de lote', { exact: true }).fill('LOTE-QA-001');
     await page.getByLabel('Referencia de origen', { exact: true }).fill('ORIGEN FICTICIO QA');
     await page.getByLabel('Vencimiento', { exact: true }).fill('2027-12-01T12:00');
@@ -197,6 +198,7 @@ try {
   await dispensary.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('NO-MATCH-QA');
   await dispensary.getByText('No hay resultados para esta busqueda.', { exact: true }).waitFor();
   await dispensary.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('');
+  await dispensary.getByText('Gestionar lote', {exact:true}).click();
   await command(dispensary, 'Poner en cuarentena');
   await refresh(operator);
   await operator.getByText('No hay lotes disponibles con stock y vigencia para esta entrega.', { exact: true }).waitFor();
@@ -250,6 +252,7 @@ try {
     await dispensary.getByText('No hay lotes en este estado.', {exact:true}).waitFor();
   }
   await dispensary.getByRole('button', {name:'Disponibles',exact:true}).click();
+  await dispensary.getByText('Gestionar lote', {exact:true}).click();
   await dispensary.getByRole('button', {name:'Poner en cuarentena',exact:true}).waitFor();
   await dispensary.getByRole('tab', {name:'Historial',exact:true}).click();
   await dispensary.getByText('Entrega de este dispensario', {exact:true}).waitFor();
@@ -406,6 +409,7 @@ try {
   assert.equal(operationIds.length, 2); assert.equal(operationIds[0], operationIds[1], 'recovery reuses the committed operation ID');
   await recover.unroute('**/api/operations-pilot');
   await recover.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await recover.getByText('Recibir lote', {exact:true}).click();
   await recover.getByLabel('Codigo de lote', { exact: true }).fill('LOTE-RECOVERY-001');
   await recover.getByLabel('Referencia de origen', { exact: true }).fill('ORIGEN FICTICIO RECOVERY');
   await recover.getByLabel('Vencimiento', { exact: true }).fill('2027-12-01T12:00');
@@ -417,6 +421,10 @@ try {
   await otherSession.locator('.op-row').getByText('100 g', { exact: false }).waitFor();
 
   // A rejected write must not invalidate every subsequent background read.
+  for (const page of [recover, otherSession]) {
+    await page.getByText('Gestionar lote', {exact:true}).click();
+    await page.getByText('Ajustar existencias', {exact:true}).click();
+  }
   const adjustment = form(recover, 'Registrar ajuste');
   await adjustment.getByLabel('Variacion en gramos (+/-)', { exact: true }).fill('-200');
   await adjustment.getByLabel('Motivo del ajuste', { exact: true }).fill('RECHAZO FICTICIO SIN STOCK');

@@ -58,7 +58,7 @@ export default function TeamPanel({ search, revision, disabled, remove }: { sear
   function review(event: FormEvent) { event.preventDefault(); setConfirmation(email.trim().toLowerCase()); setNotice(''); }
   const blocked = disabled || busy || pending !== null;
   const matches = (value: string) => value.toLowerCase().includes(search.toLowerCase());
-  return <section>
+  return <section className="op-team">
     {(error || readError) && <p role="alert" className="op-error">{error || readError}</p>}{notice && <p role="status" className="op-success">{notice}</p>}
     {pending && !busy && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
     {!data && !error && !readError && <p role="status">Cargando equipo...</p>}
@@ -75,6 +75,7 @@ export default function TeamPanel({ search, revision, disabled, remove }: { sear
         <span>{m.email ?? 'Correo no disponible'}<small>{m.role === 'manager' ? 'Encargado' : 'Operador'}</small></span>
         {data.membership.role === 'manager' && m.role === 'operator' && <button aria-label={`Retirar ${m.email ?? 'operador'}`} title="Retirar trabajador" disabled={blocked} onClick={() => { if (confirm(`Retirar el acceso de ${m.email ?? 'este trabajador'}?`)) remove(m.actorRef); }}><UserMinus size={18}/></button>}
       </div>)}
+      {!data.members.some(m => matches(`${m.email ?? ''} ${m.role === 'manager' ? 'Encargado' : 'Operador'}`)) && <p className="op-empty">No hay miembros para esta busqueda.</p>}
       {data.membership.role === 'manager' && <><h3>Invitaciones</h3>{!data.invitations.length && <p className="op-empty">No hay invitaciones.</p>}
         {data.invitations.filter(i => matches(i.email)).map(i => <article className="op-row" key={i.invitationRef}><h4>{i.email}</h4>
           <p>{invitationLabels[i.state]} · {deliveryLabels[i.deliveryState]}</p><p>Vence: {new Date(i.expiresAt).toLocaleString('es-CL')}</p>
@@ -82,7 +83,7 @@ export default function TeamPanel({ search, revision, disabled, remove }: { sear
             {i.state === 'pending' && ['queued', 'failed', 'uncertain', 'sending'].includes(i.deliveryState) && <button className="op-command" disabled={blocked || !data.invitationsEnabled} onClick={() => void execute({ action: 'retry-send', invitationRef: i.invitationRef })}><RefreshCw size={16}/>Reintentar envio</button>}
             <button className="op-command" disabled={blocked || !data.invitationsEnabled} onClick={() => { if (confirm(`Reenviar a ${i.email}? El enlace anterior dejara de funcionar.`)) void execute({ action: 'resend', invitationRef: i.invitationRef, operationId: crypto.randomUUID() }); }}><Send size={16}/>Reenviar</button>
             <button className="op-command" disabled={blocked} onClick={() => { if (confirm(`Cancelar la invitacion de ${i.email}?`)) void execute({ action: 'cancel', invitationRef: i.invitationRef, operationId: crypto.randomUUID() }); }}><X size={16}/>Cancelar</button>
-          </div>}</article>)}</>}
+          </div>}</article>)}{!!data.invitations.length && !data.invitations.some(i => matches(i.email)) && <p className="op-empty">No hay invitaciones para esta busqueda.</p>}</>}
     </>}
   </section>;
 }
