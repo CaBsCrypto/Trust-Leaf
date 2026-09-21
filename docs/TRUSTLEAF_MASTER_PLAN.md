@@ -1403,3 +1403,34 @@ Entrega guardada en PR #37 (borrador), base de implementacion `3465dbc`:
   SHA256 8B2E6C713A9194C79A7C17B37816C5C165FAD4B21943D669A0314516CEFD4EAD.
   Restauracion aislada PASS: 37 tablas y 222 filas. Alcance de aplicacion,
   no sustituye respaldo de Auth/Storage/configuracion de plataforma.
+
+### Publicacion tecnica fase 1, 2026-09-21
+
+Esta evidencia actualiza los pendientes historicos anteriores; no cierra las
+fases 0-7 ni la presentacion acompanada.
+
+- PR #37 integrado a main: a7102ec0ddcce52a63cd1bb2cb6e87636e2f9eaa.
+  CI 35583259750 PASS sobre db376019d650ffc8e5f58cc405feb1b8d5ef4fc7;
+  preview aprobado antes de fusionar. Incluye tipos, builds off/on, regresiones,
+  SQL, PostgREST, concurrencia PostgreSQL independiente y navegador comercial.
+- Aplicada exclusivamente 20260921010000_dispensary_commerce.sql despues del
+  respaldo/restauracion indicados arriba. SHA256 de la migracion:
+  4F2F9C16ACC5C30AD35C620863FAFE93270AC2D616EE4DB74787F41F806A20BF.
+  Funcion sin ejecucion anon/authenticated; ejecucion service_role habilitada.
+  Cero recepciones comerciales tras migrar. Borrador mensual no aplicado.
+- Despliegue inicial deshabilitado verificado: HTTP 503 COMMERCE_DISABLED,
+  Cache-Control no-store, private. Activacion de servidor y cliente corregida
+  con valores exactos true (sin saltos de linea) y nuevo despliegue.
+- Produccion activa Ready: dpl_574muzYKAFUbcspmxrR42xf7XLNn,
+  trustleaf-p66l50jvi-cabscryptocontacto-6028s-projects.vercel.app,
+  alias www.trustleaf.org. Token sintetico rechazado con 401, sin cache.
+- PASS lectura autenticada en navegador oficial como encargado B: Gestion,
+  catalogo vacio sin error y vinculacion del lote antiguo explicitamente vacia.
+  Inventario conserva 60 g, paciente 10 g disponibles y equipo dos miembros.
+  No se crearon productos, recepciones, entregas ni ajustes en produccion.
+- Pendiente: recorrido publicado de escritura con ambas identidades en una
+  organizacion demostrativa separada y durable; la fixture local sigue siendo
+  QA temporal. No equivale a autonomia del usuario ni cierre funcional completo.
+- Siguiente entrega: Compras sobre la recepcion atomica existente. Documentos,
+  caja, conteos y reportes siguen pendientes. Incidencia del selector de fecha
+  y validaciones de invitaciones permanecen separadas.
