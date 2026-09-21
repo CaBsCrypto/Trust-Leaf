@@ -157,4 +157,20 @@ await sql(`update trustleaf_private.pilot_batches set expires_at=clock_timestamp
 await assert.rejects(mutation('b', 'dispense', { ...retry, operationId: randomUUID() }), /PILOT_STOCK_OR_QUOTA_CONFLICT/);
 await mutation('doctor', 'revoke-treatment', { resourceRef: treatment2, version: 1 });
 await assert.rejects(mutation('b', 'dispense', { ...retry, operationId: randomUUID() }), /PILOT_TREATMENT_EXPIRED/);
-console.log('PASS: independent blocked PostgreSQL sessions validate shared quota, stock, retries, response loss, revocation, expiry, quarantine, same/different invitation acceptance and concurrent worker removal. Dedicated test DB retained.');
+const commerceCommand = (action, input) => `select public.trustleaf_dispensary_commerce('did:privy:concurrency-a',${literal(action)},${literal(JSON.stringify(input))}::jsonb);`;
+const commerceProduct = JSON.parse(await sql(commerceCommand('save-product', { operationId: randomUUID(), code: 'CONCURRENT',
+  name: 'Synthetic commerce product', presentation: 'Grams', referencePriceClp: null, reorderMg: 0, archived: false })));
+const managerRef = await sql("select actor_ref from public.trustleaf_resolve_privy_actor('did:privy:concurrency-a');");
+const receiptIntent = { operationId: randomUUID(), productRef: commerceProduct.resourceRef, supplierRef: null,
+  lotCode: 'CONCURRENT-COMMERCE', sourceReference: 'synthetic', expiresAt: '2099-01-01T00:00:00Z', quantityMg: 100000, costClp: 10000 };
+const receiptRace = await competing(`pg_advisory_xact_lock(hashtextextended('pilot-member|'||${literal(managerRef)},0))`,
+  [commerceCommand('receive', receiptIntent), commerceCommand('receive', receiptIntent)]);
+assert.equal(receiptRace.filter(r => r.status === 'fulfilled').length, 2);
+const receiptResults = receiptRace.map(r => JSON.parse(r.value));
+assert.equal(receiptResults[0].resourceRef, receiptResults[1].resourceRef);
+assert.equal(receiptResults.filter(r => r.replayed).length, 1);
+assert.equal(await sql(`select count(*) from trustleaf_private.commerce_receipts where receipt_ref=${literal(receiptResults[0].resourceRef)};`), '1');
+assert.equal(await sql(`select sum(quantity_mg) from trustleaf_private.pilot_movements where batch_ref=${literal(receiptResults[0].batchRef)};`), '100000');
+const recoveredReceipt = JSON.parse(await sql(commerceCommand('receive', receiptIntent)));
+assert.equal(recoveredReceipt.resourceRef, receiptResults[0].resourceRef, 'lost-response replay recovers same receipt');
+console.log('PASS: independent PostgreSQL sessions validate pilot and commerce receipt concurrency, idempotency and response loss. Dedicated test DB retained.');

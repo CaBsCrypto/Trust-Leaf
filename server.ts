@@ -131,6 +131,11 @@ async function startServer() {
       query: { __trustleaf_route: 'operations-pilot' } }, res)
       .catch(() => { if (!res.headersSent) res.status(503).json({ code: 'PILOT_UNAVAILABLE' }); });
   });
+  app.all('/api/dispensary-commerce', (req, res) => {
+    void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
+      query: { ...req.query, __trustleaf_route: 'dispensary-commerce' } }, res)
+      .catch(() => { if (!res.headersSent) res.status(503).json({ code: 'COMMERCE_UNAVAILABLE' }); });
+  });
   app.all('/api/agenda', (req, res) => {
     void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
       query: { ...req.query, __trustleaf_route: 'privy-agenda' } }, res)

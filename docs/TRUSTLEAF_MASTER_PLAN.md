@@ -1343,3 +1343,63 @@ Contraste de fecha, 2026-09-21 03:04 America/Santiago:
   crash. No se modifico codigo ni se declaro resuelta la incidencia.
 - Lectura posterior publicada: un paciente, 10 g disponibles, stock 60 g,
   dos miembros y cero entregas del dia. Sesion de encargado en Atenciones.
+
+## Suite integral: inicio de fases 0 y 1 (2026-09-21)
+
+Rama `feat/dispensary-commerce-foundation`, base `b6277bf`. Alcance y puertas
+de salida en [DISPENSARY_SUITE_ROADMAP.md](DISPENSARY_SUITE_ROADMAP.md).
+No se declara completa la suite ni se modifica el modelo comercial del piloto.
+
+- Implementado localmente: contratos comerciales separados, API paginada,
+  tablas privadas incrementales, catalogo/proveedores, archivo y versiones,
+  recepcion atomica sobre el inventario existente y vinculacion de lotes.
+- Activacion independiente y deshabilitada por defecto. Costos y proveedores
+  privados solo para encargado; el operador no tiene escrituras comerciales
+  durante esta fase. Caja y cobros pertenecen a fases posteriores.
+- PASS local SQL: aislamiento, permisos, paginacion, reintento sin duplicar
+  stock, rollback integral, archivo, vinculacion sin variar stock, retirada
+  y rechazo de acceso directo. PGlite NO demuestra concurrencia independiente.
+- PASS local API: ambas opciones de activacion, identidad derivada del token,
+  limites de entrada, no-cache, metodos, errores privados y sin reintento ciego.
+- PASS navegador SQL aislado: producto y recepcion persistentes tras recarga;
+  ambos roles a 360/390/768/1024/1440, sin overflow de pagina ni costos para
+  operador. Capturas locales en scratch/operations-qa/commerce-*.png.
+- PASS regresion SQL del piloto anterior y presupuesto de funciones Vercel.
+- Pendientes: concurrencia independiente, CI, preview, revision ampliada de
+  UX/errores y puertas de publicacion. No se aplico la migracion remota,
+  no hubo respaldo nuevo ni validacion de produccion para este modulo.
+- B, saldos, tratamientos, invitaciones y borrador mensual permanecen intactos.
+  El dispensario demostrativo creado existe solamente en la base aislada de QA.
+
+Entrega guardada en PR #37 (borrador), base de implementacion `3465dbc`:
+- Tipos y compilacion local aprobados; advertencias existentes de paquetes
+  Privy y chunks grandes, sin error de compilacion.
+- Ampliada prueba browser: proveedor creado por formulario y seleccionado por
+  nombre; perdida deliberada de respuesta tras confirmar recepcion; reintento
+  recupera una sola recepcion y 100 g, no 200 g. Lectura fallida bloquea guardar
+  y permite recuperar datos. PASS aislado, no evidencia de produccion.
+- CI y preview del PR sujetos al ultimo commit. No fusionar este borrador
+  como si hubieran terminado todas las fases de la suite.
+
+### Cierre de brechas fase 1, 2026-09-21
+
+- Plan ampliado aprobado: compras sin cuentas por pagar y conteos con bloqueo
+  de lotes antes de presentar. Hoja de ruta actualizada a fases 0-7; compras,
+  documentos, caja y conteos aun NO implementados por este cambio.
+- PR #37 sobre `1cdc6a4`: CI 35574560630 y preview aprobados. Cambios posteriores
+  requieren una nueva ejecucion antes de integrar.
+- Lectura paginada `batch-links`: Inventario muestra producto/codigo vinculado;
+  proveedor solo para encargado. Lotes antiguos sin vincular siguen disponibles.
+  PASS SQL para referencia ajena, inexistente, operador retirado y vincular
+  lote antiguo sin cambiar sus 5 g de prueba.
+- Formularios comerciales piden confirmar descarte; operacion incierta bloquea
+  salida y conserva reintento. PASS browser aislado para ambos casos, vinculacion
+  visible, proveedor, recepcion, recarga y cinco anchos.
+- Limites de nombre de producto y codigo de lote alineados con el inventario
+  existente (100 y 80 caracteres), evitando catalogos que no se puedan recibir.
+- Historial remoto revisado: 31 migraciones, ultima 20260915030000. Comercio y
+  borrador mensual no aplicados.
+- Respaldo application-20260921-062018.dpapi, fuera de Git, DPAPI CurrentUser;
+  SHA256 8B2E6C713A9194C79A7C17B37816C5C165FAD4B21943D669A0314516CEFD4EAD.
+  Restauracion aislada PASS: 37 tablas y 222 filas. Alcance de aplicacion,
+  no sustituye respaldo de Auth/Storage/configuracion de plataforma.

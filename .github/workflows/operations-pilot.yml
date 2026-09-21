@@ -57,6 +57,8 @@ jobs:
           npm run qa:operations-pilot
           npm run test:team-invitations
           npm run test:dispensary-lifecycle
+          node --experimental-strip-types tests/dispensary-commerce.test.ts
+          node tests/sql/dispensary-commerce.mjs
           node tests/sql/approval-flow.mjs
           node tests/sql/calendar-outbox.mjs
           node tests/sql/application-backup-test.mjs
@@ -88,7 +90,7 @@ jobs:
       - name: Build disabled and enabled pilot
         run: |
           VITE_OPERATIONS_PILOT_ENABLED=false npm run build
-          VITE_OPERATIONS_PILOT_ENABLED=true npm run build
+          VITE_OPERATIONS_PILOT_ENABLED=true VITE_COMMERCE_CATALOG_ENABLED=true npm run build
       - name: Browser integration with synthetic identities
         run: |
           npm install --prefix /tmp/trustleaf-browser --no-package-lock playwright@1.58.2
@@ -109,6 +111,16 @@ jobs:
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/calendar-operations-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/consultation-agenda-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/doctor-filters-browser.mjs
+      - name: Isolated commerce browser journey
+        run: |
+          VITE_COMMERCE_CATALOG_ENABLED=true node node_modules/vite/bin/vite.js --config tests/ui/vite-operations.config.mjs --port 4322 > scratch/commerce-server.log 2>&1 &
+          commerce_pid=$!
+          trap 'kill "$commerce_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4322/ > /dev/null; then break; fi
+            sleep 1
+          done
+          PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/commerce-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
