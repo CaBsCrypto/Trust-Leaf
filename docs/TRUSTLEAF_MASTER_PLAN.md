@@ -1282,3 +1282,38 @@ Publicacion y verificacion posterior, 2026-09-21 02:10 America/Santiago:
   encargado y permiso vigente del paciente para retomar Atenciones. El saldo
   actual no se confirma desde una sesion sin autorizacion. Invitaciones siguen
   separadas. La entrega tecnica no cierra por si sola la fase de evaluacion.
+
+Continuacion acompanada, 2026-09-21 02:53 America/Santiago:
+- Version publicada 85632d2afb10b465fb8f4df0bf3c706003c2f750,
+  deployment dpl_2ThfsgLTvSYEGY8sAcoboCS1p8Vj READY.
+- Paciente crwom01: tratamiento 4119236d vigente, 30 g asignados, 20 g
+  retirados y 10 g disponibles. Renovado permiso ficticio de B por solicitud
+  del usuario hasta 2026-09-22 02:48:54 America/Santiago; saldo intacto.
+- Nueva sesion del operador: un paciente autorizado, stock 60 g y dos miembros.
+  Busqueda Piloto Uno, detalle y revision de 10 g con saldo hipotetico 0 g
+  comprobados. NO se confirmo la entrega. Retorno conserva busqueda.
+- Comprobante 3150a49a-a8b2-4e19-a46b-a453adb7c15f recuperado desde lote;
+  producto, cantidad, lote y responsable conservados. Revision movil 390px
+  sin desbordamiento; viewport normal restaurado.
+- Recarga pide Continuar con la identidad ya autorizada y vuelve al panel:
+  paciente con 10 g, stock 60 g y cero entregas del dia. El control del navegador
+  tuvo timeouts transitorios al volver y recargar; la UI recuperada y la lectura
+  posterior confirmaron estado intacto, sin atribuirlo a un fallo de datos.
+- Evidencia obtenida por el agente, no prueba de autonomia humana. Falta
+  recorrido del encargado y evaluacion sin ayuda de ambos roles.
+
+Encargado comprobado, 2026-09-21 02:57 America/Santiago:
+- Sesion dgtlmoney8@gmail.com / Encargado de B. Preparacion 4/4 plegada,
+  paciente autorizado encontrado por referencia 11945d2c: 30 g asignados,
+  20 g retirados, 10 g disponibles; lote con 60 g.
+- Recepcion y Gestionar lote inicialmente plegados. Se abrieron recepcion
+  y Ajustar existencias, sin completar ni enviar formularios y sin cambiar
+  cuarentena. Acceso al historial del lote y busqueda 3150a49a recuperan el
+  mismo comprobante, producto, lote y operador que la sesion del trabajador.
+- Equipo muestra un encargado y un operador, con controles de gestion solo
+  para encargado. No se enviaron invitaciones ni se retiraron miembros.
+- Inventario revisado visualmente a 390 y 1440px sin desbordamiento horizontal;
+  viewport restaurado. Stock 60 g y cero entregas del dia conservados.
+- Comprobacion tecnica de los dos roles realizada por el agente. Pendiente
+  prueba humana de autonomia en ambos dispositivos; no equivale a cierre del
+  piloto ni habilita atencion real. No se requirieron cambios de codigo.
