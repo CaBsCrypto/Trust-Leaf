@@ -30,6 +30,25 @@
 .op-dispensary summary { min-height: 44px; }
 .op-dispensary details.op-preparation { margin: 4px 0; }
 .op-dispensary summary:focus-visible { outline: 2px solid #2179af; outline-offset: 2px; }
+.op-stock-row { display: grid; grid-template-columns: minmax(0,2fr) minmax(100px,1fr) minmax(0,1.4fr) auto; gap: 10px 20px; align-items: center; }
+.op-stock-row > * { min-width: 0; }
+.op-stock-row > details { grid-column: 1 / -1; margin: 0; }
+.op-stock-row p { margin: 4px 0; }
+.op-stock-amount { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.op-stock-amount strong { font-size: 20px; overflow-wrap: anywhere; }
+.op-batch-state { font-size: 12px; padding-left: 8px; border-left: 3px solid #64716c; }
+.op-batch-available { border-color: #258054; color: #175f40; }
+.op-batch-quarantined { border-color: #bd7900; color: #785100; }
+.op-batch-expired { border-color: #c93c3c; color: #a32929; }
+.op-history-filters { max-width: 760px; }
+.op-team h4 { margin: 0 0 8px; }
+.op-team .op-line > span { flex: 1 1 180px; }
+.op-dispensary .op-stock-row .op-command { min-height: 44px; }
+@media(max-width: 1023px) {
+  .op-stock-row { grid-template-columns: minmax(0,1fr) minmax(90px,auto); gap: 10px; }
+  .op-stock-row > p, .op-stock-row > button { grid-column: 1 / -1; }
+  .op-stock-row > button { justify-self: start; }
+}
 @media(max-width: 1023px) {
   .op-attention { display: block; }
   .op-attention:not(.op-attention-selected) .op-patient-detail, .op-attention-selected .op-patient-list { display: none; }

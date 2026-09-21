@@ -1231,3 +1231,30 @@ Publicacion y comprobacion posterior, 2026-09-15 13:49 America/Santiago:
 - Los cinco anchos y ambos roles tienen evidencia automatizada aislada; falta
   validar comprension y facilidad de uso con encargado y operador reales.
   Las pruebas pendientes de invitaciones permanecen abiertas y separadas.
+
+### Jornada diaria del dispensario: 2026-09-21
+
+Rama feat/dispensary-daily-inventory-history. Inventario compacto con estados
+textuales (incluido Agotado), recepcion y ajustes plegados para encargado;
+operador sin controles administrativos. Historial separado en Entregas y
+Movimientos, busqueda por producto/lote/comprobante, fecha y lote combinables,
+limpieza explicita y acceso desde inventario. Referencias y responsable en
+detalle. Equipo conserva contratos y permisos, con vacios de busqueda claros.
+Sin cambios de API, tipos publicos, migraciones ni operaciones persistentes.
+
+Referencia publicada previa: main 0db24ab30e38e6c9d4af0255b9381fab299d85cb,
+deployment dpl_ArHVc7eaWcQoVvszg7ShBvUh3LNz READY. Sesion observada:
+digitalmoneychile8@gmail.com, Operador de Dispensario B - pruebas; stock 60 g,
+dos miembros activos y ningun paciente con permiso vigente. No se ha comprobado
+el saldo actual del paciente: los 10 g disponibles son evidencia anterior,
+no una nueva lectura. Renovacion solicitada al paciente en otro dispositivo;
+no se renuevan permisos automaticamente.
+
+Evidencia local: tipos, compilacion, SQL aislado y navegador integral aprobados.
+Nueva regresion diaria aprobada para encargado y operador en 360, 390, 768,
+1024 y 1440px: estados, formularios plegados, teclado, filtros combinados,
+acceso lote-historial, reinicio por seccion, errores y reconexion; cero escrituras.
+Capturas en scratch/operations-qa/daily-*.png; revision visual movil y escritorio.
+No se modifico el borrador mensual. CI, preview, publicacion y comprobacion
+oficial de esta entrega pendientes. La autonomia de navegacion de ambos roles
+requiere confirmacion humana; no cerrar ese criterio con pruebas automatizadas.
