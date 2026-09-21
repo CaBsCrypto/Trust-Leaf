@@ -9,7 +9,7 @@ export type Supplier = {
 };
 export type CommercialReceipt = {
   receipt_ref: string; batch_ref: string; product_ref: string; supplier_ref: string | null;
-  quantity_mg: number; cost_clp?: number | null; created_at: string;
+  quantity_mg: number; product_name: string; lot_code: string; cost_clp?: number | null; created_at: string;
 };
 type Mutation = { operationId: string };
 export type CommerceCommand =

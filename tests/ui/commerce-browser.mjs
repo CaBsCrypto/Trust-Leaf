@@ -12,6 +12,14 @@ try {
   await page.goto(`${base}/?operations&role=dispensary`);
   await page.getByRole('tab', { name: 'Gestion', exact: true }).click();
   const panel = page.getByRole('region', { name: 'Gestion comercial' });
+  await panel.getByRole('button', { name: 'Proveedores', exact: true }).click();
+  await panel.getByRole('button', { name: 'Nuevo proveedor', exact: true }).click();
+  await panel.getByLabel('Nombre', { exact: true }).fill('Proveedor sintetico');
+  await panel.getByLabel('Referencia interna', { exact: true }).fill('DEMO-S1');
+  await panel.getByLabel('Contacto comercial', { exact: true }).fill('proveedor@example.test');
+  await panel.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await panel.getByRole('button', { name: 'Editar proveedor' }).waitFor();
+  await panel.getByRole('button', { name: 'Catalogo', exact: true }).click();
   await panel.getByRole('button', { name: 'Nuevo producto', exact: true }).click();
   await panel.getByLabel('Codigo interno', { exact: true }).fill(`DEMO-${Date.now()}`);
   await panel.getByLabel('Nombre', { exact: true }).fill('Flor de prueba con nombre extenso para validar el catalogo');
@@ -25,13 +33,38 @@ try {
   await panel.getByLabel('Cantidad (g)', { exact: true }).fill('100');
   await panel.getByLabel('Vencimiento', { exact: true }).fill('2099-01-01T12:00');
   await panel.getByLabel('Costo total (CLP)', { exact: true }).fill('15000');
+  await panel.getByLabel('Proveedor de la recepcion', { exact: true }).selectOption({ label: 'Proveedor sintetico' });
+  let receiptRequests = 0;
+  await page.route('**/api/dispensary-commerce', async route => {
+    if (route.request().method() === 'POST' && route.request().postDataJSON().action === 'receive') {
+      receiptRequests++;
+      const response = await route.fetch();
+      if (receiptRequests === 1) return route.abort('failed');
+      return route.fulfill({ response });
+    }
+    return route.continue();
+  });
   await panel.getByRole('button', { name: 'Registrar recepcion simulada' }).click();
+  await panel.getByRole('button', { name: 'Reintentar la misma operacion' }).click();
   await panel.getByText('Guardado.', { exact: false }).waitFor();
+  assert.equal(receiptRequests, 2, 'lost response is retried with a stable operation identifier');
   await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await page.getByText('COMMERCE-DEMO-1', { exact: false }).first().waitFor();
+  const snapshot = await (await page.request.get(`${base}/api/operations-pilot`, { headers: { 'privy-id-token': 'fixture-dispensary' } })).json();
+  assert.equal(snapshot.batches.length, 1); assert.equal(snapshot.batches[0].stock_mg, 100000);
   await page.reload();
   await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await page.getByText('COMMERCE-DEMO-1', { exact: false }).first().waitFor();
+  await page.getByRole('tab', { name: 'Gestion', exact: true }).click();
+  await panel.getByRole('button', { name: 'Abrir producto' }).click();
+  await page.route('**/api/dispensary-commerce?*', route => route.fulfill({ status: 503, json: {} }));
+  await panel.getByRole('button', { name: 'Actualizar registros comerciales' }).click();
+  await panel.getByRole('alert').first().waitFor();
+  assert.equal(await panel.getByRole('button', { name: 'Guardar', exact: true }).isDisabled(), true);
+  await page.unroute('**/api/dispensary-commerce?*');
+  await panel.getByRole('button', { name: 'Actualizar registros comerciales' }).click();
+  await panel.getByRole('button', { name: 'Guardar', exact: true }).waitFor({ state: 'visible' });
+  await page.waitForFunction(() => !document.querySelector('[aria-label="Gestion comercial"] button[type="submit"]')?.disabled);
   await page.close();
   for (const role of ['dispensary', 'operator']) for (const width of [360, 390, 768, 1024, 1440]) {
     const view = await browser.newPage({ viewport: { width, height: 900 }, timezoneId: 'America/Santiago' });

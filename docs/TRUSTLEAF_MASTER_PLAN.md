@@ -1370,3 +1370,13 @@ No se declara completa la suite ni se modifica el modelo comercial del piloto.
   no hubo respaldo nuevo ni validacion de produccion para este modulo.
 - B, saldos, tratamientos, invitaciones y borrador mensual permanecen intactos.
   El dispensario demostrativo creado existe solamente en la base aislada de QA.
+
+Entrega guardada en PR #37 (borrador), base de implementacion `3465dbc`:
+- Tipos y compilacion local aprobados; advertencias existentes de paquetes
+  Privy y chunks grandes, sin error de compilacion.
+- Ampliada prueba browser: proveedor creado por formulario y seleccionado por
+  nombre; perdida deliberada de respuesta tras confirmar recepcion; reintento
+  recupera una sola recepcion y 100 g, no 200 g. Lectura fallida bloquea guardar
+  y permite recuperar datos. PASS aislado, no evidencia de produccion.
+- CI y preview del PR sujetos al ultimo commit. No fusionar este borrador
+  como si hubieran terminado todas las fases de la suite.

@@ -90,7 +90,7 @@ jobs:
       - name: Build disabled and enabled pilot
         run: |
           VITE_OPERATIONS_PILOT_ENABLED=false npm run build
-          VITE_OPERATIONS_PILOT_ENABLED=true npm run build
+          VITE_OPERATIONS_PILOT_ENABLED=true VITE_COMMERCE_CATALOG_ENABLED=true npm run build
       - name: Browser integration with synthetic identities
         run: |
           npm install --prefix /tmp/trustleaf-browser --no-package-lock playwright@1.58.2

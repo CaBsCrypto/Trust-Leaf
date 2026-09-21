@@ -39,6 +39,8 @@ create table trustleaf_private.commerce_receipts (
   product_ref uuid not null,
   supplier_ref uuid,
   quantity_mg bigint not null check(quantity_mg between 1 and 1000000000),
+  product_name text not null,
+  lot_code text not null,
   cost_clp bigint check(cost_clp between 0 and 1000000000),
   operator_ref uuid not null,
   created_at timestamptz not null default statement_timestamp(),
@@ -102,7 +104,7 @@ begin
         order by name,supplier_ref limit page_size+1 offset page_offset) t;
     else
       select coalesce(jsonb_agg(case when m.role='manager' then to_jsonb(t) else to_jsonb(t)-'cost_clp' end),'[]') into items from (
-        select receipt_ref,batch_ref,product_ref,supplier_ref,quantity_mg,cost_clp,created_at
+        select receipt_ref,batch_ref,product_ref,supplier_ref,quantity_mg,product_name,lot_code,cost_clp,created_at
         from trustleaf_private.commerce_receipts where organization_ref=m.organization_ref
         order by created_at desc,receipt_ref limit page_size+1 offset page_offset) t;
     end if;
@@ -159,8 +161,8 @@ begin
         'operationId',op,'lotCode',p_input->>'lotCode','product',product.name,'sourceReference',p_input->>'sourceReference',
         'expiresAt',p_input->>'expiresAt','quantityMg',p_input->'quantityMg'));
       batch:=(result->>'resourceRef')::uuid;
-      insert into trustleaf_private.commerce_receipts(organization_ref,batch_ref,product_ref,supplier_ref,quantity_mg,cost_clp,operator_ref)
-      values(m.organization_ref,batch,product.product_ref,supplier,(p_input->>'quantityMg')::bigint,(p_input->>'costClp')::bigint,a.actor_ref)
+      insert into trustleaf_private.commerce_receipts(organization_ref,batch_ref,product_ref,supplier_ref,quantity_mg,product_name,lot_code,cost_clp,operator_ref)
+      values(m.organization_ref,batch,product.product_ref,supplier,(p_input->>'quantityMg')::bigint,product.name,p_input->>'lotCode',(p_input->>'costClp')::bigint,a.actor_ref)
       returning receipt_ref into resource;
     else
       update trustleaf_private.pilot_batches set version=version+1

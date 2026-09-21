@@ -148,6 +148,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
       <details><summary>Referencia del proveedor</summary><p className="op-reference">{item.supplier_ref}</p></details>
       <button className="op-command" disabled={disabled} onClick={() => { setSelected(item); setEditor(true); }}>Editar proveedor</button>
     </article> : <article className="op-row" key={item.receipt_ref}><h3>{formatGrams(item.quantity_mg)}</h3>
+      <p>{item.product_name} · Lote {item.lot_code}</p>
       <p>{new Date(item.created_at).toLocaleString('es-CL', { timeZone: 'America/Santiago' })}</p>
       {manager && <p>Costo: {money(item.cost_clp)}</p>}<details><summary>Trazabilidad</summary><p className="op-reference">Recepcion: {item.receipt_ref}<br/>Lote: {item.batch_ref}<br/>Producto: {item.product_ref}</p></details>
     </article>)}
@@ -174,7 +175,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
           <form className="op-form" key={`receive-${product.product_ref}-${formRevision}`} onSubmit={e => submit(e, 'receive')}><fieldset disabled={disabled}>
             <label>Codigo de lote<input name="lot" required maxLength={100}/></label>
             <label>Referencia de origen<input name="source" required maxLength={160}/></label>
-            <label>Proveedor (opcional)<select name="supplier" key={`suppliers-${supplierOffset}`} defaultValue=""><option value="">Sin proveedor</option>{supplierPage?.items.filter(s => !s.archived).map(s => <option key={s.supplier_ref} value={s.supplier_ref}>{s.name}</option>)}</select></label>
+            <label>Proveedor (opcional)<select aria-label="Proveedor de la recepcion" name="supplier" key={`suppliers-${supplierOffset}`} defaultValue=""><option value="">Sin proveedor</option>{supplierPage?.items.filter(s => !s.archived).map(s => <option key={s.supplier_ref} value={s.supplier_ref}>{s.name}</option>)}</select></label>
             {supplierError && <p role="alert">{supplierError}</p>}
             <div className="op-toolbar"><button type="button" title="Proveedores anteriores" aria-label="Proveedores anteriores" disabled={supplierOffset === 0} onClick={() => setSupplierOffset(n => Math.max(0, n - 25))}><ChevronLeft size={18}/></button>
               <button type="button" title="Proveedores siguientes" aria-label="Proveedores siguientes" disabled={supplierPage?.nextOffset == null} onClick={() => setSupplierOffset(supplierPage!.nextOffset!)}><ChevronRight size={18}/></button></div>
@@ -187,7 +188,7 @@ export default function CommercePanel({ data, changed }: { data: PilotSnapshot; 
         <details><summary>Vincular lote existente sin cambiar stock</summary>
           <form className="op-form" onSubmit={e => submit(e, 'link-batch')}><fieldset disabled={disabled}>
             <label>Lote<select name="batch" required defaultValue=""><option value="" disabled>Seleccionar lote</option>{data.batches?.map(b => <option key={b.batch_ref} value={b.batch_ref}>{b.product} · {b.lot_code}</option>)}</select></label>
-            <label>Proveedor (opcional)<select name="supplier" defaultValue=""><option value="">Sin proveedor</option>{supplierPage?.items.filter(s => !s.archived).map(s => <option key={s.supplier_ref} value={s.supplier_ref}>{s.name}</option>)}</select></label>
+            <label>Proveedor (opcional)<select aria-label="Proveedor del lote" name="supplier" defaultValue=""><option value="">Sin proveedor</option>{supplierPage?.items.filter(s => !s.archived).map(s => <option key={s.supplier_ref} value={s.supplier_ref}>{s.name}</option>)}</select></label>
             <button className="op-command" type="submit"><Save size={16}/>Vincular sin cambiar stock</button>
           </fieldset></form>
         </details>
