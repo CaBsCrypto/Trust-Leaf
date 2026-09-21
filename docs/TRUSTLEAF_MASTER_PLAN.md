@@ -1258,3 +1258,27 @@ Capturas en scratch/operations-qa/daily-*.png; revision visual movil y escritori
 No se modifico el borrador mensual. CI, preview, publicacion y comprobacion
 oficial de esta entrega pendientes. La autonomia de navegacion de ambos roles
 requiere confirmacion humana; no cerrar ese criterio con pruebas automatizadas.
+
+Publicacion y verificacion posterior, 2026-09-21 02:10 America/Santiago:
+- PR #36 fusionado; main 1656f52cb3b73f2e6d2237e7996170d807325d31.
+- CI 35562778818 aprobado sobre d43c21e92a1139da309ba6b21387554684f556fa
+  (6m9s), incluidas conexiones PostgreSQL independientes, PostgREST, builds
+  habilitado/deshabilitado y regresiones de navegador. Ejecucion manual porque
+  no aparecio la automatica del PR; no se omitieron checks.
+- Preview dpl_GLts8d3CaLRmMTs2Mud6LVj6oBKj aprobado; produccion
+  dpl_Hbh9PQVvfcf3sUByyhSCgnEjCSUP READY con alias www.trustleaf.org.
+- Operador autenticado tras recarga: misma organizacion y dos miembros.
+  Inventario mantiene 60 g, lote disponible y ningun control administrativo.
+- Buscar Piloto-B y abrir historial aplica el lote y limpia la busqueda.
+  Entregas muestra tres recibos; buscar 3150a49a recupera exclusivamente el
+  comprobante 3150a49a-a8b2-4e19-a46b-a453adb7c15f con producto y lote.
+- Movimientos muestra cuatro registros; buscar 0d44d3aa recupera el movimiento
+  0d44d3aa-22e9-4fce-a4f8-87a52c8f182d de -10 g y su operador en detalle.
+  Limpieza de filtros y cambio de seccion comprobados. Equipo lista encargado
+  y operador sin botones de gestion para este ultimo.
+- Revision a 390 y 1440px, sin desbordamiento horizontal; viewport restaurado.
+  Cero entregas, ajustes, cambios de cuarentena o renovaciones de permiso.
+- Pendiente: recorrido humano de ambos roles sin ayuda, sesion publicada del
+  encargado y permiso vigente del paciente para retomar Atenciones. El saldo
+  actual no se confirma desde una sesion sin autorizacion. Invitaciones siguen
+  separadas. La entrega tecnica no cierra por si sola la fase de evaluacion.
