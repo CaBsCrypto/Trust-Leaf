@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigateSection } from './workspace-navigation.mjs';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 const require = createRequire(import.meta.url);
@@ -32,7 +33,7 @@ try {
         members:[{actorRef:role,email:'correo-muy-largo-de-trabajador@example.test',role}],invitations:[]}});
     });
     await page.goto(`${base}/?operations&role=dispensary`);
-    const section = name => page.getByRole('tab',{name,exact:true});
+    const section = name => ({ click: () => navigateSection(page, name) });
     await section('Inventario').click();
     await page.locator('.op-stock-row').nth(3).waitFor();
     for (const [filter,label] of [['Disponibles','Disponible'],['Cuarentena','Cuarentena'],['Vencidos','Vencido'],['Agotados','Agotado']]) {

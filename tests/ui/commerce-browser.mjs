@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigateSection } from './workspace-navigation.mjs';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 const require = createRequire(import.meta.url);
@@ -78,7 +79,7 @@ try {
     const view = await browser.newPage({ viewport: { width, height: 900 }, timezoneId: 'America/Santiago' });
     const errors = []; view.on('pageerror', e => errors.push(e.message));
     await view.goto(`${base}/?operations&role=${role}`);
-    await view.getByRole('tab', { name: 'Gestion', exact: true }).click();
+    await navigateSection(view, 'Gestion');
     const region = view.getByRole('region', { name: 'Gestion comercial' });
     await region.getByText('Flor de prueba con nombre extenso para validar el catalogo', { exact: true }).waitFor();
     assert.equal(await region.getByRole('button', { name: 'Nuevo producto', exact: true }).count(), role === 'dispensary' ? 1 : 0);

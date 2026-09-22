@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigateSection } from './workspace-navigation.mjs';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 const require = createRequire(import.meta.url);
@@ -29,11 +30,13 @@ try {
       return route.fulfill({ status: failure ? 503 : 200, json: failure ? {} : data });
     });
     await page.goto(`${base}/?operations&role=dispensary`);
+    await page.getByRole('tab', { name: role === 'manager' ? 'Inicio' : 'Atenciones', selected: true, includeHidden: true }).waitFor({state:'attached'});
+    if (role === 'manager') await navigateSection(page, 'Atenciones');
     await page.locator('.op-patient').first().waitFor();
     assert.equal(await page.locator('.op-patient').count(), 3);
     assert.equal(await page.getByLabel('Lote', { exact: true }).count(), 0, 'no automatic selection');
-    const rows = await page.locator('nav.op-tabs button').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().top));
-    assert.equal(new Set(rows).size, 1, 'single navigation row');
+    assert.equal(await page.locator('.op-mobile-menu').isVisible(), width < 1024);
+    assert.equal(await page.locator('.op-sidebar').isVisible(), width >= 1024);
     assert.ok((await page.locator('.op-patient').first().boundingBox()).y < 800, 'patient list begins in first viewport');
     await page.screenshot({path:`scratch/operations-qa/attention-list-${role}-${width}.png`,fullPage:true});
     await page.locator('.op-patient').first().focus();
@@ -47,6 +50,10 @@ try {
     await search.fill('11111111');
     await page.locator('.op-patient').click();
     await page.getByLabel('Lote', {exact:true}).selectOption('batch');
+    page.once('dialog', dialog => dialog.dismiss());
+    await navigateSection(page, 'Inventario');
+    assert.equal(await page.getByLabel('Lote', {exact:true}).inputValue(), 'batch', 'cancelled navigation preserves the draft');
+    if (width < 1024) await page.locator('.op-mobile-menu').click();
     await page.getByLabel('Cantidad en gramos', {exact:true}).fill('5');
     page.once('dialog', d => d.dismiss());
     await page.getByRole('button', {name:'Volver a pacientes'}).click();
@@ -77,6 +84,7 @@ try {
     await page.getByText('No hay pacientes con permiso vigente.').waitFor();
     assert.equal(posts, 0, 'navigation and review never write');
     await page.reload();
+    if (role === 'manager') await navigateSection(page, 'Atenciones');
     await page.getByText('No hay pacientes con permiso vigente.').waitFor();
     await page.close();
   }

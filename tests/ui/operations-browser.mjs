@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { navigateSection } from './workspace-navigation.mjs';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +37,7 @@ try {
     await command(page, 'Aceptar y participar');
   }
   const { doctor, patient, dispensary, dispensaryB, admin } = pages;
+  await navigateSection(dispensary, 'Inicio');
   await dispensary.locator('.op-preparation summary').click();
   assert.equal(await dispensary.getByLabel('Pendiente', {exact:true}).count(), 4);
   await patient.getByRole('tab', {name:'Tratamientos',exact:true}).click();
@@ -133,7 +135,7 @@ try {
   }
   const operator = await (await browser.newContext({ viewport: { width: 1365, height: 900 }, timezoneId: 'America/Santiago' })).newPage();
   pages.operator = operator; operator.on('pageerror', e => errors.push(e.message));
-  await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await navigateSection(dispensary, 'Equipo');
   await dispensary.getByLabel('Correo del trabajador', { exact: true }).fill('operator@example.test');
   await dispensary.getByRole('button', { name: 'Preparar invitacion', exact: true }).click();
   await dispensary.getByRole('group', { name: 'Confirmar invitacion' }).waitFor();
@@ -223,7 +225,7 @@ try {
   const granted = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
   await revoke.getByRole('button', { name: 'Autorizar 24 horas', exact: true }).click(); assert.equal((await granted).status(), 200);
   for (const [page, grams] of [[operator, '10'], [dispensaryB, '20']]) {
-    await page.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(page);
+    await navigateSection(page, 'Atenciones'); await refresh(page);
     await page.getByRole('button', {name:/Paciente QA/}).click();
     const delivery = form(page, 'Registrar entrega simulada');
     await delivery.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
@@ -290,7 +292,7 @@ try {
   await doctor.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'otherPatient' })));
   await doctor.getByRole('heading', { name: 'Mi atencion', exact: true }).waitFor();
   assert.equal(await doctor.getByText('NOTA FICTICIA PARA QA:', { exact: false }).count(), 0);
-  await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await navigateSection(dispensary, 'Equipo');
   await operator.route('**/api/operations-pilot', route => route.request().method() === 'GET'
     ? route.fulfill({ status: 503, json: {} }) : route.continue());
   await refresh(operator);
@@ -330,7 +332,7 @@ try {
   assert.equal(createAsRemoved.status(), 403);
   // Respect the real resend interval; do not weaken the fixture's rate limits.
   await new Promise(resolve => setTimeout(resolve, Math.max(0, firstInvitationAt + 61000 - Date.now())));
-  await dispensary.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await navigateSection(dispensary, 'Equipo');
   await dispensary.getByLabel('Correo del trabajador', { exact: true }).fill('operator@example.test');
   await dispensary.getByRole('button', { name: 'Preparar invitacion', exact: true }).click();
   const reinvited = dispensary.waitForResponse(r => r.url().endsWith('/api/team-invitations') && r.request().postDataJSON()?.action === 'create');
@@ -345,9 +347,9 @@ try {
   await operator.getByRole('button', { name: 'Aceptar invitacion como operador' }).click();
   assert.equal((await reaccepted).status(), 200);
   await operator.goto(`${baseUrl}/?operations&role=operator`);
-  await operator.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await navigateSection(operator, 'Inventario');
   await operator.locator('.op-row').getByText('90 g', { exact: false }).waitFor();
-  await operator.getByRole('tab', { name: 'Historial', exact: true }).click();
+  await navigateSection(operator, 'Historial');
   assert.equal(await operator.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 1);
   await refresh(admin);
   await admin.getByText('operator@example.test', { exact: true }).waitFor();
@@ -451,7 +453,7 @@ try {
   await otherSession.close();
   await recover.close();
   // A person without an actor joins through email acceptance, not onboarding.
-  await dispensaryB.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await navigateSection(dispensaryB, 'Equipo');
   await dispensaryB.getByLabel('Correo del trabajador', { exact: true }).fill('newworker@example.test');
   await dispensaryB.getByRole('button', { name: 'Preparar invitacion', exact: true }).click();
   const inviteIds = [];
@@ -490,13 +492,13 @@ try {
   await newcomer.getByRole('button', { name: 'Aceptar invitacion como operador', exact: true }).click();
   await newcomer.getByRole('alert').waitFor();
   await newcomer.getByRole('button', { name: 'Aceptar invitacion como operador', exact: true }).click();
-  await newcomer.getByRole('tab', { name: 'Equipo', exact: true }).click();
+  await navigateSection(newcomer, 'Equipo');
   assert.equal(acceptanceAttempts.length, 2); assert.equal(acceptanceAttempts[0], acceptanceAttempts[1]);
   await newcomer.locator('.op-line').filter({ hasText: 'newworker@example.test' }).waitFor();
   assert.equal(await newcomer.getByRole('button', { name: 'Crear dispensario de prueba', exact: true }).count(), 0);
   assert.equal(await newcomer.getByLabel('Correo del trabajador', { exact: true }).count(), 0);
   assert.equal(await newcomer.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
-  await newcomer.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await navigateSection(newcomer, 'Inventario');
   await newcomer.locator('.op-row').getByText('80 g', { exact: false }).waitFor();
   await newcomer.screenshot({ path: fileURLToPath(new URL('team-new-worker-mobile.png', output)), fullPage: true });
   await patient.route('**/api/operations-pilot', route => route.fulfill({ status: 403, json: {} }));

@@ -5,14 +5,22 @@ import { DispensingForm } from './DispensaryDaily';
 
 const date = (value: string) => new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago' });
 
-export default function DispensaryAttention({ data, search, disabled, readError, receiptRef, submit, history }: {
+export default function DispensaryAttention({ data, search, disabled, readError, receiptRef, submit, history, onDirtyChange }: {
   data: PilotSnapshot; search: string; disabled: boolean; readError: string; receiptRef: string | null;
   submit: (input: Record<string, unknown>) => void; history: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [treatmentRef, setTreatmentRef] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  useEffect(() => { onDirtyChange?.(dirty); return () => onDirtyChange?.(false); }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    if (!dirty && !disabled) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, disabled]);
   const heading = useRef<HTMLHeadingElement>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const scroll = useRef(0);

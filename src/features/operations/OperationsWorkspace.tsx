@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Activity, CalendarDays, ClipboardList, History, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
+import { Activity, CalendarDays, ClipboardList, History, House, Menu, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import CommercePanel from '../commerce/CommercePanel';
 import BatchCatalogDetails from '../commerce/BatchCatalogDetails';
@@ -29,6 +29,10 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const identity = useTrustLeafPrivyIdentity();
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
+  const initialSection = useRef(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const sectionBody = useRef<HTMLDivElement>(null);
+  const [attentionDirty, setAttentionDirty] = useState(false);
   const [search, setSearch] = useState('');
   const [managementView, setManagementView] = useState<'commerce' | 'team'>('commerce');
   const [commerceGuard, setCommerceGuard] = useState({ dirty: false, pending: false });
@@ -43,13 +47,17 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [historyView, setHistoryView] = useState<'deliveries' | 'movements'>('deliveries');
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
   const setTab = (next: string, target?: AgendaTarget) => {
+    if (next !== tab && data?.role === 'dispensary' && (busy || pending)) return;
+    if (next !== tab && attentionDirty && !window.confirm('Descartar los datos de esta entrega sin confirmar?')) return;
     if (!leaveCommerce()) return;
-    setSearch(''); setAgendaTarget(target); setSelectedTab(next);
+    setSearch(''); setAgendaTarget(target); setSelectedTab(next); setMenuOpen(false);
+    if (data?.role === 'dispensary') requestAnimationFrame(() => sectionBody.current?.focus({ preventScroll: true }));
     if (next !== tab && data?.role === 'dispensary') {
       setInventoryFilter('all'); setHistoryDate(''); setHistoryBatch(''); setHistoryView('deliveries');
     }
   };
   const openBatchHistory = (batchRef: string) => { setTab('history'); setHistoryBatch(batchRef); };
+  const openDailySection = (next: string) => { if (next === 'team') setManagementView('team'); setTab(next); };
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
@@ -96,6 +104,10 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         const result = await request(undefined, read.signal);
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
         if (result.synthetic !== true || !['doctor', 'patient', 'dispensary', 'admin'].includes(result.role)) throw new Error('Respuesta operativa no disponible.');
+        if (!initialSection.current) {
+          initialSection.current = true;
+          if (result.role === 'dispensary' && result.membership?.role === 'manager') setSelectedTab('home');
+        }
         setData(result); setReadError('');
       } catch (e) {
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
@@ -174,7 +186,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const historyLots = new Map((data?.deliveries ?? []).map(d => [d.batch_ref, `${d.product ?? 'Producto no disponible'} · ${d.lot_code ?? short(d.batch_ref)}`]));
   for (const b of data?.batches ?? []) historyLots.set(b.batch_ref, `${b.product} · ${b.lot_code}`);
   const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ['demo', 'POV de prueba']]
-    : role === 'dispensary' ? [['today', 'Atenciones'], ['inventory', 'Inventario'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'], ['history', 'Historial']]
+    : role === 'dispensary' ? [['home', 'Inicio'], ['today', 'Atenciones'], ['inventory', 'Inventario'], ['history', 'Historial'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
 
   return <section className={`tl-operations ${role === 'dispensary' ? 'op-dispensary' : ''} ${embedded ? '' : 'tl-operations-page'}`}>
@@ -183,7 +195,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name} · {data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
       <div className="op-toolbar"><span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
-        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" onClick={() => { if (leaveCommerce()) onSignOut(); }}><LogOut size={18}/></button>}</div></header>
+        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={role === 'dispensary' && disabled} onClick={() => { if (attentionDirty && !window.confirm('Descartar los datos de esta entrega sin confirmar?')) return; if (leaveCommerce()) onSignOut(); }}><LogOut size={18}/></button>}</div></header>
     <div className="op-content">
       {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
       {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
@@ -197,11 +209,24 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         <p>Tu cuenta sigue activa. Para incorporarte a un equipo, necesitas una nueva invitación del encargado. Las operaciones anteriores se conservan en el historial del dispensario.</p>
       </div>}
       {data?.joined && !withoutTeam && <>
-        {role === 'dispensary' && data.membership?.organization_ref && <DailyOverview data={data} navigate={setTab}/>}
-        {role === 'dispensary' && !data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && tab === 'today' && <Preparation data={data} navigate={setTab}/>}
-        <nav className="op-tabs" aria-label="Secciones del panel">{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}</nav>
-        {tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
-        {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} disabled={disabled} readError={readError} receiptRef={receiptRef} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
+        <div className={role === 'dispensary' ? 'op-workspace-layout' : undefined}>
+        <div className={role === 'dispensary' ? 'op-workspace-navigation' : undefined}>
+        {role === 'dispensary' && <button className="op-mobile-menu" aria-expanded={menuOpen} aria-controls="dispensary-sections" onClick={() => setMenuOpen(value => !value)}><Menu size={18}/><span>{tabs.find(([id]) => id === tab)?.[1]}</span><span>Menu</span></button>}
+        <nav id={role === 'dispensary' ? 'dispensary-sections' : undefined} className={`op-tabs ${role === 'dispensary' ? `op-sidebar ${menuOpen ? 'op-sidebar-open' : ''}` : ''}`} aria-label="Secciones del panel">{tabs.map(([id, label]) => {
+          const Icon = id === 'home' ? House : id === 'today' ? Users : id === 'inventory' ? Package : id === 'history' ? History : Settings;
+          return <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{role === 'dispensary' && <Icon size={18} aria-hidden="true"/>}{label}</button>;
+        })}</nav></div>
+        <div className="op-workspace-body" ref={sectionBody} tabIndex={role === 'dispensary' ? -1 : undefined}>
+        {role === 'dispensary' && tab === 'home' && <>
+          <h2>Inicio</h2>
+          {readError ? <p role="status">El resumen no esta disponible hasta recuperar los datos.</p> : <>
+            {data.membership?.organization_ref && <DailyOverview data={data} navigate={openDailySection}/>}
+            {!data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && <Preparation data={data} navigate={openDailySection}/>}
+          </>}
+          <button className="op-command" onClick={() => setTab('today')}><Users size={18}/>Atender pacientes</button>
+        </>}
+        {tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
+        {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
@@ -319,6 +344,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'demo' && role === 'admin' && <DemoPerspective/>}
         <p className="op-footer">{data.asOf ? `Actualizado: ${date(data.asOf)} · ` : ''}Datos ficticios · America/Santiago</p>
+        </div></div>
       </>}
     </div>
   </section>;
