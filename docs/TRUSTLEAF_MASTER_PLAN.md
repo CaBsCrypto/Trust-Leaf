@@ -2,10 +2,10 @@
 
 ## Incorporacion de encargados desde Admin: entrega en preparacion (2026-09-22)
 
-Rama `feat/dispensary-admin-onboarding`, basada en `4f389b2` (PR #38 aun
-abierto). Este apartado no declara cambios publicados ni invitaciones reales
-enviadas. La CI de #38 tiene un fallo pendiente en `operations-browser.mjs`
-(Gestionar lote); debe resolverse antes de integrar la base.
+Rama `feat/dispensary-admin-onboarding`, PR #39. Base #38 integrada como
+`e5ad8e4` tras repeticion aprobada de CI `35700012561` y preview. El primer
+intento tuvo un timeout de navegador en Gestionar lote; la regresion local y la
+repeticion completa pasaron. No se enviaron invitaciones reales.
 
 - Implementado localmente: Incorporaciones en el panel operativo admin, vistas
   Invitaciones/Solicitudes, confirmacion del destinatario y estados separados de
@@ -28,15 +28,19 @@ enviadas. La CI de #38 tiene un fallo pendiente en `operations-browser.mjs`
   y recorrido completo del piloto en navegador aprobadas. PostgreSQL 18 aislado
   en WSL, puerto 55439: aceptacion/aprobacion simultaneas, cancelacion frente a
   aceptacion y respuesta perdida aprobadas, sin duplicar solicitud ni membresia.
-  Los mismos casos quedaron en CI. Resultado alojado, revision, preview y
-  publicacion aun pendientes.
+  CI `35711385247` y preview `CpztMKtoyayFkJezmRGoxSAwNr32` aprobados para
+  `76c2c8b`. Integracion con la base requiere repetir los checks del merge.
 
 Activacion independiente: `TRUSTLEAF_DISPENSARY_ONBOARDING_ENABLED` (servidor)
 y `VITE_DISPENSARY_ONBOARDING_ENABLED` (build), deshabilitados por defecto.
-No se cambiaron flags remotos, cuentas, organizaciones, saldos ni el borrador
-mensual. La migracion NO se aplico remotamente. Antes: revisar historial,
-respaldo cifrado actualizado y restauracion aislada; despues publicar con flags
-en false, verificar version y solo entonces activar.
+Ambas banderas remotas preparadas explicitamente en false. Historial remoto
+contrastado hasta `20260921010000`; aplicada exclusivamente
+`20260922010000_dispensary_onboarding.sql` y registrada en el historial.
+Respaldo `D:\00 CODEX - OPENIA\.backups\trustleaf\application-20260922-063915.dpapi`:
+DPAPI CurrentUser, 42 tablas/222 filas restauradas en aislamiento;
+SHA256 `0D7D7D1B6552C523D178A392D5D17D63F0073F4BE132B55C5350B98B67B3C928`.
+Sin cambios a cuentas, organizaciones, saldos ni borrador mensual. Pendiente:
+publicar codigo con flags en false, verificar version y solo entonces activar.
 
 Primera prueba acompanada pendiente: comprobar compatibilidad de
 `brownsstudiocontact@gmail.com`, invitar desde Admin y completar/revisar con el
