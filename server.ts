@@ -126,6 +126,10 @@ async function startServer() {
     void consolidatedReadinessHandler({method:req.method,headers:req.headers,body:req.body,query:{__trustleaf_route:'team-invitations'}},res)
       .catch(()=>{if (!res.headersSent) res.status(503).json({code:'TEAM_UNAVAILABLE'});});
   });
+  app.all('/api/dispensary-onboarding', (req, res) => {
+    void consolidatedReadinessHandler({method:req.method,headers:req.headers,body:req.body,query:{__trustleaf_route:'dispensary-onboarding'}},res)
+      .catch(() => res.status(503).json({code:'ONBOARDING_UNAVAILABLE'}));
+  });
   app.all('/api/operations-pilot', (req, res) => {
     void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
       query: { __trustleaf_route: 'operations-pilot' } }, res)

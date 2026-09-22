@@ -1,5 +1,48 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Incorporacion de encargados desde Admin: entrega en preparacion (2026-09-22)
+
+Rama `feat/dispensary-admin-onboarding`, basada en `4f389b2` (PR #38 aun
+abierto). Este apartado no declara cambios publicados ni invitaciones reales
+enviadas. La CI de #38 tiene un fallo pendiente en `operations-browser.mjs`
+(Gestionar lote); debe resolverse antes de integrar la base.
+
+- Implementado localmente: Incorporaciones en el panel operativo admin, vistas
+  Invitaciones/Solicitudes, confirmacion del destinatario y estados separados de
+  correo y solicitud. Encargados solamente; equipo y medicos no se convierten.
+- API consolidada `/api/dispensary-onboarding`, identidad Privy actual, secretos
+  cifrados con contexto separado, cola persistente, reintento estable y categoria
+  Resend `dispensary_onboarding` verificada por el webhook existente.
+- Migracion nueva `20260922010000_dispensary_onboarding.sql`: borrador privado
+  versionado, decisiones con motivo, auditoria sin datos de formulario y alta
+  atomica de organizacion/membresia/participacion al aprobar. Un trigger bloquea
+  activacion por revision simulada antigua; esa cola ya no lista estos procesos.
+- Probado en PGlite: aceptacion repetida, identidad incompatible, borrador,
+  control de version, correcciones, rechazo, aprobacion repetida, cancelacion,
+  privacidad y bloqueo de aprobacion antigua. No sustituye concurrencia real.
+- Probado en navegador local con SQL: invitacion, aceptacion, conservacion de
+  cambios sin guardar al recuperar foco, recarga, correcciones y aprobacion hasta
+  Mi dispensario. Capturas a 360/390/768/1024/1440 px en
+  `scratch/operations-qa/onboarding/`; exclusivamente identidades sinteticas.
+- Tipos y compilacion local aprobados. Regresiones de invitaciones de trabajadores
+  y recorrido completo del piloto en navegador aprobadas. PostgreSQL 18 aislado
+  en WSL, puerto 55439: aceptacion/aprobacion simultaneas, cancelacion frente a
+  aceptacion y respuesta perdida aprobadas, sin duplicar solicitud ni membresia.
+  Los mismos casos quedaron en CI. Resultado alojado, revision, preview y
+  publicacion aun pendientes.
+
+Activacion independiente: `TRUSTLEAF_DISPENSARY_ONBOARDING_ENABLED` (servidor)
+y `VITE_DISPENSARY_ONBOARDING_ENABLED` (build), deshabilitados por defecto.
+No se cambiaron flags remotos, cuentas, organizaciones, saldos ni el borrador
+mensual. La migracion NO se aplico remotamente. Antes: revisar historial,
+respaldo cifrado actualizado y restauracion aislada; despues publicar con flags
+en false, verificar version y solo entonces activar.
+
+Primera prueba acompanada pendiente: comprobar compatibilidad de
+`brownsstudiocontact@gmail.com`, invitar desde Admin y completar/revisar con el
+usuario. Los datos de contacto pueden ser reales; datos clinicos e inventario
+siguen ficticios. Aprobacion de piloto no equivale a acreditacion sanitaria.
+
 Fecha de corte: 2026-09-14. Estado: piloto operativo integrado a main; respaldo
 restaurado, migracion aplicada y activacion alojada confirmada. Aceptacion
 del recorrido completo con usuarios pendiente.

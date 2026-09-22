@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { mkdir } from 'node:fs/promises';
+const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE + '/index.mjs').href);
+const base = process.env.OPERATIONS_TEST_URL ?? 'http://127.0.0.1:4325';
+assert.ok(/^http:\/\/127\.0\.0\.1:\d+$/.test(base));
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
+await mkdir('scratch/operations-qa/onboarding', { recursive: true });
+const admin = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+const manager = await browser.newPage({ viewport: { width: 390, height: 844 } });
+admin.on('dialog', d => void d.accept());
+manager.on('dialog', d => void d.accept());
+try {
+  await admin.goto(base + '/?onboardingAdmin&role=admin');
+  await admin.getByText('No hay invitaciones.', { exact: true }).waitFor();
+  await admin.getByLabel('Correo del encargado', { exact: true }).fill('newManager@example.test');
+  await admin.getByRole('button', {name:'Revisar invitacion',exact:true}).click();
+  await admin.getByRole('button', {name:'Confirmar envio',exact:true}).click();
+  await admin.getByRole('heading', {name:'newmanager@example.test',exact:true}).waitFor();
+  const mail = (await (await admin.request.get(base + '/__team-mail')).json()).find(m => m.tags?.some(t => t.value === 'dispensary_onboarding'));
+  assert.ok(mail);
+  const token = mail.text.match(/#dispensary-invite=([\w-]+)/)[1];
+  await manager.goto(base + '/dispensario?onboarding&role=newManager#dispensary-invite=' + token);
+  await manager.getByRole('heading', {name:'Invitacion para encargado',exact:true}).waitFor();
+  assert.ok(!manager.url().includes(token));
+  await manager.getByRole('checkbox').check();
+  await manager.getByRole('button', {name:'Aceptar invitacion',exact:true}).click();
+  await manager.getByRole('heading', {name:'Borrador',exact:true}).waitFor();
+  for (const [label, value] of [['Nombre del encargado','Encargado Demo'],['Telefono','+56000000000'],['Nombre comercial','Demo de incorporacion'],['Comuna','Comuna ficticia'],['Direccion de la sede','Direccion de pruebas 123'],['Descripcion de actividad','Pruebas de gestion sin atencion real']]) {
+    await manager.getByLabel(label, {exact:true}).fill(value);
+  }
+  await manager.evaluate(() => window.dispatchEvent(new Event('focus')));
+  assert.equal(await manager.getByLabel('Nombre del encargado',{exact:true}).inputValue(),'Encargado Demo');
+  await manager.getByRole('button',{name:'Guardar borrador',exact:true}).click();
+  await manager.getByRole('button',{name:'Revisar datos guardados',exact:true}).waitFor();
+  await manager.reload();
+  await manager.getByLabel('Nombre del encargado',{exact:true}).waitFor();
+  assert.equal(await manager.getByLabel('Nombre del encargado',{exact:true}).inputValue(),'Encargado Demo');
+  for (const width of [360,390,768,1024,1440]) {
+    await manager.setViewportSize({width,height:1000});
+    assert.equal(await manager.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),false,`overflow ${width}`);
+    await manager.screenshot({path:`scratch/operations-qa/onboarding/applicant-${width}.png`,fullPage:true});
+  }
+  await manager.getByRole('button',{name:'Revisar datos guardados',exact:true}).click();
+  await manager.getByRole('checkbox').check();
+  await manager.getByRole('button',{name:'Enviar solicitud a revision',exact:true}).click();
+  await manager.getByRole('heading',{name:'En revision',exact:true}).waitFor();
+  await admin.getByRole('button',{name:'Actualizar incorporaciones',exact:true}).click();
+  await admin.getByRole('tab',{name:'Solicitudes',exact:true}).click();
+  await admin.getByRole('button',{name:'Revisar solicitud',exact:true}).click();
+  await admin.getByLabel('Motivo de la decision').fill('Confirmar direccion de la sede');
+  await admin.getByRole('button',{name:'Solicitar correcciones',exact:true}).click();
+  await admin.getByText('Correcciones solicitadas',{exact:true}).waitFor();
+  await manager.getByRole('button',{name:'Actualizar solicitud',exact:true}).click();
+  await manager.getByRole('heading',{name:'Correcciones solicitadas',exact:true}).waitFor();
+  await manager.getByRole('button',{name:'Revisar datos guardados',exact:true}).click();
+  await manager.getByRole('checkbox').check();
+  await manager.getByRole('button',{name:'Enviar solicitud a revision',exact:true}).click();
+  await manager.getByRole('heading',{name:'En revision',exact:true}).waitFor();
+  await admin.getByRole('button',{name:'Actualizar incorporaciones',exact:true}).click();
+  await admin.getByRole('button',{name:'Aprobar piloto',exact:true}).click();
+  await admin.getByText('Aprobada',{exact:true}).waitFor();
+  await manager.getByRole('button',{name:'Actualizar solicitud',exact:true}).click();
+  await manager.getByRole('heading',{name:'Mi dispensario',exact:true}).waitFor();
+  await manager.getByText('Demo de incorporacion · Encargado',{exact:true}).waitFor();
+  await manager.reload();
+  await manager.getByText('Demo de incorporacion · Encargado',{exact:true}).waitFor();
+  await admin.screenshot({path:'scratch/operations-qa/onboarding/admin-approved.png',fullPage:true});
+  await manager.screenshot({path:'scratch/operations-qa/onboarding/manager-approved.png',fullPage:true});
+  console.log('PASS browser: invite, acceptance, private draft, unsaved focus, reload, corrections, approval, persistent manager and five viewport widths. Isolated data only.');
+} finally { await browser.close(); }

@@ -173,4 +173,28 @@ assert.equal(await sql(`select count(*) from trustleaf_private.commerce_receipts
 assert.equal(await sql(`select sum(quantity_mg) from trustleaf_private.pilot_movements where batch_ref=${literal(receiptResults[0].batchRef)};`), '100000');
 const recoveredReceipt = JSON.parse(await sql(commerceCommand('receive', receiptIntent)));
 assert.equal(recoveredReceipt.resourceRef, receiptResults[0].resourceRef, 'lost-response replay recovers same receipt');
-console.log('PASS: independent PostgreSQL sessions validate pilot and commerce receipt concurrency, idempotency and response loss. Dedicated test DB retained.');
+const onboard = (who, action, input) => `select public.trustleaf_dispensary_onboarding(${literal('did:privy:concurrency-' + who)},${literal(action)},${literal(JSON.stringify(input))}::jsonb);`;
+const onboardInvite = { invitationRef: randomUUID(), operationId: randomUUID(), intent: 'concurrent-onboarding', emailHash: 'd'.repeat(64), tokenHash: 'e'.repeat(64), emailCiphertext: 'synthetic-encrypted-email', payloadCiphertext: 'synthetic-encrypted-token' };
+await sql(onboard('admin','invite',onboardInvite));
+const onboardAccept = { tokenHash: onboardInvite.tokenHash, emailHashes: [onboardInvite.emailHash], consent: true };
+const accepted = await competing('pg_advisory_xact_lock(42826004)', [onboard('new-manager','accept',onboardAccept),onboard('new-manager','accept',onboardAccept)]);
+assert.equal(accepted.filter(r => r.status==='fulfilled').length,2);
+const application = JSON.parse(accepted[0].value).application;
+assert.equal(JSON.parse(accepted[1].value).application.applicationRef,application.applicationRef);
+const profile = { managerName:'Concurrent manager',phone:'+56000000000',businessName:'Concurrent onboarding',commune:'Fictional',address:'Synthetic 123',activity:'Synthetic pilot',contactEmail:'' };
+const savedApp = JSON.parse(await sql(onboard('new-manager','save-draft',{applicationRef:application.applicationRef,version:application.version,profile,operationId:randomUUID(),intent:'save'}))).application;
+const submittedApp = JSON.parse(await sql(onboard('new-manager','submit',{applicationRef:application.applicationRef,version:savedApp.version,consent:true,operationId:randomUUID(),intent:'submit'}))).application;
+const approveInput = {applicationRef:application.applicationRef,version:submittedApp.version,decision:'approve',reason:'',operationId:randomUUID(),intent:'approve'};
+const approvals = await competing('pg_advisory_xact_lock(42826004)',[onboard('admin','review',approveInput),onboard('admin','review',approveInput)]);
+assert.equal(approvals.filter(r => r.status==='fulfilled').length,2);
+assert.equal(JSON.parse(approvals[0].value).application.organizationRef,JSON.parse(approvals[1].value).application.organizationRef);
+assert.equal(JSON.parse(await sql(onboard('admin','review',approveInput))).application.organizationRef,JSON.parse(approvals[0].value).application.organizationRef,'lost response recovers exact organization');
+assert.equal(await sql(`select count(*) from trustleaf_private.pilot_memberships where organization_ref=${literal(JSON.parse(approvals[0].value).application.organizationRef)};`),'1');
+const cancelInvite = {...onboardInvite,invitationRef:randomUUID(),operationId:randomUUID(),intent:'cancel-race',emailHash:'f'.repeat(64),tokenHash:'a'.repeat(64)};
+await sql(onboard('admin','invite',cancelInvite));
+const cancellation = await competing('pg_advisory_xact_lock(42826004)',[
+  onboard('cancel-manager','accept',{tokenHash:cancelInvite.tokenHash,emailHashes:[cancelInvite.emailHash],consent:true}),
+  onboard('admin','cancel',{invitationRef:cancelInvite.invitationRef,operationId:randomUUID(),intent:'cancel'}),
+]);
+assert.equal(cancellation.filter(r=>r.status==='fulfilled').length,1,'accept or cancel wins, never both');
+console.log('PASS: independent PostgreSQL sessions validate pilot, commerce, onboarding acceptance/approval/cancellation, idempotency and response loss. Dedicated test DB retained.');

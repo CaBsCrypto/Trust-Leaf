@@ -1,5 +1,6 @@
 import { operationsDatabase } from '../sql/operations-db.mjs';
 import { executeTeamCommand } from '../../api/_lib/team-invitations.ts';
+import { executeOnboarding } from '../../api/_lib/dispensary-onboarding.ts';
 import { readActorDirectory } from '../../api/_lib/privy-actor-directory.ts';
 import { joinTeam } from '../sql/team-fixtures.mjs';
 
@@ -12,8 +13,9 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
     await joinTeam(db, subjects.dispensary, subjects.operator);
   }
   subjects.newWorker = 'did:privy:pilot-fixture-newWorker';
+  subjects.newManager = 'did:privy:pilot-fixture-newManager';
   const deliveries = [];
-  const env = { TRUSTLEAF_TEAM_INVITATIONS_ENABLED: 'true', TRUSTLEAF_OPERATIONS_PILOT_ENABLED: 'true', TEAM_INVITATION_ENCRYPTION_KEY: 'ab'.repeat(32),
+  const env = { TRUSTLEAF_DISPENSARY_ONBOARDING_ENABLED: 'true', TRUSTLEAF_TEAM_INVITATIONS_ENABLED: 'true', TRUSTLEAF_OPERATIONS_PILOT_ENABLED: 'true', TEAM_INVITATION_ENCRYPTION_KEY: 'ab'.repeat(32),
     SUPABASE_URL: 'https://fixture.invalid', SUPABASE_SECRET_KEY: 'fixture', PRIVY_APP_ID: 'fixture', PRIVY_APP_SECRET: 'fixture', RESEND_API_KEY: 'fixture' };
   const fetcher = async (url, init) => {
     const address = String(url);
@@ -35,13 +37,17 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
       try { return Response.json((await db.query('select public.trustleaf_team_invitations($1,$2,$3) as data', [payload.p_subject, payload.p_action, payload.p_input])).rows[0].data); }
       catch (e) { return Response.json({ code: e.code }, { status: 400 }); }
     }
+    if (address.endsWith('/trustleaf_dispensary_onboarding')) {
+      try { return Response.json((await db.query('select public.trustleaf_dispensary_onboarding($1,$2,$3) as data', [payload.p_subject, payload.p_action, payload.p_input])).rows[0].data); }
+      catch (e) { return Response.json({ code: e.code }, { status: 400 }); }
+    }
     throw new Error('Fixture rejected external request');
   };
   server.httpServer?.once('close', () => void db.close());
   server.middlewares.use(async (req, res, next) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     if (url.pathname === '/__team-mail') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(deliveries)); return; }
-    if (!['/api/agenda', '/api/operations-pilot', '/api/dispensary-commerce', '/api/team-invitations', '/api/auth/privy/admin/actors'].includes(url.pathname)) return next();
+    if (!['/api/agenda', '/api/operations-pilot', '/api/dispensary-commerce', '/api/team-invitations', '/api/dispensary-onboarding', '/api/auth/privy/admin/actors'].includes(url.pathname)) return next();
     res.setHeader('content-type', 'application/json'); res.setHeader('Cache-Control', 'no-store');
     const key = String(req.headers['privy-id-token'] ?? '').replace(/^fixture-/, '');
     if (!(key in subjects)) { res.statusCode = 401; res.end('{}'); return; }
@@ -61,6 +67,10 @@ export function operationsFixture() { return { name: 'operations-sql-fixture', a
           [subjects[key], command.action, command.input])).rows[0].data)); return;
       }
       const command = req.method === 'GET' ? url.pathname === '/api/agenda' ? { action: 'list', input: { from: url.searchParams.get('from'), to: url.searchParams.get('to') } } : { action: 'snapshot', input: {} } : JSON.parse(body);
+      if (url.pathname === '/api/dispensary-onboarding') {
+        const result = await executeOnboarding({ env, fetcher, token: `fixture-${key}`, command, verifier: { verify: async () => ({ subject: subjects[key], emails: [`${key}@example.test`] }) } });
+        res.end(JSON.stringify(result)); return;
+      }
       if (url.pathname === '/api/team-invitations') {
         const result = await executeTeamCommand({ env, fetcher, token: `fixture-${key}`, command, verifier: { verify: async () => ({ subject: subjects[key], emails: [`${key}@example.test`] }) } });
         res.end(JSON.stringify(result)); return;

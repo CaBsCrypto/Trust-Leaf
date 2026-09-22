@@ -71,7 +71,7 @@ export function verifiedTeamEmails(value: unknown): string[] {
   }
   return [...emails];
 }
-async function currentEmails(subject: string, env: Env, fetcher: typeof fetch): Promise<string[]> {
+export async function currentEmails(subject: string, env: Env, fetcher: typeof fetch): Promise<string[]> {
   if (!/^did:privy:[A-Za-z0-9._:-]{6,500}$/.test(subject) || !env.PRIVY_APP_ID || !env.PRIVY_APP_SECRET) throw teamFailure(503,'TEAM_UNAVAILABLE');
   const response = await fetcher(`https://api.privy.io/v1/users/${encodeURIComponent(subject)}`, {
     headers:{authorization:`Basic ${Buffer.from(`${env.PRIVY_APP_ID}:${env.PRIVY_APP_SECRET}`).toString('base64')}`,'privy-app-id':env.PRIVY_APP_ID},signal:AbortSignal.timeout(5000),
@@ -169,8 +169,10 @@ export async function teamMailWebhook(request: Request, env: Env, fetcher: typeo
   try {
     // Resend webhooks cover the whole account, including unrelated applications.
     if (state && 'email_id' in event.data && 'from' in event.data && event.data.from===TEAM_MAIL_FROM
-      && 'tags' in event.data && event.data.tags?.app==='trustleaf' && event.data.tags?.category==='operator_invitation') {
-      await teamRpc(env,fetcher,'trustleaf_team_mail_event',{p_event_id:request.headers.get('svix-id'),p_provider_ref:event.data.email_id,p_state:state});
+      && 'tags' in event.data && event.data.tags?.app==='trustleaf'
+      && ['operator_invitation','dispensary_onboarding'].includes(event.data.tags?.category ?? '')) {
+      const rpc = event.data.tags?.category==='dispensary_onboarding'?'trustleaf_onboarding_mail_event':'trustleaf_team_mail_event';
+      await teamRpc(env,fetcher,rpc,{p_event_id:request.headers.get('svix-id'),p_provider_ref:event.data.email_id,p_state:state});
     }
     return Response.json({received:true},{headers});
   } catch { return Response.json({code:'TEAM_UNAVAILABLE'},{status:503,headers}); }

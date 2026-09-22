@@ -56,6 +56,7 @@ jobs:
           npm run test:visual-qa-regressions
           npm run qa:operations-pilot
           npm run test:team-invitations
+          npm run test:dispensary-onboarding
           npm run test:dispensary-lifecycle
           node --experimental-strip-types tests/dispensary-commerce.test.ts
           node tests/sql/dispensary-commerce.mjs
@@ -90,7 +91,7 @@ jobs:
       - name: Build disabled and enabled pilot
         run: |
           VITE_OPERATIONS_PILOT_ENABLED=false npm run build
-          VITE_OPERATIONS_PILOT_ENABLED=true VITE_COMMERCE_CATALOG_ENABLED=true npm run build
+          VITE_OPERATIONS_PILOT_ENABLED=true VITE_COMMERCE_CATALOG_ENABLED=true VITE_DISPENSARY_ONBOARDING_ENABLED=true npm run build
       - name: Browser integration with synthetic identities
         run: |
           npm install --prefix /tmp/trustleaf-browser --no-package-lock playwright@1.58.2
@@ -107,6 +108,7 @@ jobs:
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/dispensary-attention-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/dispensary-daily-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/dispensary-home-browser.mjs
+          PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium OPERATIONS_TEST_URL=http://127.0.0.1:4321 node tests/ui/dispensary-onboarding.browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/agenda-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/calendar-agenda-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/calendar-operations-browser.mjs
