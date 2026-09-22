@@ -1434,3 +1434,31 @@ fases 0-7 ni la presentacion acompanada.
 - Siguiente entrega: Compras sobre la recepcion atomica existente. Documentos,
   caja, conteos y reportes siguen pendientes. Incidencia del selector de fecha
   y validaciones de invitaciones permanecen separadas.
+
+### Suite diaria: navegacion por rol, 2026-09-22
+
+- Aclaracion del usuario: nueva cuenta para el primer dispensario real, no otra
+  identidad suya ni traslado de B. Correo del encargado aun no proporcionado.
+  Alta/aprobacion e invitaciones utilizaran los flujos actuales; datos de la
+  demostracion siguen ficticios. No se crearon cuentas ni organizaciones remotas.
+- Implementado en rama feat/dispensary-daily-workspace: Inicio por defecto para
+  encargado con membresia, Atenciones para operador, barra lateral desde 1024 px
+  y menu en anchos menores. Identidad, organizacion y piloto permanecen visibles.
+- Inicio reutiliza datos persistidos: permisos vigentes, stock, actividad y
+  equipo; vencimientos a 30 dias. No muestra metricas si falla la lectura.
+  Preparacion permanece plegada y los accesos a equipo abren Equipo, no catalogo.
+- Proteccion de borrador de Atenciones al salir de seccion/cerrar sesion y aviso
+  al recargar; una entrega incierta conserva su reintento. Sin cambios API/SQL.
+- PASS local: tipos, build (avisos heredados Privy/chunks), pruebas de Inicio,
+  Atenciones e Inventario/Historial con ambos roles en 360/390/768/1024/1440.
+  PASS comercio aislado SQL: producto, proveedor, recepcion, respuesta perdida,
+  reintento y restricciones del operador. Capturas en scratch/operations-qa.
+- POV local 4322 reiniciado con fixture temporal nueva; no equivale a demo
+  durable. Esta entrega no implementa Compras, documentos, Caja ni Conteos.
+  Esos modulos mantienen el orden y las puertas de salida de la hoja de ruta.
+- CI, preview, publicacion y recorrido del primer dispensario pendientes del
+  commit de esta entrega; no confundir esta evidencia local con produccion.
+- PASS regresion integral browser + SQL aislado tras adaptar accesos al menu:
+  cuatro roles, invitaciones/reincorporacion, permisos, citas, entregas parciales,
+  recuperacion de errores, reconexion y cambio de cuenta. No hubo escrituras
+  publicadas para ejecutar estas pruebas.

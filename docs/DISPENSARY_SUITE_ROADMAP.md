@@ -16,7 +16,7 @@ the delivery checklist, not a claim of production readiness.
 
 ## Phase 1: catalog, suppliers, receipt
 
-Implemented on feature branch:
+Published through PR #37 on main a7102ec (2026-09-21):
 - Separate typed commerce contracts and /api/dispensary-commerce routing.
 - Private products, suppliers, batch links, receipts and operation journal.
 - Organization-scoped pagination; manager-only supplier contacts and costs.
@@ -27,16 +27,28 @@ Implemented on feature branch:
 - Local SQL-backed demonstration and both-role responsive browser tests.
 
 Remaining before Phase 1 closure:
-- Independent PostgreSQL concurrency, full CI and preview review.
-- Expand browser negative scenarios: removal, uncertain response, pagination,
-  supplier archive and error recovery; confirm keyboard/focus behavior.
-- Review long-list selection and display of linked legacy batches in Inventory.
-- Remote migration history, encrypted backup and isolated restoration approval.
-- Apply ONLY 20260921010000_dispensary_commerce.sql after the gates pass;
-  the monthly quota draft is excluded.
-- Publish disabled, verify hosted API, then explicitly enable the demo module.
 - Create hosted demo organization through approved panel identities, never by
   copying production clinical data or inventing accounts.
+- Validate hosted writes for both roles without changing B. CI, independent
+  PostgreSQL concurrency, preview, migration, encrypted backup restoration,
+  activation and authenticated hosted reads already passed; see master evidence.
+
+## First customer onboarding and daily navigation (2026-09-22)
+
+- User clarified that the new account belongs to the first actual dispensary.
+  Do not invent email addresses or reuse B identities. Await their manager email
+  and explicit onboarding instruction; manager applies and admin approves, then
+  organization creation and operator invitation use existing panels.
+- Real authentication does not authorize real clinical or commercial operations.
+  Demonstration records remain synthetic. No real patient profile is required to
+  showcase management; use an agreed synthetic patient account for the full flow.
+- Local navigation increment: manager with membership starts at Inicio; operator
+  starts at Atenciones. Desktop sidebar and mobile menu share existing sections.
+  Hide unimplemented modules. Read errors hide overview metrics, not fake zeros.
+- Attention drafts require confirmation before section changes or sign-out;
+  uncertain delivery writes remain recoverable. Commerce keeps its existing guard.
+- Durable customer onboarding remains pending while account details are unknown.
+  This does not block isolated development of purchases, documents or cash.
 
 ## Phase 2: purchase orders
 

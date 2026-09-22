@@ -9,8 +9,6 @@
 .op-dispensary .op-daily-metrics strong { flex-shrink: 0; }
 .op-dispensary .op-daily-alert { padding: 6px 8px; font-size: 12px; gap: 6px; }
 .op-dispensary .op-daily-metrics strong { font-size: 18px; margin-top: 2px; }
-.op-dispensary nav.op-tabs { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; }
-.op-dispensary nav.op-tabs button { min-width: 0; padding: 8px 2px; font-size: 13px; }
 .op-dispensary .op-search { flex-direction: column; align-items: stretch; gap: 6px; margin: 12px 0; }
 .op-dispensary .op-search input { max-width: 480px; }
 .op-attention { display: grid; grid-template-columns: minmax(260px, 2fr) minmax(0, 3fr); gap: 24px; }
@@ -115,3 +113,24 @@
 .tl-operations .op-check input { width: 18px; height: 18px; flex: 0 0 18px; padding: 0; margin-top: 2px; }
 .tl-operations h4, .op-line > span { overflow-wrap: anywhere; min-width: 0; }
 @media(max-width: 600px) { .op-content,.op-header { padding: 16px; } .op-header h1 { font-size: 22px; } .op-form label { flex-basis: 100%; } .op-search { align-items: flex-start; flex-direction: column; } .op-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+.op-dispensary .op-content { max-width: 1440px; }
+.op-workspace-layout { display: grid; grid-template-columns: 184px minmax(0,1fr); gap: 28px; }
+.op-workspace-body { min-width: 0; }
+.op-workspace-navigation { min-width: 0; }
+.op-dispensary .op-sidebar { display: flex; flex-direction: column; gap: 6px; padding: 0 16px 0 0; border: 0; border-right: 1px solid #dce2df; position: sticky; top: 16px; }
+.op-dispensary .op-sidebar button { justify-content: flex-start; gap: 10px; min-height: 46px; text-align: left; border: 0; border-left: 3px solid transparent; border-radius: 4px; }
+.op-dispensary .op-sidebar button[aria-selected=true] { border-left-color: #258054; background: #edf5f0; }
+.op-dispensary .op-sidebar svg { flex-shrink: 0; }
+.op-dispensary .op-mobile-menu { display: none; }
+.op-dispensary .op-workspace-body > h2:first-child { margin-top: 0; }
+.op-dispensary .op-workspace-body > .op-search:first-child { margin-top: 0; }
+@media(max-width: 1023px) {
+  .op-workspace-layout { display: block; }
+  .op-workspace-navigation { margin-bottom: 20px; }
+  .op-dispensary .op-mobile-menu { display: flex; min-height: 46px; width: 100%; gap: 10px; padding: 10px 12px; }
+  .op-mobile-menu span:first-of-type { flex: 1; text-align: left; font-weight: 600; }
+  .op-mobile-menu span:last-child { font-size: 12px; color: #58635e; }
+  .op-dispensary .op-sidebar { display: none; position: static; border: 0; padding: 8px 0; }
+  .op-dispensary .op-sidebar-open { display: flex; }
+}
