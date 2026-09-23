@@ -216,7 +216,8 @@ interaccion, no preferencia visual ni autonomia de una persona.
 5. Recuperar REC-001: cantidad, producto, lote y responsable; abrir historial del lote.
 6. Revisar error, vacio y carga sin interpretarlos como operaciones completadas.
 
-Decision visual: **pendiente del usuario**. No existe especificacion final de
+Decision inicial: **mezcla A + B elegida por el usuario**; propuesta C local.
+La aprobacion visual del resultado sigue pendiente. No existe especificacion final de
 implementacion elegida hasta esa decision. Tras elegir: comprobar tambien
 360/768/1024, teclado, reconexion/cambio de cuenta con la integracion real,
 CI/preview y pruebas oficiales sin nuevas entregas.
@@ -252,3 +253,21 @@ No se validaron permisos reales, revocacion remota, persistencia ni latencia de
 Supabase con estas maquetas. No se hizo CI/preview remota ni publicacion.
 La evaluacion de uso y eleccion A/B/mezcla siguen pendientes; no cerrar esta
 fase como direccion elegida ni empezar el redisenio conectado por inferencia.
+
+### Iteracion C: mezcla elegida, revision visual pendiente
+
+El usuario eligio combinar A y B. C es ahora la entrada predeterminada del
+laboratorio; A/B se conservan. Escritorio desde 1024 px mantiene navegacion
+lateral y lista/detalle; por debajo, menu y etapas consecutivas. Cabecera,
+indicadores y registros mas compactos; detalle prioriza permiso y cantidades.
+Los estilos nuevos estan limitados a `.direction-C`.
+
+Validacion de esta iteracion: tipos y compilacion local aprobados; QA de A/B/C
+en ambos roles y 360/390/768/1024/1440 px (30 combinaciones), sin solicitudes
+operativas ni errores JS. Capturas comparables en la misma carpeta de evidencia;
+detalle C revisado visualmente en 390 y 1440 px. Saldo y stock siguen siendo
+fixtures sin escrituras. No hay despliegue ni validacion de permisos reales.
+
+La eleccion inicial anterior queda resuelta, pero la aceptacion de C por el
+usuario no se infiere de las pruebas. No conectar ni publicar el redisenio
+hasta revisar esta propuesta y planificar su integracion.

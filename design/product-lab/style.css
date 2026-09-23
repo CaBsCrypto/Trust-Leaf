@@ -282,4 +282,52 @@ dialog p { font-size: 14px; color: var(--muted); }
   .state-surface { min-height: 300px; padding: 40px 20px; }
   footer { margin-top: 28px; }
 }
+.direction-C .app-shell { grid-template-columns: 200px minmax(0,1fr); }
+.direction-C .navigation { padding: 22px 12px; }
+.direction-C .brand { font-size: 22px; padding-bottom: 24px; }
+.direction-C .identity { padding: 12px 24px; }
+.direction-C main { padding: 22px 24px 16px; }
+.direction-C h1 { font-size: 26px; margin-bottom: 6px; }
+.direction-C .page-heading { margin-bottom: 18px; gap: 16px; }
+.direction-C .page-heading p { margin-bottom: 0; font-size: 13px; }
+.direction-C .metric { padding: 14px 18px; }
+.direction-C .metric strong { font-size: 28px; }
+.direction-C .home-work { margin-top: 24px; }
+.direction-C .work-item { padding-block: 16px; }
+.direction-C .attention { grid-template-columns: minmax(270px,.85fr) minmax(0,1.15fr); gap: 24px; }
+.direction-C .patient-row { padding: 15px 12px; }
+.direction-C .patient-detail { border: 0; border-left: 1px solid var(--line); background: transparent; padding: 0 0 0 24px; }
+.direction-C .detail-top { margin-bottom: 12px; }
+.direction-C .balance { padding: 18px; margin: 18px 0; background: #eaf2ed; border: 0; }
+.direction-C .balance strong { font-size: 28px; }
+.direction-C .form-heading { margin-bottom: 16px; }
+.direction-C form { padding-bottom: 18px; }
+.direction-C .back { margin-bottom: 16px; }
+.direction-C .steps { display: none; }
+.direction-C .stock-row,.direction-C .receipt-row { padding-block: 16px; }
+.direction-C footer { margin-top: 24px; }
+.direction-C input[type=search]::-webkit-search-cancel-button { display: none; }
+@media(max-width:1023px) {
+  .direction-C .app-shell { display: block; }
+  .direction-C .navigation { padding: 12px 20px; }
+  .direction-C .brand { padding: 0; }
+  .direction-C .attention { display: block; }
+  .direction-C .patient-detail { padding: 0; border: 0; }
+  .direction-C .steps { display: flex; justify-content: space-between; gap: 10px; list-style: none; padding: 0 0 16px; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+  .direction-C .detail-top { display: none; }
+}
+@media(max-width:600px) {
+  .direction-C .variant button { padding-inline: 5px; font-size: 11px; }
+  .direction-C .navigation { padding: 10px 16px; }
+  .direction-C .identity { padding: 10px 16px; }
+  .direction-C main { padding: 18px 16px 12px; }
+  .direction-C h1 { font-size: 24px; }
+  .direction-C .page-heading { gap: 12px; }
+  .direction-C .metric { padding: 10px 12px; }
+  .direction-C .metric strong { font-size: 25px; }
+  .direction-C .balance { padding: 16px 12px; }
+  .direction-C .balance strong { font-size: 24px; }
+  .direction-C .patient-row { gap: 8px; }
+  .direction-C .avatar { display: none; }
+}
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

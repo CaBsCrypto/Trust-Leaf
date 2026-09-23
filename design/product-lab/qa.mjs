@@ -9,7 +9,7 @@ await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const results = [];
 try {
-  for (const direction of ['A', 'B']) for (const width of [360, 390, 768, 1024, 1440]) {
+  for (const direction of ['A', 'B', 'C']) for (const width of [360, 390, 768, 1024, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage();
     const violations = [], errors = [];
@@ -18,7 +18,8 @@ try {
     });
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://127.0.0.1:4330/');
-    await page.getByRole('button', { name: direction === 'A' ? 'A · Operativo' : 'B · Por tareas', exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: 'C · Combinada', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.getByRole('button', { name: { A: 'A · Operativo', B: 'B · Por tareas', C: 'C · Combinada' }[direction], exact: true }).click();
     async function fit(label) {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${direction}/${width}/${label}: page overflow`);
     }

@@ -2,6 +2,10 @@
 
 ## Mapa de producto y alternativas de experiencia (2026-09-23)
 
+Iteracion local C: mezcla A+B elegida por el usuario, ahora predeterminada en
+el laboratorio. A/B permanecen disponibles. QA de 30 combinaciones aprobada;
+tipos y build local aprobados. Aprobacion visual de C e integracion pendientes.
+
 [Mapa del producto, recorridos y backlog de experiencia](PRODUCT_EXPERIENCE_MAP.md).
 Base de esta revision: `a995f44`. Las evidencias historicas no sustituyen una
 comprobacion actual de produccion. El acceso final de Browns como encargado
