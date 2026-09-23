@@ -1,5 +1,18 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Mapa de producto y alternativas de experiencia (2026-09-23)
+
+[Mapa del producto, recorridos y backlog de experiencia](PRODUCT_EXPERIENCE_MAP.md).
+Base de esta revision: `a995f44`. Las evidencias historicas no sustituyen una
+comprobacion actual de produccion. El acceso final de Browns como encargado
+permanece pendiente de verificar.
+
+La propuesta visual anterior se conserva en `feat/dispensary-visual-preview`
+(`58b2839`), descartada y sin publicar. Las alternativas A/B viven exclusivamente
+en `design/product-lab`, con datos sinteticos y sin APIs operativas. La direccion
+visual y su implementacion conectada requieren revision y eleccion explicita.
+No se modifican B, Browns, saldos, migraciones ni el borrador mensual.
+
 ## Incorporacion de encargados desde Admin: entrega en preparacion (2026-09-22)
 
 Rama `feat/dispensary-admin-onboarding`, PR #39. Base #38 integrada como
