@@ -1,5 +1,37 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Incorporaciones publicadas: validacion oficial en curso (2026-09-23)
+
+- PR #39 integrado en main como `a995f4443a301686c8e6ce1bfdaf73f33d3e8e0c`.
+  Revision final `ebf766e`: CI `35712478963` y preview aprobados antes del merge.
+- Primera publicacion con ambas banderas desactivadas:
+  `dpl_E3QmAny1r2VcYcyGt9gL7fvKcEVQ`. En el dominio oficial, lectura sin
+  sesion devuelve 401; con token de prueba devuelve 503 ONBOARDING_DISABLED.
+- Activacion de servidor e interfaz mediante un nuevo despliegue del mismo
+  codigo: `dpl_8XZiTuiPF4MBFjTzorNpCk5NkBtd`, Ready y asociado a
+  `https://www.trustleaf.org`. Ambas banderas de Incorporaciones en true.
+- Comprobaciones oficiales tras activar: sin token 401 AUTH_REQUIRED; token
+  invalido 401; Cache-Control no-store, private. Webhook con firma falsa devuelve
+  400 SIGNATURE_INVALID. No se enviaron invitaciones ni se guardaron solicitudes.
+- Historial remoto consultado: `20260922010000` ya registrada; no se repitio
+  ninguna migracion. Se conserva el respaldo restaurado documentado abajo.
+- La sesion inicialmente abierta no tenia permisos de admin y fue rechazada.
+  Tras ingreso del usuario como admin@trustleaf.org, Incorporaciones carga
+  Invitaciones y Solicitudes vacias sin error; recarga conserva acceso. Revision
+  de escritorio y viewport 390x844: formulario legible y controles sin solaparse.
+  No se ingresaron destinatarios ni se ejecutaron escrituras desde el panel.
+- CI de main `35813471991` aprobada: tipos, regresiones, PostgreSQL independiente,
+  compilacion con piloto desactivado/activado y recorridos de navegador.
+- El directorio oficial ya muestra brownsstudiocontact@gmail.com como dispensario
+  activo. No asumir que es una cuenta nueva: antes de invitar, comprobar su
+  membresia y compatibilidad o elegir otra identidad con el usuario. No se
+  convirtio ni reinicio esta cuenta. Recorrido real de envio/aceptacion/revision
+  y comprobacion de acceso con las otras cuentas existentes siguen pendientes.
+
+No se modificaron B, saldos, inventario, equipo ni el borrador mensual. Antes de
+invitar a `brownsstudiocontact@gmail.com`, retomar la prueba acompanada y comprobar
+compatibilidad. El usuario completa sus propios datos y verifica su correo.
+
 ## Incorporacion de encargados desde Admin: entrega en preparacion (2026-09-22)
 
 Rama `feat/dispensary-admin-onboarding`, PR #39. Base #38 integrada como
