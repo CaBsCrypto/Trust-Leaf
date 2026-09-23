@@ -5,6 +5,7 @@
     }
   },
   "rewrites": [
+    { "source": "/api/dispensary-onboarding", "destination": "/api/stellar/readiness?__trustleaf_route=dispensary-onboarding" },
     { "source": "/api/team-invitations", "destination": "/api/stellar/readiness?__trustleaf_route=team-invitations" },
     { "source": "/api/operations-pilot", "destination": "/api/stellar/readiness?__trustleaf_route=operations-pilot" },
     { "source": "/api/dispensary-commerce", "destination": "/api/stellar/readiness?__trustleaf_route=dispensary-commerce" },

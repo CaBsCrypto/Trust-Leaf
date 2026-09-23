@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Activity, CalendarDays, ClipboardList, History, House, Menu, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
+import AdminOnboarding from '../onboarding/AdminOnboarding';
 import CommercePanel from '../commerce/CommercePanel';
 import BatchCatalogDetails from '../commerce/BatchCatalogDetails';
 import AdminOrganizationTeams from './AdminOrganizationTeams';
@@ -185,7 +186,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   }).sort((a,b) => b.created_at.localeCompare(a.created_at) || a.movement_ref.localeCompare(b.movement_ref));
   const historyLots = new Map((data?.deliveries ?? []).map(d => [d.batch_ref, `${d.product ?? 'Producto no disponible'} · ${d.lot_code ?? short(d.batch_ref)}`]));
   for (const b of data?.batches ?? []) historyLots.set(b.batch_ref, `${b.product} · ${b.lot_code}`);
-  const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ['demo', 'POV de prueba']]
+  const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ...(import.meta.env.VITE_DISPENSARY_ONBOARDING_ENABLED === 'true' ? [['onboarding', 'Incorporaciones']] : []), ['demo', 'POV de prueba']]
     : role === 'dispensary' ? [['home', 'Inicio'], ['today', 'Atenciones'], ['inventory', 'Inventario'], ['history', 'Historial'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
 
@@ -225,7 +226,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           </>}
           <button className="op-command" onClick={() => setTab('today')}><Users size={18}/>Atender pacientes</button>
         </>}
-        {tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
+        {tab === 'onboarding' && role === 'admin' && <AdminOnboarding/>}
+        {tab !== 'onboarding' && tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
         {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}

@@ -1,0 +1,20 @@
+.onboarding { min-width: 0; }
+.onboarding-heading, .onboarding-invite { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+.onboarding-heading { align-items: center; justify-content: space-between; }
+.onboarding label { display: grid; gap: 6px; font-size: 14px; }
+.onboarding .op-check { display: flex; align-items: start; }
+.onboarding input:not([type=checkbox]), .onboarding textarea { width: 100%; min-width: 0; border: 1px solid #aab5b2; border-radius: 4px; padding: 10px; font: inherit; background: #fff; color: #172923; }
+.onboarding textarea { min-height: 100px; resize: vertical; }
+.onboarding-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; max-width: 850px; }
+.onboarding-form .op-toolbar { grid-column: 1 / -1; }
+.onboarding-invite { margin: 20px 0; }
+.onboarding-invite label { flex: 1; min-width: 200px; }
+.onboarding-row { border-bottom: 1px solid #d5dfda; padding: 16px 0; overflow-wrap: anywhere; }
+.onboarding h3 { font-size: 17px; margin: 0 0 8px; }
+.onboarding-review { border-left: 3px solid #26755a; background: #f2f7f4; padding: 16px; margin: 16px 0; overflow-wrap: anywhere; }
+.onboarding-details { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.onboarding-details dt { color: #53675e; font-size: 13px; }
+.onboarding-details dd { margin: 4px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.onboarding .op-command { min-height: 44px; white-space: normal; }
+.onboarding :focus-visible { outline: 3px solid #177a9c; outline-offset: 3px; }
+@media(max-width:600px) { .onboarding-form, .onboarding-details { grid-template-columns: minmax(0,1fr); } .onboarding-invite { align-items: stretch; flex-direction: column; } }

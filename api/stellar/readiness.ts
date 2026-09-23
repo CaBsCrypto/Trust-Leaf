@@ -15,6 +15,13 @@ import { googleCalendarHandler } from '../_lib/google-calendar-handler.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+  if (route === 'dispensary-onboarding') {
+    res.setHeader('Cache-Control','no-store, private');
+    try {
+      const { dispensaryOnboardingHandler } = await import('../_lib/dispensary-onboarding.js');
+      return await dispensaryOnboardingHandler(req,res,process.env,createPrivyIdentityVerifier(process.env));
+    } catch { return res.status(503).json({code:'ONBOARDING_UNAVAILABLE'}); }
+  }
   if (route === 'dispensary-commerce') {
     const { dispensaryCommerceHandler } = await import('../_lib/dispensary-commerce.js');
     return dispensaryCommerceHandler(req, res, process.env, createPrivyIdentityVerifier(process.env));
