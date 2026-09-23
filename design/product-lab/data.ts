@@ -4,7 +4,7 @@ export const patients = [
   { id: 'P-307', name: 'Perfil de prueba pendiente', assigned: 30000, used: 0, permission: 'Hasta 24 sep, 12:00', initials: 'P' },
 ] as const;
 export const lots = [
-  { id: 'ALB-024', product: 'Flor Alba', stock: 60000, state: 'Disponible', expires: '15 dic 2026' },
+  { id: 'ALB-024', product: 'Flor Cordillera', stock: 60000, state: 'Disponible', expires: '15 dic 2026' },
   { id: 'NOR-018', product: 'Flor Norte', stock: 25000, state: 'Cuarentena', expires: '30 oct 2026' },
   { id: 'SUR-009', product: 'Flor Sur', stock: 12000, state: 'Vencido', expires: '20 sep 2026' },
 ] as const;

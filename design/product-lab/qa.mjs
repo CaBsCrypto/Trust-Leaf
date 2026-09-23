@@ -9,7 +9,7 @@ await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const results = [];
 try {
-  for (const direction of ['A', 'B', 'C']) for (const width of [360, 390, 768, 1024, 1440]) {
+  for (const direction of ['A', 'B', 'C', 'D']) for (const width of [360, 390, 768, 1024, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage();
     const violations = [], errors = [];
@@ -18,14 +18,20 @@ try {
     });
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://127.0.0.1:4330/');
-    assert.equal(await page.getByRole('button', { name: 'C · Combinada', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.getByRole('button', { name: { A: 'A · Operativo', B: 'B · Por tareas', C: 'C · Combinada' }[direction], exact: true }).click();
+    assert.equal(await page.locator('.lab-bar').isVisible(), false);
+    await page.getByLabel('Configuración del prototipo', { exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: 'D · Clínica', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.getByRole('button', { name: { A: 'A · Operativo', B: 'B · Por tareas', C: 'C · Combinada', D: 'D · Clínica' }[direction], exact: true }).click();
     async function fit(label) {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${direction}/${width}/${label}: page overflow`);
     }
     async function shot(label) {
       await fit(label);
-      if ([390,1440].includes(width)) await page.screenshot({ path: fileURLToPath(new URL(`${direction}-${width}-${label}.png`, output)), fullPage: true });
+      if ([390,1440].includes(width)) {
+        await page.getByLabel('Configuración del prototipo', { exact: true }).click();
+        await page.screenshot({ path: fileURLToPath(new URL(`${direction}-${width}-${label}.png`, output)), fullPage: true });
+        await page.getByLabel('Configuración del prototipo', { exact: true }).click();
+      }
     }
     async function navigate(name) {
       const menu = page.getByRole('button', { name: /Jornada|Atender|Existencias|Comprobantes/ }).filter({ has: page.locator('svg.lucide-menu') });

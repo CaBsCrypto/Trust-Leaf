@@ -1,8 +1,10 @@
 # Laboratorio de experiencia Trust Leaf
 
-Prototipos A/B/C aislados. Misma informacion sintetica y mismas tareas.
-C combina la navegacion de A y la claridad del detalle de B; abre por defecto.
-A y B permanecen disponibles. La aprobacion visual de C sigue pendiente.
+Prototipos A/B/C/D aislados. Misma informacion sintetica y mismas tareas.
+D abre por defecto: minimalismo clinico, navegacion clara y vidrio sutil.
+A/B/C permanecen disponibles. La aprobacion visual de D sigue pendiente.
+Los controles A/B/C, rol y estado estan plegados en Configuracion del prototipo
+al pie de la pagina, fuera de la cabecera y navegacion de trabajo.
 No hay autenticacion, fetch, almacenamiento local ni escrituras. Los estados
 se reinician al recargar. La barra LAB es de evaluacion, no parte del producto.
 

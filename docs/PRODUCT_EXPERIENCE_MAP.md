@@ -271,3 +271,24 @@ fixtures sin escrituras. No hay despliegue ni validacion de permisos reales.
 La eleccion inicial anterior queda resuelta, pero la aceptacion de C por el
 usuario no se infiere de las pruebas. No conectar ni publicar el redisenio
 hasta revisar esta propuesta y planificar su integracion.
+
+### Iteracion D: minimalismo clinico
+
+Direccion solicitada por el usuario para todas las vistas locales: lateral
+claro, grises neutros, verde puntual, cabecera y menu movil con vidrio al 92%
+y desenfoque de 12 px; fallback blanco solido. Datos/formularios sin vidrio.
+Estilos aislados en `clinical.css`, encabezados de 24 px, controles de 44 px,
+textos secundarios de al menos 12 px en las superficies de trabajo.
+Se conserva Flor Cordillera. Los controles de evaluacion quedan plegados al pie.
+
+Tipos y build del laboratorio aprobados. QA de A/B/C/D con ambos roles y cinco
+anchos (40 combinaciones): navegacion, busqueda, revision sin ejecutar,
+descarte/Escape/retorno de foco, filtros, recibos, error/carga/vacio, cero
+solicitudes externas u operativas y sin desbordamiento horizontal.
+Capturas de las cuatro vistas en 390/1440 bajo `scratch/product-lab-evidence`.
+Contraste calculado de texto secundario, navegacion, permiso, accion primaria
+y deshabilitado: 5.31:1 a 7.89:1. Esto no constituye una auditoria WCAG integral.
+Movimiento reducido probado; revision visual manual en escritorio y movil.
+
+D queda abierta por defecto para evaluacion humana, no aprobada por inferencia.
+No hay cambios de API, permisos, migraciones, datos reales ni publicacion.

@@ -2,6 +2,11 @@
 
 ## Mapa de producto y alternativas de experiencia (2026-09-23)
 
+Ultima iteracion: D clinica, predeterminada localmente. Cuatro vistas con lateral
+claro, vidrio sutil y datos sobre superficies solidas. A/B/C conservadas;
+controles de laboratorio plegados al pie. Tipos, build y 40 combinaciones de
+QA aprobados. Sin produccion; aprobacion visual de D pendiente.
+
 Iteracion local C: mezcla A+B elegida por el usuario, ahora predeterminada en
 el laboratorio. A/B permanecen disponibles. QA de 30 combinaciones aprobada;
 tipos y build local aprobados. Aprobacion visual de C e integracion pendientes.
