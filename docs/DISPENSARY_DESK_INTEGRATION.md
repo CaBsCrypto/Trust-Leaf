@@ -1,7 +1,17 @@
 # Mesa de atencion: siguiente entrega de integracion
 
-Estado: plan preparado, no implementado. Requiere aprobacion visual explicita.
+Estado: aprobacion visual explicita recibida el 2026-09-24. Primera integracion
+de navegacion y Atenciones implementada en rama, pendiente de CI y publicacion.
 El laboratorio no sustituye /dispensario y sus fixtures no son datos operativos.
+
+La integracion usa los datos y acciones existentes de OperationsWorkspace.
+Conserva Gestion/Equipo en cabecera, tratamientos multiples y confirmacion de
+entrega. Inventario e Historial conservan sus funciones bajo el nuevo marco;
+el refinamiento detallado de Gestion permanece como entrega posterior.
+Validacion local: tipos y build aprobados; atencion, jornada, inventario,
+historial y comercio comprobados en ambos roles y cinco viewports. El recorrido
+SQL completo y CI deben terminar aprobados antes de fusionar.
+No se modifican APIs, contratos, migraciones ni datos publicados.
 
 ## Correspondencia con el producto
 

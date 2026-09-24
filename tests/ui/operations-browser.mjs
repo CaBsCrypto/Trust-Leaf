@@ -187,15 +187,15 @@ try {
     const response = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
     await row.getByRole('button', { name: 'Autorizar 24 horas' }).click(); assert.equal((await response).status(), 200); await refresh(patient);
   }
-  await operator.getByRole('tab', { name: 'Atenciones', exact: true }).click(); await refresh(operator);
+  await operator.getByRole('tab', { name: 'Pacientes', exact: true }).click(); await refresh(operator);
   await operator.getByRole('button', {name:/Paciente QA/}).click();
-  await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
+  await operator.getByRole('button', { name: 'Revisar entrega', exact: true }).waitFor();
   await operator.getByRole('searchbox').fill('NO-MATCH-QA');
   await operator.getByText('No hay pacientes para esta busqueda.', { exact: true }).waitFor();
   assert.equal(await operator.getByText('No hay pacientes que hayan compartido un tratamiento vigente con este dispensario.', { exact: true }).count(), 0);
   await operator.getByRole('searchbox').fill('   ');
-  await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor();
-  await operator.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
+  await operator.getByRole('button', { name: 'Revisar entrega', exact: true }).waitFor();
+  await operator.getByRole('radio').filter({visible:true}).first().check();
   await dispensary.getByRole('tab', { name: 'Inventario', exact: true }).click();
   await dispensary.getByRole('searchbox', { name: 'Buscar', exact: true }).fill('NO-MATCH-QA');
   await dispensary.getByText('No hay resultados para esta busqueda.', { exact: true }).waitFor();
@@ -204,8 +204,8 @@ try {
   await command(dispensary, 'Poner en cuarentena');
   await refresh(operator);
   await operator.getByText('No hay lotes disponibles con stock y vigencia para esta entrega.', { exact: true }).waitFor();
-  assert.equal(await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).isDisabled(), true);
-  assert.equal(await operator.getByLabel('Lote', { exact: true }).inputValue(), '', 'a quarantined selected lot is no longer usable');
+  assert.equal(await operator.getByRole('button', { name: 'Revisar entrega', exact: true }).isDisabled(), true);
+  assert.equal(await operator.getByRole('radio').first().isChecked(), false, 'a quarantined selected lot is no longer usable');
   assert.equal((await refresh(operator)).deliveries.length, 0);
   await operator.setViewportSize({ width: 390, height: 844 });
   assert.equal(await operator.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'unavailable inventory mobile layout');
@@ -214,23 +214,24 @@ try {
   await command(dispensary, 'Liberar cuarentena');
   await refresh(operator);
   await operator.getByText('No hay lotes disponibles con stock y vigencia para esta entrega.', { exact: true }).waitFor({ state: 'hidden' });
-  assert.equal(await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).isEnabled(), true);
+  await operator.getByRole('radio').first().check();
+  assert.equal(await operator.getByRole('button', { name: 'Revisar entrega', exact: true }).isEnabled(), true);
   const revoke = patient.locator('.op-line').filter({ hasText: 'Dispensario A QA' });
   const revoked = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
   await revoke.getByRole('button', { name: 'Revocar permiso', exact: true }).click(); assert.equal((await revoked).status(), 200);
   await refresh(operator);
-  await operator.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).waitFor({ state: 'hidden' });
+  await operator.getByRole('button', { name: 'Revisar entrega', exact: true }).waitFor({ state: 'hidden' });
   assert.equal((await refresh(operator)).treatments.length, 0, 'revoking a patient grant removes the protected treatment');
   await refresh(patient);
   const granted = patient.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
   await revoke.getByRole('button', { name: 'Autorizar 24 horas', exact: true }).click(); assert.equal((await granted).status(), 200);
   for (const [page, grams] of [[operator, '10'], [dispensaryB, '20']]) {
-    await navigateSection(page, 'Atenciones'); await refresh(page);
+    await navigateSection(page, 'Pacientes'); await refresh(page);
     await page.getByRole('button', {name:/Paciente QA/}).click();
-    const delivery = form(page, 'Registrar entrega simulada');
-    await delivery.getByLabel('Lote', { exact: true }).selectOption({ index: 1 });
+    const delivery = form(page, 'Revisar entrega');
+    await delivery.getByRole('radio').first().check();
     await delivery.getByLabel('Cantidad en gramos', { exact: true }).fill(grams);
-    await page.getByRole('button', {name:'Registrar entrega simulada',exact:true}).click();
+    await page.getByRole('button', {name:'Revisar entrega',exact:true}).click();
     await command(page, 'Confirmar entrega');
   }
   assert.equal((await refresh(dispensary)).deliveries[0].operator_ref, operatorRef, 'delivery retains the responsible team member');
@@ -240,7 +241,7 @@ try {
   await operator.locator('.op-balance div').filter({ hasText: 'Disponible' }).getByText('0 g', { exact: true }).waitFor({ timeout: 5000 });
   await patient.reload(); await patient.getByRole('tab', { name: 'Tratamientos', exact: true }).click();
   await patient.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('0 g', { exact: true }).waitFor();
-  assert.equal(await dispensaryB.getByRole('button', { name: 'Registrar entrega simulada', exact: true }).count(), 0, 'saved receipt does not restart delivery');
+  assert.equal(await dispensaryB.getByRole('button', { name: 'Revisar entrega', exact: true }).count(), 0, 'saved receipt does not restart delivery');
   await patient.getByRole('tab', { name: 'Historial', exact: true }).click();
   assert.equal(await patient.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 2);
   for (const d of (await refresh(patient)).deliveries) {
@@ -249,7 +250,7 @@ try {
     assert.ok((await receiptRow.innerText()).includes(`${d.product} · Lote ${d.lot_code}`));
   }
   await dispensary.getByRole('tab', {name:'Inventario',exact:true}).click();
-  for (const state of ['Cuarentena','Vencidos','Agotados']) {
+  for (const state of ['Bloqueados','Vencidos','Agotados']) {
     await dispensary.getByRole('button', {name:state,exact:true}).click();
     await dispensary.getByText('No hay lotes en este estado.', {exact:true}).waitFor();
   }
@@ -407,7 +408,7 @@ try {
   await recover.getByRole('button', { name: 'Crear dispensario de prueba', exact: true }).click();
   await recover.getByRole('button', { name: 'Reintentar operacion', exact: true }).waitFor();
   await command(recover, 'Reintentar operacion');
-  await recover.getByRole('heading', { name: 'Organizacion recuperada QA', exact: true }).waitFor();
+  await recover.getByRole('heading', { name: 'Organizacion recuperada QA', exact: true, level: 3 }).waitFor();
   assert.equal(operationIds.length, 2); assert.equal(operationIds[0], operationIds[1], 'recovery reuses the committed operation ID');
   await recover.unroute('**/api/operations-pilot');
   await recover.getByRole('tab', { name: 'Inventario', exact: true }).click();

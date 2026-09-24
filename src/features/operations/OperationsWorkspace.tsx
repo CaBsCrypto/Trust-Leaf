@@ -1,5 +1,7 @@
+import { useDiscardDialog } from './useDiscardDialog';
+import { batchState, batchLabels } from './batchPresentation';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Activity, CalendarDays, ClipboardList, History, House, Menu, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
+import { Activity, CalendarDays, ClipboardList, History, House, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import AdminOnboarding from '../onboarding/AdminOnboarding';
 import CommercePanel from '../commerce/CommercePanel';
@@ -11,6 +13,7 @@ import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
 import { currentPeriod, formatGrams, gramsToMg, type Booking, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
 import './operations.css';
+import './dispensary-desk.css';
 
 const titles: Record<PilotRole, string> = { doctor: 'Mi consulta', patient: 'Mi atencion', dispensary: 'Mi dispensario', admin: 'Supervision del piloto' };
 const date = (value: string) => new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago', dateStyle: 'short', timeStyle: 'short' });
@@ -31,15 +34,15 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
   const initialSection = useRef(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { confirmDiscard, discardDialog } = useDiscardDialog();
   const sectionBody = useRef<HTMLDivElement>(null);
   const [attentionDirty, setAttentionDirty] = useState(false);
   const [search, setSearch] = useState('');
   const [managementView, setManagementView] = useState<'commerce' | 'team'>('commerce');
   const [commerceGuard, setCommerceGuard] = useState({ dirty: false, pending: false });
-  const leaveCommerce = () => {
+  const leaveCommerce = async () => {
     if (commerceGuard.pending) return false;
-    return !commerceGuard.dirty || window.confirm('Descartar los cambios comerciales sin guardar?');
+    return !commerceGuard.dirty || await confirmDiscard('Los cambios comerciales sin guardar se perderan.');
   };
   const [consultationFilter, setConsultationFilter] = useState<ConsultationFilter>('pending');
   const [inventoryFilter, setInventoryFilter] = useState('all');
@@ -47,18 +50,19 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [historyBatch, setHistoryBatch] = useState('');
   const [historyView, setHistoryView] = useState<'deliveries' | 'movements'>('deliveries');
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
-  const setTab = (next: string, target?: AgendaTarget) => {
+  const setTab = async (next: string, target?: AgendaTarget) => {
     if (next !== tab && data?.role === 'dispensary' && (busy || pending)) return;
-    if (next !== tab && attentionDirty && !window.confirm('Descartar los datos de esta entrega sin confirmar?')) return;
-    if (!leaveCommerce()) return;
-    setSearch(''); setAgendaTarget(target); setSelectedTab(next); setMenuOpen(false);
+    if (next !== tab && attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
+    if (!await leaveCommerce()) return;
+    setSearch(''); setAgendaTarget(target); setSelectedTab(next);
     if (data?.role === 'dispensary') requestAnimationFrame(() => sectionBody.current?.focus({ preventScroll: true }));
     if (next !== tab && data?.role === 'dispensary') {
       setInventoryFilter('all'); setHistoryDate(''); setHistoryBatch(''); setHistoryView('deliveries');
     }
+    return true;
   };
-  const openBatchHistory = (batchRef: string) => { setTab('history'); setHistoryBatch(batchRef); };
-  const openDailySection = (next: string) => { if (next === 'team') setManagementView('team'); setTab(next); };
+  const openBatchHistory = async (batchRef: string) => { if (await setTab('history')) setHistoryBatch(batchRef); };
+  const openDailySection = async (next: string) => { if (await setTab(next)) { if (next === 'team') setManagementView('team'); } };
   const [error, setError] = useState('');
   const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
@@ -172,8 +176,6 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   });
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref} ${data?.patientProfiles?.find(p => p.patient_ref === t.patient_ref)?.name ?? ''}`));
   const now = Date.now();
-  const batchState = (b: NonNullable<PilotSnapshot['batches']>[number]) => b.state === 'quarantined' ? 'quarantined' : Date.parse(b.expires_at) <= now ? 'expired' : b.stock_mg <= 0 ? 'empty' : 'available';
-  const batchLabels = { quarantined: 'Cuarentena', expired: 'Vencido', empty: 'Agotado', available: 'Disponible' };
   const visibleBatches = (data?.batches ?? []).filter(b => matches(`${b.lot_code} ${b.product}`) && (inventoryFilter === 'all' || batchState(b) === inventoryFilter));
   const historyMatches = (batchRef: string, createdAt: string) => role !== 'dispensary' || ((!historyBatch || batchRef === historyBatch) && (!historyDate || new Intl.DateTimeFormat('en-CA', {timeZone:'America/Santiago'}).format(new Date(createdAt)) === historyDate));
   const visibleDeliveries = (data?.deliveries ?? []).filter(d => {
@@ -187,16 +189,17 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const historyLots = new Map((data?.deliveries ?? []).map(d => [d.batch_ref, `${d.product ?? 'Producto no disponible'} · ${d.lot_code ?? short(d.batch_ref)}`]));
   for (const b of data?.batches ?? []) historyLots.set(b.batch_ref, `${b.product} · ${b.lot_code}`);
   const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ...(import.meta.env.VITE_DISPENSARY_ONBOARDING_ENABLED === 'true' ? [['onboarding', 'Incorporaciones']] : []), ['demo', 'POV de prueba']]
-    : role === 'dispensary' ? [['home', 'Inicio'], ['today', 'Atenciones'], ['inventory', 'Inventario'], ['history', 'Historial'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo']]
+    : role === 'dispensary' ? [['home', 'Jornada'], ['today', 'Pacientes'], ['inventory', 'Inventario'], ['history', 'Historial'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
 
   return <section className={`tl-operations ${role === 'dispensary' ? 'op-dispensary' : ''} ${embedded ? '' : 'tl-operations-page'}`}>
-    <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role ? titles[role] : 'Panel operativo'}</h1>
+    <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role === 'dispensary' ? data?.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name ?? titles.dispensary : role ? titles[role] : 'Panel operativo'}</h1>
       <p className="op-email">{email ?? identity.email ?? 'Cuenta conectada'}</p>
-      {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name} · {data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
-      <div className="op-toolbar"><span className="op-simulation">Piloto simulado</span>
+      {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
+      <div className="op-toolbar">{role === 'dispensary' && data?.joined && !withoutTeam && <button className="op-management-tab" role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}><Settings size={16}/>{import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'}</button>}<span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
-        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={role === 'dispensary' && disabled} onClick={() => { if (attentionDirty && !window.confirm('Descartar los datos de esta entrega sin confirmar?')) return; if (leaveCommerce()) onSignOut(); }}><LogOut size={18}/></button>}</div></header>
+        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={role === 'dispensary' && disabled} onClick={async () => { if (attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return; if (await leaveCommerce()) onSignOut(); }}><LogOut size={18}/></button>}</div></header>
+    {discardDialog}
     <div className="op-content">
       {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
       {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
@@ -212,14 +215,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       {data?.joined && !withoutTeam && <>
         <div className={role === 'dispensary' ? 'op-workspace-layout' : undefined}>
         <div className={role === 'dispensary' ? 'op-workspace-navigation' : undefined}>
-        {role === 'dispensary' && <button className="op-mobile-menu" aria-expanded={menuOpen} aria-controls="dispensary-sections" onClick={() => setMenuOpen(value => !value)}><Menu size={18}/><span>{tabs.find(([id]) => id === tab)?.[1]}</span><span>Menu</span></button>}
-        <nav id={role === 'dispensary' ? 'dispensary-sections' : undefined} className={`op-tabs ${role === 'dispensary' ? `op-sidebar ${menuOpen ? 'op-sidebar-open' : ''}` : ''}`} aria-label="Secciones del panel">{tabs.map(([id, label]) => {
+        <nav id={role === 'dispensary' ? 'dispensary-sections' : undefined} className={`op-tabs ${role === 'dispensary' ? 'op-sidebar' : ''}`} aria-label="Secciones del panel">{tabs.filter(([id]) => role !== 'dispensary' || id !== 'team').map(([id, label]) => {
           const Icon = id === 'home' ? House : id === 'today' ? Users : id === 'inventory' ? Package : id === 'history' ? History : Settings;
           return <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{role === 'dispensary' && <Icon size={18} aria-hidden="true"/>}{label}</button>;
         })}</nav></div>
         <div className="op-workspace-body" ref={sectionBody} tabIndex={role === 'dispensary' ? -1 : undefined}>
         {role === 'dispensary' && tab === 'home' && <>
-          <h2>Inicio</h2>
+          <h2>Jornada</h2>
           {readError ? <p role="status">El resumen no esta disponible hasta recuperar los datos.</p> : <>
             {data.membership?.organization_ref && <DailyOverview data={data} navigate={openDailySection}/>}
             {!data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && <Preparation data={data} navigate={openDailySection}/>}
@@ -227,8 +229,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           <button className="op-command" onClick={() => setTab('today')}><Users size={18}/>Atender pacientes</button>
         </>}
         {tab === 'onboarding' && role === 'admin' && <AdminOnboarding/>}
-        {tab !== 'onboarding' && tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
-        {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
+        {!(role === 'dispensary' && tab === 'today') && tab !== 'onboarding' && tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
+        {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} onSearch={setSearch} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
@@ -281,7 +283,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'inventory' && role === 'dispensary' && <>
           <h2><Package size={20}/>Inventario por lote</h2>
-          <div className="op-tabs" role="group" aria-label="Estado de inventario">{[['available','Disponibles'],['quarantined','Cuarentena'],['expired','Vencidos'],['empty','Agotados'],['all','Todos']].map(([id,label]) => <button key={id} aria-pressed={inventoryFilter === id} onClick={() => setInventoryFilter(id)}>{label}</button>)}</div>
+          <div className="op-tabs" role="group" aria-label="Estado de inventario">{[['available','Disponibles'],['quarantined','Bloqueados'],['expired','Vencidos'],['empty','Agotados'],['all','Todos']].map(([id,label]) => <button key={id} aria-pressed={inventoryFilter === id} onClick={() => setInventoryFilter(id)}>{label}</button>)}</div>
           {data.membership?.role === 'manager' && <details className="op-stock-receive"><summary>Recibir lote</summary><CommandForm label="Recibir lote simulado" disabled={disabled || !!readError} fields={[
             { name: 'lotCode', label: 'Codigo de lote', maxLength: 80 }, { name: 'product', label: 'Producto', value: 'Flor de prueba', maxLength: 100 },
             { name: 'sourceReference', label: 'Referencia de origen', maxLength: 160 }, { name: 'expiresAt', label: 'Vencimiento', type: 'datetime-local' }, { name: 'grams', label: 'Cantidad en gramos', value: '100' }]}
@@ -301,7 +303,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'team' && <>
           {role === 'dispensary' && data.membership?.organization_ref && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' && <>
-            <div className="op-tabs" role="group" aria-label="Gestion del dispensario"><button aria-pressed={managementView === 'commerce'} onClick={() => { if (!leaveCommerce()) return; setManagementView('commerce'); setSearch(''); }}>Registros comerciales</button><button aria-pressed={managementView === 'team'} disabled={commerceGuard.pending} onClick={() => { if (!leaveCommerce()) return; setManagementView('team'); setSearch(''); }}>Equipo</button></div>
+            <div className="op-tabs" role="group" aria-label="Gestion del dispensario"><button aria-pressed={managementView === 'commerce'} onClick={async () => { if (!await leaveCommerce()) return; setManagementView('commerce'); setSearch(''); }}>Registros comerciales</button><button aria-pressed={managementView === 'team'} disabled={commerceGuard.pending} onClick={async () => { if (!await leaveCommerce()) return; setManagementView('team'); setSearch(''); }}>Equipo</button></div>
             {managementView === 'commerce' && <CommercePanel key={data.membership.organization_ref} data={data} changed={() => setRevision(n => n + 1)} guardChanged={setCommerceGuard}/>}
           </>}
           {(role !== 'dispensary' || !data.membership?.organization_ref || import.meta.env.VITE_COMMERCE_CATALOG_ENABLED !== 'true' || managementView === 'team') && <>

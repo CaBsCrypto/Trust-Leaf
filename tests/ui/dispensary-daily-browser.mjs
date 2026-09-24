@@ -36,7 +36,7 @@ try {
     const section = name => ({ click: () => navigateSection(page, name) });
     await section('Inventario').click();
     await page.locator('.op-stock-row').nth(3).waitFor();
-    for (const [filter,label] of [['Disponibles','Disponible'],['Cuarentena','Cuarentena'],['Vencidos','Vencido'],['Agotados','Agotado']]) {
+    for (const [filter,label] of [['Disponibles','Disponible'],['Bloqueados','Bloqueado para entrega'],['Vencidos','Vencido'],['Agotados','Agotado']]) {
       await page.getByRole('button',{name:filter,exact:true}).click();
       await page.locator('.op-stock-row .op-batch-state').getByText(label,{exact:true}).waitFor();
       assert.equal(await page.locator('.op-stock-row').count(),1);

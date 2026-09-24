@@ -26,8 +26,8 @@ try {
   await panel.getByLabel('Nombre', { exact: true }).fill('Flor de prueba con nombre extenso para validar el catalogo');
   await panel.getByLabel('Presentacion', { exact: true }).fill('Gramos');
   await panel.getByLabel('Precio de referencia (CLP)', { exact: true }).fill('2500');
-  page.once('dialog', dialog => dialog.dismiss());
   await page.getByRole('tab', { name: 'Inventario', exact: true }).click();
+  await page.getByRole('button', {name:'Seguir editando'}).click();
   assert.equal(await panel.getByLabel('Nombre', { exact: true }).inputValue(), 'Flor de prueba con nombre extenso para validar el catalogo');
   await panel.getByRole('button', { name: 'Guardar', exact: true }).click();
   await panel.getByRole('button', { name: 'Abrir producto' }).last().click();
