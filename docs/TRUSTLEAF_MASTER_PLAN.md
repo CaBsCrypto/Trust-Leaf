@@ -1541,6 +1541,11 @@ fases 0-7 ni la presentacion acompanada.
   publicadas para ejecutar estas pruebas.
 # Cierre del laboratorio de diseno (2026-09-24)
 
+Actualizacion: laboratorio integrado por PR #41, main 0c7708b, CI aprobado.
+Aprobacion visual explicita recibida del usuario. Se inicia entrega separada
+de Mesa conectada: navegacion y Atenciones, conservando herramientas de Gestion.
+Pruebas con datos aislados; publicacion y verificacion oficial pendientes.
+
 Mesa de atencion sigue aislada, con datos sinteticos y sin conexion a produccion.
 Tipos, build y regresiones locales comprobados; la aprobacion visual final sigue
 pendiente. Fusionar el laboratorio no activa el rediseno de /dispensario.

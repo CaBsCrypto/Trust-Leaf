@@ -1,0 +1,79 @@
+.tl-operations.op-dispensary { font-family: system-ui, sans-serif; background: #fff; color: #25332f; }
+.op-dispensary .op-content { max-width: none; padding: 0; }
+.op-dispensary .op-content > :is(.op-error,.op-success,.op-empty,button) { margin: 16px; }
+.op-dispensary .op-header { min-height: 76px; padding: 12px 24px; background: #fff; }
+.op-dispensary .op-header h1 { font-size: 18px; }
+.op-dispensary .op-header > div { min-width: 0; max-width: 100%; }
+.op-dispensary .op-header h1 { overflow-wrap: anywhere; }
+.op-dispensary .op-management-tab { gap: 6px; padding: 8px 10px; }
+.op-dispensary .op-management-tab[aria-selected=true] { background: #edf5f0; color: #175f40; }
+.op-dispensary .op-brand { font-size: 12px; }
+.op-dispensary .op-workspace-layout { grid-template-columns: 104px minmax(0,1fr); gap: 0; }
+.op-dispensary .op-workspace-navigation { border-right: 1px solid #dce2df; }
+.op-dispensary .op-sidebar { border: 0; padding: 12px 6px; top: 8px; gap: 8px; }
+.op-dispensary .op-sidebar button { flex-direction: column; justify-content: center; text-align: center; gap: 8px; min-height: 72px; font-size: 12px; padding: 10px 4px; border: 0; border-radius: 6px; }
+.op-dispensary .op-workspace-body { padding: 24px; }
+.op-dispensary .op-workspace-body:has(> .op-attention) { padding: 0; }
+.op-dispensary .op-workspace-body:has(> .op-attention) > .op-footer { margin: 24px; }
+.op-dispensary .op-attention { grid-template-columns: 300px minmax(0,1fr); gap: 0; min-height: 600px; }
+.op-dispensary .op-patient-list { padding: 24px 18px; }
+.op-dispensary .op-patient-list h2 { font-size: 16px; margin: 0 0 18px; }
+.op-dispensary .op-patient-detail { padding: 24px 30px; }
+.op-dispensary .op-patient-detail > h2 { font-size: 24px; }
+.op-dispensary .op-balance { padding: 24px 0; margin-bottom: 20px; border-top: 0; }
+.op-dispensary .op-balance > div { border-left: 1px solid #dce2df; padding-left: 16px; }
+.op-dispensary .op-balance > div:first-child { border: 0; padding-left: 0; }
+.op-dispensary .op-balance strong { font-size: 24px; }
+.op-dispensary .op-balance > div:first-child strong { font-size: 32px; }
+.op-dispensary .op-patient { border-radius: 6px; margin-bottom: 6px; }
+.op-dispensary :is(button,input,select,summary) { min-height: 44px; }
+.op-dispensary button { transition: background-color 140ms, color 140ms; border-radius: 6px; }
+.op-dispensary .op-daily-metrics button { background: #f5f7f6; border-left: 2px solid #ccd8d1; border-radius: 0; }
+.op-dispensary .op-lot-options { display: block; width: 100%; margin: 0 0 18px; }
+.op-dispensary .op-lot-options legend { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.op-dispensary .op-lot-option { display: grid; grid-template-columns: 20px minmax(0,1fr) 75px 130px; gap: 12px; align-items: center; padding: 16px 12px; border-bottom: 1px solid #dce2df; cursor: pointer; }
+.op-dispensary .op-lot-option input { width: 18px; min-height: 18px; height: 18px; padding: 0; accent-color: #185c47; }
+.op-dispensary .op-lot-option:has(input:checked) { background: #edf5f0; }
+.op-dispensary .op-lot-option:has(input:disabled) { background: #f8f9f8; cursor: not-allowed; color: #58635e; }
+.op-dispensary .op-lot-option small { display: block; margin-top: 5px; font-size: 12px; }
+.op-dispensary .op-lot-option :is(strong,span) { min-width: 0; overflow-wrap: anywhere; }
+.op-dispensary .op-desk-quantity { display: grid; grid-template-columns: minmax(100px,1fr) minmax(100px,1fr) auto; width: 100%; gap: 16px; align-items: end; padding: 18px; background: #f4f6f5; }
+.op-dispensary .op-desk-quantity > div { padding-left: 16px; border-left: 1px solid #cdd7d1; }
+.op-dispensary .op-desk-quantity span { font-size: 12px; }
+.op-dispensary .op-desk-quantity strong { display: block; font-size: 24px; }
+.op-dispensary .op-desk-quantity button { background: #185c47; color: white; }
+.op-dispensary .op-desk-preparation[hidden] { display: none; }
+.op-dispensary .op-discard-dialog { width: min(440px,calc(100% - 32px)); border: 1px solid #cdd7d1; border-radius: 8px; padding: 24px; color: #25332f; margin: auto; }
+.op-discard-dialog::backdrop { background: #13261f66; }
+.op-dispensary .op-discard-dialog > div { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.op-dispensary .op-discard-dialog button { padding: 8px 12px; }
+@media(min-width:1024px) and (max-width:1200px) {
+  .op-dispensary .op-attention { grid-template-columns: 260px minmax(0,1fr); }
+  .op-dispensary .op-patient-detail { padding: 24px 18px; }
+  .op-dispensary .op-lot-option { grid-template-columns: 18px minmax(0,1fr) 65px 105px; gap: 8px; padding-inline: 6px; }
+  .op-dispensary .op-desk-quantity { grid-template-columns: 1fr 1fr; }
+  .op-dispensary .op-desk-quantity button { grid-column: 1 / -1; }
+}
+@media(max-width:1023px) {
+  .op-dispensary .op-workspace-layout { display: block; }
+  .op-dispensary .op-workspace-navigation { border: 0; margin: 0; }
+  .op-dispensary .op-content { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+  .op-dispensary .op-sidebar { position: fixed; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); top: auto; bottom: 0; left: 0; right: 0; z-index: 20; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid #dce2df; background: #fff; gap: 4px; }
+  .op-dispensary .op-sidebar button { min-height: 60px; font-size: 12px; padding: 6px 2px; gap: 4px; }
+  .op-dispensary .op-header { padding: 12px 16px; }
+  .op-dispensary .op-attention { display: block; min-height: 400px; }
+  .op-dispensary .op-patient-detail { padding: 20px 16px; }
+  .op-dispensary .op-patient-list { padding: 24px 16px; }
+  .op-dispensary .op-workspace-body { padding: 20px 16px; }
+  .op-dispensary :is(button,input,summary) { scroll-margin-bottom: 110px; }
+}
+@media(max-width:600px) {
+  .op-dispensary .op-lot-option { grid-template-columns: 18px minmax(0,1fr) auto; gap: 8px 10px; }
+  .op-dispensary .op-lot-option .op-batch-state { grid-column: 2 / -1; }
+  .op-dispensary .op-lot-option input { grid-row: 1 / 3; }
+  .op-dispensary .op-desk-quantity { grid-template-columns: minmax(0,1fr); }
+  .op-dispensary .op-desk-quantity > div { padding: 12px 0 0; border-left: 0; border-top: 1px solid #cdd7d1; }
+  .op-dispensary .op-balance strong { font-size: 21px; }
+  .op-dispensary .op-balance > div:first-child strong { font-size: 28px; }
+}
+@media(prefers-reduced-motion:reduce) { .op-dispensary button { transition: none; } }
