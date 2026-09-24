@@ -292,3 +292,25 @@ Movimiento reducido probado; revision visual manual en escritorio y movil.
 
 D queda abierta por defecto para evaluacion humana, no aprobada por inferencia.
 No hay cambios de API, permisos, migraciones, datos reales ni publicacion.
+
+### 2026-09-24: Mesa de atencion, boceto 01
+
+La nueva entrada predeterminada reemplaza D solo como seleccion del laboratorio.
+Referencia: boceto 01 aprobado; no se copian sus fechas, cantidades erroneas ni
+modulos inexistentes. A/B/C/D siguen disponibles en controles plegados al pie.
+Componentes locales separados: navegacion, lista, detalle y seleccion de lotes.
+Escritorio con rail estrecho/lista/detalle; movil y tablet bajo 1024 px con
+navegacion inferior fija, espacio reservado y `safe-area-inset-bottom`.
+No hay ejecucion de entregas, APIs, persistencia ni cambios en B/Browns.
+
+QA: regresiones A/B/C/D completadas en ambos roles y cinco anchos; Mesa probada
+en 360/390/768/1024/1440 px, ambos roles. Lotes no disponibles bloqueados,
+cantidades invalidas, revision, descarte, retorno de foco/busqueda, filtros,
+historial, estados de error y cero solicitudes de produccion.
+Tipos y build del laboratorio aprobados. Capturas E-* en la carpeta de evidencia;
+detalle revisado visualmente en 390/1440 px. La navegacion inferior no tapa
+Revisar al reducir el viewport a 520 px de alto.
+
+Limite de evidencia: reduccion de viewport no es teclado virtual real. Teclado,
+recortes/safe area en telefono fisico y aprobacion visual del usuario pendientes.
+Sin publicacion ni afirmacion de preparacion para operacion real.

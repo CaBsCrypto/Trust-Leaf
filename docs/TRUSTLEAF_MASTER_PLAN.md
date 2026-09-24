@@ -1,5 +1,13 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Mesa de atencion local (2026-09-24)
+
+Boceto 01 aprobado implementado en el laboratorio, sin integrar ni publicar.
+Lista/detalle desde 1024 px; navegacion inferior Jornada/Pacientes/Inventario/
+Historial por debajo. Componentes separados, lotes bloqueados, revision sin
+escrituras y comprobante recuperable. Detalle y evidencia en el mapa de producto.
+A/B/C/D conservadas; validacion humana y teclado en dispositivo real pendientes.
+
 ## Mapa de producto y alternativas de experiencia (2026-09-23)
 
 Ultima iteracion: D clinica, predeterminada localmente. Cuatro vistas con lateral

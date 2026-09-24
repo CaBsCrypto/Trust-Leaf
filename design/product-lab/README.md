@@ -1,8 +1,13 @@
 # Laboratorio de experiencia Trust Leaf
 
-Prototipos A/B/C/D aislados. Misma informacion sintetica y mismas tareas.
-D abre por defecto: minimalismo clinico, navegacion clara y vidrio sutil.
-A/B/C permanecen disponibles. La aprobacion visual de D sigue pendiente.
+Prototipos A/B/C/D y Mesa de atencion aislados. Misma informacion sintetica.
+Mesa de atencion abre por defecto, siguiendo el boceto 01 aprobado: lista y
+detalle en escritorio, barra inferior de cuatro secciones bajo 1024 px.
+A/B/C/D permanecen disponibles. Revision humana de la implementacion pendiente.
+
+Lotes mediante radios, cuarentena/vencidos bloqueados, saldo hipotetico y
+revision sin escritura. QA incluye viewport reducido a 520 px de alto; no
+equivale a comprobar teclado virtual ni area segura en un telefono real.
 Los controles A/B/C, rol y estado estan plegados en Configuracion del prototipo
 al pie de la pagina, fuera de la cabecera y navegacion de trabajo.
 No hay autenticacion, fetch, almacenamiento local ni escrituras. Los estados

@@ -9,7 +9,7 @@ await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const results = [];
 try {
-  for (const direction of ['A', 'B', 'C', 'D']) for (const width of [360, 390, 768, 1024, 1440]) {
+  for (const direction of (process.env.LAB_DIRECTION ? [process.env.LAB_DIRECTION] : ['A', 'B', 'C', 'D', 'E'])) for (const width of [360, 390, 768, 1024, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage();
     const violations = [], errors = [];
@@ -20,8 +20,8 @@ try {
     await page.goto('http://127.0.0.1:4330/');
     assert.equal(await page.locator('.lab-bar').isVisible(), false);
     await page.getByLabel('Configuración del prototipo', { exact: true }).click();
-    assert.equal(await page.getByRole('button', { name: 'D · Clínica', exact: true }).getAttribute('aria-pressed'), 'true');
-    await page.getByRole('button', { name: { A: 'A · Operativo', B: 'B · Por tareas', C: 'C · Combinada', D: 'D · Clínica' }[direction], exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: 'Mesa de atención', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.getByRole('button', { name: { A: 'A · Operativo', B: 'B · Por tareas', C: 'C · Combinada', D: 'D · Clínica', E: 'Mesa de atención' }[direction], exact: true }).click();
     async function fit(label) {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${direction}/${width}/${label}: page overflow`);
     }
@@ -36,7 +36,8 @@ try {
     async function navigate(name) {
       const menu = page.getByRole('button', { name: /Jornada|Atender|Existencias|Comprobantes/ }).filter({ has: page.locator('svg.lucide-menu') });
       if (await menu.isVisible()) await menu.click();
-      await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
+      const label = direction === 'E' ? ({ Atender: 'Pacientes', Existencias: 'Inventario', Comprobantes: 'Historial' }[name] || name) : name;
+      await page.getByRole('navigation').getByRole('button', { name: label, exact: true }).click();
     }
     await shot('home');
     for (const role of ['operator','manager']) {
@@ -44,14 +45,45 @@ try {
       if (role === 'manager') await navigate('Atender');
       await page.getByRole('searchbox').fill('P-104');
       await page.getByRole('button', { name: /Camila Torres.*P-104/ }).click();
-      await page.getByLabel('Lote disponible').selectOption('ALB-024');
+      if (direction === 'E') {
+        assert.equal(await page.getByRole('radio', { name: /NOR-018/ }).isEnabled(), false);
+        assert.equal(await page.getByRole('radio', { name: /SUR-009/ }).isEnabled(), false);
+        await page.getByRole('radio', { name: /ALB-024/ }).check();
+        for (const value of ['0', '-1', '11', '1.0001']) {
+          await page.getByLabel('Cantidad en gramos').fill(value);
+          assert.equal(await page.getByRole('button', { name: 'Revisar entrega', exact: true }).isEnabled(), false);
+        }
+      } else await page.getByLabel('Lote disponible').selectOption('ALB-024');
       await page.getByLabel('Cantidad en gramos').fill('5');
+      if (direction === 'E' && width >= 1024) {
+        await page.getByRole('searchbox').fill('');
+        await page.getByRole('button', { name: /Camila Torres.*P-218/ }).click();
+        await page.getByRole('dialog').waitFor();
+        await page.getByRole('button', { name: 'Seguir editando' }).click();
+        assert.equal(await page.getByLabel('Cantidad en gramos').inputValue(), '5');
+        await page.getByRole('searchbox').fill('P-104');
+      }
       await shot(`${role}-detail`);
       await page.getByRole('button', { name: 'Revisar entrega', exact: true }).click();
       await page.getByText('Saldo hipotético', { exact: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: /Confirmar entrega/ }).count(), 0);
       await shot(`${role}-review`);
       await page.getByRole('button', { name: 'Volver a editar' }).click();
+      if (direction === 'E') {
+        await navigate('Existencias');
+        await page.getByRole('dialog').waitFor();
+        await page.getByRole('button', { name: 'Seguir editando' }).click();
+        assert.equal(await page.getByLabel('Cantidad en gramos').inputValue(), '5');
+        if (width < 1024) {
+          await page.setViewportSize({ width, height: 520 });
+          await page.getByLabel('Cantidad en gramos').focus();
+          await page.getByRole('button', { name: 'Revisar entrega', exact: true }).scrollIntoViewIfNeeded();
+          const action = await page.getByRole('button', { name: 'Revisar entrega', exact: true }).boundingBox();
+          const nav = await page.getByRole('navigation').boundingBox();
+          assert.ok(action.y + action.height <= nav.y, 'Review must not overlap bottom navigation');
+          await page.setViewportSize({ width, height: 960 });
+        }
+      }
       await page.getByRole('button', { name: 'Volver a pacientes' }).click();
       await page.getByRole('dialog').waitFor();
       await page.keyboard.press('Escape');
