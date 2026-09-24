@@ -1,5 +1,35 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Mesa de atencion local (2026-09-24)
+
+Boceto 01 aprobado implementado en el laboratorio, sin integrar ni publicar.
+Lista/detalle desde 1024 px; navegacion inferior Jornada/Pacientes/Inventario/
+Historial por debajo. Componentes separados, lotes bloqueados, revision sin
+escrituras y comprobante recuperable. Detalle y evidencia en el mapa de producto.
+A/B/C/D conservadas; validacion humana y teclado en dispositivo real pendientes.
+
+## Mapa de producto y alternativas de experiencia (2026-09-23)
+
+Ultima iteracion: D clinica, predeterminada localmente. Cuatro vistas con lateral
+claro, vidrio sutil y datos sobre superficies solidas. A/B/C conservadas;
+controles de laboratorio plegados al pie. Tipos, build y 40 combinaciones de
+QA aprobados. Sin produccion; aprobacion visual de D pendiente.
+
+Iteracion local C: mezcla A+B elegida por el usuario, ahora predeterminada en
+el laboratorio. A/B permanecen disponibles. QA de 30 combinaciones aprobada;
+tipos y build local aprobados. Aprobacion visual de C e integracion pendientes.
+
+[Mapa del producto, recorridos y backlog de experiencia](PRODUCT_EXPERIENCE_MAP.md).
+Base de esta revision: `a995f44`. Las evidencias historicas no sustituyen una
+comprobacion actual de produccion. El acceso final de Browns como encargado
+permanece pendiente de verificar.
+
+La propuesta visual anterior se conserva en `feat/dispensary-visual-preview`
+(`58b2839`), descartada y sin publicar. Las alternativas A/B viven exclusivamente
+en `design/product-lab`, con datos sinteticos y sin APIs operativas. La direccion
+visual y su implementacion conectada requieren revision y eleccion explicita.
+No se modifican B, Browns, saldos, migraciones ni el borrador mensual.
+
 ## Incorporacion de encargados desde Admin: entrega en preparacion (2026-09-22)
 
 Rama `feat/dispensary-admin-onboarding`, PR #39. Base #38 integrada como
@@ -1509,3 +1539,11 @@ fases 0-7 ni la presentacion acompanada.
   cuatro roles, invitaciones/reincorporacion, permisos, citas, entregas parciales,
   recuperacion de errores, reconexion y cambio de cuenta. No hubo escrituras
   publicadas para ejecutar estas pruebas.
+# Cierre del laboratorio de diseno (2026-09-24)
+
+Mesa de atencion sigue aislada, con datos sinteticos y sin conexion a produccion.
+Tipos, build y regresiones locales comprobados; la aprobacion visual final sigue
+pendiente. Fusionar el laboratorio no activa el rediseno de /dispensario.
+Siguiente entrega documentada en [Integracion de Mesa](DISPENSARY_DESK_INTEGRATION.md).
+La revision remota, CI y preview se registraran al cerrar el PR; no presumir su
+aprobacion a partir de las pruebas locales. B, Browns y borrador mensual intactos.
