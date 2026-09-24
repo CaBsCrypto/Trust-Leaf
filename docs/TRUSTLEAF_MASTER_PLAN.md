@@ -1539,3 +1539,11 @@ fases 0-7 ni la presentacion acompanada.
   cuatro roles, invitaciones/reincorporacion, permisos, citas, entregas parciales,
   recuperacion de errores, reconexion y cambio de cuenta. No hubo escrituras
   publicadas para ejecutar estas pruebas.
+# Cierre del laboratorio de diseno (2026-09-24)
+
+Mesa de atencion sigue aislada, con datos sinteticos y sin conexion a produccion.
+Tipos, build y regresiones locales comprobados; la aprobacion visual final sigue
+pendiente. Fusionar el laboratorio no activa el rediseno de /dispensario.
+Siguiente entrega documentada en [Integracion de Mesa](DISPENSARY_DESK_INTEGRATION.md).
+La revision remota, CI y preview se registraran al cerrar el PR; no presumir su
+aprobacion a partir de las pruebas locales. B, Browns y borrador mensual intactos.

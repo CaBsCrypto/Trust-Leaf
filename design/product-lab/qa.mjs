@@ -46,7 +46,8 @@ try {
       await page.getByRole('searchbox').fill('P-104');
       await page.getByRole('button', { name: /Camila Torres.*P-104/ }).click();
       if (direction === 'E') {
-        assert.equal(await page.getByRole('radio', { name: /NOR-018/ }).isEnabled(), false);
+        assert.equal(await page.getByRole('radio', { name: /NOR-018.*Bloqueado para entrega.*Pendiente de revisión/ }).isEnabled(), false);
+        await page.getByRole('group', { name: 'Seleccionar lote', exact: true }).waitFor();
         assert.equal(await page.getByRole('radio', { name: /SUR-009/ }).isEnabled(), false);
         await page.getByRole('radio', { name: /ALB-024/ }).check();
         for (const value of ['0', '-1', '11', '1.0001']) {
@@ -104,8 +105,12 @@ try {
       }
       await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
       await navigate('Existencias');
-      await page.getByRole('button', { name: 'Cuarentena', exact: true }).click();
+      await page.getByRole('button', { name: direction === 'E' ? 'Bloqueados' : 'Cuarentena', exact: true }).click();
       assert.equal(await page.locator('.stock-row').count(), 1);
+      if (direction === 'E') {
+        assert.match(await page.locator('.stock-row').innerText(), /Bloqueado para entrega/);
+        assert.match(await page.locator('.stock-row').innerText(), /Pendiente de revisión/);
+      }
       await page.getByRole('button', { name: 'Todos', exact: true }).click();
       await shot(`${role}-inventory`);
       await page.locator('.stock-row').filter({ hasText: 'ALB-024' }).getByRole('button', { name: 'Ver historial' }).click();

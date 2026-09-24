@@ -1,5 +1,17 @@
 # Trust Leaf: mapa de producto y nueva experiencia
 
+## Ajuste local de estados de lote (2026-09-24)
+
+Mesa de atencion presenta Cuarentena como "Bloqueado para entrega" y NOR-018
+con motivo "Pendiente de revision". Jornada y el filtro Bloqueados conservan
+el estado interno y sus restricciones. A/B/C/D mantienen sus etiquetas previas.
+Sin conexiones a produccion, cambios de stock ni nuevas acciones.
+
+Tipos y compilacion del laboratorio aprobados. QA A/B/C/D/E aprobado con ambos
+roles en 360, 390, 768, 1024 y 1440 px, cero solicitudes a produccion.
+Capturas en scratch/product-lab-evidence; inspeccion visual de E a 390 y 1440 px.
+Pruebas responsive automatizadas, no equivalentes a una prueba en celular real.
+
 Fecha de revision: 2026-09-23. Referencia funcional: main `a995f44` (PR #39).
 Fuentes: codigo de esa referencia, plan maestro y comprobaciones de esta tarea.
 Este documento no es una certificacion sanitaria ni una comprobacion fresca de

@@ -1,3 +1,4 @@
+import { lotStateLabel, lotReviewReason } from './lotPresentation';
 import type { ReactNode, RefObject } from 'react';
 import { ArrowLeft, ArrowRight, ChevronRight, Home, Users, Package, FileText, ShieldCheck, Leaf } from 'lucide-react';
 import { patients, lots, receipts, grams } from './data';
@@ -15,7 +16,7 @@ export function DeskPatientList({ searchField, selected, items, choose }: { sear
 }
 
 export function DeskLotSelector({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  return <fieldset className="desk-lots"><legend>Lotes disponibles</legend><div className="desk-lot-columns" aria-hidden="true"><span>Producto / código</span><span>Existencias</span><span>Estado</span></div>{lots.map(l => <label className={`desk-lot ${l.state !== 'Disponible' ? 'unavailable' : ''}`} key={l.id}><input type="radio" name="desk-lot" value={l.id} checked={value === l.id} disabled={l.state !== 'Disponible'} onChange={() => onChange(l.id)}/><span className="desk-product"><strong>{l.product}</strong><small>{l.id}</small></span><strong className="desk-stock">{grams(l.stock)}</strong><span className={`badge ${l.state === 'Disponible' ? 'ok' : l.state === 'Vencido' ? 'danger' : 'warning'}`}>{l.state}</span></label>)}</fieldset>;
+  return <fieldset className="desk-lots"><legend>Seleccionar lote</legend><div className="desk-lot-columns" aria-hidden="true"><span>Producto / código</span><span>Existencias</span><span>Estado</span></div>{lots.map(l => <label className={`desk-lot ${l.state !== 'Disponible' ? 'unavailable' : ''}`} key={l.id}><input type="radio" name="desk-lot" value={l.id} checked={value === l.id} disabled={l.state !== 'Disponible'} onChange={() => onChange(l.id)}/><span className="desk-product"><strong>{l.product}</strong><small>{l.id}</small></span><strong className="desk-stock">{grams(l.stock)}</strong><span className="desk-lot-status"><span className={`badge ${l.state === 'Disponible' ? 'ok' : l.state === 'Vencido' ? 'danger' : 'warning'}`}>{lotStateLabel(l.state, true)}</span>{lotReviewReason(l) && <small>{lotReviewReason(l)}</small>}</span></label>)}</fieldset>;
 }
 
 type DetailProps = {
