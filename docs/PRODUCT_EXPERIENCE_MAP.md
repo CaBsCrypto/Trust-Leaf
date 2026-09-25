@@ -1,5 +1,30 @@
 # Trust Leaf: mapa de producto y nueva experiencia
 
+## Estado vigente (2026-09-25)
+
+La Mesa conectada esta publicada en main `d101469` (PR #42), con aprobacion visual,
+CI y despliegue confirmados. El laboratorio A/B/C/D/Mesa sigue aislado.
+El mapa original de abajo documenta la referencia historica `a995f44`; sus
+pendientes de eleccion visual/publicacion no describen el estado actual.
+
+E7: [PR #42 y cierre de publicacion](https://github.com/CaBsCrypto/Trust-Leaf/pull/42#issuecomment-5824007733),
+[CI aprobado](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36072522968),
+capturas sinteticas en `docs/evidence/desk-connected`. Vercel Ready reconfirmado
+el 25/09. Navegacion y Atenciones conectadas; Inventario/Historial mantienen
+funciones y Gestion permanece accesible. Sin APIs, migraciones ni saldos nuevos.
+E7 acredita publicacion y pruebas tecnicas, no autonomia ni telefono fisico.
+
+| Capacidad actual | Publicacion | Validacion pendiente |
+| --- | --- | --- |
+| Jornada, Pacientes y revision de entrega | Publicada E7 | Uso sin ayuda por ambos roles |
+| Inventario e Historial bajo nuevo marco | Publicada E7 | Lote/comprobante y retorno en movil real |
+| Gestion y Equipo | Funciones conservadas E7 | Legibilidad y experiencia; escrituras comerciales remotas E3 siguen separadas |
+| Incorporacion de Browns | Evidencia parcial E5 | Acceso efectivo del encargado |
+| Compras, Caja, Conteos | Planificado | Confirmar necesidades y especificar cada entrega |
+
+[Tablero unico y evaluacion de uso](DISPENSARY_CLOSEOUT_SPRINT.md).
+No se revalidaron saldos, stock ni autorizaciones vigentes en esta consolidacion.
+
 ## Ajuste local de estados de lote (2026-09-24)
 
 Mesa de atencion presenta Cuarentena como "Bloqueado para entrega" y NOR-018
