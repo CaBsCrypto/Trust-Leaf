@@ -6,6 +6,32 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Objetivo, responsables y reglas
 
+### Evidencia incremental: 25/09, 02:09 Chile
+
+Comprobacion del agente en navegador interno sobre version publicada d101469;
+no acredita autonomia humana ni telefono fisico. Sustituye el bloqueo inicial B1
+solo para encargado. Operador y evaluaciones U1-U4 permanecen pendientes.
+
+- Encargado B autenticado; Jornada confirma 60 g, dos miembros y un paciente
+  autorizado. Tras recarga conserva organizacion/rol, valores y cero entregas hoy.
+- Paciente: tratamiento de prueba 4119236d con 30 g asignados, 20 g retirados y
+  10 g disponibles. Con confirmacion explicita del usuario se concedio permiso
+  a B hasta 26/09 02:02 Chile. No se modificaron tratamiento, saldo o stock.
+- Atenciones: seleccion explicita y revision de 10 g desde Piloto-B-20260908;
+  saldo hipotetico 0 g, SIN confirmar entrega. Luego se observo listado limpio.
+- Busqueda por referencia, apertura y retorno conservan texto y foco en paciente.
+- Inventario -> historial aplica filtro de lote y muestra comprobante existente
+  3150a49a-a8b2-4e19-a46b-a453adb7c15f de 10 g. Responsable se muestra por UUID:
+  oportunidad de legibilidad, sin afirmar identidad nominal desde esa referencia.
+- Gestion: Catalogo y Proveedores terminan carga con pagina vacia, no error;
+  formularios no abiertos. Equipo muestra un encargado y un operador, dos
+  invitaciones aceptadas historicas no equivalen a dos membresias activas.
+- No se enviaron invitaciones, retiraron miembros ni guardaron operaciones.
+  Descarte/cancelacion de preparacion fue guiado al usuario: falta evidencia
+  detallada para dar por aprobados todos los pasos J04.
+- Pendiente: filtros combinados/movimientos J06, operador, dispositivo fisico y
+  autonomia. El permiso es temporal; comprobar nuevamente antes de otra sesion.
+
 Encargado y operador encuentran paciente, explican saldo, localizan lote y
 recuperan comprobante desde computador y celular, sin ayuda de navegacion.
 
