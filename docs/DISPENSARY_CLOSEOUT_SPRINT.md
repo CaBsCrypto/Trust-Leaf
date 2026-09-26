@@ -1,10 +1,42 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-09-25. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-09-26. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
 
 ## Objetivo, responsables y reglas
+
+### Estado vigente: 26/09, preparacion de presentacion
+
+Esta entrada sustituye los bloqueos historicos de navegacion indicados abajo.
+El usuario navego manualmente por Inventario, Historial y Gestion/Equipo como
+operador de B; el agente contrasto las pantallas. NAV-01 no es un defecto del
+producto confirmado ni una correccion publicada: causa del control automatizado
+sin determinar. Los clics de cierre de sesion tampoco cambiaron la vista en esta
+sesion; se solicito accion manual, sin declarar al usuario desconectado.
+
+- Inventario: lote Piloto-B-20260908, 60 g disponibles. Historial por lote conserva
+  filtro; entregas de 20 g, 10 g y 10 g, movimientos +100/-20/-10/-10 g.
+- Comprobante existente 3150a49a-a8b2-4e19-a46b-a453adb7c15f recuperado, sin entrega.
+- Alternar movimientos y limpiar filtros funciono manualmente. No se atribuye
+  cobertura completa a todas las combinaciones de busqueda y fecha.
+- Operador: Catalogo/Recepciones consultables, sin Proveedores ni creacion;
+  Equipo muestra encargado y operador sin controles de administracion.
+- Recarga conserva identidad y membresia, vuelve a Pacientes. El usuario necesito
+  indicaciones para volver a Gestion: oportunidad de continuidad, no autonomia.
+- A las 02:36 Chile, operador de B y cero pacientes con permiso vigente. No se
+  renovo permiso ni se releyo stock en esa comprobacion.
+
+U1-U4 siguen pendientes de autonomia y celular real. J05/J06/J07 tienen evidencia
+guiada parcial del operador, no aprobacion de uso independiente ni prueba de
+escrituras denegadas. B no recibio entregas, ajustes ni cambios de equipo.
+
+Decision del usuario: Browns es ensayo propio, no el primer dispensario externo.
+P-01 pasa a En curso: verificar su encargado con una sesion real. P-02 preparado
+como guion en [Browns: ensayo y presentacion](BROWNS_DEMO_READINESS.md); ejecucion
+depende de P-01, cuentas separadas, datos y prueba fisica. No se cierra S1.
+
+PR #40 fusionado como 58d1dd3 tras verify/Vercel aprobados en 43581f7. Solo docs.
 
 ### Estado del cierre: 26/09, 01:10 Chile
 
