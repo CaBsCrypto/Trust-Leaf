@@ -61,10 +61,11 @@ try {
   await admin.getByRole('button',{name:'Aprobar piloto',exact:true}).click();
   await admin.getByText('Aprobada',{exact:true}).waitFor();
   await manager.getByRole('button',{name:'Actualizar solicitud',exact:true}).click();
-  await manager.getByRole('heading',{name:'Mi dispensario',exact:true}).waitFor();
-  await manager.getByText('Demo de incorporacion · Encargado',{exact:true}).waitFor();
+  await manager.getByRole('heading',{name:'Demo de incorporacion',level:1,exact:true}).waitFor();
+  await manager.getByText('Encargado',{exact:true}).waitFor();
   await manager.reload();
-  await manager.getByText('Demo de incorporacion · Encargado',{exact:true}).waitFor();
+  await manager.getByRole('heading',{name:'Demo de incorporacion',level:1,exact:true}).waitFor();
+  await manager.getByText('Encargado',{exact:true}).waitFor();
   await admin.screenshot({path:'scratch/operations-qa/onboarding/admin-approved.png',fullPage:true});
   await manager.screenshot({path:'scratch/operations-qa/onboarding/manager-approved.png',fullPage:true});
   console.log('PASS browser: invite, acceptance, private draft, unsaved focus, reload, corrections, approval, persistent manager and five viewport widths. Isolated data only.');

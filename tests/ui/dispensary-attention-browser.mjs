@@ -25,23 +25,29 @@ try {
     const page = await browser.newPage({viewport: { width, height: 900 }});
     let data = seed(), failure = false, posts = 0;
     data.membership.role = role;
+    for (const [id, state, expires_at, stock_mg] of [
+      ['blocked', 'quarantined', future, 25000], ['expired', 'active', past, 12000], ['empty', 'active', future, 0],
+    ]) data.batches.push({ ...data.batches[0], batch_ref: id, lot_code: id, state, expires_at, stock_mg });
     await page.route('**/api/operations-pilot', route => {
       if (route.request().method() !== 'GET') posts++;
       return route.fulfill({ status: failure ? 503 : 200, json: failure ? {} : data });
     });
     await page.goto(`${base}/?operations&role=dispensary`);
-    await page.getByRole('tab', { name: role === 'manager' ? 'Inicio' : 'Atenciones', selected: true, includeHidden: true }).waitFor({state:'attached'});
+    await page.getByRole('tab', { name: role === 'manager' ? 'Jornada' : 'Pacientes', selected: true, includeHidden: true }).waitFor({state:'attached'});
     if (role === 'manager') await navigateSection(page, 'Atenciones');
     await page.locator('.op-patient').first().waitFor();
     assert.equal(await page.locator('.op-patient').count(), 3);
-    assert.equal(await page.getByLabel('Lote', { exact: true }).count(), 0, 'no automatic selection');
-    assert.equal(await page.locator('.op-mobile-menu').isVisible(), width < 1024);
-    assert.equal(await page.locator('.op-sidebar').isVisible(), width >= 1024);
+    assert.equal(await page.locator('.op-lot-options').count(), 0, 'no automatic selection');
+    assert.equal(await page.locator('.op-mobile-menu').count(), 0);
+    assert.equal(await page.locator('.op-sidebar').isVisible(), true);
     assert.ok((await page.locator('.op-patient').first().boundingBox()).y < 800, 'patient list begins in first viewport');
     await page.screenshot({path:`scratch/operations-qa/attention-list-${role}-${width}.png`,fullPage:true});
     await page.locator('.op-patient').first().focus();
     await page.locator('.op-patient').first().press('Enter');
     await page.locator('.op-patient-detail h2:focus').waitFor();
+    for (const label of ['Bloqueado para entrega', 'Vencido', 'Agotado']) {
+      assert.equal(await page.getByRole('radio', {name:new RegExp(label)}).isDisabled(), true);
+    }
     await page.getByRole('button', {name:'Volver a pacientes'}).press('Enter');
     await page.locator('.op-patient:focus').waitFor();
     const search = page.getByRole('searchbox');
@@ -49,25 +55,33 @@ try {
     await page.getByText('No hay pacientes para esta busqueda.').waitFor();
     await search.fill('11111111');
     await page.locator('.op-patient').click();
-    await page.getByLabel('Lote', {exact:true}).selectOption('batch');
-    page.once('dialog', dialog => dialog.dismiss());
+    await page.getByRole('radio', {name:/LOTE-PRUEBA/}).check();
+    await page.screenshot({path:`scratch/operations-qa/desk-preparation-${role}-${width}.png`,fullPage:true});
     await navigateSection(page, 'Inventario');
-    assert.equal(await page.getByLabel('Lote', {exact:true}).inputValue(), 'batch', 'cancelled navigation preserves the draft');
-    if (width < 1024) await page.locator('.op-mobile-menu').click();
+    await page.getByRole('button', {name:'Seguir editando'}).click();
+    assert.equal(await page.getByRole('radio', {name:/LOTE-PRUEBA/}).inputValue(), 'batch', 'cancelled navigation preserves the draft');
     await page.getByLabel('Cantidad en gramos', {exact:true}).fill('5');
-    page.once('dialog', d => d.dismiss());
+    if (width < 1024) {
+      await page.setViewportSize({width,height:520});
+      await page.getByRole('button', {name:'Revisar entrega',exact:true}).scrollIntoViewIfNeeded();
+      const action = await page.getByRole('button', {name:'Revisar entrega',exact:true}).boundingBox();
+      const nav = await page.locator('.op-sidebar').boundingBox();
+      assert.ok(action.y + action.height <= nav.y, 'review stays above bottom navigation in reduced viewport');
+      await page.setViewportSize({width,height:900});
+    }
     await page.getByRole('button', {name:'Volver a pacientes'}).click();
-    assert.equal(await page.getByLabel('Lote', {exact:true}).inputValue(), 'batch');
-    page.once('dialog', d => d.accept());
+    await page.getByRole('dialog').press('Escape');
+    assert.equal(await page.getByRole('radio', {name:/LOTE-PRUEBA/}).inputValue(), 'batch');
     await page.getByRole('button', {name:'Volver a pacientes'}).click();
+    await page.getByRole('button', {name:'Descartar cambios'}).click();
     await page.locator('.op-patient:focus').waitFor();
     assert.equal(await search.inputValue(), '11111111');
     await search.fill('');
     await page.locator('.op-patient').nth(1).click();
     await page.getByLabel('Tratamiento', {exact:true}).waitFor();
     assert.equal(await page.getByLabel('Tratamiento', {exact:true}).locator('option').count(), 2);
-    await page.getByLabel('Lote', {exact:true}).selectOption('batch');
-    await page.getByRole('button', {name:'Registrar entrega simulada',exact:true}).click();
+    await page.getByRole('radio', {name:/LOTE-PRUEBA/}).check();
+    await page.getByRole('button', {name:'Revisar entrega',exact:true}).click();
     failure = true;
     await page.getByRole('button', {name:'Actualizar datos',exact:true}).click();
     await page.getByRole('alert').waitFor();
@@ -80,7 +94,7 @@ try {
     await page.screenshot({path:`scratch/operations-qa/attention-${role}-${width}.png`,fullPage:true});
     data.grants = [];
     await page.getByRole('button', {name:'Actualizar datos',exact:true}).click();
-    await page.getByLabel('Lote', {exact:true}).waitFor({state:'hidden'});
+    await page.locator('.op-lot-options').waitFor({state:'hidden'});
     await page.getByText('No hay pacientes con permiso vigente.').waitFor();
     assert.equal(posts, 0, 'navigation and review never write');
     await page.reload();
@@ -104,16 +118,16 @@ try {
   });
   await page.goto(`${base}/?operations&role=dispensary`);
   await page.locator('.op-patient').first().click();
-  await page.getByLabel('Lote', {exact:true}).selectOption('batch');
+  await page.getByRole('radio', {name:/LOTE-PRUEBA/}).check();
   await page.getByLabel('Cantidad en gramos', {exact:true}).fill('5');
-  await page.getByRole('button', {name:'Registrar entrega simulada',exact:true}).click();
+  await page.getByRole('button', {name:'Revisar entrega',exact:true}).click();
   await page.getByRole('button', {name:'Confirmar entrega',exact:true}).dblclick();
   await page.getByRole('button', {name:'Reintentar operacion',exact:true}).click();
   await page.getByRole('region', {name:'Entrega registrada',exact:true}).waitFor();
   assert.equal(attempts.length, 2);
   assert.equal(new Set(attempts).size, 1, 'lost response retries the same operation');
   assert.equal(data.deliveries.length, 1);
-  assert.equal(await page.getByRole('button', {name:'Registrar entrega simulada',exact:true}).count(), 0);
+  assert.equal(await page.getByRole('button', {name:'Revisar entrega',exact:true}).count(), 0);
   await page.close();
   console.log('PASS attention: roles and five widths, grouping, drafts, errors, revocation, navigation, double click and lost response');
 } finally { await browser.close(); }

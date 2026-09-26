@@ -1,0 +1,137 @@
+/* D is isolated from the comparison variants and the connected application. */
+.direction-D { --line: #dce2e1; --muted: #586461; --green: #185c47; background: #f5f7f6; color: #242c29; font-size: 14px; }
+.direction-D .app-shell { grid-template-columns: 204px minmax(0,1fr); }
+.direction-D .navigation { background: #fff; color: #47544e; border-right: 1px solid var(--line); padding: 24px 14px; }
+.direction-D .brand { color: #253c31; font-size: 23px; padding: 0 10px 32px; }
+.direction-D .brand > svg { color: #316b50; }
+.direction-D .brand-caption { display: none; }
+.direction-D nav button { color: #53615a; min-height: 48px; font-size: 14px; }
+.direction-D nav button:hover { background: #f0f4f2; }
+.direction-D nav button[aria-current=page] { background: #e9f2ed; color: #185c47; box-shadow: none; font-weight: 650; }
+.direction-D .nav-foot { color: #485b50; padding-inline: 10px; }
+.direction-D .nav-foot small { color: var(--muted); font-size: 12px; }
+.direction-D .identity { background: #fff; padding: 14px 28px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.direction-D .identity strong { font-size: 14px; }
+.direction-D .identity small { font-size: 12px; }
+.direction-D .account-dot { background: #eef2ef; color: #34513f; }
+.direction-D main { max-width: 1400px; padding: 28px; }
+.direction-D .eyebrow { display: none; }
+.direction-D h1 { font-size: 24px; margin-bottom: 6px; font-weight: 650; }
+.direction-D h2 { font-size: 17px; }
+.direction-D .page-heading { margin-bottom: 24px; gap: 16px; }
+.direction-D .page-heading p { margin: 0; font-size: 14px; color: var(--muted); }
+.direction-D button,.direction-D select,.direction-D input { font-size: 14px; min-height: 44px; transition: color 140ms, background-color 140ms, opacity 140ms; }
+.direction-D button:disabled { opacity: 1; color: #56635d; background: #e8edea; border-color: #a4afa9; }
+.direction-D button:focus-visible,.direction-D input:focus-visible,.direction-D select:focus-visible,.direction-D summary:focus-visible { outline: 3px solid #2367a0; outline-offset: 3px; }
+.direction-D .icon { min-width: 44px; }
+.direction-D .overview { background: transparent; border-inline: 0; }
+.direction-D .metric { padding: 18px 20px; background: transparent; }
+.direction-D .metric:hover { background: #edf2ef; }
+.direction-D .metric > span { font-size: 14px; }
+.direction-D .metric strong { font-size: 30px; color: #26372e; }
+.direction-D .metric small { font-size: 12px; color: var(--muted); }
+.direction-D .home-work { margin-top: 30px; }
+.direction-D .work-item { padding-block: 18px; }
+.direction-D .section-title span,.direction-D .receipt-number,.direction-D .recent p { font-size: 12px; }
+.direction-D .preparation { font-size: 14px; }
+.direction-D .attention { grid-template-columns: minmax(280px,.85fr) minmax(0,1.15fr); gap: 28px; }
+.direction-D .people { min-width: 0; }
+.direction-D .search { max-width: none; border-color: #919f97; margin-bottom: 16px; }
+.direction-D .search input { font-size: 14px; }
+.direction-D input[type=search]::-webkit-search-cancel-button { display: none; }
+.direction-D .patient-row { padding: 18px 12px; gap: 10px; }
+.direction-D .person strong { font-size: 14px; }
+.direction-D .person small,.direction-D .row-balance small { font-size: 12px; color: var(--muted); }
+.direction-D .person small { line-height: 1.5; }
+.direction-D .row-balance strong { font-size: 20px; }
+.direction-D .patient-detail { border: 0; border-left: 1px solid var(--line); padding: 0 0 0 28px; background: #fff; }
+.direction-D .attention.selected { background: #fff; }
+.direction-D .detail-top { display: none; }
+.direction-D .permission { padding: 10px 0; font-size: 12px; color: #285d44; }
+.direction-D .balance { align-items: end; padding: 18px 0 24px; margin: 0 0 22px; background: #fff; }
+.direction-D .balance span { font-size: 12px; }
+.direction-D .balance strong { font-size: 22px; }
+.direction-D .balance > div:first-child strong { font-size: 36px; line-height: 1.15; }
+.direction-D .number { display: none; }
+.direction-D .form-heading { margin-bottom: 18px; }
+.direction-D form { background: #fff; }
+.direction-D form label { font-size: 14px; gap: 8px; }
+.direction-D select,.direction-D .quantity { border-color: #919f97; background: #fff; }
+.direction-D .quantity input { font-size: 18px; }
+.direction-D .patient-detail details { font-size: 14px; }
+.direction-D .steps { display: none; }
+.direction-D .back { margin-bottom: 16px; }
+.direction-D .selection-empty { background: transparent; color: var(--muted); border-left: 1px solid var(--line); }
+.direction-D .selection-empty h2 { color: #47584f; }
+.direction-D .stock-row { padding: 18px 16px; }
+.direction-D .stock-name h2 { font-size: 15px; }
+.direction-D .stock-name span,.direction-D .badge,.direction-D .expiry { font-size: 12px; }
+.direction-D .lot-symbol { color: #426950; background: #f0f4f1; }
+.direction-D .filters button { font-size: 14px; }
+.direction-D .receipt-row { padding: 18px 16px; gap: 16px; }
+.direction-D .receipt-row > strong { order: -1; min-width: 58px; font-size: 22px; }
+.direction-D .receipt-row > svg:first-child { display: none; }
+.direction-D .receipt-row small { font-size: 12px; }
+.direction-D .receipt-detail { border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+.direction-D .review-panel { background: #fff; }
+.direction-D .review-panel h2 { font-size: 22px; }
+.direction-D dl > div { font-size: 14px; }
+.direction-D .prototype-note { color: #65502d; font-size: 12px; }
+.direction-D footer { color: var(--muted); font-size: 12px; margin-top: 30px; }
+.direction-D .lab-bar { background: #f1f3f2; }
+.direction-D .variant { flex-wrap: wrap; }
+.direction-D .variant button,.direction-D .lab-bar select { min-height: 44px; }
+.direction-D .state-surface { border: 0; min-height: 340px; }
+.direction-D h1 { scroll-margin-top: 100px; }
+@supports (backdrop-filter: blur(12px)) {
+  .direction-D .identity { background: rgb(255 255 255 / 92%); backdrop-filter: blur(12px); }
+}
+@media(min-width:1024px) and (max-width:1200px) {
+  .direction-D .app-shell { grid-template-columns: 180px minmax(0,1fr); }
+  .direction-D main { padding: 22px; }
+  .direction-D .attention { grid-template-columns: minmax(250px,.85fr) minmax(0,1.15fr); gap: 20px; }
+  .direction-D .patient-detail { padding-left: 20px; }
+}
+@media(max-width:1023px) {
+  .direction-D .app-shell { display: block; }
+  .direction-D .navigation { padding: 12px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .direction-D .brand { padding: 0; }
+  .direction-D .nav-foot { display: none; }
+  .direction-D .identity { position: static; padding: 12px 20px; }
+  .direction-D nav.expanded { background: #fff; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
+  .direction-D .attention { display: block; }
+  .direction-D .patient-detail { border: 0; padding: 20px; }
+  .direction-D .steps { display: flex; list-style: none; gap: 12px; justify-content: space-between; padding: 0 0 16px; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+  .direction-D .steps li { font-size: 12px; color: var(--muted); }
+  .direction-D .steps li[aria-current=step] { color: var(--green); }
+  .direction-D .steps li > span { font-size: 12px; }
+  .direction-D .steps li[aria-current=step] > span { color: white; background: var(--green); }
+  @supports (backdrop-filter: blur(12px)) {
+    .direction-D nav.expanded { background: rgb(255 255 255 / 92%); backdrop-filter: blur(12px); }
+  }
+}
+@media(max-width:600px) {
+  .direction-D .navigation { padding: 12px 16px; }
+  .direction-D .identity { padding: 12px 16px; gap: 12px; }
+  .direction-D .identity strong { font-size: 13px; }
+  .direction-D .identity small { font-size: 12px; }
+  .direction-D main { padding: 22px 16px 14px; }
+  .direction-D .page-heading { gap: 14px; margin-bottom: 20px; }
+  .direction-D .metric { padding: 12px 0; }
+  .direction-D .metric > strong { font-size: 28px; }
+  .direction-D .home-work { margin-top: 24px; gap: 24px; }
+  .direction-D .patient-row { padding: 16px 10px; }
+  .direction-D .patient-row .avatar { display: none; }
+  .direction-D .patient-detail { padding: 16px; }
+  .direction-D .balance { gap: 8px; }
+  .direction-D .balance > div:first-child strong { font-size: 32px; }
+  .direction-D .balance strong { font-size: 21px; }
+  .direction-D .stock-row { padding: 18px 12px; }
+  .direction-D .receipt-row { padding: 18px 10px; gap: 10px; }
+  .direction-D .receipt-row strong { font-size: 14px; }
+  .direction-D .receipt-row > strong { font-size: 21px; min-width: 48px; }
+  .direction-D .lab-bar .variant { display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .direction-D * { transition: none !important; animation: none !important; }
+}

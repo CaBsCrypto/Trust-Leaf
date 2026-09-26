@@ -1,3 +1,4 @@
+import { batchState, batchLabels } from './batchPresentation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CheckCircle2, Circle, ArrowRight, Save, ClipboardCheck } from 'lucide-react';
 import { currentPeriod, formatGrams, gramsToMg, type PatientProfile, type PilotSnapshot, type Treatment } from './contracts';
@@ -69,25 +70,44 @@ export function ProfileForm({ profile, disabled, save }: { profile?: PatientProf
 
 export function DispensingForm({ data, treatment, disabled, submit, onDirty }: { data: PilotSnapshot; treatment: Treatment; disabled: boolean; submit: (input: Record<string, unknown>) => void; onDirty?: () => void }) {
   const [review, setReview] = useState<{ batch: string; quantity: number } | null>(null);
+  const [selected, setSelected] = useState('');
+  const [quantity, setQuantity] = useState('10');
   const [error, setError] = useState('');
   const period = currentPeriod(treatment, Date.now());
   const remaining = period ? period.allowance_mg - period.used_mg : 0;
-  const batches = (data.batches ?? []).filter(b => b.state === 'active' && b.stock_mg > 0 && Date.parse(b.expires_at) > Date.now());
+  const lots = (data.batches ?? []).filter(b => b.organization_ref === data.membership?.organization_ref);
+  const batches = lots.filter(b => batchState(b) === 'available');
+  const selectedBatch = batches.find(b => b.batch_ref === selected);
   const batch = batches.find(b => b.batch_ref === review?.batch);
   const profile = data.patientProfiles?.find(p => p.patient_ref === treatment.patient_ref);
+  let amount = 0;
+  try { amount = gramsToMg(quantity); } catch { /* Invalid input remains editable. */ }
+  const validDraft = !!selectedBatch && amount > 0 && amount <= remaining && amount <= selectedBatch.stock_mg;
   const valid = !!review && !!batch && review.quantity > 0 && review.quantity <= remaining && review.quantity <= batch.stock_mg;
   return <>
     {!batches.length && <p className="op-empty">No hay lotes disponibles con stock y vigencia para esta entrega.</p>}
-    <form className="op-form" onChange={onDirty} onSubmit={event => { event.preventDefault(); setError(''); try {
-      const values = new FormData(event.currentTarget); const quantity = gramsToMg(String(values.get('grams')));
-      if (quantity <= 0 || quantity > remaining || quantity > (batches.find(b => b.batch_ref === values.get('batch'))?.stock_mg ?? 0)) throw new Error('La cantidad supera el saldo o stock disponible.');
-      setReview({ batch: String(values.get('batch')), quantity });
-    } catch (e) { setError((e as Error).message); } }}>
-      <fieldset disabled={disabled || !batches.length || remaining <= 0 || !!review}>
-        <label>Lote<select aria-label="Lote" name="batch" required defaultValue=""><option value="">Seleccionar lote</option>{batches.map(b => <option key={b.batch_ref} value={b.batch_ref}>{b.product} · {b.lot_code} · {formatGrams(b.stock_mg)}</option>)}</select></label>
-        <label>Cantidad en gramos<input name="grams" defaultValue="10" required inputMode="decimal"/></label>
-        <button className="op-command" type="submit"><ClipboardCheck size={16}/>Registrar entrega simulada</button>
+    <form className="op-form op-desk-preparation" hidden={!!review} onSubmit={event => {
+      event.preventDefault(); setError('');
+      if (!validDraft) { setError('Selecciona un lote disponible y una cantidad dentro del saldo y stock.'); return; }
+      setReview({ batch: selected, quantity: amount });
+    }}>
+      <fieldset disabled={disabled || !batches.length || remaining <= 0}>
+        <fieldset className="op-lot-options"><legend>Seleccionar lote</legend>{lots.map(lot => {
+          const state = batchState(lot);
+          return <label key={lot.batch_ref} className="op-lot-option">
+            <input type="radio" name="batch" value={lot.batch_ref} checked={selected === lot.batch_ref && state === 'available'} disabled={state !== 'available'} onChange={() => { setSelected(lot.batch_ref); onDirty?.(); }}/>
+            <span><strong>{lot.product}</strong><small>{lot.lot_code}</small></span>
+            <strong>{formatGrams(lot.stock_mg)}</strong>
+            <span className={'op-batch-state op-batch-' + state}>{batchLabels[state]}</span>
+          </label>;
+        })}</fieldset>
+        <div className="op-desk-quantity">
+          <label>Cantidad en gramos<input name="grams" value={quantity} onChange={event => { setQuantity(event.target.value); onDirty?.(); }} required inputMode="decimal"/></label>
+          <div><span>Saldo resultante</span><strong>{validDraft ? formatGrams(remaining - amount) : '—'}</strong></div>
+          <button className="op-command" type="submit" disabled={!validDraft}><ClipboardCheck size={16}/>Revisar entrega</button>
+        </div>
       </fieldset>
+      {!!selectedBatch && !validDraft && <p className="op-error" role="status">Indica una cantidad mayor que cero, dentro del saldo y las existencias disponibles.</p>}
     </form>
     {error && <p role="alert" className="op-error">{error}</p>}
     {review && <section className="op-invitation-review" aria-label="Confirmar entrega"><h3>Confirmar entrega simulada</h3>

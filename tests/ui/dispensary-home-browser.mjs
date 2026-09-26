@@ -21,7 +21,7 @@ try {
       return route.fulfill({ status: failure ? 503 : 200, json: failure ? {} : data });
     });
     await page.goto(`${base}/?operations&role=dispensary`);
-    await page.getByRole('heading', { name: 'Inicio', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Jornada', exact: true }).waitFor();
     await page.getByText('1 lote(s) disponibles vencen en los proximos 30 dias.', { exact: true }).waitFor();
     assert.equal(await page.getByRole('searchbox').count(), 0);
     assert.equal(await page.locator('.op-preparation').getAttribute('open'), null);
@@ -30,10 +30,10 @@ try {
     await page.getByRole('button', { name: 'Revisar inventario', exact: true }).click();
     await page.getByRole('heading', { name: 'Inventario por lote' }).waitFor();
     await page.getByRole('searchbox').fill('not found');
-    await navigateSection(page, 'Inicio');
+    await navigateSection(page, 'Jornada');
     await page.getByRole('button', { name: 'Atender pacientes', exact: true }).click();
     assert.equal(await page.getByRole('searchbox').inputValue(), '');
-    await navigateSection(page, 'Inicio');
+    await navigateSection(page, 'Jornada');
     failure = true;
     await page.getByRole('button', { name: 'Actualizar datos', exact: true }).click();
     await page.getByRole('alert').waitFor();
@@ -42,7 +42,7 @@ try {
     await page.getByRole('button', { name: 'Actualizar datos', exact: true }).click();
     await page.getByRole('region', { name: 'Resumen del dispensario' }).waitFor();
     await page.reload();
-    await page.getByRole('heading', { name: 'Inicio', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Jornada', exact: true }).waitFor();
     assert.equal(writes, 0);
     await page.close();
   }

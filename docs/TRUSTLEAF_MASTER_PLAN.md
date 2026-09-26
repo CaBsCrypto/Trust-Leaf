@@ -1,5 +1,60 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Estado vigente y sprint de cierre (2026-09-25)
+
+Actualizacion 26/09: encargado y operador autenticados comprobados; permiso del
+paciente renovado con consentimiento explicito el 25/09. Revision sin entrega y
+descarte del operador observados. Cierre sigue pendiente: NAV-01 (navegacion del
+operador no cambia de seccion en la sesion observada, causa por contrastar),
+lecturas restantes, movil real y autonomia. Detalle en el tablero del sprint.
+Los bloqueos de sesion anotados abajo describen el inicio, no el estado actual.
+
+Mesa de atencion conectada publicada: [PR #42](https://github.com/CaBsCrypto/Trust-Leaf/pull/42),
+main `d101469e51888f6a33bc8c007267beba265d81a3`. Aprobacion visual recibida.
+CI `36072522968` aprobado sobre `668d84f`; Vercel produccion
+`dpl_d6Amae2MsKf8prLTEYno8ix2Ah9R` Ready y asociado a www.trustleaf.org,
+reconfirmado el 25/09. No hubo migraciones ni escrituras de negocio.
+
+La evidencia tecnica no cierra autonomia de encargado/operador ni teclado en
+celular real. La sesion oficial observada sigue siendo Admin; saldo, stock y
+permiso actuales no se han comprobado. Laboratorio 4330 no es el producto.
+
+[Sprint, tablero unico, escenarios y oportunidades](DISPENSARY_CLOSEOUT_SPRINT.md).
+[Correspondencia de integracion](DISPENSARY_DESK_INTEGRATION.md).
+Las entradas fechadas siguientes conservan evidencia historica; sus pendientes
+de aprobacion visual/publicacion quedan sustituidos por este estado vigente.
+Browns, negativos de invitaciones y otras validaciones mantienen sus pendientes.
+
+## Mesa de atencion local (2026-09-24)
+
+Boceto 01 aprobado implementado en el laboratorio, sin integrar ni publicar.
+Lista/detalle desde 1024 px; navegacion inferior Jornada/Pacientes/Inventario/
+Historial por debajo. Componentes separados, lotes bloqueados, revision sin
+escrituras y comprobante recuperable. Detalle y evidencia en el mapa de producto.
+A/B/C/D conservadas; validacion humana y teclado en dispositivo real pendientes.
+
+## Mapa de producto y alternativas de experiencia (2026-09-23)
+
+Ultima iteracion: D clinica, predeterminada localmente. Cuatro vistas con lateral
+claro, vidrio sutil y datos sobre superficies solidas. A/B/C conservadas;
+controles de laboratorio plegados al pie. Tipos, build y 40 combinaciones de
+QA aprobados. Sin produccion; aprobacion visual de D pendiente.
+
+Iteracion local C: mezcla A+B elegida por el usuario, ahora predeterminada en
+el laboratorio. A/B permanecen disponibles. QA de 30 combinaciones aprobada;
+tipos y build local aprobados. Aprobacion visual de C e integracion pendientes.
+
+[Mapa del producto, recorridos y backlog de experiencia](PRODUCT_EXPERIENCE_MAP.md).
+Base de esta revision: `a995f44`. Las evidencias historicas no sustituyen una
+comprobacion actual de produccion. El acceso final de Browns como encargado
+permanece pendiente de verificar.
+
+La propuesta visual anterior se conserva en `feat/dispensary-visual-preview`
+(`58b2839`), descartada y sin publicar. Las alternativas A/B viven exclusivamente
+en `design/product-lab`, con datos sinteticos y sin APIs operativas. La direccion
+visual y su implementacion conectada requieren revision y eleccion explicita.
+No se modifican B, Browns, saldos, migraciones ni el borrador mensual.
+
 ## Incorporaciones publicadas: validacion oficial en curso (2026-09-23)
 
 - PR #39 integrado en main como `a995f4443a301686c8e6ce1bfdaf73f33d3e8e0c`.
@@ -1541,3 +1596,16 @@ fases 0-7 ni la presentacion acompanada.
   cuatro roles, invitaciones/reincorporacion, permisos, citas, entregas parciales,
   recuperacion de errores, reconexion y cambio de cuenta. No hubo escrituras
   publicadas para ejecutar estas pruebas.
+# Cierre del laboratorio de diseno (2026-09-24)
+
+Actualizacion: laboratorio integrado por PR #41, main 0c7708b, CI aprobado.
+Aprobacion visual explicita recibida del usuario. Se inicia entrega separada
+de Mesa conectada: navegacion y Atenciones, conservando herramientas de Gestion.
+Pruebas con datos aislados; publicacion y verificacion oficial pendientes.
+
+Mesa de atencion sigue aislada, con datos sinteticos y sin conexion a produccion.
+Tipos, build y regresiones locales comprobados; la aprobacion visual final sigue
+pendiente. Fusionar el laboratorio no activa el rediseno de /dispensario.
+Siguiente entrega documentada en [Integracion de Mesa](DISPENSARY_DESK_INTEGRATION.md).
+La revision remota, CI y preview se registraran al cerrar el PR; no presumir su
+aprobacion a partir de las pruebas locales. B, Browns y borrador mensual intactos.
