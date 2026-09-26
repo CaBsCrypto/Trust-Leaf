@@ -1,8 +1,9 @@
-# Mesa de atencion: siguiente entrega de integracion
+# Mesa de atencion: integracion publicada
 
-Estado: aprobacion visual explicita recibida el 2026-09-24. Primera integracion
-de navegacion y Atenciones implementada en rama, pendiente de CI y publicacion.
-El laboratorio no sustituye /dispensario y sus fixtures no son datos operativos.
+Estado al 2026-09-25: aprobacion visual explicita recibida el 2026-09-24.
+Navegacion y Atenciones publicadas mediante PR #42, main `d101469`.
+El laboratorio permanece separado; /dispensario usa datos y permisos existentes,
+no fixtures. El cierre humano se gestiona en [el sprint](DISPENSARY_CLOSEOUT_SPRINT.md).
 
 La integracion usa los datos y acciones existentes de OperationsWorkspace.
 Conserva Gestion/Equipo en cabecera, tratamientos multiples y confirmacion de
@@ -10,7 +11,9 @@ entrega. Inventario e Historial conservan sus funciones bajo el nuevo marco;
 el refinamiento detallado de Gestion permanece como entrega posterior.
 Validacion local: tipos y build aprobados; atencion, jornada, inventario,
 historial y comercio comprobados en ambos roles y cinco viewports. El recorrido
-SQL completo y CI deben terminar aprobados antes de fusionar.
+SQL completo y CI `36072522968` terminaron aprobados antes de fusionar.
+Preview aprobada y despliegue de produccion Ready confirmado. La sesion oficial
+disponible es Admin: no acredita una prueba autenticada de encargado/operador.
 No se modifican APIs, contratos, migraciones ni datos publicados.
 
 ## Correspondencia con el producto
@@ -27,7 +30,7 @@ No se modifican APIs, contratos, migraciones ni datos publicados.
 | Inventario e historial | Mantener filtros, acceso por lote, entregas y movimientos existentes. |
 | Gestion | Mantener CommercePanel (catalogo, proveedores, recepcion) y equipo por invitacion, segun banderas y rol. |
 
-## Entregas propuestas
+## Alcance integrado y validacion pendiente
 
 1. Estructura: estilos aislados del dispensario, lateral desde 1024 px y barra
    inferior movil con Jornada, Pacientes, Inventario e Historial. Gestion permanece
@@ -39,8 +42,8 @@ No se modifican APIs, contratos, migraciones ni datos publicados.
    de descarte por dialogo React accesible; mantener beforeunload.
 3. Inventario, Historial y Gestion: aplicar el marco visual sin quitar recepcion,
    ajustes, vinculacion, archivo, filtros ni acciones de equipo autorizadas.
-4. Validacion: preview con datos aislados, ambos roles y cinco anchos; despues
-   prueba acompanada de lectura en produccion sin entregas ni ajustes nuevos.
+4. Validacion tecnica: datos aislados, ambos roles y cinco anchos aprobados.
+   Pendiente prueba acompanada de lectura en produccion, sin entregas ni ajustes.
 
 ## Invariantes y puertas de salida
 
@@ -53,5 +56,5 @@ No se modifican APIs, contratos, migraciones ni datos publicados.
   doble clic y respuesta perdida. No inventar un motivo de bloqueo sin datos.
 - Tipos, build, regresiones, revision, CI y preview antes de merge.
 - Evidencia responsive en 360/390/768/1024/1440 no sustituye dispositivo real.
-- La aprobacion del PR de laboratorio no equivale a aprobacion visual ni autoriza
-  por si sola publicar la interfaz conectada. B, Browns y borrador mensual intactos.
+- La aprobacion visual y publicacion no equivalen a autonomia de uso validada.
+  B, Browns y borrador mensual intactos.

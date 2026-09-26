@@ -1,5 +1,30 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Estado vigente y sprint de cierre (2026-09-25)
+
+Actualizacion 26/09: encargado y operador autenticados comprobados; permiso del
+paciente renovado con consentimiento explicito el 25/09. Revision sin entrega y
+descarte del operador observados. Cierre sigue pendiente: NAV-01 (navegacion del
+operador no cambia de seccion en la sesion observada, causa por contrastar),
+lecturas restantes, movil real y autonomia. Detalle en el tablero del sprint.
+Los bloqueos de sesion anotados abajo describen el inicio, no el estado actual.
+
+Mesa de atencion conectada publicada: [PR #42](https://github.com/CaBsCrypto/Trust-Leaf/pull/42),
+main `d101469e51888f6a33bc8c007267beba265d81a3`. Aprobacion visual recibida.
+CI `36072522968` aprobado sobre `668d84f`; Vercel produccion
+`dpl_d6Amae2MsKf8prLTEYno8ix2Ah9R` Ready y asociado a www.trustleaf.org,
+reconfirmado el 25/09. No hubo migraciones ni escrituras de negocio.
+
+La evidencia tecnica no cierra autonomia de encargado/operador ni teclado en
+celular real. La sesion oficial observada sigue siendo Admin; saldo, stock y
+permiso actuales no se han comprobado. Laboratorio 4330 no es el producto.
+
+[Sprint, tablero unico, escenarios y oportunidades](DISPENSARY_CLOSEOUT_SPRINT.md).
+[Correspondencia de integracion](DISPENSARY_DESK_INTEGRATION.md).
+Las entradas fechadas siguientes conservan evidencia historica; sus pendientes
+de aprobacion visual/publicacion quedan sustituidos por este estado vigente.
+Browns, negativos de invitaciones y otras validaciones mantienen sus pendientes.
+
 ## Mesa de atencion local (2026-09-24)
 
 Boceto 01 aprobado implementado en el laboratorio, sin integrar ni publicar.
