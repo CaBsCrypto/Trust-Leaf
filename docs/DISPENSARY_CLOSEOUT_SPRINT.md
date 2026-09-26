@@ -6,6 +6,31 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Objetivo, responsables y reglas
 
+### Estado del cierre: 26/09, 01:10 Chile
+
+Operador autenticado de B confirmado tras recarga; panel muestra un paciente con
+10 g disponibles y permiso vigente en ese momento. No se renovo el permiso.
+No se comprobó stock de nuevo en esta sesion: 60 g sigue siendo evidencia del 25/09.
+
+NAV-01 (fallo de flujo observado, causa pendiente): al pulsar Inventario,
+Historial o Gestion desde Pacientes, permanece Pacientes seleccionado. Repetido
+tras recargar y con locator semantico del navegador. No hay error visible ni
+errores de consola capturados. No se ha demostrado si es fallo de aplicacion,
+sesion o automatizacion; se solicito contraste manual al usuario antes de
+proponer un cambio funcional. Responsable: facilitador tecnico. J05/J06/J08
+del operador permanecen pendientes; no inferir denegacion del servidor.
+
+Evidencia adicional del 25/09, operador: revision de 10 g sin confirmar, volver
+con lote/cantidad conservados, cancelar descarte manteniendo preparacion y foco,
+descartar y regresar al listado con 10 g disponibles. Inventario mostraba 60 g
+sin controles de recepcion/ajuste. Estas observaciones no sustituyen permisos
+directos ni autonomia humana. No se realizaron nuevas entregas.
+
+Cierre NO aprobado. Pendientes: contraste NAV-01, filtros/historial/Gestion del
+operador, celular real, autonomia y acceso de Browns. No ampliar el alcance ni
+forzar datos para completar casos. Si se reproduce un defecto de codigo,
+correccion separada con regresion, CI y preview antes de publicar.
+
 ### Evidencia incremental: 25/09, 02:09 Chile
 
 Comprobacion del agente en navegador interno sobre version publicada d101469;
@@ -148,9 +173,11 @@ sin ejecutar -> encontrar lote y comprobante -> explicar equipo. No presentar
 Compras/Caja/Conteos como operativos. Preguntar herramientas actuales, tareas
 frecuentes, excepciones, roles, formatos y modelo economico; no asumir respuestas.
 
-Revision actual: consolidacion tecnica completada; prueba humana bloqueada por
-sesiones. Ninguna funcion nueva ni escritura de negocio. Siguiente accion:
-encargado entra y realiza J01-J02; seguir el protocolo sin tutorial inicial.
+Revision actual: consolidacion tecnica completada; sesiones de ambos roles
+observadas, prueba humana pendiente. Ninguna funcion nueva ni entrega registrada.
+Siguiente accion: contrastar NAV-01 y completar lecturas del operador; luego
+evaluacion humana sin tutorial inicial. El unico cambio de acceso fue el permiso
+temporal del paciente, autorizado explicitamente y documentado el 25/09.
 Cierre S1 solo con ambas evaluaciones, defectos relevantes resueltos, evidencia
 actualizada y siguiente prioridad aprobada. Retrospectiva: que funciono, donde
 hubo ayuda y un cambio concreto al proceso para la proxima iteracion.

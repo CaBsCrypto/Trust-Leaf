@@ -2,6 +2,13 @@
 
 ## Estado vigente y sprint de cierre (2026-09-25)
 
+Actualizacion 26/09: encargado y operador autenticados comprobados; permiso del
+paciente renovado con consentimiento explicito el 25/09. Revision sin entrega y
+descarte del operador observados. Cierre sigue pendiente: NAV-01 (navegacion del
+operador no cambia de seccion en la sesion observada, causa por contrastar),
+lecturas restantes, movil real y autonomia. Detalle en el tablero del sprint.
+Los bloqueos de sesion anotados abajo describen el inicio, no el estado actual.
+
 Mesa de atencion conectada publicada: [PR #42](https://github.com/CaBsCrypto/Trust-Leaf/pull/42),
 main `d101469e51888f6a33bc8c007267beba265d81a3`. Aprobacion visual recibida.
 CI `36072522968` aprobado sobre `668d84f`; Vercel produccion
