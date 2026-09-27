@@ -64,7 +64,7 @@ export default function DispensaryAttention({ data, search, onSearch, disabled, 
         const current = currentPeriod(items[0], now)!;
         return <button className="op-patient" key={ref} aria-pressed={selected === ref} disabled={disabled} onClick={async event => {
           const target = event.currentTarget;
-          if (ref === selected || !mayLeave()) return;
+          if (ref === selected || !await mayLeave()) return;
           scroll.current = window.scrollY; origin.current = target;
           previousReceipt.current = receiptRef; setSubmitted(false); setDirty(false);
           setTreatmentRef(items[0].treatment_ref); setSelected(ref);
@@ -80,7 +80,7 @@ export default function DispensaryAttention({ data, search, onSearch, disabled, 
         <p>Paciente {treatment.patient_ref.slice(0, 8)} · Permiso hasta {grant ? date(grant.expires_at) : 'no disponible'}</p>
         {treatments.length > 1 && <label>Tratamiento<select aria-label="Tratamiento" value={treatmentRef ?? ''} disabled={disabled} onChange={async e => {
           const next = e.target.value;
-          if (!mayLeave()) return; setTreatmentRef(next); setDirty(false); setSubmitted(false); previousReceipt.current = receiptRef;
+          if (!await mayLeave()) return; setTreatmentRef(next); setDirty(false); setSubmitted(false); previousReceipt.current = receiptRef;
         }}>{treatments.map(t => <option key={t.treatment_ref} value={t.treatment_ref}>{t.treatment_ref.slice(0, 8)} · {date(t.issued_at)}</option>)}</select></label>}
         <div className="op-balance"><div><span>Disponible</span><strong>{formatGrams(period.allowance_mg - period.used_mg)}</strong></div><div><span>Asignada</span><strong>{formatGrams(period.allowance_mg)}</strong></div><div><span>Retirada</span><strong>{formatGrams(period.used_mg)}</strong></div></div>
         {receipt ? <section aria-label="Entrega registrada"><h3>Entrega registrada: {formatGrams(receipt.quantity_mg)}</h3><p>{receipt.product ?? 'Producto no disponible'} · {receipt.lot_code ?? 'Lote no disponible'}</p><p className="op-reference">Comprobante: {receipt.delivery_ref}</p><button className="op-command" onClick={history}><History size={16}/>Ver historial</button></section>

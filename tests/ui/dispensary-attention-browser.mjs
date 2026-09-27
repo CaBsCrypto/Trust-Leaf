@@ -81,6 +81,25 @@ try {
     await page.getByLabel('Tratamiento', {exact:true}).waitFor();
     assert.equal(await page.getByLabel('Tratamiento', {exact:true}).locator('option').count(), 2);
     await page.getByRole('radio', {name:/LOTE-PRUEBA/}).check();
+    await page.getByLabel('Cantidad en gramos', {exact:true}).fill('5');
+    await page.getByLabel('Tratamiento', {exact:true}).selectOption('t3');
+    await page.getByRole('dialog').waitFor();
+    assert.equal(await page.getByLabel('Tratamiento', {exact:true}).inputValue(), 't2', 'treatment stays unchanged while discard is pending');
+    await page.getByRole('button', {name:'Seguir editando'}).click();
+    assert.equal(await page.getByLabel('Cantidad en gramos', {exact:true}).inputValue(), '5');
+    assert.equal(await page.getByRole('radio', {name:/LOTE-PRUEBA/}).isChecked(), true);
+    if (width >= 1024) {
+      await page.locator('.op-patient').first().click();
+      await page.getByRole('dialog').waitFor();
+      assert.equal(await page.locator('.op-patient').nth(1).getAttribute('aria-pressed'), 'true', 'patient stays unchanged while discard is pending');
+      await page.getByRole('button', {name:'Seguir editando'}).click();
+      assert.equal(await page.getByLabel('Cantidad en gramos', {exact:true}).inputValue(), '5');
+    }
+    await page.getByLabel('Tratamiento', {exact:true}).selectOption('t3');
+    await page.getByRole('button', {name:'Descartar cambios'}).click();
+    assert.equal(await page.getByLabel('Tratamiento', {exact:true}).inputValue(), 't3');
+    assert.equal(await page.getByLabel('Cantidad en gramos', {exact:true}).inputValue(), '10');
+    await page.getByRole('radio', {name:/LOTE-PRUEBA/}).check();
     await page.getByRole('button', {name:'Revisar entrega',exact:true}).click();
     failure = true;
     await page.getByRole('button', {name:'Actualizar datos',exact:true}).click();
