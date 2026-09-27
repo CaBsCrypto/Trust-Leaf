@@ -7,9 +7,8 @@ import Footer from './components/Footer';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
 import OperationsWorkspace from './features/operations/OperationsWorkspace';
 import DispensaryOnboarding from './features/onboarding/DispensaryOnboarding';
-import { captureOnboardingInvitation } from './features/onboarding/api';
+import { captureDispensaryInvitation, clearDispensaryInvitation } from './lib/dispensaryInvitation';
 import TeamInvitationGate from './features/operations/TeamInvitationGate';
-import { captureTeamInvitation } from './features/operations/team-api';
 import GoogleCalendarConnection from './components/GoogleCalendarConnection';
 import PrivySessionBoundary from './components/PrivySessionBoundary';
 import { readPrivyAdminJson } from './lib/privyRead';
@@ -120,10 +119,9 @@ function AppContent() {
   const { t } = useLanguage();
   const privyIdentity = useTrustLeafPrivyIdentity();
   const [path, setPath] = useState(() => window.location.pathname);
-  const [teamInvitation, setTeamInvitation] = useState(captureTeamInvitation);
-  const [onboardingInvitation] = useState(captureOnboardingInvitation);
+  const [invitation, setInvitation] = useState(captureDispensaryInvitation);
   useEffect(() => {
-    const capture = () => setTeamInvitation(captureTeamInvitation());
+    const capture = () => setInvitation(captureDispensaryInvitation());
     window.addEventListener('hashchange', capture);
     return () => window.removeEventListener('hashchange', capture);
   }, []);
@@ -654,8 +652,9 @@ function AppContent() {
   const dispensaryCanOperate =
     privyIdentity.enabled ? hasRoleSession('dispensary') : session?.role === 'dispensary' && (session.mode === 'demo' || Boolean(currentDispensaryRegistration));
 
-  if (path === '/dispensario' && teamInvitation) return <TeamInvitationGate token={teamInvitation}/>;
-  if (path === '/dispensario' && privyIdentity.enabled && import.meta.env.VITE_DISPENSARY_ONBOARDING_ENABLED === 'true') return <DispensaryOnboarding token={onboardingInvitation}/>;
+  if (path === '/dispensario' && invitation?.kind === 'invalid') return <section className="tl-operations tl-operations-page"><h1>Invitacion no valida</h1><p role="alert">Abre el enlace completo del correo mas reciente.</p><button className="op-command" onClick={() => { clearDispensaryInvitation(); setInvitation(null); }}>Salir de la invitacion</button></section>;
+  if (path === '/dispensario' && invitation?.kind === 'worker') return <TeamInvitationGate key={invitation.token} token={invitation.token}/>;
+  if (path === '/dispensario' && privyIdentity.enabled && import.meta.env.VITE_DISPENSARY_ONBOARDING_ENABLED === 'true') return <DispensaryOnboarding key={invitation?.kind === 'manager' ? invitation.token : 'draft'} token={invitation?.kind === 'manager' ? invitation.token : null}/>;
 
   if (patientView) {
     if (!hasRoleSession('patient')) {
