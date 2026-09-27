@@ -19,6 +19,13 @@ Verificacion local 27/09:
 - Compilacion producto (`npm run build`) PASS, 3m 7s; advertencias de
   anotaciones de dependencias y chunks grandes, sin error de compilacion.
 
-Pendiente: navegador aislado con ambos destinos, hashchange, salida, recarga y
-sesion; revision del diff, CI y preview. No publicado ni bloqueo cerrado.
+- Navegador aislado 390/1440: encargado/trabajador, tokens anteriores, recarga,
+  hashchange, reinicio de consentimiento y enlace invalido PASS. Solicitudes
+  externas bloqueadas y ninguna escritura; identidad sintetica, no Privy real.
+- Regresion navegador de incorporacion: invitacion, borrador, cambios sin
+  guardar al recuperar foco, recarga, correcciones, aprobacion y encargado
+  persistente PASS; cinco anchos. Datos SQL aislados.
+
+Pendiente: revision del diff, CI y preview del ultimo commit. No publicado ni
+bloqueo cerrado. Admin autenticado en produccion sigue pendiente.
 No hubo correos ni escrituras a produccion. Sin API, migracion ni permisos nuevos.
