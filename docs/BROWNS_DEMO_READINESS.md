@@ -20,11 +20,11 @@ los flujos moviles ni uso del operador. Modelo/navegador no registrados.
 | Integrar PR40 documental | Hecho | 58d1dd3; verify y Vercel aprobados en 43581f7 |
 | Acceso encargado Browns | Comprobado 27/09 | Ingreso del usuario; Browns / Encargado conservados tras recarga |
 | Inventario inicial de Browns | Comprobado | Un producto, lote, recepcion y movimiento de 100 g; persistencia |
-| Operador propio | Pendiente de inventario | Reutilizar miembro correcto o pedir correo separado e invitacion explicita |
-| Paciente exclusivo | Pendiente | Cuenta separada, tratamiento ficticio por medico, permiso expreso |
-| Comprobante del ensayo | Pendiente | Reutilizar uno de Browns o acordar una entrega ficticia unica |
+| Operador propio | Aplazado, no bloquea esta incorporacion | Reutilizar evidencia de B sin trasladar membresias |
+| Paciente exclusivo | Aplazado, no bloquea esta incorporacion | Evidencia de B separada; no afirmar atencion completa en Browns |
+| Comprobante del ensayo | Recepcion Browns comprobada; entrega Browns no realizada | Recibo de entrega de B se presenta como otro escenario |
 | Ensayo desktop y telefono | Parcial guiado | Agente en navegador; usuario encuentra movimiento en celular fisico; autonomia pendiente |
-| Presentacion externa | No preparada aun | Todas las puertas anteriores y ausencia de defectos criticos |
+| Incorporacion externa acompanada | Decision en auditoria | Ver matriz unica del sprint; no depende de cuentas nuevas en Browns |
 
 No deducir la cuenta encargada por su correo ni crear otra organizacion si el
 acceso falla. Resolver primero identidad, solicitud y membresia. Nunca mover
@@ -48,9 +48,10 @@ movimientos registrados. Equipo muestra solo al encargado y ninguna invitacion.
 Navegacion a Inventario/Historial y cambio a Movimientos comprobados con Enter
 en controles semanticos; clics automatizados no siempre cambiaron la vista.
 No inferir fallo general de navegacion ni autonomia humana. Sin escrituras.
-Proveedores y Recepciones comerciales, filtros con datos, operador propio y
-telefono real siguen pendientes. El siguiente bloqueo es preparar registros
-sinteticos y disponer de cuentas separadas para operador y paciente de Browns.
+Estado historico previo a la recepcion: Proveedores y Recepciones comerciales,
+filtros con datos y telefono real no estaban comprobados. El resultado posterior
+y la confirmacion movil sustituyen ese estado. Operador/paciente propios fueron
+aplazados explicitamente; no son requisitos del bloque de incorporacion actual.
 
 ## Preparacion desde paneles
 
@@ -72,7 +73,11 @@ Con sesion del encargado Browns, catalogo vacio comprobado antes de guardar:
   No hay movimientos para estos filtros; limpiar filtros recupera la vista.
 - B intacto; ninguna entrega, ajuste, invitacion o cambio de permisos efectuado.
 
-### Matriz vigente de validacion
+### Evidencia del ensayo (historica; matriz vigente en el sprint)
+
+La decision y los pendientes actuales se mantienen solo en
+[la matriz del sprint](DISPENSARY_CLOSEOUT_SPRINT.md). Esta tabla conserva el
+corte del ensayo; no sustituye la auditoria de version posterior.
 
 | Flujo | Version / evidencia | Resultado | Pendiente |
 | --- | --- | --- | --- |

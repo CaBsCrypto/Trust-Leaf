@@ -1,5 +1,18 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Auditoria para primera incorporacion (27/09/2026)
+
+Cuatro agentes revisaron acceso, medico/paciente, dispensario y calidad sobre
+main `2e01443`, CI `36307001486` aprobado y despliegue oficial asociado comprobado.
+Resultado: presentacion/ensayo acompanado con limitaciones; no aprobacion
+incondicional de onboarding externo. Corregir conflicto de invitacion antigua
+de trabajador con enlace nuevo de encargado (AUD-01), verificar Admin y
+destinatario antes de enviar. Hallazgos de borradores AUD-02/03 y sospecha AUD-04
+requieren entregas separadas. No hay nuevo defecto critico de permisos demostrado.
+Matriz unica, evidencias, prioridades y responsables en
+[Sprint S1](DISPENSARY_CLOSEOUT_SPRINT.md). Browns conserva 100 g y B no se toca.
+La evidencia guiada en celular no acredita autonomia ni habilitacion clinica.
+
 ## Preparacion de dos dispensarios (27/09/2026)
 
 Browns: ingreso y rol Encargado comprobados tras recarga. Producto DEMO-BRW-001
@@ -9,7 +22,7 @@ trasladar miembros ni exigir cuentas adicionales en este bloque. Pruebas locales
 de comercio, invitaciones e incorporaciones aprobadas; CI main 36221358001 verde.
 Usuario confirma recepcion de 100 g en celular fisico con ayuda: prueba guiada,
 no autonomia completa. Pendientes: resto de validacion movil/autonomia, revision Admin actual y dos incorporaciones
-externas secuenciales. No declarar cerrado el piloto. Matriz y referencias en
+externas secuenciales. No declarar cerrado el piloto. Evidencia del ensayo en
 [Preparacion Browns](BROWNS_DEMO_READINESS.md).
 
 ## Estado vigente y sprint de cierre (2026-09-25)
