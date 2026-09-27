@@ -5,10 +5,11 @@
 Cuatro agentes revisaron acceso, medico/paciente, dispensario y calidad sobre
 main `2e01443`, CI `36307001486` aprobado y despliegue oficial asociado comprobado.
 Resultado: presentacion/ensayo acompanado con limitaciones; no aprobacion
-incondicional de onboarding externo. Corregir conflicto de invitacion antigua
-de trabajador con enlace nuevo de encargado (AUD-01), verificar Admin y
-destinatario antes de enviar. Hallazgos de borradores AUD-02/03 y sospecha AUD-04
-requieren entregas separadas. No hay nuevo defecto critico de permisos demostrado.
+incondicional de onboarding externo. AUD-01 corregido y publicado por PR46;
+AUD-02 reproducido en navegador, corregido e integrado por PR47 con CI aprobado,
+publicacion y alias oficial contrastados. Verificar Admin y destinatario antes de enviar.
+AUD-03/04 siguen pendientes de reproduccion, sin declarar perdida de datos
+guardados. No hay nuevo defecto critico de permisos demostrado.
 Matriz unica, evidencias, prioridades y responsables en
 [Sprint S1](DISPENSARY_CLOSEOUT_SPRINT.md). Browns conserva 100 g y B no se toca.
 La evidencia guiada en celular no acredita autonomia ni habilitacion clinica.

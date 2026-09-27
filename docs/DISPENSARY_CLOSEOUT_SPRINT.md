@@ -21,11 +21,22 @@ No se afirma preparacion clinica, legal ni operacion autonoma.
 
 #### Matriz unica de decision
 
+Actualizacion de cierre tecnico: PR45 documental integrado (`0fe2758`).
+AUD-01 corregido por PR46 (`7ccb908`), CI PR `36308719527` PASS.
+Deployment GitHub `6690456559` success y Vercel `dpl_4FZRiVYqXBrE7VNA4kcYwTte7dm3`
+Ready, URL `trustleaf-fjdloa0a9-cabscryptocontacto-6028s-projects.vercel.app`,
+alias oficial comprobado. AUD-02 corregido por PR47 (`9291f2e`), CI PR
+`36309391166` PASS y preview aprobado. Deployment `6690567724` success,
+Vercel `dpl_Hf7waVNxgfC1UjgMS57gAHucdvet` Ready y alias oficial coinciden con
+`trustleaf-9d2qgh6oj-cabscryptocontacto-6028s-projects.vercel.app`.
+No interpretar los hallazgos historicos de abajo como correcciones pendientes
+de codigo para AUD-01/02. No hay cambios de APIs, migraciones o datos publicados.
+
 | Area / responsable | Evidencia actual | Resultado / limite | Siguiente accion |
 | --- | --- | --- | --- |
-| Incorporacion / Hume | API 5/5, invitaciones 12/12 y SQL PGlite PASS; identidad, versiones, aprobacion atomica | P2 AUD-01 reproducido en funciones reales; no escalamiento observado | Corregir entrada de invitacion en rama propia antes de onboarding externo general |
+| Incorporacion / Hume + coordinador | API 5/5, invitaciones 12/12, SQL, 15 pruebas de captura y navegador 390/1440 PASS | AUD-01 corregido y publicado por PR46; identidad real Admin pendiente | Leer Incorporaciones con Admin antes de invitar |
 | Medico-paciente / Pasteur | Operaciones 8/8, agenda 6/6 y SQL sintetico PASS | AUD-03 nota sin guardar; evidencia alojada anterior reutilizada, no sesion medica hoy | Reproduccion y correccion acotada; no prometer recorrido clinico cerrado |
-| Dispensario / Locke | Operaciones/comercio 13/13 PASS; reproduccion logica AUD-02 | Cancelar descarte puede no conservar preparacion; AUD-04 estatico | Regresion UI y correccion separada, no nuevas entregas para demostrar |
+| Dispensario / Locke + coordinador | AUD-02 reproducido en navegador antes del fix; ambos roles/cinco anchos PASS despues; CI PR47 PASS | Correccion publicada y alias contrastado. AUD-04 estatico | Mantener pendientes humanos separados |
 | Calidad / McClintock | SHA/CI oficial comprobados, PostgreSQL independiente y PostgREST aprobados | Carreras revocacion/cuarentena vs entrega no cubiertas de forma independiente | Backlog de pruebas aisladas; no afirmar fallo sin reproduccion |
 | Browns / coordinador | Lectura 27/09 05:52-05:53: encargado, lote 100 g, proveedor vacio sin error, formulario abierto/cerrado sin guardar | Persistencia y lectura comprobadas; ninguna escritura en esta auditoria | Mantener ensayo separado de B |
 | Humano movil / PO | Recepcion 100 g encontrada en telefono fisico con indicaciones | Guiado parcial, no autonomia ni teclado completo | Evaluar tareas sin instrucciones y registrar dispositivo |
@@ -56,7 +67,7 @@ No se afirma preparacion clinica, legal ni operacion autonoma.
   pendiente de reproduccion, no defecto de persistencia guardada confirmado.
   Rama propuesta, solo tras reproducir: `fix/inventory-draft-guard`.
 
-Decision de esta ronda: LISTO CON LIMITACIONES para presentacion y ensayo
+Decision inicial de la ronda, anterior a PR46/47: LISTO CON LIMITACIONES para presentacion y ensayo
 acompanados, NO aprobacion incondicional para incorporar externamente. Antes
 del envio externo: cerrar AUD-01, verificar sesion Admin y destinatario.
 Decision especifica de incorporacion externa: BLOQUEADA hasta completar esas
@@ -68,6 +79,24 @@ correcciones propias. Ningun critico de aislamiento o escalamiento demostrado.
 No confundir ausencia de hallazgo con garantia de seguridad completa.
 Correcciones no se incluyen en este PR documental; una rama funcional a la vez,
 tipos/build/regresion/CI/preview antes de integrar y revalidar.
+
+#### Decision vigente y siguiente accion
+
+LISTO CON LIMITACIONES para presentar el nucleo y preparar incorporacion
+acompanada con datos ficticios. El envio externo queda retenido hasta comprobar
+Admin autenticado y destinatario compatible. Version oficial de PR47 comprobada.
+Responsable tecnico: coordinador; inicio de sesion y destinatario: Product Owner.
+No se enviaron invitaciones durante la auditoria.
+
+AUD-03 y AUD-04 permanecen como hallazgos de fuente pendientes de reproduccion;
+no afirmar perdida de datos guardados. En cualquier ensayo medico, guardar y
+verificar nota antes de finalizar. No ofrecer recorrido clinico completo como
+validado. Pruebas humanas de autonomia, teclado movil y carreras concurrentes
+faltantes continuan abiertas. No hay defecto critico confirmado de aislamiento.
+
+Evidencia detallada: [AUD-01](INVITATION_ENTRY_FIX.md) y
+[AUD-02](DISPENSARY_DRAFT_GUARD_FIX.md). Brownsonchain sigue como encargado de
+Browns en lectura 27/09 06:27, 100 g visibles. No se cambio la sesion a Admin.
 
 ### Estado vigente: 27/09, Browns preparado
 
