@@ -16,7 +16,8 @@ Verificacion local 27/09:
 - Tipos completos (`npm run lint`) PASS.
 - Incorporacion: API 5/5 y SQL PGlite PASS.
 - Equipo: API 12/12 y SQL PGlite PASS.
-- Compilacion y navegador: registrar resultado antes de pedir integracion.
+- Compilacion producto (`npm run build`) PASS, 3m 7s; advertencias de
+  anotaciones de dependencias y chunks grandes, sin error de compilacion.
 
 Pendiente: navegador aislado con ambos destinos, hashchange, salida, recarga y
 sesion; revision del diff, CI y preview. No publicado ni bloqueo cerrado.
