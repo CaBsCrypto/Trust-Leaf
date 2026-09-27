@@ -26,7 +26,9 @@ AUD-01 corregido por PR46 (`7ccb908`), CI PR `36308719527` PASS.
 Deployment GitHub `6690456559` success y Vercel `dpl_4FZRiVYqXBrE7VNA4kcYwTte7dm3`
 Ready, URL `trustleaf-fjdloa0a9-cabscryptocontacto-6028s-projects.vercel.app`,
 alias oficial comprobado. AUD-02 corregido por PR47 (`9291f2e`), CI PR
-`36309391166` PASS y preview aprobado; despliegue oficial aun por contrastar.
+`36309391166` PASS y preview aprobado. Deployment `6690567724` success,
+Vercel `dpl_Hf7waVNxgfC1UjgMS57gAHucdvet` Ready y alias oficial coinciden con
+`trustleaf-9d2qgh6oj-cabscryptocontacto-6028s-projects.vercel.app`.
 No interpretar los hallazgos historicos de abajo como correcciones pendientes
 de codigo para AUD-01/02. No hay cambios de APIs, migraciones o datos publicados.
 
@@ -34,7 +36,7 @@ de codigo para AUD-01/02. No hay cambios de APIs, migraciones o datos publicados
 | --- | --- | --- | --- |
 | Incorporacion / Hume + coordinador | API 5/5, invitaciones 12/12, SQL, 15 pruebas de captura y navegador 390/1440 PASS | AUD-01 corregido y publicado por PR46; identidad real Admin pendiente | Leer Incorporaciones con Admin antes de invitar |
 | Medico-paciente / Pasteur | Operaciones 8/8, agenda 6/6 y SQL sintetico PASS | AUD-03 nota sin guardar; evidencia alojada anterior reutilizada, no sesion medica hoy | Reproduccion y correccion acotada; no prometer recorrido clinico cerrado |
-| Dispensario / Locke + coordinador | AUD-02 reproducido en navegador antes del fix; ambos roles/cinco anchos PASS despues; CI PR47 PASS | Correccion integrada; falta contraste del despliegue. AUD-04 estatico | Verificar publicacion; mantener pendientes humanos separados |
+| Dispensario / Locke + coordinador | AUD-02 reproducido en navegador antes del fix; ambos roles/cinco anchos PASS despues; CI PR47 PASS | Correccion publicada y alias contrastado. AUD-04 estatico | Mantener pendientes humanos separados |
 | Calidad / McClintock | SHA/CI oficial comprobados, PostgreSQL independiente y PostgREST aprobados | Carreras revocacion/cuarentena vs entrega no cubiertas de forma independiente | Backlog de pruebas aisladas; no afirmar fallo sin reproduccion |
 | Browns / coordinador | Lectura 27/09 05:52-05:53: encargado, lote 100 g, proveedor vacio sin error, formulario abierto/cerrado sin guardar | Persistencia y lectura comprobadas; ninguna escritura en esta auditoria | Mantener ensayo separado de B |
 | Humano movil / PO | Recepcion 100 g encontrada en telefono fisico con indicaciones | Guiado parcial, no autonomia ni teclado completo | Evaluar tareas sin instrucciones y registrar dispositivo |
@@ -82,7 +84,7 @@ tipos/build/regresion/CI/preview antes de integrar y revalidar.
 
 LISTO CON LIMITACIONES para presentar el nucleo y preparar incorporacion
 acompanada con datos ficticios. El envio externo queda retenido hasta comprobar
-Admin autenticado, destinatario compatible y version oficial de PR47.
+Admin autenticado y destinatario compatible. Version oficial de PR47 comprobada.
 Responsable tecnico: coordinador; inicio de sesion y destinatario: Product Owner.
 No se enviaron invitaciones durante la auditoria.
 

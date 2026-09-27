@@ -20,5 +20,6 @@ Regresion PASS con encargado y operador en 360, 390, 768, 1024 y 1440 px:
 No hubo solicitudes de negocio a produccion. La prueba de respuesta perdida
 es una escritura interceptada en memoria, no una entrega publicada.
 Tipos (`npm run lint`) y compilacion (`npm run build`, 31.79s) PASS.
-Pendiente: CI, preview e integracion. No publicado.
+CI `36309391166` y preview PASS. PR47 integrado en `9291f2e` y publicado;
+deployment y alias oficial contrastados, evidencia en el tablero del sprint.
 AUD-03/04 y autonomia humana no quedan resueltos por esta correccion.

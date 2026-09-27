@@ -7,7 +7,7 @@ main `2e01443`, CI `36307001486` aprobado y despliegue oficial asociado comproba
 Resultado: presentacion/ensayo acompanado con limitaciones; no aprobacion
 incondicional de onboarding externo. AUD-01 corregido y publicado por PR46;
 AUD-02 reproducido en navegador, corregido e integrado por PR47 con CI aprobado,
-publicacion aun por contrastar. Verificar Admin y destinatario antes de enviar.
+publicacion y alias oficial contrastados. Verificar Admin y destinatario antes de enviar.
 AUD-03/04 siguen pendientes de reproduccion, sin declarar perdida de datos
 guardados. No hay nuevo defecto critico de permisos demostrado.
 Matriz unica, evidencias, prioridades y responsables en

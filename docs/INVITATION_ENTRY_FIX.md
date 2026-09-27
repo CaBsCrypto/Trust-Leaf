@@ -26,6 +26,7 @@ Verificacion local 27/09:
   guardar al recuperar foco, recarga, correcciones, aprobacion y encargado
   persistente PASS; cinco anchos. Datos SQL aislados.
 
-Pendiente: revision del diff, CI y preview del ultimo commit. No publicado ni
-bloqueo cerrado. Admin autenticado en produccion sigue pendiente.
+Cierre tecnico: revision, CI `36308719527` y preview aprobados. PR46 integrado
+en `7ccb908` y publicado; evidencia de deployment en el tablero del sprint.
+Admin autenticado en produccion sigue pendiente.
 No hubo correos ni escrituras a produccion. Sin API, migracion ni permisos nuevos.
