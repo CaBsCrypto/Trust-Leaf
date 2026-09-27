@@ -2,6 +2,9 @@
 
 Fecha: 2026-09-26. Browns es ensayo propio por decision del Product Owner.
 El dispensario externo tendra cuenta y organizacion propias posteriormente.
+Actualizacion de alcance 27/09: preparar dos incorporaciones externas secuenciales.
+Reutilizar evidencia de B; no exigir cuentas nuevas ni repetir entregas en Browns
+para este bloque. Operador/paciente exclusivos se aplazan, no se dan por probados.
 Este documento es el guion; el tablero de seguimiento sigue en
 [Sprint S1](DISPENSARY_CLOSEOUT_SPRINT.md).
 
@@ -10,7 +13,7 @@ Este documento es el guion; el tablero de seguimiento sigue en
 | Paso | Estado | Evidencia requerida |
 | --- | --- | --- |
 | Integrar PR40 documental | Hecho | 58d1dd3; verify y Vercel aprobados en 43581f7 |
-| Acceso encargado Browns | Pendiente de inicio de sesion | Organizacion, rol y persistencia tras recarga |
+| Acceso encargado Browns | Comprobado 27/09 | Ingreso del usuario; Browns / Encargado conservados tras recarga |
 | Inventario inicial de Browns | Pendiente | Leer catalogo, lotes, equipo y comprobantes antes de crear |
 | Operador propio | Pendiente de inventario | Reutilizar miembro correcto o pedir correo separado e invitacion explicita |
 | Paciente exclusivo | Pendiente | Cuenta separada, tratamiento ficticio por medico, permiso expreso |
@@ -22,7 +25,66 @@ No deducir la cuenta encargada por su correo ni crear otra organizacion si el
 acceso falla. Resolver primero identidad, solicitud y membresia. Nunca mover
 miembros de B. No pedir contrasenas ni codigos en el chat.
 
+### Evidencia del 27/09, 03:38 Chile
+
+Usuario completo el ingreso. El agente observo Browns, rol Encargado e indicador
+Piloto simulado; recarga conserva identidad, organizacion y rol. Jornada muestra
+0 pacientes autorizados, 0 g disponibles, 0 entregas hoy, 1 miembro activo y
+preparacion 1/4. Catalogo finaliza lectura sin error y muestra pagina vacia;
+Nuevo producto esta habilitado. No se crearon registros ni se enviaron invitaciones.
+Esto comprueba acceso, no autonomia humana ni uso en telefono real. Falta leer
+Inventario, Historial y Equipo: cero entregas hoy no prueba ausencia de historico,
+y cero stock disponible no prueba ausencia de lotes bloqueados o agotados.
+
+Lecturas posteriores del 27/09: Inventario con Todos seleccionado muestra
+No hay lotes registrados; formulario Recibir lote plegado. Historial/Entregas
+muestra No hay entregas registradas, y Movimientos de stock muestra No hay
+movimientos registrados. Equipo muestra solo al encargado y ninguna invitacion.
+Navegacion a Inventario/Historial y cambio a Movimientos comprobados con Enter
+en controles semanticos; clics automatizados no siempre cambiaron la vista.
+No inferir fallo general de navegacion ni autonomia humana. Sin escrituras.
+Proveedores y Recepciones comerciales, filtros con datos, operador propio y
+telefono real siguen pendientes. El siguiente bloqueo es preparar registros
+sinteticos y disponer de cuentas separadas para operador y paciente de Browns.
+
 ## Preparacion desde paneles
+
+### Resultado ejecutado 27/09, 03:50-03:52 Chile
+
+Con sesion del encargado Browns, catalogo vacio comprobado antes de guardar:
+
+- Producto Flor Demo Browns - no real, codigo DEMO-BRW-001, presentacion Gramos,
+  exclusivamente para pruebas; reposicion 20 g, precio sin informar.
+- Producto: b65e9426-0ae0-492f-9338-a977ac3134e6.
+- Una recepcion comercial vinculada de 100 g, lote BRW-DEMO-001; origen Ensayo
+  ficticio Browns, sin proveedor ni costo, vencimiento 31/12/2026 12:00 Chile.
+- Recepcion: 38546c47-ace9-449e-a20d-2dd3fcb08f6f. Respuesta Guardado y una fila
+  en Recepciones. No se repitio el envio ni se uso recepcion legacy adicional.
+- Recarga: Browns/Encargado, 100 g disponibles, preparacion 2/4 y cero entregas.
+- Inventario: un lote Disponible, vencimiento correcto. Buscar BRW-DEMO-001
+  encuentra el lote. Ver historial del lote aplica su filtro; Movimientos muestra
+  una recepcion de 100 g. Entregas sigue vacio. Busqueda inexistente muestra
+  No hay movimientos para estos filtros; limpiar filtros recupera la vista.
+- B intacto; ninguna entrega, ajuste, invitacion o cambio de permisos efectuado.
+
+### Matriz vigente de validacion
+
+| Flujo | Version / evidencia | Resultado | Pendiente |
+| --- | --- | --- | --- |
+| Acceso Browns | Oficial, 27/09; ingreso usuario y recarga agente | Comprobado | Autonomia y celular real |
+| Producto/recepcion/lote | Oficial, referencias anteriores | Comprobado desde panel y persistente | Dispositivo fisico |
+| Historial/busqueda | Oficial, lote y movimiento anteriores | Comprobado por agente | Combinaciones de fecha y evaluacion humana |
+| Operador/paciente B | Evidencia historica del sprint, sin nuevas escrituras | Reutilizada, no repetida hoy | Negativos reales aun pendientes no se cierran |
+| Comercio | Local 27/09: 5 tests API y SQL commerce aprobados | Roles, aislamiento, rollback, replay, archivo, vinculacion | Concurrencia independiente se contrasta con CI |
+| Invitaciones | Local 27/09: 12 tests y SQL aprobados | Identidad, rechazo, cancelacion, rotacion, limites, webhooks | Recepcion real y negativos publicados separados |
+| Incorporaciones | Local 27/09: 5 tests y SQL aprobados | Borrador, versiones, correcciones, rechazo, aprobacion | Sesion Admin no inspeccionada hoy |
+| CI main | 58d1dd3, run 36221358001 success | Workflow incluye PostgreSQL independiente y navegador sintetico | No sustituye uso humano |
+| Produccion | dpl_Bt2DKQGNUee8dHMXfFPNDAfkzEq7 Ready, alias oficial 27/09 | Despliegue identificado | CLI no expuso SHA; no inferir correspondencia exacta |
+| Dos equipos externos | Sin invitaciones enviadas | Pendiente | Nombre/correo del primero, luego segundo |
+
+El guion inicial que sigue conserva referencia; no exige completar operador y
+paciente propios en esta entrega. Presentacion combina preparacion en Browns y
+evidencia de atencion de B, identificando ambos escenarios explicitamente.
 
 1. Entrar como encargado y registrar la organizacion visible. Recargar y confirmar.
 2. Consultar catalogo, inventario, equipo e historial. Anotar lo reutilizable.

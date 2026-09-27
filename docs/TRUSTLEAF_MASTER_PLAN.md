@@ -1,5 +1,16 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Preparacion de dos dispensarios (27/09/2026)
+
+Browns: ingreso y rol Encargado comprobados tras recarga. Producto DEMO-BRW-001
+y lote BRW-DEMO-001 creados desde recepcion comercial: 100 g ficticios persistentes,
+una recepcion y un movimiento; sin entregas. Se reutiliza evidencia de B, sin
+trasladar miembros ni exigir cuentas adicionales en este bloque. Pruebas locales
+de comercio, invitaciones e incorporaciones aprobadas; CI main 36221358001 verde.
+Pendientes: celular real/autonomia, revision Admin actual y dos incorporaciones
+externas secuenciales. No declarar cerrado el piloto. Matriz y referencias en
+[Preparacion Browns](BROWNS_DEMO_READINESS.md).
+
 ## Estado vigente y sprint de cierre (2026-09-25)
 
 Actualizacion 26/09: encargado y operador autenticados comprobados. El usuario
