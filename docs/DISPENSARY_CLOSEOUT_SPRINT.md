@@ -6,6 +6,69 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Objetivo, responsables y reglas
 
+### Auditoria coordinada con cuatro agentes: 27/09
+
+Base: `2e014430455cffe2c3a8cfef01c1182a2540bb6f` (PR44 integrado).
+CI main `36307001486` success. GitHub deployment `6690086452` asocia ese SHA a
+`trustleaf-o253jym0p-cabscryptocontacto-6028s-projects.vercel.app`; misma URL que
+Vercel `dpl_9a9Ue1ApQMYKUYBSyUUTBQyqFEfL`, production Ready y alias oficial.
+Solo documentacion cambio desde el baseline funcional `668d84f` hasta esa base.
+
+Primera ronda: cuatro agentes independientes, solo lectura y pruebas sinteticas.
+Coordinador: version, lecturas Browns, consolidacion y revision de resultados.
+No se enviaron invitaciones ni se modificaron permisos o registros publicados.
+No se afirma preparacion clinica, legal ni operacion autonoma.
+
+#### Matriz unica de decision
+
+| Area / responsable | Evidencia actual | Resultado / limite | Siguiente accion |
+| --- | --- | --- | --- |
+| Incorporacion / Hume | API 5/5, invitaciones 12/12 y SQL PGlite PASS; identidad, versiones, aprobacion atomica | P2 AUD-01 reproducido en funciones reales; no escalamiento observado | Corregir entrada de invitacion en rama propia antes de onboarding externo general |
+| Medico-paciente / Pasteur | Operaciones 8/8, agenda 6/6 y SQL sintetico PASS | AUD-03 nota sin guardar; evidencia alojada anterior reutilizada, no sesion medica hoy | Reproduccion y correccion acotada; no prometer recorrido clinico cerrado |
+| Dispensario / Locke | Operaciones/comercio 13/13 PASS; reproduccion logica AUD-02 | Cancelar descarte puede no conservar preparacion; AUD-04 estatico | Regresion UI y correccion separada, no nuevas entregas para demostrar |
+| Calidad / McClintock | SHA/CI oficial comprobados, PostgreSQL independiente y PostgREST aprobados | Carreras revocacion/cuarentena vs entrega no cubiertas de forma independiente | Backlog de pruebas aisladas; no afirmar fallo sin reproduccion |
+| Browns / coordinador | Lectura 27/09 05:52-05:53: encargado, lote 100 g, proveedor vacio sin error, formulario abierto/cerrado sin guardar | Persistencia y lectura comprobadas; ninguna escritura en esta auditoria | Mantener ensayo separado de B |
+| Humano movil / PO | Recepcion 100 g encontrada en telefono fisico con indicaciones | Guiado parcial, no autonomia ni teclado completo | Evaluar tareas sin instrucciones y registrar dispositivo |
+| Admin publicado / coordinador + PO | Solicitud de sesion enviada; sesion actual sigue Browns | No comprobado en esta ronda | Iniciar Admin y leer Incorporaciones; no enviar hasta verificar destinatario |
+| Primer/segundo equipo / PO | No hay contactos suministrados | Pendiente, no defecto | Primero un encargado; segundo despues de observar su incorporacion |
+
+#### Hallazgos y entregas separadas
+
+- AUD-01 / P2 / entrada de encargado: `src/features/operations/team-api.ts:29`
+  recupera invitacion de trabajador guardada y `src/App.tsx:657` la prioriza
+  frente al enlace nuevo de encargado. Reproducido con funciones reales y
+  almacenamiento sintetico, no navegador publicado. Mitigacion de ensayo:
+  salir de invitacion anterior y reabrir enlace; no es correccion definitiva.
+  Rama propuesta `fix/onboarding-invitation-entry`, prioridad primera.
+- AUD-02 / P2 / borrador de entrega: `DispensaryAttention.tsx:67,83` no espera
+  `mayLeave()`. Manejador de tratamiento reproducido con promesa pendiente y
+  luego false: cambia seleccion antes de decidir. Paciente comparte patron
+  por inspeccion; UI extremo a extremo pendiente. No evidencia de entrega
+  involuntaria ni stock corrupto. Rama propuesta `fix/dispensary-draft-guard`.
+- AUD-03 / P2 / borrador medico: `OperationsWorkspace.tsx:249` separa guardar
+  nota y finalizar; cierre no envia texto sin guardar. Hallazgo de fuente,
+  reproduccion navegador aislado pendiente: el agente termino por limite de uso,
+  sin resultado de esa comprobacion. No se considera defecto UI reproducido.
+  Antes de ensayo: guardar y
+  verificar borrador antes de cerrar. Rama propuesta `fix/medical-note-guard`.
+- AUD-04 / P2 / borrador de inventario: `OperationsWorkspace.tsx:287,370`
+  formularios no registran dirty para guardia de navegacion. Hallazgo estatico
+  pendiente de reproduccion, no defecto de persistencia guardada confirmado.
+  Rama propuesta, solo tras reproducir: `fix/inventory-draft-guard`.
+
+Decision de esta ronda: LISTO CON LIMITACIONES para presentacion y ensayo
+acompanados, NO aprobacion incondicional para incorporar externamente. Antes
+del envio externo: cerrar AUD-01, verificar sesion Admin y destinatario.
+Decision especifica de incorporacion externa: BLOQUEADA hasta completar esas
+tres condiciones. Responsable tecnico: coordinador para AUD-01 y lectura Admin;
+Product Owner para iniciar sesion y confirmar destinatario. No se enviara correo
+como parte de esta auditoria.
+AUD-02/03 excluyen declarar jornada completa validada; requieren regresiones y
+correcciones propias. Ningun critico de aislamiento o escalamiento demostrado.
+No confundir ausencia de hallazgo con garantia de seguridad completa.
+Correcciones no se incluyen en este PR documental; una rama funcional a la vez,
+tipos/build/regresion/CI/preview antes de integrar y revalidar.
+
 ### Estado vigente: 27/09, Browns preparado
 
 P-01 cerrado para el ensayo propio: Browns/Encargado comprobados tras ingreso
@@ -17,10 +80,11 @@ No se conoce modelo de telefono/navegador; no inferirlos del viewport interno.
 Se reutiliza evidencia de B, sin exigir cuentas nuevas para este bloque.
 Pendientes: autonomia, resto de escenarios en dispositivo real, Admin actual
 y correos de los dos encargados externos. S1 no cerrado.
-Matriz vigente: [Browns](BROWNS_DEMO_READINESS.md). Las entradas fechadas de abajo
+Detalle del ensayo: [Browns](BROWNS_DEMO_READINESS.md). La matriz vigente se mantiene
+en este tablero. Las entradas fechadas de abajo
 son historicas, no el estado actual de acceso de Browns.
 
-### Estado vigente: 26/09, preparacion de presentacion
+### Evidencia historica: 26/09, preparacion de presentacion
 
 Esta entrada sustituye los bloqueos historicos de navegacion indicados abajo.
 El usuario navego manualmente por Inventario, Historial y Gestion/Equipo como
@@ -103,7 +167,7 @@ solo para encargado. Operador y evaluaciones U1-U4 permanecen pendientes.
 - Pendiente: filtros combinados/movimientos J06, operador, dispositivo fisico y
   autonomia. El permiso es temporal; comprobar nuevamente antes de otra sesion.
 
-Encargado y operador encuentran paciente, explican saldo, localizan lote y
+Objetivo de uso, no resultado aprobado: encargado y operador encuentran paciente, explican saldo, localizan lote y
 recuperan comprobante desde computador y celular, sin ayuda de navegacion.
 
 - Product Owner (usuario): prioridad, aprobacion y coordinacion del dispensario.
@@ -126,7 +190,7 @@ recuperan comprobante desde computador y celular, sin ayuda de navegacion.
 | 3 Presentacion | Acceso primer encargado, datos separados y feedback registrado | Backlog |
 | 4 Ampliar suite | Objetivo y reglas aprobados por modulo | Backlog; no construir por suposicion |
 
-## Base comprobada y limites
+## Base historica PR42 y limites del recorrido original
 
 - Producto: https://www.trustleaf.org/dispensario; laboratorio local 4330 excluido.
 - Main `d101469e51888f6a33bc8c007267beba265d81a3`, PR #42 fusionado.
@@ -156,7 +220,7 @@ recuperan comprobante desde computador y celular, sin ayuda de navegacion.
 | P-02 / dispensario | Preparar presentacion basada en funciones disponibles | Validacion / PO + facilitador | Browns con 100 g, movil guiado; autonomia y escenarios restantes pendientes |
 | SEP-01 / equipo | Negativos de invitaciones y otros pendientes historicos | Backlog separado / facilitador | Reconciliar evidencia por caso antes de pruebas; S1 no los declara cerrados |
 
-Bloqueo B1: se necesita sesion de encargado u operador. Usar perfiles o dispositivos
+Bloqueo B1 historico (superado para Browns encargado): se necesitaba sesion de encargado u operador. Usar perfiles o dispositivos
 separados; dos pestanas comunes no aislan identidad. Solicitud de acceso enviada
 al usuario el 25/09, sin pedir contrasenas ni codigos. No cerrar Admin sin indicacion.
 Bloqueo B2 condicional: permiso/tratamiento no aptos. Solo el paciente renueva
@@ -187,9 +251,9 @@ permisos publicados solo para obtener evidencia. Comprobar foco y teclado movil.
 
 | Sesion | Rol / dispositivo | Casos | Resultado |
 | --- | --- | --- | --- |
-| U1 | Encargado / escritorio | J01-J08 | Pendiente de acceso |
-| U2 | Encargado / celular real | J01-J08 | Pendiente |
-| U3 | Operador / escritorio | J01-J07 | Pendiente |
+| U1 | Encargado / escritorio | J01-J08 | Acceso y pruebas del agente observados; autonomia pendiente |
+| U2 | Encargado / celular real | J01-J08 | Recepcion 100 g encontrada con guia; resto y autonomia pendientes |
+| U3 | Operador / escritorio | J01-J07 | B con evidencia guiada; autonomia pendiente |
 | U4 | Operador / celular real | J01-J07 | Pendiente |
 
 Por caso registrar: fecha, version, rol, dispositivo/navegador/ancho, esperado,
