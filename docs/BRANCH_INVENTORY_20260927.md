@@ -183,6 +183,13 @@ antes de git branch -d; un rechazo se conserva. SHA permite identificar el traba
 
 ## Propuesta posterior, no ejecutada
 
+Resultado de limpieza: 26 refs locales eliminadas con git branch -d; 103 ramas
+locales restantes. Cinco candidatas fueron rechazadas por divergencia con su
+upstream y se conservaron SIN forzar: feat/cross-tab-session-sync,
+feat/operations-pilot-release, fix/operations-recovery,
+fix/pilot-business-conflicts y test/operations-workflow-validation.
+Ningun worktree ni rama remota eliminado. PR #1 intacto.
+
 Revisar PR #1 con su propietario antes de decidir continuidad o cierre. Comparar
 ramas remotas y ramas squash por contenido, no por nombre. Comprobar procesos,
 cambios ignorados y responsable antes de proponer archivo recuperable de worktrees.
