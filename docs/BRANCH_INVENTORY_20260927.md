@@ -195,4 +195,3 @@ ramas remotas y ramas squash por contenido, no por nombre. Comprobar procesos,
 cambios ignorados y responsable antes de proponer archivo recuperable de worktrees.
 No integrar modulos historicos por antiguedad. Mantener una entrega funcional
 por rama/PR, con checks y revision antes de main.
-
