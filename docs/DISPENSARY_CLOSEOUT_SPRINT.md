@@ -1,10 +1,56 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-09-25. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-09-27. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
 
 ## Objetivo, responsables y reglas
+
+### Estado vigente: 27/09, Browns preparado
+
+P-01 cerrado para el ensayo propio: Browns/Encargado comprobados tras ingreso
+y recarga. P-02 en Validacion: producto DEMO-BRW-001, lote BRW-DEMO-001, una
+recepcion y movimiento de 100 g persistentes, sin entrega. El usuario confirmo
+en celular fisico que encontro el movimiento de 100 g tras indicaciones del
+agente: evidencia guiada parcial de J05/J06, no autonomia ni todos los casos U2.
+No se conoce modelo de telefono/navegador; no inferirlos del viewport interno.
+Se reutiliza evidencia de B, sin exigir cuentas nuevas para este bloque.
+Pendientes: autonomia, resto de escenarios en dispositivo real, Admin actual
+y correos de los dos encargados externos. S1 no cerrado.
+Matriz vigente: [Browns](BROWNS_DEMO_READINESS.md). Las entradas fechadas de abajo
+son historicas, no el estado actual de acceso de Browns.
+
+### Estado vigente: 26/09, preparacion de presentacion
+
+Esta entrada sustituye los bloqueos historicos de navegacion indicados abajo.
+El usuario navego manualmente por Inventario, Historial y Gestion/Equipo como
+operador de B; el agente contrasto las pantallas. NAV-01 no es un defecto del
+producto confirmado ni una correccion publicada: causa del control automatizado
+sin determinar. Los clics de cierre de sesion tampoco cambiaron la vista en esta
+sesion; se solicito accion manual, sin declarar al usuario desconectado.
+
+- Inventario: lote Piloto-B-20260908, 60 g disponibles. Historial por lote conserva
+  filtro; entregas de 20 g, 10 g y 10 g, movimientos +100/-20/-10/-10 g.
+- Comprobante existente 3150a49a-a8b2-4e19-a46b-a453adb7c15f recuperado, sin entrega.
+- Alternar movimientos y limpiar filtros funciono manualmente. No se atribuye
+  cobertura completa a todas las combinaciones de busqueda y fecha.
+- Operador: Catalogo/Recepciones consultables, sin Proveedores ni creacion;
+  Equipo muestra encargado y operador sin controles de administracion.
+- Recarga conserva identidad y membresia, vuelve a Pacientes. El usuario necesito
+  indicaciones para volver a Gestion: oportunidad de continuidad, no autonomia.
+- A las 02:36 Chile, operador de B y cero pacientes con permiso vigente. No se
+  renovo permiso ni se releyo stock en esa comprobacion.
+
+U1-U4 siguen pendientes de autonomia y celular real. J05/J06/J07 tienen evidencia
+guiada parcial del operador, no aprobacion de uso independiente ni prueba de
+escrituras denegadas. B no recibio entregas, ajustes ni cambios de equipo.
+
+Decision del usuario: Browns es ensayo propio, no el primer dispensario externo.
+P-01 pasa a En curso: verificar su encargado con una sesion real. P-02 preparado
+como guion en [Browns: ensayo y presentacion](BROWNS_DEMO_READINESS.md); ejecucion
+depende de P-01, cuentas separadas, datos y prueba fisica. No se cierra S1.
+
+PR #40 fusionado como 58d1dd3 tras verify/Vercel aprobados en 43581f7. Solo docs.
 
 ### Estado del cierre: 26/09, 01:10 Chile
 
@@ -106,8 +152,8 @@ recuperan comprobante desde computador y celular, sin ayuda de navegacion.
 | S1-03 / ambos roles | Fricciones aun no observadas; resolver solo hallazgos | Backlog / facilitador | Hallazgo reproducible, regresion, CI/preview y repeticion humana; depende S1-02 |
 | S1-04 / encargado | Gestion conserva funciones pero falta evaluar claridad | Preparado / facilitador + encargado | Encontrar catalogo, proveedores/equipo y volver, sin guardar; sesion requerida |
 | S1-05 / PO | Falta decision de cierre y siguiente prioridad | Backlog / PO + facilitador | Revision con resultados, bloqueos y retrospectiva; depende S1-02/03/04 |
-| P-01 / primer encargado | Acceso de Browns aun no comprobado | Backlog / PO + encargado | Organizacion/rol correctos tras sesion nueva; no mover miembros de B |
-| P-02 / dispensario | Preparar presentacion basada en funciones disponibles | Backlog / PO + facilitador | Guion reproducible, datos ficticios separados, sin acceso directo a base; depende P-01 y S1 |
+| P-01 / encargado de ensayo | Acceso de Browns | Cerrado / PO + encargado | Ingreso y recarga del 27/09, Browns/Encargado; sin mover miembros de B |
+| P-02 / dispensario | Preparar presentacion basada en funciones disponibles | Validacion / PO + facilitador | Browns con 100 g, movil guiado; autonomia y escenarios restantes pendientes |
 | SEP-01 / equipo | Negativos de invitaciones y otros pendientes historicos | Backlog separado / facilitador | Reconciliar evidencia por caso antes de pruebas; S1 no los declara cerrados |
 
 Bloqueo B1: se necesita sesion de encargado u operador. Usar perfiles o dispositivos

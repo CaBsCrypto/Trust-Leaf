@@ -1,12 +1,30 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Preparacion de dos dispensarios (27/09/2026)
+
+Browns: ingreso y rol Encargado comprobados tras recarga. Producto DEMO-BRW-001
+y lote BRW-DEMO-001 creados desde recepcion comercial: 100 g ficticios persistentes,
+una recepcion y un movimiento; sin entregas. Se reutiliza evidencia de B, sin
+trasladar miembros ni exigir cuentas adicionales en este bloque. Pruebas locales
+de comercio, invitaciones e incorporaciones aprobadas; CI main 36221358001 verde.
+Usuario confirma recepcion de 100 g en celular fisico con ayuda: prueba guiada,
+no autonomia completa. Pendientes: resto de validacion movil/autonomia, revision Admin actual y dos incorporaciones
+externas secuenciales. No declarar cerrado el piloto. Matriz y referencias en
+[Preparacion Browns](BROWNS_DEMO_READINESS.md).
+
 ## Estado vigente y sprint de cierre (2026-09-25)
 
-Actualizacion 26/09: encargado y operador autenticados comprobados; permiso del
-paciente renovado con consentimiento explicito el 25/09. Revision sin entrega y
-descarte del operador observados. Cierre sigue pendiente: NAV-01 (navegacion del
-operador no cambia de seccion en la sesion observada, causa por contrastar),
-lecturas restantes, movil real y autonomia. Detalle en el tablero del sprint.
+Actualizacion 26/09: encargado y operador autenticados comprobados. El usuario
+completo manualmente Inventario, historial del lote, movimientos, limpieza de
+filtros y Gestion/Equipo del operador. NAV-01 no es un defecto confirmado del
+producto: la navegacion manual funciono; la causa del control automatizado sigue
+sin determinar. Cierre pendiente: autonomia, celular real y acceso de Browns.
+El 26/09 a las 02:36 Chile B muestra cero pacientes autorizados; no se renovo
+el permiso. Stock de 60 g observado en el recorrido anterior, no releido hoy.
+PR #40 documental fusionado como `58d1dd3`, checks del head `43581f7` aprobados
+(CI `36220202722`). Vercel oficial Ready `dpl_AH3TJNUKfNCQUNEyjnyd3hTjLdby`
+consultado antes de terminar el nuevo despliegue; no atribuirle ese ultimo commit.
+[Guion y puertas de salida del ensayo Browns](BROWNS_DEMO_READINESS.md).
 Los bloqueos de sesion anotados abajo describen el inicio, no el estado actual.
 
 Mesa de atencion conectada publicada: [PR #42](https://github.com/CaBsCrypto/Trust-Leaf/pull/42),
@@ -16,8 +34,8 @@ CI `36072522968` aprobado sobre `668d84f`; Vercel produccion
 reconfirmado el 25/09. No hubo migraciones ni escrituras de negocio.
 
 La evidencia tecnica no cierra autonomia de encargado/operador ni teclado en
-celular real. La sesion oficial observada sigue siendo Admin; saldo, stock y
-permiso actuales no se han comprobado. Laboratorio 4330 no es el producto.
+celular real. La ultima sesion observada es operador de B, no Browns.
+Laboratorio 4330 no es el producto.
 
 [Sprint, tablero unico, escenarios y oportunidades](DISPENSARY_CLOSEOUT_SPRINT.md).
 [Correspondencia de integracion](DISPENSARY_DESK_INTEGRATION.md).
