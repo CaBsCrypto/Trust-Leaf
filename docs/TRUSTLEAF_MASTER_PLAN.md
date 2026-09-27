@@ -7,7 +7,8 @@ y lote BRW-DEMO-001 creados desde recepcion comercial: 100 g ficticios persisten
 una recepcion y un movimiento; sin entregas. Se reutiliza evidencia de B, sin
 trasladar miembros ni exigir cuentas adicionales en este bloque. Pruebas locales
 de comercio, invitaciones e incorporaciones aprobadas; CI main 36221358001 verde.
-Pendientes: celular real/autonomia, revision Admin actual y dos incorporaciones
+Usuario confirma recepcion de 100 g en celular fisico con ayuda: prueba guiada,
+no autonomia completa. Pendientes: resto de validacion movil/autonomia, revision Admin actual y dos incorporaciones
 externas secuenciales. No declarar cerrado el piloto. Matriz y referencias en
 [Preparacion Browns](BROWNS_DEMO_READINESS.md).
 

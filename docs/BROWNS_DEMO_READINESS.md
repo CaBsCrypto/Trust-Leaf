@@ -10,15 +10,20 @@ Este documento es el guion; el tablero de seguimiento sigue en
 
 ## Estado y dependencias
 
+Actualizacion humana 27/09: el usuario confirmo encontrar el movimiento de
+recepcion de 100 g en celular fisico. Requirio indicaciones para localizar
+Historial/Movimientos: prueba guiada, no autonomia. No acredita teclado, todos
+los flujos moviles ni uso del operador. Modelo/navegador no registrados.
+
 | Paso | Estado | Evidencia requerida |
 | --- | --- | --- |
 | Integrar PR40 documental | Hecho | 58d1dd3; verify y Vercel aprobados en 43581f7 |
 | Acceso encargado Browns | Comprobado 27/09 | Ingreso del usuario; Browns / Encargado conservados tras recarga |
-| Inventario inicial de Browns | Pendiente | Leer catalogo, lotes, equipo y comprobantes antes de crear |
+| Inventario inicial de Browns | Comprobado | Un producto, lote, recepcion y movimiento de 100 g; persistencia |
 | Operador propio | Pendiente de inventario | Reutilizar miembro correcto o pedir correo separado e invitacion explicita |
 | Paciente exclusivo | Pendiente | Cuenta separada, tratamiento ficticio por medico, permiso expreso |
 | Comprobante del ensayo | Pendiente | Reutilizar uno de Browns o acordar una entrega ficticia unica |
-| Ensayo desktop y telefono | Pendiente | Rol, dispositivo fisico, version, resultado y ayuda por tarea |
+| Ensayo desktop y telefono | Parcial guiado | Agente en navegador; usuario encuentra movimiento en celular fisico; autonomia pendiente |
 | Presentacion externa | No preparada aun | Todas las puertas anteriores y ausencia de defectos criticos |
 
 No deducir la cuenta encargada por su correo ni crear otra organizacion si el
