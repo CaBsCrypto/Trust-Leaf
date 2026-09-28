@@ -105,6 +105,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/operations-browser.mjs
+          PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium OPERATIONS_TEST_URL=http://127.0.0.1:4321 node tests/ui/medical-note-guard.browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/dispensary-attention-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/dispensary-daily-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/dispensary-home-browser.mjs

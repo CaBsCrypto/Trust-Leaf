@@ -1,11 +1,17 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
-export function useDiscardDialog() {
+export function useDiscardDialog(resetKey?: unknown) {
   const [message, setMessage] = useState<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const resolve = useRef<((accepted: boolean) => void) | null>(null);
   const origin = useRef<HTMLElement | null>(null);
   const id = useId();
+  useEffect(() => {
+    dialog.current?.close();
+    setMessage(null);
+    resolve.current?.(false);
+    resolve.current = null;
+  }, [resetKey]);
   useEffect(() => () => { resolve.current?.(false); resolve.current = null; }, []);
   useEffect(() => { if (message) dialog.current?.showModal(); }, [message]);
   function finish(accepted: boolean) {

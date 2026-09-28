@@ -7,9 +7,13 @@ main `2e01443`, CI `36307001486` aprobado y despliegue oficial asociado comproba
 Resultado: presentacion/ensayo acompanado con limitaciones; no aprobacion
 incondicional de onboarding externo. AUD-01 corregido y publicado por PR46;
 AUD-02 reproducido en navegador, corregido e integrado por PR47 con CI aprobado,
-publicacion y alias oficial contrastados. Verificar Admin y destinatario antes de enviar.
-AUD-03/04 siguen pendientes de reproduccion, sin declarar perdida de datos
-guardados. No hay nuevo defecto critico de permisos demostrado.
+publicacion y alias oficial contrastados. Admin ya comprobado por lectura y
+recarga; falta el destinatario antes de enviar. AUD-03 reproducido en navegador
+aislado sobre `a9ddc67`: navegar pierde la nota no guardada y finalizar no la
+incluye. Correccion en `fix/medical-note-guard`, aun no publicada. AUD-04 tambien
+reproducido con API sintetica: navegacion/filtros pierden borradores y ajuste
+guardado conserva valores. Correccion separada posterior. No se declara perdida de datos guardados ni un nuevo
+defecto critico de permisos demostrado.
 Matriz unica, evidencias, prioridades y responsables en
 [Sprint S1](DISPENSARY_CLOSEOUT_SPRINT.md). Browns conserva 100 g y B no se toca.
 La evidencia guiada en celular no acredita autonomia ni habilitacion clinica.
@@ -22,7 +26,7 @@ una recepcion y un movimiento; sin entregas. Se reutiliza evidencia de B, sin
 trasladar miembros ni exigir cuentas adicionales en este bloque. Pruebas locales
 de comercio, invitaciones e incorporaciones aprobadas; CI main 36221358001 verde.
 Usuario confirma recepcion de 100 g en celular fisico con ayuda: prueba guiada,
-no autonomia completa. Pendientes: resto de validacion movil/autonomia, revision Admin actual y dos incorporaciones
+no autonomia completa. Pendientes: resto de validacion movil/autonomia y dos incorporaciones
 externas secuenciales. No declarar cerrado el piloto. Evidencia del ensayo en
 [Preparacion Browns](BROWNS_DEMO_READINESS.md).
 
