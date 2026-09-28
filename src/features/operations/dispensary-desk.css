@@ -43,10 +43,12 @@
 .op-dispensary .op-desk-quantity strong { display: block; font-size: 24px; }
 .op-dispensary .op-desk-quantity button { background: #185c47; color: white; }
 .op-dispensary .op-desk-preparation[hidden] { display: none; }
-.op-dispensary .op-discard-dialog { width: min(440px,calc(100% - 32px)); border: 1px solid #cdd7d1; border-radius: 8px; padding: 24px; color: #25332f; margin: auto; }
+.tl-operations .op-discard-dialog { width: min(440px,calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid #cdd7d1; border-radius: 8px; padding: 24px; color: #25332f; background: #fff; margin: auto; }
 .op-discard-dialog::backdrop { background: #13261f66; }
-.op-dispensary .op-discard-dialog > div { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-.op-dispensary .op-discard-dialog button { padding: 8px 12px; }
+.tl-operations .op-discard-dialog > div { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.tl-operations .op-discard-dialog h2 { font-size: 20px; line-height: 1.3; margin: 0 0 12px; }
+.tl-operations .op-discard-dialog p { margin: 0 0 20px; }
+.tl-operations .op-discard-dialog button { padding: 8px 12px; min-height: 44px; }
 @media(min-width:1024px) and (max-width:1200px) {
   .op-dispensary .op-attention { grid-template-columns: 260px minmax(0,1fr); }
   .op-dispensary .op-patient-detail { padding: 24px 18px; }

@@ -21,6 +21,7 @@ const short = (value: string) => value.slice(0, 8);
 const consultationFilters = [['pending', 'Pendientes'], ['active', 'En atención'], ['completed', 'Finalizadas'], ['cancelled', 'Canceladas'], ['all', 'Todas']] as const;
 type ConsultationFilter = typeof consultationFilters[number][0];
 type Mutate = (action: PilotAction, input: Record<string, unknown>) => void;
+type NoteDraft = { text: string; baseline: string; version: number; acknowledged?: boolean };
 type Field = { name: string; label: string; type?: 'text' | 'number' | 'textarea' | 'select' | 'datetime-local'; value?: string;
   choices?: { value: string; label: string }[]; min?: number; max?: number; maxLength?: number };
 
@@ -34,9 +35,19 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
   const initialSection = useRef(false);
-  const { confirmDiscard, discardDialog } = useDiscardDialog();
+  const { confirmDiscard, discardDialog } = useDiscardDialog(data?.role);
   const sectionBody = useRef<HTMLDivElement>(null);
   const [attentionDirty, setAttentionDirty] = useState(false);
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, NoteDraft>>({});
+  const dirtyNoteCount = Object.values(noteDrafts).filter(draft => !draft.acknowledged).length;
+  const notesDirty = dirtyNoteCount > 0;
+  const leaveNotes = async () => {
+    if ((data?.role === 'doctor' && lock.current) || (pending && ['save-note', 'complete-encounter'].includes(pending.action))) return false;
+    if (!notesDirty) return true;
+    if (!await confirmDiscard('Las notas sin guardar se perderan. No se finalizara ninguna consulta.')) return false;
+    setNoteDrafts({});
+    return true;
+  };
   const [search, setSearch] = useState('');
   const [managementView, setManagementView] = useState<'commerce' | 'team'>('commerce');
   const [commerceGuard, setCommerceGuard] = useState({ dirty: false, pending: false });
@@ -51,6 +62,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [historyView, setHistoryView] = useState<'deliveries' | 'movements'>('deliveries');
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
   const setTab = async (next: string, target?: AgendaTarget) => {
+    if (next !== tab && !await leaveNotes()) return;
     if (next !== tab && data?.role === 'dispensary' && (busy || pending)) return;
     if (next !== tab && attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
     if (!await leaveCommerce()) return;
@@ -74,6 +86,22 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const controller = useRef(new AbortController());
   const requestNumber = useRef(0);
   useEffect(() => { controller.current = new AbortController(); return () => { controller.current.abort(); requestNumber.current++; }; }, []);
+  useEffect(() => {
+    if (!notesDirty && !(pending && ['save-note', 'complete-encounter'].includes(pending.action))) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [notesDirty, pending]);
+  useEffect(() => {
+    // Completion is not revocation: an authorized reader keeps their local text.
+    setNoteDrafts(current => {
+      const entries = Object.entries(current).filter(([ref, draft]) => data?.role === 'doctor' && data.joined &&
+        data.bookings?.some(b => b.booking_ref === ref) &&
+        data.encounters?.some(e => e.booking_ref === ref) &&
+        !(draft.acknowledged && data.encounters?.some(e => e.booking_ref === ref && e.version > draft.version)));
+      return entries.length === Object.keys(current).length ? current : Object.fromEntries(entries);
+    });
+  }, [data]);
 
   async function request(command?: PilotCommand, signal = controller.current.signal) {
     let token = await identity.getIdentityToken(); signal.throwIfAborted();
@@ -116,7 +144,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         setData(result); setReadError('');
       } catch (e) {
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
-        if ([401, 403].includes((e as { status?: number }).status ?? 0)) setData(null);
+        if ([401, 403].includes((e as { status?: number }).status ?? 0)) { setData(null); setNoteDrafts({}); }
         setReadError((e as Error).message);
       }
     }
@@ -136,11 +164,16 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       const result = await request(command);
       if (controller.current.signal.aborted) return;
       setPending(null); setNotice(command.action === 'dispense' ? `Entrega guardada. Comprobante: ${result.resourceRef}` : 'Cambio guardado.');
+      if (command.action === 'save-note') setNoteDrafts(current => {
+        const ref = String(command.input.resourceRef);
+        if (current[ref]?.text !== command.input.note) return current;
+        return { ...current, [ref]: { ...current[ref], acknowledged: true } };
+      });
       if (command.action === 'dispense') setReceiptRef(result.resourceRef);
     } catch (e) {
       if (controller.current.signal.aborted) return;
       setError((e as Error).message);
-      if ([401, 403].includes((e as { status?: number }).status ?? 0)) setData(null);
+      if ([401, 403].includes((e as { status?: number }).status ?? 0)) { setData(null); setNoteDrafts({}); }
       if ([400, 401, 403, 409].includes((e as { status?: number }).status ?? 0)) setPending(null);
     } finally {
       if (!controller.current.signal.aborted) {
@@ -151,6 +184,18 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     }
   }
   const mutate: Mutate = (action, input) => void execute({ action, input: { ...input, operationId: crypto.randomUUID() } });
+  async function completeEncounter(ref: string, input: Record<string, unknown>) {
+    if (lock.current || pending || readError) return;
+    if (noteDrafts[ref]?.acknowledged) return;
+    if (noteDrafts[ref]) {
+      if (await confirmDiscard('Guarda la nota antes de finalizar o descarta sus cambios. Descartar no finalizara la consulta.')) {
+        setNoteDrafts(current => { const next = { ...current }; delete next[ref]; return next; });
+      }
+      return;
+    }
+    if (input.issueTreatment === false && !confirm('Finalizar esta consulta sin tratamiento?')) return;
+    mutate('complete-encounter', { resourceRef: ref, ...input });
+  }
   const query = search.trim().toLocaleLowerCase();
   const matches = (value: string) => value.toLocaleLowerCase().includes(query);
   const disabled = busy || pending !== null;
@@ -198,12 +243,20 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
       <div className="op-toolbar">{role === 'dispensary' && data?.joined && !withoutTeam && <button className="op-management-tab" role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}><Settings size={16}/>{import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'}</button>}<span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
-        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={role === 'dispensary' && disabled} onClick={async () => { if (attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return; if (await leaveCommerce()) onSignOut(); }}><LogOut size={18}/></button>}</div></header>
+        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={(role === 'dispensary' || role === 'doctor') && disabled} onClick={async () => {
+          if (pending && !data) {
+            if (await confirmDiscard('Hay una operacion sin confirmar que podria estar guardada. Cerrar sesion abandona su recuperacion. Comprueba el historial antes de repetirla.')) onSignOut();
+            return;
+          }
+          if (!await leaveNotes()) return;
+          if (attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
+          if (await leaveCommerce()) onSignOut();
+        }}><LogOut size={18}/></button>}</div></header>
     {discardDialog}
     <div className="op-content">
       {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
       {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
-      {pending && !busy && !withoutTeam && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
+      {pending && !busy && data?.joined && !readError && !withoutTeam && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
       {!data && !visibleError && <p role="status">Verificando permisos...</p>}
       {data && !data.joined && !withoutTeam && <div className="op-empty"><ShieldCheck size={32}/><h2>Participar en el piloto</h2>
         <p>Solo datos ficticios. Sin atencion clinica ni entrega real de medicamentos.</p>
@@ -235,6 +288,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
+          {notesDirty && <p role="status">Notas sin guardar: {dirtyNoteCount}.</p>}
           <div className="op-tabs" role="group" aria-label="Estado de consultas">{consultationFilters.map(([id, label]) =>
             <button key={id} aria-pressed={consultationFilter === id} onClick={() => setConsultationFilter(id)}>{label} ({consultationCounts[id]})</button>)}</div>
           {visibleBookings.map(b => {
@@ -246,12 +300,31 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
               <button className="op-command" onClick={() => setTab('agenda', { bookingRef: b.booking_ref, startsAt: b.starts_at })}><CalendarDays size={16}/>Ver en agenda</button>
               {b.state === 'confirmed' && !encounter && <button className="op-command" disabled={disabled} onClick={() => mutate('start-encounter', { resourceRef: b.booking_ref })}><Plus size={16}/>Iniciar consulta simulada</button>}
               {encounter?.state === 'active' && b.state === 'confirmed' && <>
-                <CommandForm key={`note-${encounter.version}`} label="Guardar borrador" disabled={disabled} fields={[{ name: 'note', label: 'Nota de prueba', type: 'textarea', value: notes[0]?.body, maxLength: 4000 }]}
-                  submit={values => mutate('save-note', { resourceRef: b.booking_ref, version: encounter.version, note: values.note })}/>
-                <CommandForm label="Finalizar con tratamiento simulado" disabled={disabled} fields={[{ name: 'grams', label: 'Gramos por periodo', value: '30' }, { name: 'periods', label: 'Periodos de 30 dias', type: 'number', value: '3', min: 1, max: 12 }]}
-                  submit={values => mutate('complete-encounter', { resourceRef: b.booking_ref, version: encounter.version, issueTreatment: true, allowanceMg: gramsToMg(values.grams), periodCount: Number(values.periods) })}/>
-                <button className="op-command" disabled={disabled} onClick={() => { if (confirm('Finalizar esta consulta sin tratamiento?')) mutate('complete-encounter', { resourceRef: b.booking_ref, version: encounter.version, issueTreatment: false }); }}>Finalizar sin tratamiento</button>
+                <form className="op-form" onSubmit={event => { event.preventDefault(); mutate('save-note', { resourceRef: b.booking_ref, version: noteDrafts[b.booking_ref]?.version ?? encounter.version, note: noteDrafts[b.booking_ref]?.text ?? notes[0]?.body ?? '' }); }}>
+                  <fieldset disabled={disabled || !!readError || noteDrafts[b.booking_ref]?.acknowledged}><label className="op-wide">Nota de prueba<textarea aria-label="Nota de prueba" required maxLength={4000} rows={4} value={noteDrafts[b.booking_ref]?.text ?? notes[0]?.body ?? ''} onChange={event => {
+                    const text = event.target.value;
+                    setNoteDrafts(current => {
+                      const draft = current[b.booking_ref] ?? { text, baseline: notes[0]?.body ?? '', version: encounter.version };
+                      const next = { ...current };
+                      if (text === draft.baseline) delete next[b.booking_ref];
+                      else next[b.booking_ref] = { ...draft, text };
+                      return next;
+                    });
+                  }}/></label><button className="op-command" type="submit"><Save size={16}/>Guardar borrador</button></fieldset>
+                </form>
+                {noteDrafts[b.booking_ref] && !noteDrafts[b.booking_ref].acknowledged && noteDrafts[b.booking_ref].version !== encounter.version && <div role="alert">
+                  <p>La consulta cambio. Tu nota sin guardar se conserva. Revisa el historial antes de continuar.</p>
+                  <button type="button" disabled={disabled || !!readError} onClick={() => setNoteDrafts(current => ({ ...current, [b.booking_ref]: { ...current[b.booking_ref], version: encounter.version, baseline: notes[0]?.body ?? '' } }))}>Usar version actual y conservar borrador</button>
+                </div>}
+                <CommandForm label="Finalizar con tratamiento simulado" disabled={disabled || !!readError || !!noteDrafts[b.booking_ref]?.acknowledged} fields={[{ name: 'grams', label: 'Gramos por periodo', value: '30' }, { name: 'periods', label: 'Periodos de 30 dias', type: 'number', value: '3', min: 1, max: 12 }]}
+                  submit={values => { const allowanceMg = gramsToMg(values.grams); void completeEncounter(b.booking_ref, { version: encounter.version, issueTreatment: true, allowanceMg, periodCount: Number(values.periods) }); }}/>
+                <button className="op-command" disabled={disabled || !!readError || !!noteDrafts[b.booking_ref]?.acknowledged} onClick={() => void completeEncounter(b.booking_ref, { version: encounter.version, issueTreatment: false })}>Finalizar sin tratamiento</button>
               </>}
+              {noteDrafts[b.booking_ref] && (encounter?.state !== 'active' || b.state !== 'confirmed') && <div className="op-note">
+                <p role="alert">La consulta ya no admite cambios. Tu nota local no se guardo.</p>
+                <label>Nota local sin guardar<textarea aria-label="Nota local sin guardar" readOnly value={noteDrafts[b.booking_ref].text}/></label>
+                <button type="button" onClick={async () => { if (await confirmDiscard('La nota local no se guardo. Descartarla no modifica la consulta.')) setNoteDrafts(current => { const next = { ...current }; delete next[b.booking_ref]; return next; }); }}>Descartar nota local</button>
+              </div>}
               {notes.length > 0 && <details><summary>Historial de notas ({notes.length})</summary>{notes.map(n => <div className="op-note" key={n.version}><strong>Version {n.version} · {date(n.created_at)}</strong><p>{n.body}</p></div>)}</details>}
             </article>;
           })}

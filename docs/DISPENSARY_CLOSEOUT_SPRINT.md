@@ -6,6 +6,24 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Objetivo, responsables y reglas
 
+### Sprint de proteccion de borradores: 27/09
+
+Base de trabajo: `a9ddc67` (PR48). Rama inicial `fix/medical-note-guard`.
+Coordinador integra; cuatro agentes revisan flujo medico, inventario, UX y calidad.
+Una correccion funcional en curso; inventario se integra despues de medicina.
+Pruebas sinteticas aisladas, sin escrituras de negocio publicadas.
+
+| Trabajo | Estado | Evidencia / siguiente accion |
+| --- | --- | --- |
+| AUD-03 nota medica | Validacion local | Reproducido sobre a9ddc67: navegacion pierde texto y ambos cierres omiten nota no guardada. Correccion y regresion en rama, sin publicar |
+| AUD-04 formularios de inventario | Preparado | Reproducido con API interceptada: navegacion/filtros pierden borrador; ajuste guardado conserva valores. Reintento incierto mantiene ID y no duplica. Correccion espera integracion medica |
+| UX y calidad | En curso | Revision independiente; conservar pruebas humanas pendientes |
+| Admin oficial | Comprobado tecnicamente | Sesion Admin: invitacion aceptada, solicitud Browns aprobada y organizacion visibles; recarga conserva acceso. Sin envios ni decisiones nuevas |
+
+La lectura de Admin anterior sustituye el pendiente historico de sesion de la
+auditoria de abajo. No acredita autonomia humana ni incorporacion del primer cliente.
+Detalle de reproduccion y gates: [Proteccion de notas](MEDICAL_NOTE_GUARD.md).
+
 ### Auditoria coordinada con cuatro agentes: 27/09
 
 Base: `2e014430455cffe2c3a8cfef01c1182a2540bb6f` (PR44 integrado).
@@ -34,13 +52,13 @@ de codigo para AUD-01/02. No hay cambios de APIs, migraciones o datos publicados
 
 | Area / responsable | Evidencia actual | Resultado / limite | Siguiente accion |
 | --- | --- | --- | --- |
-| Incorporacion / Hume + coordinador | API 5/5, invitaciones 12/12, SQL, 15 pruebas de captura y navegador 390/1440 PASS | AUD-01 corregido y publicado por PR46; identidad real Admin pendiente | Leer Incorporaciones con Admin antes de invitar |
+| Incorporacion / Hume + coordinador | API 5/5, invitaciones 12/12, SQL, 15 pruebas de captura y navegador 390/1440 PASS; lectura Admin posterior comprobada | AUD-01 corregido y publicado por PR46 | Esperar destinatario y acompanar primera incorporacion |
 | Medico-paciente / Pasteur | Operaciones 8/8, agenda 6/6 y SQL sintetico PASS | AUD-03 nota sin guardar; evidencia alojada anterior reutilizada, no sesion medica hoy | Reproduccion y correccion acotada; no prometer recorrido clinico cerrado |
 | Dispensario / Locke + coordinador | AUD-02 reproducido en navegador antes del fix; ambos roles/cinco anchos PASS despues; CI PR47 PASS | Correccion publicada y alias contrastado. AUD-04 estatico | Mantener pendientes humanos separados |
 | Calidad / McClintock | SHA/CI oficial comprobados, PostgreSQL independiente y PostgREST aprobados | Carreras revocacion/cuarentena vs entrega no cubiertas de forma independiente | Backlog de pruebas aisladas; no afirmar fallo sin reproduccion |
 | Browns / coordinador | Lectura 27/09 05:52-05:53: encargado, lote 100 g, proveedor vacio sin error, formulario abierto/cerrado sin guardar | Persistencia y lectura comprobadas; ninguna escritura en esta auditoria | Mantener ensayo separado de B |
 | Humano movil / PO | Recepcion 100 g encontrada en telefono fisico con indicaciones | Guiado parcial, no autonomia ni teclado completo | Evaluar tareas sin instrucciones y registrar dispositivo |
-| Admin publicado / coordinador + PO | Solicitud de sesion enviada; sesion actual sigue Browns | No comprobado en esta ronda | Iniciar Admin y leer Incorporaciones; no enviar hasta verificar destinatario |
+| Admin publicado / coordinador + PO | Sesion Admin, invitacion aceptada, solicitud Browns aprobada y organizacion; recarga conserva acceso | Comprobacion tecnica de lectura, sin nueva invitacion ni decision | Verificar destinatario antes de la incorporacion externa |
 | Primer/segundo equipo / PO | No hay contactos suministrados | Pendiente, no defecto | Primero un encargado; segundo despues de observar su incorporacion |
 
 #### Hallazgos y entregas separadas
