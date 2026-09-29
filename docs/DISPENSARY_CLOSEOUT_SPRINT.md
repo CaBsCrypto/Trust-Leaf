@@ -16,8 +16,8 @@ Pruebas sinteticas aisladas, sin escrituras de negocio publicadas.
 | Trabajo | Estado | Evidencia / siguiente accion |
 | --- | --- | --- |
 | AUD-03 nota medica | Publicado | PR49 integrado en ab2f4b3; CI 36365590291 PASS, deployment 6700540461 success. Regresion aislada repetida: diez casos PASS |
-| AUD-04 formularios de inventario | Validacion | Rama fix/inventory-draft-guard sobre PR49. Diez combinaciones rol/ancho PASS; guardas adicionales de operacion pendiente en revision. No publicado |
-| UX y calidad | En curso | Revision independiente; conservar pruebas humanas pendientes |
+| AUD-04 formularios de inventario | Publicado | PR50 a3656eb; candidato 4f37b1f, CI 36633030614 y preview PASS. Deployment 6745997363 success y alias oficial contrastado. Diez combinaciones rol/ancho y suites compartidas aprobadas |
+| UX y calidad | Revision tecnica aprobada | Cuatro agentes, hallazgos y regresiones consolidados; conservar pruebas humanas pendientes |
 | Admin oficial | Comprobado tecnicamente | Sesion Admin: invitacion aceptada, solicitud Browns aprobada y organizacion visibles; recarga conserva acceso. Sin envios ni decisiones nuevas |
 
 La lectura de Admin anterior sustituye el pendiente historico de sesion de la

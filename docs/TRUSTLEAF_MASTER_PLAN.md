@@ -13,8 +13,10 @@ aislado sobre `a9ddc67`: navegar pierde la nota no guardada y finalizar no la
 incluye. Correccion publicada por PR49 (`ab2f4b3`), CI `36365590291` aprobado
 y deployment `6700540461` comprobado. AUD-04 tambien
 reproducido con API sintetica: navegacion/filtros pierden borradores y ajuste
-guardado conserva valores. Correccion separada en `fix/inventory-draft-guard`,
-todavia en validacion, sin publicar. [Estado y matriz actual por actor](INVENTORY_DRAFT_GUARD.md).
+guardado conserva valores. Correccion integrada por PR50 (`a3656eb`), candidato
+`4f37b1f` con CI `36633030614` y preview aprobados. Deployment `6745997363`
+success para `a3656eb`; Vercel Ready y dominio oficial contrastados.
+[Estado y matriz actual por actor](INVENTORY_DRAFT_GUARD.md).
 No se declara perdida de datos guardados ni un nuevo
 defecto critico de permisos demostrado.
 Matriz unica, evidencias, prioridades y responsables en
