@@ -3,6 +3,11 @@
 Fecha: 2026-09-27. Base: `a9ddc67` (PR48). Rama: `fix/medical-note-guard`.
 Sin cambios de API, migraciones, permisos o datos publicados.
 
+Actualizacion 29/09: PR49 integrado en `ab2f4b3`, CI `36365590291` PASS y
+deployment `6700540461` success. La regresion de diez casos se repitio de forma
+aislada durante la entrega de inventario. Los gates pendientes descritos abajo
+corresponden al registro historico de preparacion, no al estado de publicacion.
+
 ## Reproduccion
 
 Agente medico reprodujo en navegador y PGlite aislados sobre la base:

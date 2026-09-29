@@ -34,7 +34,10 @@ pendiente y sin borradores. No se demostro un bypass de permisos del servidor.
   la respuesta perdida seguida de lectura con nueva membresia ocultaba el reintento.
   La excepcion queda limitada a crear organizacion desde contexto sin organizacion;
   recepciones, ajustes y estado de lote conservan el aislamiento estricto. Repetir
-  la regresion compartida antes de integrar PR50.
+  la regresion compartida antes de integrar PR50. Repeticion final: PASS con
+  SQL aislado nuevo; se precisaron selectores de alertas sin eliminar expectativas.
+- Atenciones y jornada: ambos roles y cinco anchos PASS en revision de calidad.
+  No quedan bloqueantes reproducidos en la revision local del candidato.
 - Capturas: `scratch/inventory-draft-guard`, incluidas en artefactos CI.
 - Celular fisico, teclado real y autonomia: pendientes; viewport no los sustituye.
 
@@ -48,7 +51,7 @@ mensual queda fuera de la entrega.
 | Medico | Notas y flujo de consulta, regresion aislada | Sesion oficial: reserva, nota y tratamiento |
 | Paciente | Evidencia historica de saldo y comprobante | Identidad, reserva y saldo actuales; no asumir vigencia |
 | Dispensario | Inventario aislado y evidencia historica B/Browns | Lecturas oficiales y revision sin confirmar |
-| Admin | Lectura oficial 29/09: identidad admin, B con encargado y operador, Browns con encargado; incorporacion Browns aprobada | Repetir lectura despues de publicar el candidato |
+| Admin | Lectura oficial 29/09: identidad admin, B con encargado y operador, Browns con encargado; incorporacion Browns aprobada; recarga conserva acceso | Repetir lectura despues de publicar el candidato |
 
 No se efectuaron escrituras de negocio publicadas para esta correccion. Renovar
 un permiso requiere accion explicita del paciente. La incorporacion externa y
