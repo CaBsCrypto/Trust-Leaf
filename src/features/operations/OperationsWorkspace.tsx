@@ -194,7 +194,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     if (!data || readError) return;
     if (['receive-batch', 'adjust-stock', 'set-batch-state'].includes(command.action) && (data.role !== 'dispensary' || data.membership?.role !== 'manager')) return;
     if (pendingContext.current?.id === command.input.operationId) {
-      if (pendingContext.current.role !== data?.role || pendingContext.current.organizationRef !== data?.membership?.organization_ref) return;
+      const createdOrganization = command.action === 'create-organization' && !pendingContext.current.organizationRef;
+      if (pendingContext.current.role !== data?.role || (!createdOrganization && pendingContext.current.organizationRef !== data?.membership?.organization_ref)) return;
     } else pendingContext.current = { id: command.input.operationId, role: data?.role, organizationRef: data?.membership?.organization_ref };
     lock.current = true; setBusy(true); setPending(command); setError(''); setReadError(''); setNotice(''); requestNumber.current++;
     try {
@@ -244,7 +245,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const visibleError = readError || error;
   const role = data?.role;
   const withoutTeam = role === 'dispensary' && data?.staffOnly && !data.membership?.organization_ref;
-  const pendingContextMatches = !pending || (pendingContext.current?.role === role && pendingContext.current?.organizationRef === data?.membership?.organization_ref &&
+  const pendingContextMatches = !pending || (pendingContext.current?.role === role &&
+    (pendingContext.current?.organizationRef === data?.membership?.organization_ref || (pending.action === 'create-organization' && !pendingContext.current?.organizationRef)) &&
     (!['receive-batch', 'adjust-stock', 'set-batch-state'].includes(pending.action) || data?.membership?.role === 'manager'));
   const searchHint = tab === 'inventory' ? 'Codigo de lote o producto'
     : tab === 'history' && role === 'dispensary' ? historyView === 'deliveries' ? 'Comprobante, producto o codigo de lote' : 'Movimiento, producto, lote o motivo'

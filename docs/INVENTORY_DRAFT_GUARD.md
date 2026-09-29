@@ -30,6 +30,11 @@ pendiente y sin borradores. No se demostro un bypass de permisos del servidor.
 - Tipos y regresion visual de navegacion: PASS sobre candidato final.
 - Build local: PASS, con avisos existentes de paquetes Privy y tamano de chunks.
   Revision final, CI y preview: pendientes. No publicado este ajuste.
+- Revision de calidad reprodujo una regresion en recuperacion de crear organizacion:
+  la respuesta perdida seguida de lectura con nueva membresia ocultaba el reintento.
+  La excepcion queda limitada a crear organizacion desde contexto sin organizacion;
+  recepciones, ajustes y estado de lote conservan el aislamiento estricto. Repetir
+  la regresion compartida antes de integrar PR50.
 - Capturas: `scratch/inventory-draft-guard`, incluidas en artefactos CI.
 - Celular fisico, teclado real y autonomia: pendientes; viewport no los sustituye.
 
