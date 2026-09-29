@@ -16,8 +16,8 @@ Pruebas sinteticas aisladas, sin escrituras de negocio publicadas.
 | Trabajo | Estado | Evidencia / siguiente accion |
 | --- | --- | --- |
 | AUD-03 nota medica | Publicado | PR49 integrado en ab2f4b3; CI 36365590291 PASS, deployment 6700540461 success. Regresion aislada repetida: diez casos PASS |
-| AUD-04 formularios de inventario | Validacion | Rama fix/inventory-draft-guard sobre PR49. Diez combinaciones rol/ancho PASS; guardas adicionales de operacion pendiente en revision. No publicado |
-| UX y calidad | En curso | Revision independiente; conservar pruebas humanas pendientes |
+| AUD-04 formularios de inventario | Publicado | PR50 a3656eb; candidato 4f37b1f, CI 36633030614 y preview PASS. Deployment 6745997363 success y alias oficial contrastado. Diez combinaciones rol/ancho y suites compartidas aprobadas |
+| UX y calidad | Revision tecnica aprobada | Cuatro agentes, hallazgos y regresiones consolidados; conservar pruebas humanas pendientes |
 | Admin oficial | Comprobado tecnicamente | Sesion Admin: invitacion aceptada, solicitud Browns aprobada y organizacion visibles; recarga conserva acceso. Sin envios ni decisiones nuevas |
 
 La lectura de Admin anterior sustituye el pendiente historico de sesion de la
@@ -99,7 +99,11 @@ No confundir ausencia de hallazgo con garantia de seguridad completa.
 Correcciones no se incluyen en este PR documental; una rama funcional a la vez,
 tipos/build/regresion/CI/preview antes de integrar y revalidar.
 
-#### Decision vigente y siguiente accion
+#### Decision historica de auditoria (27/09)
+
+Este bloque conserva la decision previa a las reproducciones y PR49/50.
+El estado vigente de AUD-03/04 y Admin es el tablero de proteccion de borradores
+al inicio; no leer los pendientes historicos siguientes como defectos actuales.
 
 LISTO CON LIMITACIONES para presentar el nucleo y preparar incorporacion
 acompanada con datos ficticios. El envio externo queda retenido hasta comprobar

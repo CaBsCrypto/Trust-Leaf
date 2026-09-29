@@ -1,7 +1,20 @@
 # Inventario: proteccion del trabajo sin guardar
 
-Actualizado: 2026-09-29. Rama `fix/inventory-draft-guard`.
+Actualizado: 2026-09-29. Entrega `fix/inventory-draft-guard`.
 Base: `ab2f4b3e18eaa93d7151c3b158bb877f9e273a56` (PR49).
+
+## Cierre tecnico
+
+PR50 integrado en `a3656eb442a176d3193b26f6866b2114255791e8`.
+Candidato `4f37b1f4d1488f24935f2415bb0a9871c1000f98`, CI `36633030614`
+PASS (6m57s), incluida la suite de Inventario en Chromium y comercio. Preview
+aprobada para el mismo candidato. Cuatro revisiones independientes consolidadas.
+Publicacion comprobada: GitHub deployment `6745997363` success para
+`a3656eb442a176d3193b26f6866b2114255791e8`;
+Vercel `dpl_AzvJkh67JgzExHt8yDMh9L3aveNC` Ready y alias oficial apuntan a
+`trustleaf-fhl6s3mkd-cabscryptocontacto-6028s-projects.vercel.app`.
+Las cuatro rutas oficiales devuelven 200; API operativa sin autenticacion 401,
+`Cache-Control: no-store, private`. No se realizaron escrituras publicadas.
 
 ## Defecto y alcance
 
@@ -29,7 +42,8 @@ pendiente y sin borradores. No se demostro un bypass de permisos del servidor.
 - Operaciones API y SQL aislado: PASS. PGlite no acredita concurrencia real.
 - Tipos y regresion visual de navegacion: PASS sobre candidato final.
 - Build local: PASS, con avisos existentes de paquetes Privy y tamano de chunks.
-  Revision final, CI y preview: pendientes. No publicado este ajuste.
+  Revision final, CI y preview: aprobados; ver cierre tecnico arriba. El detalle
+  siguiente conserva el historial de hallazgos y candidatos intermedios.
 - Revision de calidad reprodujo una regresion en recuperacion de crear organizacion:
   la respuesta perdida seguida de lectura con nueva membresia ocultaba el reintento.
   La excepcion queda limitada a crear organizacion desde contexto sin organizacion;
@@ -55,7 +69,7 @@ mensual queda fuera de la entrega.
 | Medico | Notas y flujo de consulta, regresion aislada | Sesion oficial: reserva, nota y tratamiento |
 | Paciente | Evidencia historica de saldo y comprobante | Identidad, reserva y saldo actuales; no asumir vigencia |
 | Dispensario | Inventario aislado y evidencia historica B/Browns | Lecturas oficiales y revision sin confirmar |
-| Admin | Lectura oficial 29/09: identidad admin, B con encargado y operador, Browns con encargado; incorporacion Browns aprobada; recarga conserva acceso | Repetir lectura despues de publicar el candidato |
+| Admin | Lectura oficial 29/09: identidad admin, B con encargado y operador, Browns con encargado; incorporacion Browns aprobada; recarga conserva acceso | Mantener separada incorporacion externa y autonomia humana |
 
 No se efectuaron escrituras de negocio publicadas para esta correccion. Renovar
 un permiso requiere accion explicita del paciente. La incorporacion externa y
