@@ -38,6 +38,10 @@ pendiente y sin borradores. No se demostro un bypass de permisos del servidor.
   SQL aislado nuevo; se precisaron selectores de alertas sin eliminar expectativas.
 - Atenciones y jornada: ambos roles y cinco anchos PASS en revision de calidad.
   No quedan bloqueantes reproducidos en la revision local del candidato.
+- CI intermedio aprobo recorridos compartidos y medicos, pero observo la limpieza
+  del guard de salida antes de terminar el efecto React. La prueba ahora espera
+  la condicion real, acotada a 15 s, sin pausas fijas ni expectativas eliminadas.
+  Chrome local: diez combinaciones PASS; Chromium se comprobara en CI.
 - Capturas: `scratch/inventory-draft-guard`, incluidas en artefactos CI.
 - Celular fisico, teclado real y autonomia: pendientes; viewport no los sustituye.
 

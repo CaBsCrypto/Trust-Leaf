@@ -109,12 +109,14 @@ try {
   const saveAdjustment = page.getByRole('button', { name: 'Registrar ajuste', exact: true });
   const readResponse = () => page.waitForResponse(response => response.url() === `${base}/api/operations-pilot` && response.request().method() === 'GET');
   async function assertLeaveWarning(expected) {
-    const prevented = await page.evaluate(() => {
+    // React's effect cleanup may follow the DOM update that hides the retry button.
+    const settled = await page.waitForFunction(expected => {
       const event = new Event('beforeunload', { cancelable: true });
       window.dispatchEvent(event);
-      return event.defaultPrevented;
-    });
-    assert.equal(prevented, expected, 'native beforeunload guard follows dirty/uncertain state');
+      return event.defaultPrevented === expected;
+    }, expected, { timeout: 15000, polling: 'raf' });
+    assert.equal(await settled.jsonValue(), true, 'native beforeunload guard follows dirty/uncertain state');
+    await settled.dispose();
   }
   async function refresh() {
     const response = readResponse();
