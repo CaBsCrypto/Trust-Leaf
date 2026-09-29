@@ -1,6 +1,6 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-09-27. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-09-29. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
 
@@ -15,14 +15,15 @@ Pruebas sinteticas aisladas, sin escrituras de negocio publicadas.
 
 | Trabajo | Estado | Evidencia / siguiente accion |
 | --- | --- | --- |
-| AUD-03 nota medica | Validacion local | Reproducido sobre a9ddc67: navegacion pierde texto y ambos cierres omiten nota no guardada. Correccion y regresion en rama, sin publicar |
-| AUD-04 formularios de inventario | Preparado | Reproducido con API interceptada: navegacion/filtros pierden borrador; ajuste guardado conserva valores. Reintento incierto mantiene ID y no duplica. Correccion espera integracion medica |
+| AUD-03 nota medica | Publicado | PR49 integrado en ab2f4b3; CI 36365590291 PASS, deployment 6700540461 success. Regresion aislada repetida: diez casos PASS |
+| AUD-04 formularios de inventario | Validacion | Rama fix/inventory-draft-guard sobre PR49. Diez combinaciones rol/ancho PASS; guardas adicionales de operacion pendiente en revision. No publicado |
 | UX y calidad | En curso | Revision independiente; conservar pruebas humanas pendientes |
 | Admin oficial | Comprobado tecnicamente | Sesion Admin: invitacion aceptada, solicitud Browns aprobada y organizacion visibles; recarga conserva acceso. Sin envios ni decisiones nuevas |
 
 La lectura de Admin anterior sustituye el pendiente historico de sesion de la
 auditoria de abajo. No acredita autonomia humana ni incorporacion del primer cliente.
 Detalle de reproduccion y gates: [Proteccion de notas](MEDICAL_NOTE_GUARD.md).
+Inventario y matriz actual por actor: [Proteccion de inventario](INVENTORY_DRAFT_GUARD.md).
 
 ### Auditoria coordinada con cuatro agentes: 27/09
 

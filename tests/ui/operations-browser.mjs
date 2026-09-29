@@ -434,23 +434,25 @@ try {
   const rejected = recover.waitForResponse(r => r.url().endsWith('/api/operations-pilot') && r.request().method() === 'POST');
   await adjustment.getByRole('button', { name: 'Registrar ajuste', exact: true }).click();
   assert.equal((await rejected).status(), 409);
-  await recover.getByRole('alert').waitFor();
+  const rejectedActionAlert = recover.getByRole('alert').filter({ hasText: /^El registro cambio, no queda saldo o stock, o la operacion ya no esta disponible\. Actualiza los datos\.$/ });
+  await rejectedActionAlert.waitFor();
   const otherAdjustment = form(otherSession, 'Registrar ajuste');
   await otherAdjustment.getByLabel('Variacion en gramos (+/-)', { exact: true }).fill('10');
   await otherAdjustment.getByLabel('Motivo del ajuste', { exact: true }).fill('AJUSTE FICTICIO OTRA SESION');
   await command(otherSession, 'Registrar ajuste');
   await recover.evaluate(() => window.dispatchEvent(new Event('focus')));
   await recover.locator('.op-row').getByText('110 g', { exact: false }).waitFor({ timeout: 5000 });
-  assert.match(await recover.getByRole('alert').innerText(), /El registro cambio/, 'background success does not hide a rejected action');
+  assert.match(await rejectedActionAlert.innerText(), /El registro cambio/, 'background success does not hide a rejected action');
   await refresh(recover);
-  await recover.getByRole('alert').waitFor({ state: 'hidden' });
+  await rejectedActionAlert.waitFor({ state: 'hidden' });
   await recover.route('**/api/operations-pilot', route => route.request().method() === 'GET'
     ? route.fulfill({ status: 503, json: {} }) : route.continue());
   await refresh(recover);
-  await recover.getByRole('alert').waitFor();
+  const readFailureAlert = recover.getByRole('alert').filter({ hasText: /^No fue posible confirmar la operacion\. Puedes reintentar\.$/ });
+  await readFailureAlert.waitFor();
   await recover.unroute('**/api/operations-pilot');
   await recover.evaluate(() => window.dispatchEvent(new Event('online')));
-  await recover.getByRole('alert').waitFor({ state: 'hidden', timeout: 5000 });
+  await readFailureAlert.waitFor({ state: 'hidden', timeout: 5000 });
   await otherSession.close();
   await recover.close();
   // A person without an actor joins through email acceptance, not onboarding.

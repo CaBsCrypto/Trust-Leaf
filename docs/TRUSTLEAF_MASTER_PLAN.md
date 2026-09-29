@@ -10,9 +10,12 @@ AUD-02 reproducido en navegador, corregido e integrado por PR47 con CI aprobado,
 publicacion y alias oficial contrastados. Admin ya comprobado por lectura y
 recarga; falta el destinatario antes de enviar. AUD-03 reproducido en navegador
 aislado sobre `a9ddc67`: navegar pierde la nota no guardada y finalizar no la
-incluye. Correccion en `fix/medical-note-guard`, aun no publicada. AUD-04 tambien
+incluye. Correccion publicada por PR49 (`ab2f4b3`), CI `36365590291` aprobado
+y deployment `6700540461` comprobado. AUD-04 tambien
 reproducido con API sintetica: navegacion/filtros pierden borradores y ajuste
-guardado conserva valores. Correccion separada posterior. No se declara perdida de datos guardados ni un nuevo
+guardado conserva valores. Correccion separada en `fix/inventory-draft-guard`,
+todavia en validacion, sin publicar. [Estado y matriz actual por actor](INVENTORY_DRAFT_GUARD.md).
+No se declara perdida de datos guardados ni un nuevo
 defecto critico de permisos demostrado.
 Matriz unica, evidencias, prioridades y responsables en
 [Sprint S1](DISPENSARY_CLOSEOUT_SPRINT.md). Browns conserva 100 g y B no se toca.
