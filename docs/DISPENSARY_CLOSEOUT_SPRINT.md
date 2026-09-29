@@ -99,7 +99,11 @@ No confundir ausencia de hallazgo con garantia de seguridad completa.
 Correcciones no se incluyen en este PR documental; una rama funcional a la vez,
 tipos/build/regresion/CI/preview antes de integrar y revalidar.
 
-#### Decision vigente y siguiente accion
+#### Decision historica de auditoria (27/09)
+
+Este bloque conserva la decision previa a las reproducciones y PR49/50.
+El estado vigente de AUD-03/04 y Admin es el tablero de proteccion de borradores
+al inicio; no leer los pendientes historicos siguientes como defectos actuales.
 
 LISTO CON LIMITACIONES para presentar el nucleo y preparar incorporacion
 acompanada con datos ficticios. El envio externo queda retenido hasta comprobar

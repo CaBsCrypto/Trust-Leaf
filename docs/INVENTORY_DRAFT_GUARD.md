@@ -9,7 +9,8 @@ PR50 integrado en `a3656eb442a176d3193b26f6866b2114255791e8`.
 Candidato `4f37b1f4d1488f24935f2415bb0a9871c1000f98`, CI `36633030614`
 PASS (6m57s), incluida la suite de Inventario en Chromium y comercio. Preview
 aprobada para el mismo candidato. Cuatro revisiones independientes consolidadas.
-Publicacion comprobada: GitHub deployment `6745997363` success para ese SHA;
+Publicacion comprobada: GitHub deployment `6745997363` success para
+`a3656eb442a176d3193b26f6866b2114255791e8`;
 Vercel `dpl_AzvJkh67JgzExHt8yDMh9L3aveNC` Ready y alias oficial apuntan a
 `trustleaf-fhl6s3mkd-cabscryptocontacto-6028s-projects.vercel.app`.
 Las cuatro rutas oficiales devuelven 200; API operativa sin autenticacion 401,
