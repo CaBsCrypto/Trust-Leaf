@@ -1,6 +1,6 @@
 import { useDiscardDialog } from './useDiscardDialog';
 import { batchState, batchLabels } from './batchPresentation';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Activity, CalendarDays, ClipboardList, History, House, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
 import AdminOnboarding from '../onboarding/AdminOnboarding';
@@ -22,6 +22,9 @@ const consultationFilters = [['pending', 'Pendientes'], ['active', 'En atención
 type ConsultationFilter = typeof consultationFilters[number][0];
 type Mutate = (action: PilotAction, input: Record<string, unknown>) => void;
 type NoteDraft = { text: string; baseline: string; version: number; acknowledged?: boolean };
+type StockDraft = { values: Record<string, string>; organizationRef: string; version?: number };
+const receiptDefaults = { lotCode: '', product: 'Flor de prueba', sourceReference: '', expiresAt: '', grams: '100' };
+const adjustmentDefaults = { grams: '', reason: '' };
 type Field = { name: string; label: string; type?: 'text' | 'number' | 'textarea' | 'select' | 'datetime-local'; value?: string;
   choices?: { value: string; label: string }[]; min?: number; max?: number; maxLength?: number };
 
@@ -35,10 +38,29 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [tab, setSelectedTab] = useState('today');
   const initialSection = useRef(false);
-  const { confirmDiscard, discardDialog } = useDiscardDialog(data?.role);
+  const { confirmDiscard, discardDialog } = useDiscardDialog(data ? `${data.role}:${data.joined}:${data.membership?.organization_ref}:${data.membership?.role}` : undefined);
   const sectionBody = useRef<HTMLDivElement>(null);
   const [attentionDirty, setAttentionDirty] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, NoteDraft>>({});
+  const [stockDrafts, setStockDrafts] = useState<Record<string, StockDraft>>({});
+  const stockDirty = Object.keys(stockDrafts).length > 0;
+  const leaveStock = async () => {
+    if (pending && ['receive-batch', 'adjust-stock'].includes(pending.action)) return false;
+    if (!stockDirty) return true;
+    if (!await confirmDiscard('Los datos de recepcion o ajuste sin guardar se perderan. No se modificaran las existencias.')) return false;
+    setStockDrafts({}); return true;
+  };
+  function editStock(key: string, values: Record<string, string>, version?: number) {
+    const organizationRef = data?.membership?.organization_ref;
+    if (!organizationRef || data?.membership?.role !== 'manager') return;
+    const defaults = key === 'receive' ? receiptDefaults : adjustmentDefaults;
+    setStockDrafts(current => {
+      const next = { ...current };
+      if (Object.entries(defaults).every(([name, value]) => values[name] === value)) delete next[key];
+      else next[key] = { values, organizationRef, version: current[key]?.version ?? version };
+      return next;
+    });
+  }
   const dirtyNoteCount = Object.values(noteDrafts).filter(draft => !draft.acknowledged).length;
   const notesDirty = dirtyNoteCount > 0;
   const leaveNotes = async () => {
@@ -62,8 +84,9 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [historyView, setHistoryView] = useState<'deliveries' | 'movements'>('deliveries');
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
   const setTab = async (next: string, target?: AgendaTarget) => {
-    if (next !== tab && !await leaveNotes()) return;
     if (next !== tab && data?.role === 'dispensary' && (busy || pending)) return;
+    if (next !== tab && !await leaveNotes()) return;
+    if (next !== tab && !await leaveStock()) return;
     if (next !== tab && attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
     if (!await leaveCommerce()) return;
     setSearch(''); setAgendaTarget(target); setSelectedTab(next);
@@ -81,17 +104,25 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [receiptRef, setReceiptRef] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PilotCommand | null>(null);
+  const pendingContext = useRef<{ id: unknown; role?: PilotRole; organizationRef?: string } | null>(null);
   const [revision, setRevision] = useState(0);
   const lock = useRef(false);
   const controller = useRef(new AbortController());
   const requestNumber = useRef(0);
   useEffect(() => { controller.current = new AbortController(); return () => { controller.current.abort(); requestNumber.current++; }; }, []);
   useEffect(() => {
-    if (!notesDirty && !(pending && ['save-note', 'complete-encounter'].includes(pending.action))) return;
+    if (!notesDirty && !stockDirty && !(pending && ['save-note', 'complete-encounter', 'receive-batch', 'adjust-stock', 'set-batch-state'].includes(pending.action))) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [notesDirty, pending]);
+  }, [notesDirty, stockDirty, pending]);
+  useEffect(() => {
+    setStockDrafts(current => {
+      const entries = Object.entries(current).filter(([, draft]) => data?.role === 'dispensary' && data.joined &&
+        data.membership?.role === 'manager' && data.membership.organization_ref === draft.organizationRef);
+      return entries.length === Object.keys(current).length ? current : Object.fromEntries(entries);
+    });
+  }, [data]);
   useEffect(() => {
     // Completion is not revocation: an authorized reader keeps their local text.
     setNoteDrafts(current => {
@@ -159,6 +190,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
 
   async function execute(command: PilotCommand) {
     if (lock.current) return;
+    if (pending && command.input.operationId !== pending.input.operationId) return;
+    if (!data || readError) return;
+    if (['receive-batch', 'adjust-stock', 'set-batch-state'].includes(command.action) && (data.role !== 'dispensary' || data.membership?.role !== 'manager')) return;
+    if (pendingContext.current?.id === command.input.operationId) {
+      if (pendingContext.current.role !== data?.role || pendingContext.current.organizationRef !== data?.membership?.organization_ref) return;
+    } else pendingContext.current = { id: command.input.operationId, role: data?.role, organizationRef: data?.membership?.organization_ref };
     lock.current = true; setBusy(true); setPending(command); setError(''); setReadError(''); setNotice(''); requestNumber.current++;
     try {
       const result = await request(command);
@@ -168,6 +205,11 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         const ref = String(command.input.resourceRef);
         if (current[ref]?.text !== command.input.note) return current;
         return { ...current, [ref]: { ...current[ref], acknowledged: true } };
+      });
+      if (command.action === 'receive-batch' || command.action === 'adjust-stock') setStockDrafts(current => {
+        const next = { ...current };
+        delete next[command.action === 'receive-batch' ? 'receive' : String(command.input.resourceRef)];
+        return next;
       });
       if (command.action === 'dispense') setReceiptRef(result.resourceRef);
     } catch (e) {
@@ -202,6 +244,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const visibleError = readError || error;
   const role = data?.role;
   const withoutTeam = role === 'dispensary' && data?.staffOnly && !data.membership?.organization_ref;
+  const pendingContextMatches = !pending || (pendingContext.current?.role === role && pendingContext.current?.organizationRef === data?.membership?.organization_ref &&
+    (!['receive-batch', 'adjust-stock', 'set-batch-state'].includes(pending.action) || data?.membership?.role === 'manager'));
   const searchHint = tab === 'inventory' ? 'Codigo de lote o producto'
     : tab === 'history' && role === 'dispensary' ? historyView === 'deliveries' ? 'Comprobante, producto o codigo de lote' : 'Movimiento, producto, lote o motivo'
     : tab === 'team' ? role === 'admin' ? 'Nombre o referencia del dispensario' : 'Correo del equipo'
@@ -243,12 +287,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
       <div className="op-toolbar">{role === 'dispensary' && data?.joined && !withoutTeam && <button className="op-management-tab" role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}><Settings size={16}/>{import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'}</button>}<span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
-        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={(role === 'dispensary' || role === 'doctor') && disabled} onClick={async () => {
-          if (pending && !data) {
+        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={busy || ((role === 'dispensary' || role === 'doctor') && disabled && pendingContextMatches)} onClick={async () => {
+          if (pending && (!data || !pendingContextMatches)) {
             if (await confirmDiscard('Hay una operacion sin confirmar que podria estar guardada. Cerrar sesion abandona su recuperacion. Comprueba el historial antes de repetirla.')) onSignOut();
             return;
           }
           if (!await leaveNotes()) return;
+          if (!await leaveStock()) return;
           if (attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
           if (await leaveCommerce()) onSignOut();
         }}><LogOut size={18}/></button>}</div></header>
@@ -256,7 +301,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     <div className="op-content">
       {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
       {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
-      {pending && !busy && data?.joined && !readError && !withoutTeam && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
+      {pending && !busy && data && (data.joined || pending.action === 'join') && !readError && !withoutTeam && pendingContextMatches && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
+      {pending && data && !pendingContextMatches && <p role="alert">La operacion pendiente pertenece al acceso anterior. No puede reintentarse con la organizacion o permisos actuales. Comprueba su historial antes de repetirla.</p>}
       {!data && !visibleError && <p role="status">Verificando permisos...</p>}
       {data && !data.joined && !withoutTeam && <div className="op-empty"><ShieldCheck size={32}/><h2>Participar en el piloto</h2>
         <p>Solo datos ficticios. Sin atencion clinica ni entrega real de medicamentos.</p>
@@ -356,8 +402,9 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'inventory' && role === 'dispensary' && <>
           <h2><Package size={20}/>Inventario por lote</h2>
+          {stockDirty && <p role="status">Formularios sin guardar: {Object.keys(stockDrafts).length}.</p>}
           <div className="op-tabs" role="group" aria-label="Estado de inventario">{[['available','Disponibles'],['quarantined','Bloqueados'],['expired','Vencidos'],['empty','Agotados'],['all','Todos']].map(([id,label]) => <button key={id} aria-pressed={inventoryFilter === id} onClick={() => setInventoryFilter(id)}>{label}</button>)}</div>
-          {data.membership?.role === 'manager' && <details className="op-stock-receive"><summary>Recibir lote</summary><CommandForm label="Recibir lote simulado" disabled={disabled || !!readError} fields={[
+          {data.membership?.role === 'manager' && <details className="op-stock-receive"><summary>Recibir lote</summary><CommandForm label="Recibir lote simulado" disabled={disabled || !!readError} values={stockDrafts.receive?.values ?? receiptDefaults} change={values => editStock('receive', values)} fields={[
             { name: 'lotCode', label: 'Codigo de lote', maxLength: 80 }, { name: 'product', label: 'Producto', value: 'Flor de prueba', maxLength: 100 },
             { name: 'sourceReference', label: 'Referencia de origen', maxLength: 160 }, { name: 'expiresAt', label: 'Vencimiento', type: 'datetime-local' }, { name: 'grams', label: 'Cantidad en gramos', value: '100' }]}
             submit={v => mutate('receive-batch', { lotCode: v.lotCode, product: v.product, sourceReference: v.sourceReference, expiresAt: new Date(v.expiresAt).toISOString(), quantityMg: gramsToMg(v.grams) })}/></details>}
@@ -369,8 +416,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             <button className="op-command" onClick={() => openBatchHistory(b.batch_ref)}><History size={16}/>Ver historial del lote</button>
             <details><summary>Origen y trazabilidad</summary><p>Origen: {b.source_reference}</p><p className="op-reference">Lote: {b.batch_ref}</p></details>
             {data.membership?.role === 'manager' && <details><summary>Gestionar lote</summary><button className="op-command" disabled={disabled || !!readError} onClick={() => mutate('set-batch-state', { resourceRef: b.batch_ref, version: b.version, state: b.state === 'active' ? 'quarantined' : 'active' })}>{b.state === 'active' ? 'Poner en cuarentena' : 'Liberar cuarentena'}</button>
-              <details><summary>Ajustar existencias</summary><CommandForm label="Registrar ajuste" disabled={disabled || !!readError} fields={[{ name: 'grams', label: 'Variacion en gramos (+/-)' }, { name: 'reason', label: 'Motivo del ajuste', maxLength: 160 }]}
-                submit={v => mutate('adjust-stock', { resourceRef: b.batch_ref, version: b.version, quantityMg: gramsToMg(v.grams, true), reason: v.reason })}/></details></details>}
+              <details><summary>Ajustar existencias</summary><CommandForm label="Registrar ajuste" disabled={disabled || !!readError} values={stockDrafts[b.batch_ref]?.values ?? adjustmentDefaults} change={values => editStock(b.batch_ref, values, b.version)} fields={[{ name: 'grams', label: 'Variacion en gramos (+/-)' }, { name: 'reason', label: 'Motivo del ajuste', maxLength: 160 }]}
+                submit={v => mutate('adjust-stock', { resourceRef: b.batch_ref, version: stockDrafts[b.batch_ref]?.version ?? b.version, quantityMg: gramsToMg(v.grams, true), reason: v.reason })}/>
+                {stockDrafts[b.batch_ref] && stockDrafts[b.batch_ref].version !== b.version && <div role="alert"><p>Las existencias cambiaron. El ajuste sin guardar se conserva.</p>
+                  <button type="button" disabled={disabled || !!readError} onClick={() => setStockDrafts(current => ({ ...current, [b.batch_ref]: { ...current[b.batch_ref], version: b.version } }))}>Usar existencias actuales y conservar ajuste</button>
+                </div>}
+              </details></details>}
           </article>)}
           {!visibleError && !visibleBatches.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : data.batches?.length ? 'No hay lotes en este estado.' : 'No hay lotes registrados.'}</Empty>}
         </>}
@@ -440,7 +491,7 @@ function TreatmentSummary({ treatment: t, time }: { treatment: Treatment; time: 
       {t.periods.map(period => <p key={period.period_index}>Periodo {period.period_index} · {date(period.starts_at)} a {date(period.ends_at)} · {formatGrams(period.used_mg)} / {formatGrams(period.allowance_mg)}</p>)}</details>
   </>;
 }
-function CommandForm({ fields, label, disabled, submit }: { fields: Field[]; label: string; disabled: boolean; submit: (values: Record<string, string>) => void }) {
+function CommandForm({ fields, label, disabled, submit, values, change }: { fields: Field[]; label: string; disabled: boolean; submit: (values: Record<string, string>) => void; values?: Record<string, string>; change?: (values: Record<string, string>) => void }) {
   const [error, setError] = useState('');
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('');
@@ -450,7 +501,7 @@ function CommandForm({ fields, label, disabled, submit }: { fields: Field[]; lab
   return <form className="op-form" onSubmit={onSubmit}><fieldset disabled={disabled}>{fields.map(f => <label key={f.name} className={f.type === 'textarea' ? 'op-wide' : ''}>{f.label}
     {f.type === 'textarea' ? <textarea aria-label={f.label} name={f.name} defaultValue={f.value ?? ''} required maxLength={f.maxLength} rows={4}/>
       : f.type === 'select' ? <select aria-label={f.label} name={f.name} defaultValue="" required><option value="" disabled>Seleccionar</option>{f.choices?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-      : <input aria-label={f.label} name={f.name} type={f.type ?? 'text'} defaultValue={f.value ?? ''} required min={f.min} max={f.max} maxLength={f.maxLength ?? 160}/>}
+      : <input aria-label={f.label} name={f.name} type={f.type ?? 'text'} {...(values ? { value: values[f.name] ?? '', onChange: (event: ChangeEvent<HTMLInputElement>) => change?.({ ...values, [f.name]: event.target.value }) } : { defaultValue: f.value ?? '' })} required min={f.min} max={f.max} maxLength={f.maxLength ?? 160}/>}
     </label>)}<button className="op-command" type="submit"><Save size={16}/>{label}</button></fieldset>{error && <p role="alert" className="op-error">{error}</p>}</form>;
 }
 function DemoPerspective() {

@@ -125,6 +125,8 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium OPERATIONS_TEST_URL=http://127.0.0.1:4323 node tests/ui/medical-note-guard.browser.mjs
+      - name: Isolated inventory drafts
+        run: PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/inventory-draft-guard.browser.mjs
       - name: Isolated commerce browser journey
         run: |
           VITE_COMMERCE_CATALOG_ENABLED=true node node_modules/vite/bin/vite.js --config tests/ui/vite-operations.config.mjs --port 4322 > scratch/commerce-server.log 2>&1 &
@@ -144,4 +146,5 @@ jobs:
             scratch/operations-server.log
             scratch/medical-note-guard
             scratch/medical-server.log
+            scratch/inventory-draft-guard
           retention-days: 7
