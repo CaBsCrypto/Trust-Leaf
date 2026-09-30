@@ -2,9 +2,16 @@
 
 ## Corte vigente: demo y adopcion (30/09/2026)
 
-Baseline `f1c8f0e` (PR51 documental, funcional PR50). Ocho agentes por oleadas,
+Auditoria inicial `f1c8f0e` (PR51 documental, funcional PR50). Ocho agentes por oleadas,
 maximo una correccion funcional en curso. [Matriz unica y pendientes actuales](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
 y [guion de ejecucion](DEMO_ADOPTION_RUNBOOK.md).
+Base revisada `6671c5e` (PR53 solo pruebas/evidencia, sin cambios de producto):
+CI del candidato `10e0194` y preview aprobados; tres suites Chromium consecutivas
+de inventario PASS. Publicacion/alias oficial de 6671c5e contrastados; su CI de
+main se identifica por separado en el tablero. PR52 actualizado desde esa base,
+exclusivamente documental y sujeto a los checks de su ultimo head.
+[Causa y limites de la recuperacion de CI](evidence/inventory-qa-sync/README.md).
+Este cierre tecnico no corrige DEM-SEC-01/02 ni levanta la pausa de invitaciones.
 Medico y paciente leidos el 29/09: misma reserva f1e7b1d6 y comprobante 3150a49a;
 tratamiento 4119236d con 30 g asignados, 20 g retirados y 10 g disponibles,
 persistentes tras recarga. B sin permiso activo mostrado; el 30/09 se solicito

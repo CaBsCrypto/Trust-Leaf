@@ -100,6 +100,16 @@ revision -> CI/preview del ultimo commit -> integracion -> lectura publicada.
 No mezclar correcciones funcionales en el PR documental. Cualquier API/migracion
 nueva requiere decision separada y, para migrar, respaldo restaurable verificado.
 
+Primera entrega tecnica de sprint 1: PR53 ya integrado en 6671c5e. Recupera el
+runner de inventario, no modifica el producto; causa y ejecuciones repetidas en
+[evidencia de CI](evidence/inventory-qa-sync/README.md). PR52 se actualiza desde
+main y debe aprobar sus propios checks del ultimo head antes de integrar.
+El coordinador y seis agentes conservaron los controles de aislamiento,
+borradores, democion e idempotencia. La matriz unica registra resultados y limites.
+Despues: DEM-SEC-02 en una rama independiente; luego DEM-SEC-01 con su entrega
+de lectura compartida revisada. No levantar invitaciones ni renovar el permiso
+de B por aprobar checks de esta entrega de pruebas.
+
 ## Presentacion y colaboracion humana
 
 Guion de 20 minutos: identidad y acceso (3), medico/paciente con reserva y saldo

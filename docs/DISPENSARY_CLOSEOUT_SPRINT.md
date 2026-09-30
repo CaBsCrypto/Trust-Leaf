@@ -16,6 +16,19 @@ f1c8f0e a trustleaf-hwykbnsc1-cabscryptocontacto-6028s-projects.vercel.app.
 Vercel dpl_SaHyDmeSLDPMJA8k5ce7iYh2jxeL Ready y www.trustleaf.org apuntan a esa
 misma URL. La asociacion al SHA viene de GitHub, no de Vercel inspect por si solo.
 
+Actualizacion de base revisada: PR53 integrado como
+`6671c5e0214e2270e50dc080d01f43471d30ff4a`, sin cambios funcionales del producto.
+Su arbol es identico al candidato `10e019420317571f48428701f4821f2133999233`,
+con [CI 36672712861 PASS](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36672712861)
+y preview Ready. El [CI de main](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36673338483)
+es una ejecucion distinta; no atribuirle el resultado del candidato.
+GitHub deployment 6752220115 success asocia 6671c5e a
+trustleaf-3m9fryuc4-cabscryptocontacto-6028s-projects.vercel.app; Vercel
+dpl_3oJ67NP4XSZY3dEtsct9nrye1G2w Ready y www.trustleaf.org contrastados.
+PR52 se actualiza desde esa base y conserva diferencia exclusivamente documental;
+su integracion y checks del ultimo head se consultan en
+[PR52](https://github.com/CaBsCrypto/Trust-Leaf/pull/52).
+
 [Guion, ocho misiones, sprints y limites](DEMO_ADOPTION_RUNBOOK.md).
 Decision de corte: BLOQUEADO para renovar acceso compartido e incorporar equipos
 externos mientras se corrige DEM-SEC-01 y se cierra la superficie heredada
@@ -26,8 +39,8 @@ revisiones no escriben en produccion.
 
 | ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
 | --- | --- | --- | --- |
-| DEM-00 / coordinador + calidad | Validacion documental | SHA, CI, despliegue, ocho informes y equivalencia funcional contrastados; revision independiente documental apta para PR | Guardar/subir entrega documental, CI del candidato; no cierra bloqueos funcionales |
-| DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada y compatibilidad del primer contacto, aun no suministrado; envio bloqueado por DEM-SEC-01 |
+| DEM-00 / coordinador + calidad | Revision documental | Baseline y publicacion contrastadas; CI recuperado mediante PR53 independiente; PR52 actualizado desde main, sin codigo funcional en su diff | Integracion y checks del ultimo head: PR52 enlazado arriba; siguientes entregas P1 separadas, no cierre del piloto |
+| DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; envio bloqueado por DEM-SEC-01 y DEM-SEC-02 |
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
 | DEM-03 / Paciente | Bloqueado | Lecturas oficiales 29/09 y reconfirmacion 30/09: 30/20/10, sin grant B ni escrituras. DEM-SEC-01 paciente confirmado independientemente 4/4; medico inactivo es observacion de politica | Permiso B no renovado; correccion compartida sin retirar comprobantes propios |
 | DEM-04 / Dispensario | Validacion | Nuevos commerce API 5/5, SQL y browser ambos roles/cinco anchos PASS. Recepcion atomica/replay/rollback/privacidad. B y Browns conservan evidencia publicada anterior | Recorrido actual ambos roles, stock actual, revision 1 g; no entrega nueva ni integracion comercial->entrega repetida |
@@ -36,6 +49,42 @@ revisiones no escriben en produccion.
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
 | DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
+| DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
+
+### Recuperacion de CI: primera entrega del sprint 1
+
+PR52 head inicial 0f0cef0 tenia preview aprobada y CI 36666468947 fallido.
+El fallo manager/390 era una carrera del runner: respuesta A con lote B aun
+renderizado, seguida del remonte de A con `Gestionar lote` cerrado. Se reprodujo
+el mismo timeout mediante una respuesta HTTP sintetica controlada, sin cambiar
+React ni usar produccion. La validacion tambien detecto una respuesta GET anterior
+capturada por el waiter mientras el producto mostraba correctamente el scope nuevo.
+
+`fix/inventory-qa-sync` conserva todas las aserciones y escenarios. Captura el
+scope/rol esperado, espera lote/cantidad/estado renderizados y localiza controles
+dentro del lote. Sin pausas fijas, clics forzados ni aumentos de timeout. Una
+correccion auxiliar del selector de submit mantiene su prueba negativa original.
+Tres ejecuciones normales consecutivas PASS: encargado/operador en
+360/390/768/1024/1440, Node 22.23.2, Playwright 1.58.2, Chromium 145.0.7632.6.
+Cada una: 70 POST interceptados, 40 efectos de journal simulado, cero trafico externo.
+Estos contadores no son movimientos durables de inventario.
+
+Seis misiones: seguridad (Planck, revision independiente apta), medico (Lovelace,
+regresion local diez casos), paciente (Singer, identidad/unitarias sin red),
+dispensario (Huygens, SQL operaciones/comercio PASS), Admin (Popper, pendientes
+sin decisiones/envios) y calidad/UX (Hooke, reproduccion y unico editor del runner).
+Coordinador: tipos/builds off/on PASS, revision de logs/hash, Git y publicacion.
+CI del candidato repitio regresiones compartidas, medicas, inventario y comercio,
+ademas de PostgreSQL independiente/PostgREST. No confundir Windows local con Ubuntu
+CI ni viewports con telefono fisico. Servidor QA 4342 detenido.
+
+[Causa, capturas y limites](evidence/inventory-qa-sync/README.md).
+La preview fue Ready; las lecturas sin sesion redirigen a proteccion Vercel, no
+constituyen una prueba de navegacion autenticada. No se cambio esa proteccion.
+B, Browns, datos e historial no se tocaron; draft mensual fuera de los commits,
+SHA256 BDDBAAC808C90B672D5EE72A0F260B8BA23BEA21C2ECA12A2C226728B486BEC8.
+Siguiente entrega: DEM-SEC-02, frontera de rutas heredadas; despues DEM-SEC-01,
+lectura compartida revisada. Invitaciones externas y renovacion de B siguen pausadas.
 
 El 29/09, recargar medico/paciente conserva autenticacion pero vuelve al acceso
 Cuenta autorizada -> Continuar. Se observo ese paso; no se declaro cierre de
