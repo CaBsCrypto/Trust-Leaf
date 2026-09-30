@@ -6,11 +6,14 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
-Entrega actual: `fix/legacy-route-authorization`, desde main `637e17c` (PR52
-integrado, CI 36674600541 PASS y deployment oficial contrastado). DEM-SEC-02
-implementado y revisado localmente: ambas lecturas heredadas retiradas con 410/405,
-sin consultas Stellar. No declarado publicado hasta checks, integracion y lectura
-oficial del ultimo commit. [Reproduccion, revisiones y limites](evidence/legacy-private-route-block/README.md).
+DEM-SEC-02 cerrado y publicado mediante [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54),
+main `65aaeb8e703c13e97cc5707dff1ebfb22e4e01a4`. Candidato `2b6abed` aprobado por
+revision independiente, CI 36681425847 PASS y preview Ready. Deployment GitHub
+6753696128 success vincula ese main con Vercel dpl_5Fvrs9YCcXXLvNgFidWiEVX6URD8
+Ready y alias www.trustleaf.org. Lecturas oficiales 30/09: 410/405/no-store en
+ambas rutas con IDs sinteticos; cuatro entradas HTML 200, cuatro APIs privadas
+401 sin sesion. No prueba autenticada ni exposicion previa de datos reales.
+[Reproduccion, revisiones, publicacion y limites](evidence/legacy-private-route-block/README.md).
 DEM-SEC-01 sigue bloqueando invitaciones y renovacion B. El cierre del PR52 ya no
 esta pendiente; los parrafos siguientes conservan la trazabilidad de esa entrega.
 
@@ -39,26 +42,25 @@ su integracion y checks del ultimo head se consultan en
 
 [Guion, ocho misiones, sprints y limites](DEMO_ADOPTION_RUNBOOK.md).
 Decision de corte: BLOQUEADO para renovar acceso compartido e incorporar equipos
-externos mientras se corrige DEM-SEC-01 y se cierra la superficie heredada
-DEM-SEC-02. La presentacion interna puede
+externos mientras se corrige DEM-SEC-01. DEM-SEC-02 ya cerrado; la presentacion interna puede
 explicar registros ficticios, sin ofrecer validacion integral ni habilitacion real.
-Maximo una correccion funcional en curso; esta rama no contiene fixes y las
+Maximo una correccion funcional en curso; esta entrega documental no agrega fixes y las
 revisiones no escriben en produccion.
 
 | ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
 | --- | --- | --- | --- |
-| DEM-00 / coordinador + calidad | Revision documental | Baseline y publicacion contrastadas; CI recuperado mediante PR53 independiente; PR52 actualizado desde main, sin codigo funcional en su diff | Integracion y checks del ultimo head: PR52 enlazado arriba; siguientes entregas P1 separadas, no cierre del piloto |
+| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR52 integrado en 637e17c; PR54 integra DEM-SEC-02 en 65aaeb8 con CI/preview del candidato y lecturas oficiales aprobadas | CI de main y cierres documentales se identifican por separado; DEM-SEC-01 y tareas humanas mantienen el piloto abierto |
 | DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; envio bloqueado por DEM-SEC-01 y DEM-SEC-02 |
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
 | DEM-03 / Paciente | Bloqueado | Lecturas oficiales 29/09 y reconfirmacion 30/09: 30/20/10, sin grant B ni escrituras. DEM-SEC-01 paciente confirmado independientemente 4/4; medico inactivo es observacion de politica | Permiso B no renovado; correccion compartida sin retirar comprobantes propios |
 | DEM-04 / Dispensario | Validacion | Nuevos commerce API 5/5, SQL y browser ambos roles/cinco anchos PASS. Recepcion atomica/replay/rollback/privacidad. B y Browns conservan evidencia publicada anterior | Recorrido actual ambos roles, stock actual, revision 1 g; no entrega nueva ni integracion comercial->entrega repetida |
-| DEM-05 / Seguridad | Bloqueado | DEM-SEC-01 paciente 4/4 contrastado por fixture independiente, 35 hashes iguales. DEM-SEC-02 handlers heredados sin auth reproducidos en codigo con adaptadores falsos | Fix P1 paciente; cerrar handlers efectivos heredados, alcance publicado pendiente; carreras PG y politica doctor-active separadas |
+| DEM-05 / Seguridad | Bloqueado por DEM-SEC-01 | Paciente 4/4 contrastado por fixture independiente, 35 hashes iguales. DEM-SEC-02 cerrado por PR54 y comprobacion oficial de retirada | Fix P1 paciente preservando recibos propios/historial operativo; carreras PG, politica doctor-active y DEM-LEG-01 separados |
 | DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
 | DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
 | DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
-| DEM-SEC-02 / Seguridad + coordinador | Validacion de publicacion | Blocker comun, exports reales y registro Express antes de auth/parser; 198 + 325 casos locales PASS y revision independiente sin bloqueos para esta retirada | CI/preview del ultimo candidato, integrar y comprobar 410/405/no-store oficiales; no implica cierre de DEM-SEC-01 |
+| DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
 
 ### Recuperacion de CI: primera entrega del sprint 1
@@ -129,7 +131,7 @@ La prueba adicional Admin se ejecuto desde un archivo desechable fuera del repo;
 no constituye una nueva regresion permanente de CI.
 [Procedencia, limites y JSON de reproduccion](evidence/demo-readiness/README.md).
 
-### Hallazgo nuevo, no correccion en esta rama
+### Hallazgos originales de auditoria
 
 DEM-SEC-01 / P1 / lectura compartida: Singer reprodujo ocho variantes aisladas.
 Planck confirmo independientemente cuatro defectos de paciente suspendido,
@@ -168,6 +170,9 @@ exports de Vercel. Resolver su frontera efectiva o retirarlos de distribucion
 en una entrega `fix/...` separada, manteniendo mutaciones apagadas.
 Errores upstream sin sanear y falta de no-store en esos handlers: P2 relacionado,
 sin filtracion de secretos ni cache CDN efectiva comprobadas.
+Actualizacion: PR54 retira estas dos lecturas y cierra DEM-SEC-02, con 410/405 y
+no-store oficiales. Los hechos del parrafo anterior describen la reproduccion
+original, no el comportamiento publicado actual; DEM-LEG-01 queda separado.
 
 Hallazgos no convertidos en defectos: replay de operacion antigua por operador
 retirado devuelve solo UUID/replayed y no agrega entrega (P3, politica pendiente).

@@ -2,9 +2,10 @@
 
 ## Corte vigente: demo y adopcion (30/09/2026)
 
-Base actualizada: main `637e17c`, PR52 integrado y CI/despliegue oficial contrastados.
-DEM-SEC-02 implementado en rama separada, con revision y regresion local aprobadas;
-su cierre requiere integracion y lecturas oficiales. [Evidencia y limites](evidence/legacy-private-route-block/README.md).
+Base actualizada: PR52 integrado en `637e17c`; [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54)
+publica DEM-SEC-02 en `65aaeb8`. Revision independiente, CI/preview del candidato
+`2b6abed` aprobados; deployment/alias oficial y 410/405/no-store contrastados.
+DEM-SEC-02 cerrado. [Evidencia y limites](evidence/legacy-private-route-block/README.md).
 DEM-SEC-01 e invitaciones externas siguen bloqueados. Pendientes de fallback/cache
 en UI heredada registrados por separado como DEM-LEG-01; no se aprueba ese legado.
 Los cortes anteriores siguientes conservan su referencia temporal.
@@ -37,9 +38,9 @@ Los cortes fechados siguientes son historia y no sustituyen esta matriz vigente.
 Bloqueo nuevo DEM-SEC-01: cuatro casos de paciente inactivo confirmados por dos
 fixtures independientes muestran proyeccion compartida de tratamiento/historial.
 Cuatro casos de medico inactivo son comportamiento observado y politica pendiente.
-Se pausa renovacion de B hasta correccion. DEM-SEC-02: handlers Stellar heredados
-sin auth reproducidos en codigo; su disponibilidad publicada sigue pendiente.
-No enviar invitaciones externas hasta cerrar ambos bloqueos. No se declaro fuga en produccion;
+Se pausa renovacion de B hasta correccion. DEM-SEC-02 era el hallazgo de handlers
+Stellar sin auth; PR54 retira ambas lecturas, comprobadas en el dominio oficial.
+No enviar invitaciones externas mientras DEM-SEC-01 siga abierto. No se declaro fuga en produccion;
 comprobantes propios e historial operativo deben conservarse. DEM-UX-01 es una
 friccion separada de mensaje GET fallido, sin perdida de datos demostrada.
 

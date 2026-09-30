@@ -2,6 +2,9 @@
 
 Fecha: 2026-09-30. Rama `fix/legacy-route-authorization`, desde main
 `637e17c866ff50d01d7e2176316eb85963534957`.
+Estado: DEM-SEC-02 cerrado/publicado por [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54),
+main `65aaeb8e703c13e97cc5707dff1ebfb22e4e01a4`. Cierre documental posterior
+en `docs/legacy-route-security-closeout`, sin cambios funcionales.
 Base: [PR52 integrado](https://github.com/CaBsCrypto/Trust-Leaf/pull/52),
 [CI de main 36674600541 PASS](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36674600541),
 deployment GitHub 6752429450 / Vercel dpl_AdCZKkANoDLQg2aVgNYBsbB3EQj5 Ready,
@@ -30,10 +33,10 @@ alias www.trustleaf.org contrastado. No inferir SHA solo de `vercel inspect`.
   de parser/auth y cero ejecuciones downstream; no inicia el servidor completo,
   no importa dotenv ni usa credenciales reales. Los controles de rutas ajenas
   prueban passthrough, no equivalen a una prueba integral de esos modulos.
-- Calidad ejecuto independientemente 198 + 324 casos antes del ultimo caso de
-  cuerpo grande, con wrapper que permite solo loopback: cero intentos externos.
-  Sin hallazgos que bloqueen la retirada acotada. El coordinador repite la suite
-  final y exige checks sobre el commit candidato antes de integrar.
+- Calidad repitio independientemente los 198 + 325 casos del candidato final
+  `2b6abed7a3faf2d5ab0396fa9f77ca326b62a514`, con wrapper que permite solo loopback:
+  cero intentos externos y sin hallazgos que bloqueen la retirada acotada.
+  [Revision del SHA exacto](https://github.com/CaBsCrypto/Trust-Leaf/pull/54#issuecomment-5906057743).
 
 ## Revisiones y limites
 
@@ -42,13 +45,36 @@ Dispensario, Admin y Calidad/UX independiente. Los cuatro actores conectados usa
 Supabase, no estas dos URLs. Tipos sin diagnosticos; regresiones de autorizacion,
 seguridad del piloto, verificacion publica, consolidacion, operaciones SQL e
 incorporacion aislada PASS. CI incluye ahora la nueva regresion y guards asociados.
-CI/preview, integracion y lecturas oficiales se identifican en el PR y tablero;
-una prueba local por si sola no cierra la publicacion.
+El [CI candidato 36681425847](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36681425847)
+PASS incluye tipos, builds off/on, PostgreSQL independiente, PostgREST y browser
+de operaciones, notas, inventario y comercio. Preview GitHub 6753556670 success,
+Vercel dpl_DxA5edfyCKBjUBcmLLtaEr3bPNWw Ready. Las cuatro rutas de actor devolvieron
+302 hacia proteccion Vercel sin sesion; no se desactivo ni aprobo navegacion autenticada.
 Coordinador: builds piloto off/on (catalogo/incorporacion on) PASS, con avisos
 preexistentes de chunks y anotaciones Privy; tipos 0/0 diagnosticos, Node 22.20.0.
 La suite nueva tambien PASS con Node 22.23.2. Comercio API/SQL, agenda, Privy
 identidad/RBAC, equipo y lifecycle PASS en aislamiento. No equivalen a sesiones
 reales ni a carreras PostgreSQL independientes; esas puertas se contrastan en CI.
+Browser local adicional: inventario/atenciones/jornada encargado y operador en
+360/390/768/1024/1440 PASS, notas en los anchos de su runner PASS. Node 22.23.2
+para inventario; Playwright 1.62.1 con Chrome local, no Chromium 1.58.2 de CI.
+No son pruebas de celular fisico/autonomia. Servidores propios 4342/4345 detenidos.
+
+## Publicacion contrastada
+
+PR54 fusionado el 30/09 a las 07:10:55 UTC. Arbol del candidato identico al main
+65aaeb8. GitHub deployment 6753696128 success asocia ese SHA a
+trustleaf-k8jlfq9yx-cabscryptocontacto-6028s-projects.vercel.app; Vercel
+dpl_5Fvrs9YCcXXLvNgFidWiEVX6URD8 Ready y alias www.trustleaf.org contrastados.
+[CI de main 36682243915](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36682243915)
+PASS: ejecucion distinta, comprobada independientemente del candidato.
+
+Ocho comprobaciones oficiales con identificadores sinteticos: GET dashboard y
+POST validation 410; otros metodos POST/GET, HEAD y OPTIONS 405, siempre no-store,
+private y solo codigo seguro (HEAD sin cuerpo). Cuatro entradas HTML 200 y cuatro
+APIs operativas 401/no-store sin token. No se accedio a datos protegidos ni se
+ejecutaron escrituras de negocio. Es evidencia del bloqueo actual, no de la
+exposicion anterior ni del uso humano de los cuatro paneles.
 
 El adaptador esta sustituido en el harness: cero llamadas de negocio no significa
 ausencia de importaciones SDK en todo `server.ts` o en acciones vecinas. URI cruda

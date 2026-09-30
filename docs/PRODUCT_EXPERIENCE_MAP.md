@@ -2,8 +2,9 @@
 
 ## Corte vigente (2026-09-30)
 
-Actualizacion: main `637e17c` integra PR52. Las dos lecturas privadas heredadas
-Stellar se retiran en `fix/legacy-route-authorization`; [evidencia local y gates](evidence/legacy-private-route-block/README.md).
+Actualizacion: main `65aaeb8` integra PR54, despues de PR52 en `637e17c`. Las dos
+lecturas privadas heredadas Stellar estan retiradas en el dominio oficial:
+DEM-SEC-02 cerrado; [evidencia local, CI/preview y publicacion](evidence/legacy-private-route-block/README.md).
 La retirada no cambia los cuatro paneles Supabase ni aprueba MockupPortal:
 fallback/cache heredados quedan como DEM-LEG-01. DEM-SEC-01 y la pausa externa
 continuan; el tablero registra integracion y comprobaciones oficiales.
@@ -26,8 +27,9 @@ trazan en el tablero, no se infieren de los tests locales.
 No acredita teclado fisico, autonomia ni cierre de los dos bloqueos de seguridad.
 
 [Ejecucion de demo y adopcion con ocho agentes](DEMO_ADOPTION_RUNBOOK.md).
-Esta auditoria no modifica APIs, permisos, migraciones o modulos. DEM-SEC-01/02
-bloquean renovacion compartida/invitaciones externas segun el tablero; el fix
+La auditoria inicial no modifico APIs, permisos, migraciones o modulos. PR54
+retira dos lecturas heredadas sin cambiar el piloto Supabase. DEM-SEC-01 aun
+bloquea renovacion compartida/invitaciones externas segun el tablero; el fix
 paciente puede requerir una migracion incremental con revision separada.
 Compras/Caja/Conteos siguen
 planificados. Alta medica actual se revisa, no se construyen invitaciones medicas.

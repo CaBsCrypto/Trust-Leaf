@@ -106,9 +106,12 @@ runner de inventario, no modifica el producto; causa y ejecuciones repetidas en
 main y debe aprobar sus propios checks del ultimo head antes de integrar.
 El coordinador y seis agentes conservaron los controles de aislamiento,
 borradores, democion e idempotencia. La matriz unica registra resultados y limites.
-Despues: DEM-SEC-02 en una rama independiente; luego DEM-SEC-01 con su entrega
-de lectura compartida revisada. No levantar invitaciones ni renovar el permiso
-de B por aprobar checks de esta entrega de pruebas.
+Actualizacion: PR52 integrado en 637e17c. DEM-SEC-02 cerrado por PR54 en 65aaeb8,
+CI/preview del candidato aprobados y retirada 410/405/no-store comprobada en el
+dominio oficial. [Evidencia y limites](evidence/legacy-private-route-block/README.md).
+Siguiente: DEM-SEC-01 con su entrega de lectura compartida revisada. No levantar
+invitaciones ni renovar el permiso de B; DEM-LEG-01 conserva los problemas de
+fallback/cache del portal Stellar como trabajo independiente.
 
 ## Presentacion y colaboracion humana
 
