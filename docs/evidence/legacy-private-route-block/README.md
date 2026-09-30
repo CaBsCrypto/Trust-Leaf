@@ -57,7 +57,8 @@ identidad/RBAC, equipo y lifecycle PASS en aislamiento. No equivalen a sesiones
 reales ni a carreras PostgreSQL independientes; esas puertas se contrastan en CI.
 Browser local adicional: inventario/atenciones/jornada encargado y operador en
 360/390/768/1024/1440 PASS, notas en los anchos de su runner PASS. Node 22.23.2
-para inventario; Playwright 1.62.1 con Chrome local, no Chromium 1.58.2 de CI.
+para inventario; Playwright 1.62.1 con Chrome local, distinto de Playwright 1.58.2
+con Chromium en CI.
 No son pruebas de celular fisico/autonomia. Servidores propios 4342/4345 detenidos.
 
 ## Publicacion contrastada
