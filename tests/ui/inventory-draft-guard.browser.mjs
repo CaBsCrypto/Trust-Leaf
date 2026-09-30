@@ -101,13 +101,46 @@ try {
     return route.continue();
   });
   const inventory = () => navigateSection(page, 'Inventario');
+  const inventoryBatch = lotCode => page.locator('.op-stock-row').filter({ has: page.getByText(`Lote ${lotCode}`, { exact: true }) });
   const receipt = page.getByLabel('Codigo de lote', { exact: true });
-  const delta = page.getByLabel('Variacion en gramos (+/-)', { exact: true });
-  const reason = page.getByLabel('Motivo del ajuste', { exact: true });
+  const delta = page.locator('.op-stock-row').getByLabel('Variacion en gramos (+/-)', { exact: true });
+  const reason = page.locator('.op-stock-row').getByLabel('Motivo del ajuste', { exact: true });
   const dialog = page.getByRole('dialog', { name: 'Descartar cambios sin guardar' });
   const retry = page.getByRole('button', { name: 'Reintentar operacion', exact: true });
-  const saveAdjustment = page.getByRole('button', { name: 'Registrar ajuste', exact: true });
-  const readResponse = () => page.waitForResponse(response => response.url() === `${base}/api/operations-pilot` && response.request().method() === 'GET');
+  const saveAdjustment = page.locator('.op-stock-row').getByRole('button', { name: 'Registrar ajuste', exact: true });
+  const dirtyStock = page.getByRole('status').filter({ hasText: /^Formularios sin guardar:/ });
+  const readResponse = () => {
+    const expected = { organizationRef, membershipRole, authLost };
+    return page.waitForResponse(async response => {
+      if (response.url() !== `${base}/api/operations-pilot` || response.request().method() !== 'GET') return false;
+      if (expected.authLost) return [401, 403].includes(response.status());
+      if (!response.ok()) return false;
+      const current = await response.json();
+      // A recovery GET from the preceding intent may finish after a scope change starts.
+      return current.membership?.organization_ref === expected.organizationRef && current.membership?.role === expected.membershipRole;
+    });
+  };
+  async function waitForSnapshot(response) {
+    const read = await response;
+    await read.finished();
+    if ([401, 403].includes(read.status())) {
+      await page.getByRole('tab', { name: 'Inventario', exact: true }).waitFor({ state: 'hidden' });
+      return;
+    }
+    assert.equal(read.ok(), true, 'fixture snapshot GET succeeds');
+    const current = await read.json();
+    // HTTP headers can arrive while React still renders the previous membership/batch.
+    await page.locator('.op-header').getByText(current.membership.role === 'manager' ? 'Encargado' : 'Operador', { exact: true }).waitFor();
+    if (await page.getByRole('tab', { name: 'Inventario', exact: true }).getAttribute('aria-selected') === 'true') {
+      for (const currentBatch of current.batches) {
+        const row = inventoryBatch(currentBatch.lot_code);
+        await row.waitFor();
+        const grams = `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 3 }).format(currentBatch.stock_mg / 1000)} g`;
+        await row.locator('.op-stock-amount').getByText(grams, { exact: true }).waitFor();
+        await row.locator(currentBatch.state === 'quarantined' ? '.op-batch-quarantined' : '.op-batch-available').waitFor();
+      }
+    }
+  }
   async function assertLeaveWarning(expected) {
     // React's effect cleanup may follow the DOM update that hides the retry button.
     const settled = await page.waitForFunction(expected => {
@@ -121,7 +154,7 @@ try {
   async function refresh() {
     const response = readResponse();
     await page.getByRole('button', { name: 'Actualizar datos', exact: true }).click();
-    await response;
+    await waitForSnapshot(response);
   }
   async function assertLayout(target = page.locator('.op-dispensary')) {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `overflow at ${width}`);
@@ -135,12 +168,18 @@ try {
     await dialog.waitFor({ state: 'hidden' });
   }
   async function openReceipt() {
-    if (!await receipt.isVisible()) await page.getByText('Recibir lote', { exact: true }).click();
+    if (!await receipt.isVisible()) await page.locator('.op-stock-receive > summary').click();
+    await receipt.waitFor();
   }
   async function openAdjustment() {
-    const manage = page.locator('details').filter({ has: page.locator(':scope > summary', { hasText: 'Gestionar lote' }) });
-    if (!await manage.evaluate(el => el.open)) await page.getByText('Gestionar lote', { exact: true }).click();
-    if (!await delta.isVisible()) await page.getByText('Ajustar existencias', { exact: true }).click();
+    const row = inventoryBatch(snapshot().batches[0].lot_code);
+    await row.waitFor();
+    const manage = row.locator(':scope > details').filter({ has: page.locator(':scope > summary', { hasText: 'Gestionar lote' }) });
+    if (!await manage.evaluate(el => el.open)) await manage.locator(':scope > summary').click();
+    const adjustment = manage.locator(':scope > details');
+    await adjustment.locator(':scope > summary').waitFor();
+    if (!await adjustment.evaluate(el => el.open)) await adjustment.locator(':scope > summary').click();
+    await row.getByLabel('Variacion en gramos (+/-)', { exact: true }).waitFor();
   }
   async function fillAdjustment() { await openAdjustment(); await delta.fill('2'); await reason.fill('Synthetic correction'); }
   await page.goto(`${base}/?operations&role=dispensary`);
@@ -205,14 +244,14 @@ try {
   await page.getByText('Recibir lote', { exact: true }).click();
   assert.equal(await receipt.isVisible(), false);
   await openReceipt(); assert.equal(await receipt.inputValue(), 'RECEIPT-CONTROL');
-  const refreshRead = page.waitForResponse(response => response.url() === `${base}/api/operations-pilot` && response.request().method() === 'GET');
+  const refreshRead = readResponse();
   await page.getByRole('button', { name: 'Actualizar datos', exact: true }).click();
-  await refreshRead;
+  await waitForSnapshot(refreshRead);
   assert.equal(await delta.inputValue(), '2');
-  const successRead = page.waitForResponse(response => response.url() === `${base}/api/operations-pilot` && response.request().method() === 'GET');
+  const successRead = readResponse();
   await page.getByRole('button', { name: 'Registrar ajuste', exact: true }).click();
   await page.getByText('Cambio guardado.', { exact: true }).waitFor();
-  await successRead;
+  await waitForSnapshot(successRead);
   assert.equal(await delta.inputValue(), baseline ? '2' : '', 'successful adjustment resets only in guard mode');
   assert.equal(await reason.inputValue(), baseline ? 'Synthetic correction' : '');
   assert.equal(await receipt.inputValue(), 'RECEIPT-CONTROL', 'other draft must not reset');
@@ -244,7 +283,7 @@ try {
     await page.getByLabel('Vencimiento', { exact: true }).fill('2099-01-01T12:00');
     const received = readResponse();
     await page.getByRole('button', { name: 'Recibir lote simulado', exact: true }).click();
-    await received; await page.getByText('Cambio guardado.', { exact: true }).waitFor();
+    await waitForSnapshot(received); await page.getByText('Cambio guardado.', { exact: true }).waitFor();
     assert.equal(await receipt.inputValue(), ''); assert.equal(await delta.inputValue(), '2');
     assert.equal(await reason.inputValue(), 'Synthetic correction');
     assert.equal(await page.getByLabel('Producto', { exact: true }).inputValue(), 'Flor de prueba');
@@ -269,7 +308,7 @@ try {
     assert.equal(posts.length, beforeRebase, 'explicit rebase does not submit');
     assert.equal(await delta.inputValue(), '2'); assert.equal(await reason.inputValue(), 'Synthetic correction');
     const rebasedRead = readResponse();
-    await saveAdjustment.click(); await rebasedRead;
+    await saveAdjustment.click(); await waitForSnapshot(rebasedRead);
     await page.getByText('Cambio guardado.', { exact: true }).waitFor();
     assert.equal(posts.at(-1).input.version, baseVersion + 1);
     assert.notEqual(posts.at(-1).input.operationId, rejectedCommand.input.operationId);
@@ -300,9 +339,10 @@ try {
     await navigateSection(page, 'Historial'); await dialog.waitFor();
     organizationRef = 'synthetic-org-b';
     const scopeRead = readResponse();
-    await page.evaluate(() => window.dispatchEvent(new Event('online'))); await scopeRead;
+    await page.evaluate(() => window.dispatchEvent(new Event('online'))); await waitForSnapshot(scopeRead);
     await dialog.waitFor({ state: 'hidden' });
     await openReceipt(); await openAdjustment();
+    await dirtyStock.waitFor({ state: 'hidden' });
     assert.equal(await receipt.inputValue(), ''); assert.equal(await delta.inputValue(), '');
     await assertLeaveWarning(false);
     organizationRef = 'synthetic-org'; await refresh(); await openAdjustment();
@@ -315,11 +355,13 @@ try {
     organizationRef = 'synthetic-org-b'; await refresh(); await priorAccess.waitFor();
     assert.equal(await retry.isVisible(), false); await assertLeaveWarning(true);
     await openReceipt(); await openAdjustment();
+    await dirtyStock.waitFor({ state: 'hidden' });
     assert.equal(await receipt.inputValue(), ''); assert.equal(await delta.inputValue(), '');
     assert.equal(await saveAdjustment.isDisabled(), true);
     assert.equal(await page.getByRole('button', { name: 'Recibir lote simulado', exact: true }).isDisabled(), true);
     // Force form submission too: disabled controls alone must not be the command guard.
     await page.locator('form').filter({ has: receipt }).evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    await refresh();
     assert.equal(posts.length, scopedPosts, 'organization swap sends no new POST');
 
     organizationRef = 'synthetic-org'; membershipRole = 'operator';
@@ -349,7 +391,7 @@ try {
     assert.equal(await delta.inputValue(), '2');
     assert.equal(await reason.inputValue(), 'Synthetic correction');
     await assertLeaveWarning(true);
-    await page.locator('form').filter({ has: delta }).evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    await page.locator('.op-stock-row form').filter({ has: page.getByLabel('Variacion en gramos (+/-)', { exact: true }) }).evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     await refresh();
     assert.equal(posts.length, statePosts, 'pending state ID blocks a new adjustment command even on forced submit');
     assert.equal(await delta.inputValue(), '2');
