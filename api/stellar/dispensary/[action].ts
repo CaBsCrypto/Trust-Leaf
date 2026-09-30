@@ -1,41 +1,25 @@
 import {
   dispensePrescriptionForPatient,
-  validatePrescriptionForDispensary,
   releasePrescriptionToPatient,
   retainPrescriptionForDispensary,
 } from '../../_lib/stellar.js';
 import { assertTestnetMutationEnabled } from '../../_lib/pilot-safety.js';
+import { blockLegacyPrivateRoute } from '../../_lib/legacy-private-route-block.js';
 
 export default async function handler(req: any, res: any) {
+  const { action } = req.query ?? {};
+  if (action === 'validate-prescription') {
+    blockLegacyPrivateRoute(req, res, 'POST');
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ message: 'Method Not Allowed' });
     return;
   }
 
-  const { action } = req.query ?? {};
-
   try {
-    if (action !== 'validate-prescription') {
-      assertTestnetMutationEnabled();
-    }
-    if (action === 'validate-prescription') {
-      const { prescriptionId } = req.body ?? {};
-      const normalizedPrescriptionId = Number(prescriptionId);
-
-      if (!Number.isFinite(normalizedPrescriptionId)) {
-        res.status(400).json({
-          message: 'Falta prescriptionId para validar la receta.',
-        });
-        return;
-      }
-
-      const result = await validatePrescriptionForDispensary({
-        prescriptionId: normalizedPrescriptionId,
-      });
-
-      res.status(200).json(result);
-      return;
-    }
+    assertTestnetMutationEnabled();
 
     if (action === 'dispense-prescription') {
       const { prescriptionId, productLabel, batchLabel, quantity, dispensaryEmail, doctorEmail } = req.body ?? {};

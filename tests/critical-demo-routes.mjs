@@ -21,7 +21,7 @@ for (const route of [
 
 assert.ok(doctorApi.includes('assertTestnetMutationEnabled()'), 'doctor mutation API must fail closed');
 assert.ok(adminApi.includes('assertTestnetMutationEnabled()'), 'admin mutation API must fail closed');
-assert.ok(dispensaryApi.includes("action !== 'validate-prescription'"), 'read-only validation remains available');
+assert.ok(dispensaryApi.includes('blockLegacyPrivateRoute'), 'private legacy validation must remain retired');
 assert.ok(portal.includes('DEMO / NO VÁLIDA'), 'demo prescription must be visibly non-valid');
 assert.ok(!portal.includes('Todos los médicos en Trust Leaf están validados'), 'UI must not claim universal validation');
 
