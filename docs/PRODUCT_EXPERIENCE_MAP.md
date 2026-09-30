@@ -1,5 +1,32 @@
 # Trust Leaf: mapa de producto y nueva experiencia
 
+## Corte vigente (2026-09-30)
+
+El mapa describe capacidades; su matriz historica no sustituye el
+[tablero unico actualizado](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
+Baseline inicial de auditoria `f1c8f0e` (PR51; codigo funcional PR50). Mesa, proteccion de
+notas e inventario publicadas. Lecturas medico/paciente 29/09 concuerdan en
+reserva, tratamiento 30/20/10 y comprobante, con recarga persistente; no prueban
+uso clinico real ni autonomia. Browns ya tiene encargado con acceso y recepcion
+100 g comprobados; los pendientes historicos de acceso/catalogo de abajo no son
+el estado actual. Operador/paciente propios aplazados, sin trasladar miembros de B.
+
+Base revisada `6671c5e`, PR53: sincronizacion del runner de inventario, sin alterar
+pantallas ni datos del producto. Candidato `10e0194` con CI/preview aprobados y
+tres suites Chromium consecutivas, ambos roles/cinco anchos. PR52 renueva su base
+documental y requiere checks propios del ultimo head; integracion y despliegue se
+trazan en el tablero, no se infieren de los tests locales.
+[Reproduccion, capturas y limites](evidence/inventory-qa-sync/README.md).
+No acredita teclado fisico, autonomia ni cierre de los dos bloqueos de seguridad.
+
+[Ejecucion de demo y adopcion con ocho agentes](DEMO_ADOPTION_RUNBOOK.md).
+Esta auditoria no modifica APIs, permisos, migraciones o modulos. DEM-SEC-01/02
+bloquean renovacion compartida/invitaciones externas segun el tablero; el fix
+paciente puede requerir una migracion incremental con revision separada.
+Compras/Caja/Conteos siguen
+planificados. Alta medica actual se revisa, no se construyen invitaciones medicas.
+Los estados siguientes conservan la referencia temporal indicada en cada bloque.
+
 ## Estado vigente (2026-09-25)
 
 La Mesa conectada esta publicada en main `d101469` (PR #42), con aprobacion visual,

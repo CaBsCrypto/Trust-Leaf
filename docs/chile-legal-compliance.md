@@ -1,5 +1,13 @@
 # Marco de Cumplimiento Legal y Regulatorio: Ecosistema Chile
 
+> DOCUMENTO HISTORICO, NO VALIDADO. Corte de auditoria: 30/09/2026.
+> Las afirmaciones siguientes sobre recetas validas, autocultivo, libro oficial,
+> autorizaciones y privacidad no acreditan capacidades ni cumplimiento del piloto
+> actual. No usar este texto para presentar, contratar o habilitar actividad real.
+> Se conserva como antecedente, no como especificacion ejecutable.
+> Referencia prudente y expediente vigente: [preparacion legal](chile-legal-readiness.md).
+> Decision tecnica y bloqueos: [tablero del piloto](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
+
 Este documento detalla cómo la arquitectura tecnológica y descentralizada de **Trust Leaf** se acopla, respeta y potencia el cumplimiento del marco legal y sanitario chileno en relación con el cannabis medicinal, abarcando las normativas de la **Superintendencia de Salud (SIS)**, el **Instituto de Salud Pública (ISP)**, el **Ministerio de Salud (MINSAL)**, la **Ley 20.000** y la reciente **Ley 21.575**.
 
 ---

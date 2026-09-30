@@ -1,8 +1,182 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-09-29. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-09-30. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
+
+## Demo y adopcion: 30/09/2026
+
+Esta matriz es el corte vigente; las tablas fechadas siguientes son evidencia
+historica, no nuevas aprobaciones. Ejecucion en `audit/demo-adoption-readiness`,
+desde `origin/main` actualizado: `f1c8f0e1e2e3a3f6318a34283b2b82324f312965`
+(PR51 documental, contenido funcional PR50). Calidad confirmo main remoto, PR51
+fusionado, CI 36634542805 PASS sobre candidato aafe1aa y equivalencia funcional
+entre candidato, PR50 y main. GitHub deployment 6746262879 success asocia el SHA
+f1c8f0e a trustleaf-hwykbnsc1-cabscryptocontacto-6028s-projects.vercel.app.
+Vercel dpl_SaHyDmeSLDPMJA8k5ce7iYh2jxeL Ready y www.trustleaf.org apuntan a esa
+misma URL. La asociacion al SHA viene de GitHub, no de Vercel inspect por si solo.
+
+Actualizacion de base revisada: PR53 integrado como
+`6671c5e0214e2270e50dc080d01f43471d30ff4a`, sin cambios funcionales del producto.
+Su arbol es identico al candidato `10e019420317571f48428701f4821f2133999233`,
+con [CI 36672712861 PASS](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36672712861)
+y preview Ready. El [CI de main](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/36673338483)
+es una ejecucion distinta; no atribuirle el resultado del candidato.
+GitHub deployment 6752220115 success asocia 6671c5e a
+trustleaf-3m9fryuc4-cabscryptocontacto-6028s-projects.vercel.app; Vercel
+dpl_3oJ67NP4XSZY3dEtsct9nrye1G2w Ready y www.trustleaf.org contrastados.
+PR52 se actualiza desde esa base y conserva diferencia exclusivamente documental;
+su integracion y checks del ultimo head se consultan en
+[PR52](https://github.com/CaBsCrypto/Trust-Leaf/pull/52).
+
+[Guion, ocho misiones, sprints y limites](DEMO_ADOPTION_RUNBOOK.md).
+Decision de corte: BLOQUEADO para renovar acceso compartido e incorporar equipos
+externos mientras se corrige DEM-SEC-01 y se cierra la superficie heredada
+DEM-SEC-02. La presentacion interna puede
+explicar registros ficticios, sin ofrecer validacion integral ni habilitacion real.
+Maximo una correccion funcional en curso; esta rama no contiene fixes y las
+revisiones no escriben en produccion.
+
+| ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
+| --- | --- | --- | --- |
+| DEM-00 / coordinador + calidad | Revision documental | Baseline y publicacion contrastadas; CI recuperado mediante PR53 independiente; PR52 actualizado desde main, sin codigo funcional en su diff | Integracion y checks del ultimo head: PR52 enlazado arriba; siguientes entregas P1 separadas, no cierre del piloto |
+| DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; envio bloqueado por DEM-SEC-01 y DEM-SEC-02 |
+| DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
+| DEM-03 / Paciente | Bloqueado | Lecturas oficiales 29/09 y reconfirmacion 30/09: 30/20/10, sin grant B ni escrituras. DEM-SEC-01 paciente confirmado independientemente 4/4; medico inactivo es observacion de politica | Permiso B no renovado; correccion compartida sin retirar comprobantes propios |
+| DEM-04 / Dispensario | Validacion | Nuevos commerce API 5/5, SQL y browser ambos roles/cinco anchos PASS. Recepcion atomica/replay/rollback/privacidad. B y Browns conservan evidencia publicada anterior | Recorrido actual ambos roles, stock actual, revision 1 g; no entrega nueva ni integracion comercial->entrega repetida |
+| DEM-05 / Seguridad | Bloqueado | DEM-SEC-01 paciente 4/4 contrastado por fixture independiente, 35 hashes iguales. DEM-SEC-02 handlers heredados sin auth reproducidos en codigo con adaptadores falsos | Fix P1 paciente; cerrar handlers efectivos heredados, alcance publicado pendiente; carreras PG y politica doctor-active separadas |
+| DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
+| DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
+| DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
+| DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
+| DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
+
+### Recuperacion de CI: primera entrega del sprint 1
+
+PR52 head inicial 0f0cef0 tenia preview aprobada y CI 36666468947 fallido.
+El fallo manager/390 era una carrera del runner: respuesta A con lote B aun
+renderizado, seguida del remonte de A con `Gestionar lote` cerrado. Se reprodujo
+el mismo timeout mediante una respuesta HTTP sintetica controlada, sin cambiar
+React ni usar produccion. La validacion tambien detecto una respuesta GET anterior
+capturada por el waiter mientras el producto mostraba correctamente el scope nuevo.
+
+`fix/inventory-qa-sync` conserva todas las aserciones y escenarios. Captura el
+scope/rol esperado, espera lote/cantidad/estado renderizados y localiza controles
+dentro del lote. Sin pausas fijas, clics forzados ni aumentos de timeout. Una
+correccion auxiliar del selector de submit mantiene su prueba negativa original.
+Tres ejecuciones normales consecutivas PASS: encargado/operador en
+360/390/768/1024/1440, Node 22.23.2, Playwright 1.58.2, Chromium 145.0.7632.6.
+Cada una: 70 POST interceptados, 40 efectos de journal simulado, cero trafico externo.
+Estos contadores no son movimientos durables de inventario.
+
+Seis misiones: seguridad (Planck, revision independiente apta), medico (Lovelace,
+regresion local diez casos), paciente (Singer, identidad/unitarias sin red),
+dispensario (Huygens, SQL operaciones/comercio PASS), Admin (Popper, pendientes
+sin decisiones/envios) y calidad/UX (Hooke, reproduccion y unico editor del runner).
+Coordinador: tipos/builds off/on PASS, revision de logs/hash, Git y publicacion.
+CI del candidato repitio regresiones compartidas, medicas, inventario y comercio,
+ademas de PostgreSQL independiente/PostgREST. No confundir Windows local con Ubuntu
+CI ni viewports con telefono fisico. Servidor QA 4342 detenido.
+
+[Causa, capturas y limites](evidence/inventory-qa-sync/README.md).
+La preview fue Ready; las lecturas sin sesion redirigen a proteccion Vercel, no
+constituyen una prueba de navegacion autenticada. No se cambio esa proteccion.
+B, Browns, datos e historial no se tocaron; draft mensual fuera de los commits,
+SHA256 BDDBAAC808C90B672D5EE72A0F260B8BA23BEA21C2ECA12A2C226728B486BEC8.
+Siguiente entrega: DEM-SEC-02, frontera de rutas heredadas; despues DEM-SEC-01,
+lectura compartida revisada. Invitaciones externas y renovacion de B siguen pausadas.
+
+El 29/09, recargar medico/paciente conserva autenticacion pero vuelve al acceso
+Cuenta autorizada -> Continuar. Se observo ese paso; no se declaro cierre de
+sesion ni defecto. Abrir el enlace de Meet no se repitio: solo se contrasto el
+mismo enlace en ambas reservas. Lecturas nuevas no crearon consultas o entregas.
+Lectura publicada 30/09 00:40 America/Santiago: paciente conectado, tratamiento
+4119236d con 30/20/10 y B ofrece Autorizar 24 horas, sin grant activo mostrado.
+No se pulso autorizar; no se cambiaron perfil, notas ni comprobantes.
+
+Salida de Sprint 0: baseline y matriz reconciliadas. Sprint 1: evidencia tecnica
+consolidada y lecturas faltantes. Sprint 2: evaluacion humana y correcciones.
+Sprint 3: presentacion/incorporacion acompanada. Sprint 4: dictamen independiente
+para actividad real. Los cuatro ultimos no se cierran por terminar esta auditoria.
+
+El estado vigente de proteccion de borradores es Publicado (PR49/50); las
+observaciones anteriores de AUD-03/04 no vuelven a ser defectos abiertos. Browns
+ya tiene acceso y recepcion comprobados; cuentas propias de operador/paciente se
+aplazaron y no bloquean la presentacion de los dos escenarios separados.
+
+Informes: Popper (Admin 19/19), Lovelace (medico), Singer (paciente y reproduccion
+de DEM-SEC-01), Huygens (dispensario), Planck (contraste de seguridad), Kuhn (UX),
+Hooke (calidad) y Beauvoir (fuentes regulatorias). Los servidores sinteticos de
+medico, comercio y UX en 4341/4342/4344 quedaron detenidos. No editaron codigo
+publicado ni datos de produccion. Tipos/build del contenido funcional se reutilizan
+del CI; no afirmar que esos checks corrieron sobre un nuevo commit documental.
+
+Evidencia visual sintetica de esta ronda: [consulta explicita](evidence/demo-readiness/doctor-explicit-consultation.png),
+[error con borrador conservado](evidence/demo-readiness/error-390-manager.png) y
+[lista vacia de operador](evidence/demo-readiness/empty-390-operator.png).
+Son capturas de QA; 390 px representa simulacion de viewport, no telefono fisico.
+La prueba adicional Admin se ejecuto desde un archivo desechable fuera del repo;
+no constituye una nueva regresion permanente de CI.
+[Procedencia, limites y JSON de reproduccion](evidence/demo-readiness/README.md).
+
+### Hallazgo nuevo, no correccion en esta rama
+
+DEM-SEC-01 / P1 / lectura compartida: Singer reprodujo ocho variantes aisladas.
+Planck confirmo independientemente cuatro defectos de paciente suspendido,
+revocado, expired o valid_until vencido; las cuatro variantes de medico son
+comportamiento reproducido, no otros cuatro P1 contra un contrato explicito.
+Con grant vigente, dispensario recibe tratamiento e historial de otra
+organizacion, aunque entregar y el acceso del propio actor inactivo se rechazan.
+Con medico inactivo tambien se proyectan contactos ficticios del paciente.
+Fuentes: `20260909010000_operations_pilot.sql:202,208` y
+`20260915020000_pilot_patient_profiles.sql:61`. No se probo en produccion.
+Contraste independiente completado: mismo baseline, 35 hashes de fuentes iguales,
+fixture distinto con operador y dos organizaciones; no reutilizo el script Singer.
+La exigencia de paciente activo consta en el contrato documental de perfiles.
+Exigir tambien medico activo para toda lectura compartida es una alineacion
+propuesta con la entrega, no una clausula explicita ya localizada. No confundir
+el estado de la cuenta con vencimiento del tratamiento ni borrar recibos propios.
+Reproduccion y regresion roja conservadas fuera del repo en
+`review-artifacts/agente3-paciente-actor-read-coherence-20260930`; ocho casos
+sinteticos, sin red, con recibo ajeno y control separado de recibo propio.
+Los estados HTTP del informe se derivan del mapper; no son observacion HTTP
+alojada. La regresion aun no forma parte de CI.
+Al corregir, conservar comprobantes propios del paciente e historial operativo
+de la propia organizacion; retirar solo proyeccion compartida no autorizada.
+Puede requerir migracion incremental, no edicion de migraciones previas. Su
+publicacion exige revision, historial remoto y respaldo restaurable verificado;
+no aplicar ninguna migracion como parte de esta rama documental.
+
+DEM-SEC-02 / P1 en codigo / frontera heredada: los exports serverless de
+`api/stellar/patient/[address]/dashboard.ts:11` y
+`api/stellar/dispensary/[action].ts:21` leen por direccion/ID sin auth ni
+autorizacion de objeto. Planck ejecuto handlers reales con adaptador Stellar
+falso, red bloqueada, y obtuvo 200 anonimo en flags off/on/production. No
+se comprobo disponibilidad de esas rutas ni datos reales devueltos en el
+despliegue; no afirmar fuga publicada. El middleware Express no prueba los
+exports de Vercel. Resolver su frontera efectiva o retirarlos de distribucion
+en una entrega `fix/...` separada, manteniendo mutaciones apagadas.
+Errores upstream sin sanear y falta de no-store en esos handlers: P2 relacionado,
+sin filtracion de secretos ni cache CDN efectiva comprobadas.
+
+Hallazgos no convertidos en defectos: replay de operacion antigua por operador
+retirado devuelve solo UUID/replayed y no agrega entrega (P3, politica pendiente).
+Las carreras revocacion/cuarentena/retirada frente a entrega con dos conexiones
+PG aun no se probaron; los negativos secuenciales y locks no sustituyen esa
+evidencia. No se encontro servidor PG aislado disponible localmente.
+Informe de seguridad y reproductores conservados fuera de Git en
+`scratch/trustleaf-agent5-security-f1c8f0e`; ninguna escritura publicada.
+
+DEM-UX-01 / P2 / claridad de error: GET de actualizacion responde 503 y muestra
+"No fue posible confirmar la operacion. Puedes reintentar." sin POST ni comando
+pendiente. Agente 6 Kuhn lo reprodujo en ambos roles a 390/1440; el lote y
+borrador se conservan, guardado queda deshabilitado y recuperacion mantiene
+texto. No evidencia de perdida ni escritura involuntaria. Fuente:
+`src/features/operations/OperationsWorkspace.tsx:154`.
+Recomendacion: separar mensaje de lectura de escritura incierta en una rama
+`fix/operations-read-error-message`, con regresion GET 503/recuperacion y POST
+incierto/idempotencia. No se presenta como defecto critico de datos ni se
+modifica codigo funcional en este PR documental.
 
 ## Objetivo, responsables y reglas
 

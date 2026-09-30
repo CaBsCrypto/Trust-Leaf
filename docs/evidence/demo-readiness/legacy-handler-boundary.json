@@ -1,0 +1,152 @@
+{
+  "sha": "f1c8f0e1e2e3a3f6318a34283b2b82324f312965",
+  "result": "REPRODUCED_HANDLER_AUTH_BYPASS; deployment reachability NOT tested",
+  "evidence": [
+    {
+      "route": "/api/stellar/patient/:address/dashboard",
+      "flags": "disabled",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "cacheControl": "ABSENT"
+    },
+    {
+      "route": "/api/stellar/dispensary/validate-prescription",
+      "flags": "disabled",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "cacheControl": "ABSENT"
+    },
+    {
+      "route": "/api/stellar/patient/:address/dashboard",
+      "flags": "local-synthetic-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "cacheControl": "ABSENT"
+    },
+    {
+      "route": "/api/stellar/dispensary/validate-prescription",
+      "flags": "local-synthetic-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "cacheControl": "ABSENT"
+    },
+    {
+      "route": "/api/stellar/patient/:address/dashboard",
+      "flags": "production-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "cacheControl": "ABSENT"
+    },
+    {
+      "route": "/api/stellar/dispensary/validate-prescription",
+      "flags": "production-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "cacheControl": "ABSENT"
+    },
+    {
+      "route": "/api/stellar/doctor/issue-prescription",
+      "flags": "disabled",
+      "identity": "anonymous",
+      "status": 503,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/dispensary/dispense-prescription",
+      "flags": "disabled",
+      "identity": "anonymous",
+      "status": 500,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/admin/register-doctor",
+      "flags": "disabled",
+      "identity": "anonymous",
+      "status": 500,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/passkeys/send",
+      "flags": "disabled",
+      "identity": "anonymous",
+      "status": 503,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/doctor/issue-prescription",
+      "flags": "local-synthetic-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/dispensary/dispense-prescription",
+      "flags": "local-synthetic-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/admin/register-doctor",
+      "flags": "local-synthetic-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/passkeys/send",
+      "flags": "local-synthetic-flags-true",
+      "identity": "anonymous",
+      "status": 200,
+      "downstreamCalls": 1,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/doctor/issue-prescription",
+      "flags": "production-flags-true",
+      "identity": "anonymous",
+      "status": 503,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/dispensary/dispense-prescription",
+      "flags": "production-flags-true",
+      "identity": "anonymous",
+      "status": 500,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/stellar/admin/register-doctor",
+      "flags": "production-flags-true",
+      "identity": "anonymous",
+      "status": 500,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    },
+    {
+      "route": "/api/passkeys/send",
+      "flags": "production-flags-true",
+      "identity": "anonymous",
+      "status": 503,
+      "downstreamCalls": 0,
+      "sideEffects": "STUB ONLY; no signature/chain/relay"
+    }
+  ],
+  "rawErrorReturned": true,
+  "networkCalls": 0
+}
