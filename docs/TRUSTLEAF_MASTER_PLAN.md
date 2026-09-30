@@ -1,5 +1,34 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Corte vigente: demo y adopcion (30/09/2026)
+
+Baseline `f1c8f0e` (PR51 documental, funcional PR50). Ocho agentes por oleadas,
+maximo una correccion funcional en curso. [Matriz unica y pendientes actuales](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
+y [guion de ejecucion](DEMO_ADOPTION_RUNBOOK.md).
+Medico y paciente leidos el 29/09: misma reserva f1e7b1d6 y comprobante 3150a49a;
+tratamiento 4119236d con 30 g asignados, 20 g retirados y 10 g disponibles,
+persistentes tras recarga. B sin permiso activo mostrado; el 30/09 se solicito
+confirmacion especifica para autorizar 24 horas, aun sin ejecutar esa escritura.
+Lectura 30/09 00:40 reconfirma identidad, 30/20/10 y ausencia de grant B mostrado.
+Admin 29/09 conserva identidad, organizaciones y estado Browns tras recarga.
+
+Nota e inventario protegidos y publicados por PR49/50. Browns: acceso y recepcion
+100 g comprobados el 27/09; no exigir de nuevo cuentas propias aplazadas. Stock B
+60 g es evidencia historica, no lectura actual. Faltan ambos roles actuales,
+evaluacion humana/teclado movil, presentacion y primera incorporacion externa.
+Reutilizar registros publicados y probar escrituras solo en aislamiento; no
+afirmar que esta auditoria habilita receta, atencion o dispensacion reales.
+Los cortes fechados siguientes son historia y no sustituyen esta matriz vigente.
+
+Bloqueo nuevo DEM-SEC-01: cuatro casos de paciente inactivo confirmados por dos
+fixtures independientes muestran proyeccion compartida de tratamiento/historial.
+Cuatro casos de medico inactivo son comportamiento observado y politica pendiente.
+Se pausa renovacion de B hasta correccion. DEM-SEC-02: handlers Stellar heredados
+sin auth reproducidos en codigo; su disponibilidad publicada sigue pendiente.
+No enviar invitaciones externas hasta cerrar ambos bloqueos. No se declaro fuga en produccion;
+comprobantes propios e historial operativo deben conservarse. DEM-UX-01 es una
+friccion separada de mensaje GET fallido, sin perdida de datos demostrada.
+
 ## Auditoria para primera incorporacion (27/09/2026)
 
 Cuatro agentes revisaron acceso, medico/paciente, dispensario y calidad sobre

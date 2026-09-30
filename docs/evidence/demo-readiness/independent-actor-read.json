@@ -1,0 +1,166 @@
+{
+  "sha": "f1c8f0e1e2e3a3f6318a34283b2b82324f312965",
+  "engine": "PGlite memory-only; sequential; NOT a race test",
+  "result": "REPRODUCED_SHARED_PROJECTION_8_OF_8",
+  "cases": [
+    {
+      "scenario": "patient:suspended",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "42501",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "patient:revoked",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "42501",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "patient:expired",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "42501",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "patient:valid_until_expired",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "42501",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "doctor:suspended",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 1,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "PT409",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "doctor:revoked",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 1,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "PT409",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "doctor:expired",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 1,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "PT409",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    },
+    {
+      "scenario": "doctor:valid_until_expired",
+      "expectedStopShared": {
+        "treatments": 0,
+        "crossOrgDeliveries": 0,
+        "contacts": 0,
+        "ownOrgDeliveries": 1
+      },
+      "actual": {
+        "treatments": 1,
+        "crossOrgDeliveries": 1,
+        "contacts": 1,
+        "ownOrgDeliveries": 1
+      },
+      "dispenseCode": "PT409",
+      "inactiveActorOwnSnapshot": "42501",
+      "notesExposed": false
+    }
+  ],
+  "controls": {
+    "ungrantedOrgDenied": true,
+    "notesNeverShared": true,
+    "revokedGrantStopsSharedData": true,
+    "revokedTreatmentStopsSharedData": true,
+    "quarantinedBatchRejectsNewDelivery": true,
+    "removedOperatorSnapshotEmpty": true,
+    "ownOrgReceiptsRetained": true,
+    "patientOwnReceiptsRetained": true
+  },
+  "replayAfterRemoval": {
+    "result": "OLD_RECEIPT_REF_RETURNED",
+    "writesAdded": 0,
+    "contentReturned": "resourceRef/replayed/synthetic only"
+  }
+}

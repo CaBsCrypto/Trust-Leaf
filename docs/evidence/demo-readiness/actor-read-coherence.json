@@ -1,0 +1,580 @@
+{
+  "artifactVersion": 1,
+  "observedAt": "2026-09-30T03:42:40.286Z",
+  "declaredBaseline": "f1c8f0e / PR51; not Git-verified",
+  "repo": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release",
+  "mode": "contract",
+  "ownReceiptControl": true,
+  "sourceHashes": {
+    "supabase/migrations/20260826060000_trustleaf_synthetic_security_baseline.sql": "676848f2114753e6677e9c9b730c6880a5291a774d783d37d6e8fcabd3b0fba7",
+    "supabase/migrations/20260826150000_trustleaf_auth_rbac_minimum.sql": "4fcf08c08208ab09cf43dad258b7d6f9f15a8b59621416b06f8a643595af6dc0",
+    "supabase/migrations/20260829110000_trustleaf_synthetic_admin_bootstrap.sql": "dc4e90cbf1951c32d7aaf1f85329273e05f47059d0e0896006a8eb9f4cc5ebb9",
+    "supabase/migrations/20260829120000_trustleaf_synthetic_availability_booking.sql": "06cd05c668790c3981d3c0a13655333cae1315c0f7752b49113f5e137be5ae27",
+    "supabase/migrations/20260830100000_privy_identity_bindings.sql": "50ca68cf7c4a2bdfb80ea1416c71e66b2bece8d9bfa924fca4141244bfb6f66d",
+    "supabase/migrations/20260830103000_privy_identity_server_rpc.sql": "6e98aa926daa697237aa72c9f2ec3d7f17764bb22e24b559d4cd3801fbf6f165",
+    "supabase/migrations/20260830110000_privy_first_admin_bootstrap.sql": "9aa2fa420d9675141e7ad3fa92fda1c4edb38aa4df0d7a28fd229c7808083f41",
+    "supabase/migrations/20260830120000_privy_server_rpc_gateway.sql": "48705f1cbdb6cea1e327899a3b01ce279b2ac4ff390c26ab49999e1a1a307cc5",
+    "supabase/migrations/20260830130000_fix_privy_subject_validation.sql": "c0a85a034be8d295b685beabf56fb2c061925ff805653f985fe474e1fba7f60f",
+    "supabase/migrations/20260830140000_fix_privy_bootstrap_gateway_columns.sql": "e2d9a94abefbbc4afdfb3160c1b087dc86ddce81cbf05e0534a93ce0cc8c2152",
+    "supabase/migrations/20260830150000_fix_privy_bootstrap_role_lookup.sql": "5218a38d1b015db3f5354f2c9669239f525177694379fbb0776cff051e888530",
+    "supabase/migrations/20260831100000_privy_actor_enrollment.sql": "d44f629501fd75d2050e8f9f7b473cdd1c0e9c5263a3c2940a7dd4557d03a0bf",
+    "supabase/migrations/20260831110000_fix_privy_actor_enrollment_audit.sql": "8ff34211a42631ccaf6be1ae7d934153081ba6f914d9a49416c975ad48aad1ff",
+    "supabase/migrations/20260831120000_privy_admin_actor_review.sql": "d5ddf423169a8eae66bfda705bbd45546b80d54dc86eeddfd8022fa4b07bbfea",
+    "supabase/migrations/20260831130000_fix_privy_actor_review_ambiguity.sql": "4876e3d014488bccb8576d54eb7cfbe13caae38b662fafca517d75e75242a975",
+    "supabase/migrations/20260831140000_professional_test_applications.sql": "39756a64f521a82a8672ccd69d36841dbb057b6b6a3ad4a8d5eebdaeea49c75d",
+    "supabase/migrations/20260905220000_fix_professional_application_upsert.sql": "afc989f474c76b793547925d72e2a7a36355e0f0cea8594d38054ca190c3a071",
+    "supabase/migrations/20260906060000_private_actor_directory.sql": "809d47329f5caff29473eca26c5c73fba691c68dc5f23e98a22fb253a7bd1452",
+    "supabase/migrations/20260906090000_privy_persistent_agenda.sql": "6f4b61eeb78f15d30fbda2d6166522bfb15f75982ace71333336957381f9a3da",
+    "supabase/migrations/20260907010000_google_calendar_connection.sql": "ced66e13efa4ec9b12e0aa193d12f529fea557e0c9f316566d8d768abcf491d1",
+    "supabase/migrations/20260907020000_central_calendar_connection.sql": "004f6dfff64fc0e78cc1a93e2da11fcbdfba7788a534ac9c2d88e7ad235034f1",
+    "supabase/migrations/20260907030000_calendar_pending_delete_filter.sql": "cb0e52f390908cccec38b511486fa2dd820f49cfccb5414e8d4684826e79ff20",
+    "supabase/migrations/20260907040000_calendar_booking_outbox.sql": "22ec572e8e8346245f328d3b2a71f62cf9549f569a3d47271e9f6d1196b1b4e4",
+    "supabase/migrations/20260908010000_calendar_connection_ownership.sql": "9ceb61e79931abead2ff696a902ade5ffd744b442b3c1bc509fc2dec36eb2b33",
+    "supabase/migrations/20260908020000_calendar_refresh_existing.sql": "47a449bbc435ad7ae9884791e16aeda6f276ff82197444c82696935ce09f4835",
+    "supabase/migrations/20260909010000_operations_pilot.sql": "1083b7d4074adcdd5609f5e4464d2b10db7bd3673ae711102c62efd6d3501735",
+    "supabase/migrations/20260909020000_pilot_business_conflicts.sql": "b755e89052cd24668d69c35fc95686f30f567fee3cedebf8ab5297486b516246",
+    "supabase/migrations/20260909030000_operator_invitations.sql": "b985f5d537e74421ab398ef3e3c8dd250be1ef1edd3efc3d8bab5c92a086390e",
+    "supabase/migrations/20260915010000_selected_agenda_booking.sql": "e3147544f508d72cbc843ef4365a7dd7e4adb385ddb398184e14d2f4be680333",
+    "supabase/migrations/20260915020000_pilot_patient_profiles.sql": "fb4866298bc8ee1b29848c41478c550a7199c236dc15b2d226ac0962589fc115",
+    "supabase/migrations/20260915030000_pilot_delivery_descriptions.sql": "a7f484820e8181e59f62faa15638c9a0d623c4bd2ca7128d4ff27e0062ff4b67",
+    "supabase/migrations/20260921010000_dispensary_commerce.sql": "d2163d7f54f38445415281a9d617016c9d1a7d109b828a8658486fe805365d86",
+    "supabase/migrations/20260922010000_dispensary_onboarding.sql": "abaff16f1fb8c9e4b5492f2a7c53f1e21bdbc27ab01ead9827cc88ab5f309b70",
+    "tests/sql/operations-db.mjs": "5a804b98d194d51241a32b64ed90bcdcd33e6f05a74c95b33c7999a15836279c",
+    "api/_lib/operations-pilot.ts": "b25e4d0159f34c3d0c06e04942970af45ca7a80964a96ae7ac7ba8018b3ae262"
+  },
+  "resources": {
+    "patientActor": "86aca600-d92a-4a48-8250-b8528064a530",
+    "doctorActor": "903231c9-146a-487d-8d07-ef8f6716e67d",
+    "dispensaryActorA": "cee174e1-1c2e-4796-8bc8-9d093b1efb1f",
+    "dispensaryActorB": "df76b5fd-e264-45d5-b088-1d6053107f56",
+    "organizationA": "e58b07ef-a64c-49d2-8707-f7632903be8b",
+    "organizationB": "74a37199-b89a-4bd6-b5f0-9e92ecd749f4",
+    "slotRef": "b316a5a8-f85b-455a-ba54-454845bc280e",
+    "bookingRef": "8ad6d0dc-f50b-4148-8218-5f6edf256463",
+    "treatmentRef": "e01b1e32-01bb-4610-9f5a-44f6f67af4f2",
+    "batchA": "600449ba-daac-4cd9-8607-061530e76c54",
+    "batchB": "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b",
+    "receiptA": "c353229f-03ae-4d5c-825c-0744cd4b805a",
+    "receiptB": "5e082646-9437-4851-b114-f82d6056504f"
+  },
+  "statusProvenance": "SQL executed in memory; HTTP status derived from api/_lib/operations-pilot.ts, not a hosted HTTP observation",
+  "networkUsed": false,
+  "persistentDatabaseUsed": false,
+  "piiLogged": false,
+  "results": [
+    {
+      "caseId": "patient.suspended",
+      "mutation": {
+        "actor": "patient",
+        "actorRef": "86aca600-d92a-4a48-8250-b8528064a530",
+        "state": "suspended",
+        "validUntil": null
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 0,
+        "contactEmailPresent": false,
+        "contactPhonePresent": false,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "42501",
+        "dispenseDerivedHttpStatus": 403,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": null
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "patient.revoked",
+      "mutation": {
+        "actor": "patient",
+        "actorRef": "86aca600-d92a-4a48-8250-b8528064a530",
+        "state": "revoked",
+        "validUntil": null
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 0,
+        "contactEmailPresent": false,
+        "contactPhonePresent": false,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "42501",
+        "dispenseDerivedHttpStatus": 403,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": null
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "patient.expired",
+      "mutation": {
+        "actor": "patient",
+        "actorRef": "86aca600-d92a-4a48-8250-b8528064a530",
+        "state": "expired",
+        "validUntil": null
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 0,
+        "contactEmailPresent": false,
+        "contactPhonePresent": false,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "42501",
+        "dispenseDerivedHttpStatus": 403,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": null
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "patient.validUntilBoundary",
+      "mutation": {
+        "actor": "patient",
+        "actorRef": "86aca600-d92a-4a48-8250-b8528064a530",
+        "state": "active",
+        "validUntil": "2026-09-30T03:42:39.210Z"
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 0,
+        "contactEmailPresent": false,
+        "contactPhonePresent": false,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "42501",
+        "dispenseDerivedHttpStatus": 403,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": null
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "doctor.suspended",
+      "mutation": {
+        "actor": "doctor",
+        "actorRef": "903231c9-146a-487d-8d07-ef8f6716e67d",
+        "state": "suspended",
+        "validUntil": null
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 1,
+        "contactEmailPresent": true,
+        "contactPhonePresent": true,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "PT409",
+        "dispenseDerivedHttpStatus": 409,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a",
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ]
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "profiles_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "doctor.revoked",
+      "mutation": {
+        "actor": "doctor",
+        "actorRef": "903231c9-146a-487d-8d07-ef8f6716e67d",
+        "state": "revoked",
+        "validUntil": null
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 1,
+        "contactEmailPresent": true,
+        "contactPhonePresent": true,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "PT409",
+        "dispenseDerivedHttpStatus": 409,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a",
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ]
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "profiles_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "doctor.expired",
+      "mutation": {
+        "actor": "doctor",
+        "actorRef": "903231c9-146a-487d-8d07-ef8f6716e67d",
+        "state": "expired",
+        "validUntil": null
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 1,
+        "contactEmailPresent": true,
+        "contactPhonePresent": true,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "PT409",
+        "dispenseDerivedHttpStatus": 409,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a",
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ]
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "profiles_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    },
+    {
+      "caseId": "doctor.validUntilBoundary",
+      "mutation": {
+        "actor": "doctor",
+        "actorRef": "903231c9-146a-487d-8d07-ef8f6716e67d",
+        "state": "active",
+        "validUntil": "2026-09-30T03:42:39.268Z"
+      },
+      "expected": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [],
+        "foreignReceiptRefs": [],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "profileCount": 0,
+        "grantCount": 0,
+        "actorReadDerivedHttpStatus": 403,
+        "dispenseRejected": true,
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": []
+      },
+      "actual": {
+        "readBDerivedHttpStatus": 200,
+        "treatmentRefs": [
+          "e01b1e32-01bb-4610-9f5a-44f6f67af4f2"
+        ],
+        "ownReceiptRefs": [
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ],
+        "foreignReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a"
+        ],
+        "receiptOrganizationRefs": [
+          "e58b07ef-a64c-49d2-8707-f7632903be8b",
+          "74a37199-b89a-4bd6-b5f0-9e92ecd749f4"
+        ],
+        "profileCount": 1,
+        "contactEmailPresent": true,
+        "contactPhonePresent": true,
+        "grantCount": 1,
+        "notesCount": 0,
+        "bookingsCount": 0,
+        "encountersCount": 0,
+        "batchRefs": [
+          "1610a1b5-7a8d-4e6b-953b-7065b9a8ec0b"
+        ],
+        "foreignBatchCount": 0,
+        "receiptExtraFieldNames": [],
+        "dispenseSqlState": "PT409",
+        "dispenseDerivedHttpStatus": 409,
+        "actorReadSqlState": "42501",
+        "actorReadDerivedHttpStatus": 403,
+        "patientOwnerReceiptRefs": [
+          "c353229f-03ae-4d5c-825c-0744cd4b805a",
+          "5e082646-9437-4851-b114-f82d6056504f"
+        ]
+      },
+      "contractFailures": [
+        "treatments_not_filtered",
+        "foreign_receipts_not_filtered",
+        "profiles_not_filtered",
+        "grants_not_filtered",
+        "A_reads_foreign_B_receipt"
+      ]
+    }
+  ],
+  "totalCases": 8,
+  "contractFailedCases": 8
+}
