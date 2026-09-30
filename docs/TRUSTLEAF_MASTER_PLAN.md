@@ -2,6 +2,13 @@
 
 ## Corte vigente: demo y adopcion (30/09/2026)
 
+Base actualizada: main `637e17c`, PR52 integrado y CI/despliegue oficial contrastados.
+DEM-SEC-02 implementado en rama separada, con revision y regresion local aprobadas;
+su cierre requiere integracion y lecturas oficiales. [Evidencia y limites](evidence/legacy-private-route-block/README.md).
+DEM-SEC-01 e invitaciones externas siguen bloqueados. Pendientes de fallback/cache
+en UI heredada registrados por separado como DEM-LEG-01; no se aprueba ese legado.
+Los cortes anteriores siguientes conservan su referencia temporal.
+
 Auditoria inicial `f1c8f0e` (PR51 documental, funcional PR50). Ocho agentes por oleadas,
 maximo una correccion funcional en curso. [Matriz unica y pendientes actuales](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
 y [guion de ejecucion](DEMO_ADOPTION_RUNBOOK.md).

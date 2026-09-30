@@ -53,6 +53,13 @@ jobs:
       - name: Types and isolated regression tests
         run: |
           npm run lint
+          npm run test:legacy-private-route-block
+          npm run test:legacy-route-auth
+          npm run test:legacy-object-auth
+          npm run test:pilot-safety
+          npm run test:critical-static
+          npm run test:public-verification
+          npm run test:vercel-stellar-consolidation
           npm run test:visual-qa-regressions
           npm run qa:operations-pilot
           npm run test:team-invitations

@@ -6,6 +6,14 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
+Entrega actual: `fix/legacy-route-authorization`, desde main `637e17c` (PR52
+integrado, CI 36674600541 PASS y deployment oficial contrastado). DEM-SEC-02
+implementado y revisado localmente: ambas lecturas heredadas retiradas con 410/405,
+sin consultas Stellar. No declarado publicado hasta checks, integracion y lectura
+oficial del ultimo commit. [Reproduccion, revisiones y limites](evidence/legacy-private-route-block/README.md).
+DEM-SEC-01 sigue bloqueando invitaciones y renovacion B. El cierre del PR52 ya no
+esta pendiente; los parrafos siguientes conservan la trazabilidad de esa entrega.
+
 Esta matriz es el corte vigente; las tablas fechadas siguientes son evidencia
 historica, no nuevas aprobaciones. Ejecucion en `audit/demo-adoption-readiness`,
 desde `origin/main` actualizado: `f1c8f0e1e2e3a3f6318a34283b2b82324f312965`
@@ -50,6 +58,8 @@ revisiones no escriben en produccion.
 | DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
 | DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
+| DEM-SEC-02 / Seguridad + coordinador | Validacion de publicacion | Blocker comun, exports reales y registro Express antes de auth/parser; 198 + 325 casos locales PASS y revision independiente sin bloqueos para esta retirada | CI/preview del ultimo candidato, integrar y comprobar 410/405/no-store oficiales; no implica cierre de DEM-SEC-01 |
+| DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
 
 ### Recuperacion de CI: primera entrega del sprint 1
 

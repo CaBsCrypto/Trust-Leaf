@@ -1,5 +1,12 @@
 # Referencia de APIs — Trust Leaf (Backend → Frontend)
 
+> Actualizacion 30/09/2026: referencia historica Stellar, no contrato del piloto
+> Privy/Supabase. DEM-SEC-02 retira GET `/api/stellar/patient/:address/dashboard`
+> y POST `/api/stellar/dispensary/validate-prescription`: 410
+> `{"code":"LEGACY_PRIVATE_ROUTE_DISABLED"}`, otros metodos 405
+> `{"code":"METHOD_NOT_ALLOWED"}`, siempre `Cache-Control: no-store, private`.
+> Los ejemplos antiguos 200 y flujos on-chain de abajo no acreditan disponibilidad.
+
 > Documento de entrega para el equipo de FRONTEND. Cubre **los 35 endpoints REST** expuestos por `server.ts` (modo desarrollo, `http://localhost:3000`) y replicados como funciones serverless en `api/` para Vercel.
 >
 - **Base URL (dev):** `http://localhost:3000`
@@ -95,6 +102,9 @@ Deriva la clave pública Stellar determinística a partir del email (modo custod
 ## 3. Stellar — Paciente
 
 ### 3.1 `GET /api/stellar/patient/:address/dashboard`
+**Retirada:** devuelve 410; no procesa `address` ni devuelve dashboard. Lo que
+sigue describe exclusivamente el contrato historico, no una lectura disponible.
+
 Dashboard completo de recetas del paciente (vía eventos Soroban `PrescriptionIssued` + `get_prescription`).
 
 - **Path** `address` = publicKey Stellar del paciente.
@@ -282,6 +292,9 @@ Liberación firmada por el backend.
 ## 7. Stellar — Dispensario (Validación)
 
 ### 7.1 `POST /api/stellar/dispensary/validate-prescription`
+**Retirada:** devuelve 410; no procesa `prescriptionId` ni valida elegibilidad.
+El resultado 200 siguiente es historico y no debe usarse como contrato vigente.
+
 Valida una receta contra el contrato `Prescription` antes de dispensar.
 
 - **Body** `{ "prescriptionId": 12 }`
@@ -585,6 +598,9 @@ Retiro custodial firmado por el backend.
 3. `POST /api/stellar/submit` con `operationType: "issue"`.
 
 ### C) Dispensar — Web3 (dispensario con Freighter/Albedo)
+**Flujo historico no disponible:** el primer paso esta retirado. No sustituir su
+error por una validacion exitosa ni habilitar mutaciones para continuar.
+
 1. `POST /api/stellar/dispensary/validate-prescription` (verificar antes).
 2. `POST /api/stellar/dispensary/build-dispense-prescription` → `xdr`.
 3. Firmar con wallet del dispensario.

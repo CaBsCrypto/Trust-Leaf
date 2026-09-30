@@ -32,6 +32,7 @@
     "test:legacy-route-auth": "node --experimental-strip-types tests/legacy-route-authorization.test.ts",
     "test:readonly-indexer-role-e2e": "node --experimental-strip-types tests/readonly-indexer-role-e2e.test.ts",
     "test:legacy-object-auth": "node --experimental-strip-types tests/legacy-object-authorization.test.ts",
+    "test:legacy-private-route-block": "node --experimental-strip-types tests/legacy-private-route-block.test.mjs",
     "test:stellar-rpc-prep": "node --experimental-strip-types tests/stellar-testnet-rpc-adapter.test.ts",
     "test:stellar-event-source": "node --experimental-strip-types tests/stellar-receipt-event-source.test.ts",
     "test:readonly-ui-qr": "node --experimental-strip-types tests/readonly-ui-qr.test.ts",

@@ -2,6 +2,12 @@
 
 ## Corte vigente (2026-09-30)
 
+Actualizacion: main `637e17c` integra PR52. Las dos lecturas privadas heredadas
+Stellar se retiran en `fix/legacy-route-authorization`; [evidencia local y gates](evidence/legacy-private-route-block/README.md).
+La retirada no cambia los cuatro paneles Supabase ni aprueba MockupPortal:
+fallback/cache heredados quedan como DEM-LEG-01. DEM-SEC-01 y la pausa externa
+continuan; el tablero registra integracion y comprobaciones oficiales.
+
 El mapa describe capacidades; su matriz historica no sustituye el
 [tablero unico actualizado](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
 Baseline inicial de auditoria `f1c8f0e` (PR51; codigo funcional PR50). Mesa, proteccion de

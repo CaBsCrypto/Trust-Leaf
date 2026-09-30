@@ -10,7 +10,6 @@ import {
   fundTestnetAccount,
   getRuntimeReadiness,
   issuePrescriptionForPatient as issuePrescriptionForPatientShared,
-  validatePrescriptionForDispensary,
   registerDoctorOnTestnet,
   registerDispensaryOnTestnet,
   revokeDoctorOnTestnet,
@@ -37,6 +36,7 @@ import {
   displayToStroops,
 } from "./api/_lib/defindex";
 import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
+import { blockLegacyPrivateRoute } from "./api/_lib/legacy-private-route-block";
 import consolidatedReadinessHandler from './api/stellar/readiness';
 import { createLegacyAuthorizationMiddleware } from "./api/_lib/legacy-route-authorization";
 import {
@@ -111,6 +111,12 @@ async function startServer() {
   const passkeyServer = await createPasskeyServer();
 
   // Middlewares
+  app.all('/api/stellar/patient/:address/dashboard', (req, res) => {
+    blockLegacyPrivateRoute(req, res, 'GET');
+  });
+  app.all('/api/stellar/dispensary/validate-prescription', (req, res) => {
+    blockLegacyPrivateRoute(req, res, 'POST');
+  });
   app.post('/api/team-mail-webhook',express.raw({type:'application/json',limit:'64kb'}),async (req,res) => {
     res.setHeader('Cache-Control','no-store, private');
     try {
@@ -257,20 +263,6 @@ async function startServer() {
       res.json({ publicKey: objectAuth.trusted.actorAccountId });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error al derivar la wallet.";
-      res.status(500).json({ message });
-    }
-  });
-
-  app.get("/api/stellar/patient/:address/dashboard", async (req, res) => {
-    try {
-      const objectAuth = requireObjectAuthorization(res);
-      const dashboard = await getPatientDashboard(objectAuth.trusted.actorAccountId);
-      res.json(dashboard);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "No fue posible consultar el dashboard del paciente en testnet.";
       res.status(500).json({ message });
     }
   });
@@ -524,41 +516,6 @@ async function startServer() {
         error instanceof Error
           ? error.message
           : "No fue posible liberar la receta en testnet.";
-      res.status(500).json({ message });
-    }
-  });
-
-  app.post("/api/stellar/dispensary/validate-prescription", async (req, res) => {
-    try {
-      const { prescriptionId } = req.body ?? {};
-      const normalizedPrescriptionId = Number(prescriptionId);
-
-      if (!Number.isFinite(normalizedPrescriptionId)) {
-        res.status(400).json({
-          message: "Falta prescriptionId para validar la receta.",
-        });
-        return;
-      }
-
-      const result = await validatePrescriptionForDispensary({
-        prescriptionId: normalizedPrescriptionId,
-      });
-
-      res.json(result);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "No fue posible validar la receta en testnet.";
-
-      if (/missing|not found|PrescriptionMissing|#4/i.test(message)) {
-        res.status(404).json({
-          code: "PRESCRIPTION_NOT_FOUND",
-          message: "No encontramos esa receta en el contrato Prescription de Testnet.",
-        });
-        return;
-      }
-
       res.status(500).json({ message });
     }
   });
@@ -1036,103 +993,6 @@ function loadContractSpec(wasmPath: string) {
   return StellarSdk.contract.Spec.fromWasm(wasm);
 }
 
-async function getPatientDashboard(patientAddress: string) {
-  const server = getSorobanServer();
-  const latestLedger = await server.getLatestLedger();
-  const prescriptions = await getPatientPrescriptions(
-    server,
-    getPrescriptionContractId(),
-    patientAddress,
-    latestLedger.sequence,
-  );
-
-  const active = prescriptions.filter(
-    (item) => item.status === "active",
-  ).length;
-  const used = prescriptions.filter((item) => item.status === "used").length;
-  const expired = prescriptions.filter(
-    (item) => item.status === "expired",
-  ).length;
-
-  return {
-    patientAddress,
-    network: "Stellar Testnet",
-    rpcUrl: getRpcUrl(),
-    latestLedger: latestLedger.sequence,
-    latestLedgerClosedAt: new Date().toISOString(),
-    registryContractId: getRegistryContractId(),
-    prescriptionContractId: getPrescriptionContractId(),
-    summary: {
-      total: prescriptions.length,
-      active,
-      used,
-      expired,
-    },
-    prescriptions,
-  };
-}
-
-async function getPatientPrescriptions(
-  server: InstanceType<typeof StellarSdk.rpc.Server>,
-  contractId: string,
-  patientAddress: string,
-  latestLedger: number,
-) {
-  const topic = StellarSdk.nativeToScVal("PrescriptionIssued").toXDR("base64");
-
-  const page = await server.getEvents({
-    startLedger: Math.max(1, latestLedger - 10_000),
-    filters: [
-      {
-        type: "contract",
-        contractIds: [contractId],
-        topics: [[topic]],
-      },
-    ],
-    limit: 100,
-  });
-
-  const issued = page.events
-    .map((event) => decodePrescriptionIssuedEvent(event))
-    .filter(
-      (event): event is NonNullable<typeof event> =>
-        Boolean(event) && event.patient === patientAddress,
-    );
-
-  const prescriptions = await Promise.all(
-    issued.map(async (event) => {
-      const onchain = await invokeReadonlyContract(
-        server,
-        contractId,
-        "get_prescription",
-        { id: BigInt(event.id) },
-      );
-
-      return normalizePrescriptionRecord(onchain, event);
-    }),
-  );
-
-  return prescriptions.sort((a, b) => b.id - a.id);
-}
-
-function decodePrescriptionIssuedEvent(
-  event: StellarSdk.rpc.Api.EventResponse,
-) {
-  const values = event.value.vec();
-  if (!values || values.length < 3) {
-    return null;
-  }
-
-  return {
-    id: Number(StellarSdk.scValToBigInt(values[0])),
-    patient: StellarSdk.Address.fromScVal(values[1]).toString(),
-    doctor: StellarSdk.Address.fromScVal(values[2]).toString(),
-    ledger: event.ledger,
-    ledgerClosedAt: event.ledgerClosedAt,
-    txHash: event.txHash,
-  };
-}
-
 async function invokeReadonlyContract(
   server: InstanceType<typeof StellarSdk.rpc.Server>,
   contractId: string,
@@ -1158,52 +1018,6 @@ async function invokeReadonlyContract(
   }
 
   return prescriptionSpec.funcResToNative(method, simulation.result.retval);
-}
-
-function normalizePrescriptionRecord(
-  onchain: any,
-  event: {
-    id: number;
-    patient: string;
-    doctor: string;
-    ledger: number;
-    ledgerClosedAt: string;
-    txHash: string;
-  },
-) {
-  const expiresAt = Number(onchain.expires_at);
-  const isUsed = Boolean(onchain.is_used);
-  const now = Math.floor(Date.now() / 1000);
-  const status = isUsed ? "used" : expiresAt <= now ? "expired" : "active";
-
-  return {
-    id: Number(onchain.id),
-    patient: String(onchain.patient),
-    doctor: String(onchain.doctor),
-    medicationHash: bufferLikeToHex(onchain.medication_hash),
-    expiresAt,
-    isUsed,
-    status,
-    issuedAt: event.ledgerClosedAt,
-    issuedLedger: event.ledger,
-    txHash: event.txHash,
-  };
-}
-
-function bufferLikeToHex(value: unknown) {
-  if (Buffer.isBuffer(value)) {
-    return value.toString("hex");
-  }
-
-  if (value instanceof Uint8Array) {
-    return Buffer.from(value).toString("hex");
-  }
-
-  if (Array.isArray(value)) {
-    return Buffer.from(value).toString("hex");
-  }
-
-  return String(value);
 }
 
 startServer();
