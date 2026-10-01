@@ -5,56 +5,74 @@ import { invitationInput, acceptanceInput } from './team-fixtures.mjs';
 
 const literal = value => `'${String(value).replaceAll("'", "''")}'`;
 
-// Execute the first RPC without committing, then observe the second RPC waiting
-// on that backend's real business lock. No trigger or artificial lock replaces it.
-async function orderedRace({ sql, connectionEnv }, name, first, second) {
+function connection(connectionEnv, application) {
   const marker = `READY_${randomUUID().replaceAll('-', '')}:`;
-  const application = `pilot-access-${name}`;
-  const holder = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
-    env: { ...process.env, ...connectionEnv, PGAPPNAME: `${application}-holder`,
+  const child = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'], {
+    env: { ...process.env, ...connectionEnv, PGAPPNAME: application,
       PGOPTIONS: '-c statement_timeout=20000 -c lock_timeout=15000 -c idle_in_transaction_session_timeout=20000' },
     windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   });
-  let output = '', error = '', readyTimer;
-  const watchdog = setTimeout(() => holder.kill('SIGKILL'), 25000);
-  holder.stderr.on('data', chunk => { error += chunk; });
-  const finished = new Promise((resolve, reject) => {
-    holder.once('error', reject);
-    holder.once('close', code => {
-      clearTimeout(watchdog);
-      code === 0 ? resolve() : reject(new Error(error || `Holder exited ${code}`));
-    });
-  });
-  // Attach rejection handlers before starting either connection.
-  const completion = finished.then(() => ({ status: 'fulfilled' }), reason => ({ status: 'rejected', reason }));
+  let output = '', error = '', readyTimer, timedOut = false, readySeen = false;
+  const watchdog = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, 30000);
+  child.stderr.on('data', chunk => { error += chunk; });
   const ready = new Promise((resolve, reject) => {
-    readyTimer = setTimeout(() => reject(new Error(`${name}: first RPC did not reach its transaction barrier`)), 10000);
-    holder.stdout.on('data', chunk => {
+    readyTimer = setTimeout(() => reject(new Error(`${application}: connection did not reach its marker`)), 10000);
+    child.stdout.on('data', chunk => {
       output += chunk;
-      const lines = output.trim().split(/\r?\n/);
+      // Ignore an unfinished line: a marker's PID can arrive in separate chunks.
+      const lines = output.slice(0, output.lastIndexOf('\n') + 1).trimEnd().split(/\r?\n/);
       const index = lines.findIndex(line => line.startsWith(marker));
-      if (index >= 0) {
+      if (index >= 0 && !readySeen) {
+        readySeen = true;
         clearTimeout(readyTimer);
-        try { resolve({ pid: Number(lines[index].slice(marker.length)), result: JSON.parse(lines[index - 1]) }); }
+        try {
+          const pid = lines[index].slice(marker.length);
+          assert.match(pid, /^[1-9]\d*$/);
+          resolve({ pid: Number(pid), result: index ? JSON.parse(lines[index - 1]) : undefined });
+        }
         catch (reason) { reject(reason); }
       }
     });
-    holder.once('error', reject);
-    holder.once('close', () => reject(new Error(error || `${name}: holder ended before ready`)));
+    child.once('error', reject);
+    child.once('close', () => { clearTimeout(readyTimer); reject(new Error(error || `${application}: ended before marker`)); });
   });
-  let follower, settled = false, commit = false;
-  holder.stdin.on('error', () => {}); // The exit/error promise reports failed psql processes.
-  holder.stdin.write(`begin isolation level read committed; set role service_role; ${first} select ${literal(marker)}||pg_backend_pid();\n`);
+  // Completion always settles, so failures can be collected without unhandled rejections.
+  const completion = new Promise(resolve => {
+    child.once('error', reason => { clearTimeout(watchdog); resolve({ status: 'rejected', reason }); });
+    child.once('close', code => {
+      clearTimeout(watchdog);
+      if (code !== 0) resolve({ status: 'rejected', reason: new Error(timedOut ? 'psql process watchdog expired' : error) });
+      else {
+        try { resolve({ status: 'fulfilled', value: JSON.parse(output.split(/\r?\n/).filter(line => line && !line.startsWith(marker)).join('\n')) }); }
+        catch (reason) { resolve({ status: 'rejected', reason }); }
+      }
+    });
+  });
+  // The caller awaits readiness after starting the statement; attach a handler now.
+  ready.catch(() => {});
+  child.stdin.on('error', () => {});
+  return { child, ready, completion, marker };
+}
+
+// Execute the first RPC without committing, then observe the second RPC waiting
+// on that backend's real business lock. No trigger or artificial lock replaces it.
+async function orderedRace({ sql, connectionEnv }, name, first, second) {
+  const application = `pilot-access-${name}`;
+  const holder = connection(connectionEnv, `${application}-holder`);
+  let follower, result, settled = false, commit = false;
+  holder.child.stdin.write(`begin isolation level read committed; set role service_role; ${first} select ${literal(holder.marker)}||pg_backend_pid();\n`);
   try {
-    const leader = await ready;
-    follower = sql(`begin isolation level read committed; set role service_role; ${second} commit;`, application).then(
-      value => { settled = true; return { status: 'fulfilled', value: JSON.parse(value) }; },
-      reason => { settled = true; return { status: 'rejected', reason }; },
-    );
+    const leader = await holder.ready;
+    follower = connection(connectionEnv, application);
+    result = follower.completion.then(value => { settled = true; return value; });
+    follower.child.stdin.end(`begin isolation level read committed; set role service_role;
+      select ${literal(follower.marker)}||pg_backend_pid(); ${second} commit;\n`);
+    const contender = await follower.ready;
+    assert.notEqual(contender.pid, leader.pid, 'independent PostgreSQL backends');
     const deadline = Date.now() + 10000;
     while (true) {
       const blocked = await sql(`select count(*) from pg_stat_activity
-        where application_name=${literal(application)} and datname=current_database() and pid<>${leader.pid} and wait_event_type='Lock'
+        where pid=${contender.pid} and application_name=${literal(application)} and datname=current_database() and wait_event_type='Lock'
           and ${leader.pid}=any(pg_blocking_pids(pid));`);
       if (blocked === '1') break;
       assert.equal(settled, false, `${name}: second RPC completed without waiting for the first`);
@@ -62,15 +80,14 @@ async function orderedRace({ sql, connectionEnv }, name, first, second) {
       await new Promise(resolve => setTimeout(resolve, 25)); // Poll an observed DB condition, not an ordering delay.
     }
     commit = true;
-    holder.stdin.end('commit;\n');
-    const ended = await completion;
+    holder.child.stdin.end('commit;\n');
+    const ended = await holder.completion;
     if (ended.status === 'rejected') throw ended.reason;
-    return { first: leader.result, second: await follower };
+    return { first: leader.result, second: await result };
   } finally {
-    clearTimeout(readyTimer);
-    if (!commit) holder.stdin.end('rollback;\n');
-    await completion;
-    if (follower) await follower;
+    if (!commit) holder.child.stdin.end('rollback;\n');
+    await holder.completion;
+    if (result) await result;
   }
 }
 
@@ -103,7 +120,7 @@ export async function runDispensingAccessRaces(context) {
       sourceReference: 'ISOLATED QA ONLY', expiresAt: '2099-01-01T00:00:00Z', quantityMg: 100000 })).resourceRef;
     const f = { patient, manager, operator, organizationRef, treatmentRef, batchRef,
       patientRef: await actorRef(patient), managerRef: await actorRef(manager), operatorRef: await actorRef(operator) };
-    await call(manager, 'dispense', { resourceRef: treatmentRef, batchRef, quantityMg: 500 });
+    f.priorReceiptRef = (await call(manager, 'dispense', { resourceRef: treatmentRef, batchRef, quantityMg: 500 })).resourceRef;
     return f;
   }
   const ledger = async f => JSON.parse(await sql(`select jsonb_build_object(
@@ -162,6 +179,18 @@ export async function runDispensingAccessRaces(context) {
     const f = await fixture(name), who = f[role];
     const before = await ledger(f);
     const priorViews = [await call(f.patient, 'snapshot', {}), await call(f.manager, 'snapshot', {})];
+    assert.equal(before.deliveries.length, 1, 'fixture must start with a real historical receipt');
+    assert.equal(before.deliveries[0].delivery_ref, f.priorReceiptRef);
+    assert.equal(before.deliveries[0].quantity_mg, 500);
+    assert.equal(before.movements.length, 2);
+    assert.equal(before.movements.find(m => m.delivery_ref === f.priorReceiptRef)?.quantity_mg, -500);
+    assert.equal(before.stock, 99500);
+    assert.equal(before.used, 500);
+    for (const view of priorViews) {
+      assert.equal(view.deliveries.length, 1);
+      assert.equal(view.deliveries[0].delivery_ref, f.priorReceiptRef);
+      assert.equal(view.deliveries[0].quantity_mg, 500);
+    }
     const delivery = { operationId: randomUUID(), resourceRef: f.treatmentRef, batchRef: f.batchRef, quantityMg: 1000 };
     let control = { operationId: randomUUID() }, controlWho, action, rejection;
     if (kind === 'grant') {

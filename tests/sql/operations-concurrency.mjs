@@ -26,8 +26,14 @@ const sql = (text, application = 'pilot-setup') => new Promise((resolve, reject)
   const child = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'], {
     env: { ...process.env, ...connectionEnv, PGAPPNAME: application, PGOPTIONS: '-c statement_timeout=20000 -c lock_timeout=15000' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   });
-  let out = '', err = ''; child.stdout.on('data', b => { out += b; }); child.stderr.on('data', b => { err += b; });
-  child.once('error', reject); child.once('exit', code => code === 0 ? resolve(out.trim()) : reject(new Error(err)));
+  let out = '', err = '', timedOut = false;
+  const watchdog = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, 30000);
+  child.stdout.on('data', b => { out += b; }); child.stderr.on('data', b => { err += b; });
+  child.once('error', reason => { clearTimeout(watchdog); reject(reason); });
+  child.once('close', code => {
+    clearTimeout(watchdog);
+    code === 0 ? resolve(out.trim()) : reject(new Error(timedOut ? 'psql process watchdog expired' : err));
+  });
   child.stdin.end(text);
 });
 const literal = value => `'${String(value).replaceAll("'", "''")}'`;

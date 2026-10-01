@@ -13,8 +13,9 @@ asocia esa base al despliegue Vercel `dpl_BVGBprWsVexHeRi4frDPjWL5xjyj`, Ready,
 con alias oficiales comprobados durante el cierre anterior. Esta ejecucion local
 no acredita un nuevo despliegue ni repite navegacion autenticada.
 
-Estado de la entrega: validacion local aprobada; revision y CI/preview del ultimo
-commit requeridos antes de integrar. Consultar el PR para su estado posterior.
+Estado de la entrega al corte: validacion local aprobada; revision y CI/preview
+del ultimo commit requeridos antes de integrar. Estado de integracion y checks
+actualizados en [PR59](https://github.com/CaBsCrypto/Trust-Leaf/pull/59).
 El codigo funcional no cambia respecto de esa base.
 
 ## Metodo
@@ -26,9 +27,12 @@ su fixture para la comprobacion PostgREST posterior de CI.
 - Solo admite base vacia `trustleaf_pilot_test` en localhost. El mensual se excluye.
 - Las mutaciones usan los exports RPC publicos actuales bajo `service_role`.
 - Primera conexion: RPC dentro de `READ COMMITTED`, sin confirmar aun.
-- Segunda conexion: RPC competidora. Una tercera observa la base, los PIDs y
+- Segunda conexion: marcador con PID completo antes de la RPC competidora.
+  Se leen unicamente lineas terminadas, incluso si un chunk divide el PID.
+  Una tercera observa la base, los PIDs exactos y
   `pg_blocking_pids`; debe estar bloqueada por la primera antes de su COMMIT.
-- Timeouts de conexion, sentencia, lock y holder evitan esperar indefinidamente.
+- Las carreras nuevas usan timeouts de conexion, sentencia, lock y watchdogs
+  de proceso para holder, follower y observador; sus procesos se recogen con `close`.
   El sondeo de 25 ms observa un estado de PostgreSQL; no decide quien gana.
 - Se fuerza cada precedencia con fixtures independientes. Los rechazos requieren
   el error de negocio y SQLSTATE, no timeout, deadlock ni error de transporte.
@@ -36,6 +40,8 @@ su fixture para la comprobacion PostgREST posterior de CI.
 Cada fixture contiene un recibo previo de 500 mg, un lote de 100000 mg y un cupo
 de 30000 mg. La nueva entrega ensayada es de 1000 mg. El recibo anterior, su
 movimiento y sus proyecciones propias deben conservarse en ambos ordenes.
+Antes de competir se exige su ID/cantidad en las filas y ambas proyecciones,
+stock 99500 mg y uso 500 mg: la conservacion no puede pasar sin esa semilla.
 
 ## Resultados
 
@@ -90,6 +96,10 @@ locks y cleanup; Medico ejecuta operaciones SQL; Paciente ejecuta lectura
 compartida y revisa recibos previos; Admin ejecuta incorporacion y conserva su
 puerta de privacidad/contacto. El coordinador es el unico editor, controla Git y
 consolida resultados. Las revisiones de agente no equivalen a aprobacion humana.
+La revision de Calidad del primer candidato `cc21095` exigio mejorar framing,
+atribucion por PID, limites de procesos y precondiciones del recibo; se corrigieron
+en este candidato. CI 36940213121 PASS y preview del primer candidato no se
+atribuyen automaticamente al ultimo commit: este requiere sus propios checks.
 
 ## Limites y siguiente puerta
 
