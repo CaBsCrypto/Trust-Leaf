@@ -8,6 +8,7 @@
     "test:team-invitations": "node --experimental-strip-types tests/team-invitations.test.ts && node tests/sql/team-invitations.mjs",
     "test:operations-pilot": "node --experimental-strip-types tests/operations-pilot.test.ts",
     "test:operations-pilot-sql": "node tests/sql/operations-pilot.mjs",
+    "test:shared-patient-read": "node tests/sql/shared-patient-read.mjs",
     "test:dispensary-lifecycle": "node tests/sql/dispensary-lifecycle.mjs",
     "test:operations-pilot-concurrency": "node tests/sql/operations-concurrency.mjs",
     "qa:operations-types": "node scripts/qa-operations-types.mjs",

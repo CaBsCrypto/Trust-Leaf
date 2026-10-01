@@ -62,6 +62,7 @@ jobs:
           npm run test:vercel-stellar-consolidation
           npm run test:visual-qa-regressions
           npm run qa:operations-pilot
+          npm run test:shared-patient-read
           npm run test:team-invitations
           npm run test:dispensary-onboarding
           npm run test:dispensary-lifecycle
