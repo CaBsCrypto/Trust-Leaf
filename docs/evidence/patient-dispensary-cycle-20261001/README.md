@@ -1,4 +1,4 @@
-# Ciclo paciente y operador B: 01/10/2026
+# Ciclo paciente y dispensario B: 01/10/2026
 
 ## Version y alcance
 
@@ -12,14 +12,14 @@ Deployment GitHub 6777008516 success vincula 95a1b2b con
 trustleaf-45lynswsg-cabscryptocontacto-6028s-projects.vercel.app; Vercel
 `dpl_HBw3vj6SZ4r9RSwyYvxL4hgti3cP` Ready y aliases oficiales contrastados.
 
-Sesion paciente existente, despues sesion separada temporalmente del operador
-de B en el mismo navegador: logout, login y recarga. No dos pestanas para aislar
+Sesion paciente existente, despues sesiones separadas temporalmente del operador
+y encargado de B en el mismo navegador: logout, login y recarga. No dos pestanas para aislar
 identidades. La identidad, organizacion y rol se comprobaron en cada panel.
 Navegador interno del coordinador, no celular fisico ni prueba de autonomia.
 Observaciones AX/DOM y capturas mostradas en el chat; no se adjuntan pantallas
 autenticadas con correos conectados al repositorio ni se leen tokens.
 
-## Evidencia por escenario
+## Paciente y operador: evidencia por escenario
 
 | Escenario | Resultado observado | Limite |
 | --- | --- | --- |
@@ -38,6 +38,47 @@ autenticadas con correos conectados al repositorio ni se leen tokens.
 | Gestion segun rol | Catalogo/Recepciones consultables, paginas sin registros comerciales; Equipo muestra encargado y operador | Sin Proveedores privados, crear, recibir, ajustar, invitar o retirar; servidor contrastado por regresiones aisladas anteriores, no intentos de escritura publicados |
 | Recarga operador | Conserva cuenta, B y Operador; reinicia en Pacientes, permiso vigente, 10 g; Inventario sigue 60 g y comprobante recuperable | No conserva pestaña/filtros tras recarga; no es criterio prometido |
 
+## Encargado B: 03:41-03:47 Santiago
+
+Ingreso personal del usuario mediante Privy; se comprobo B y rol Encargado.
+Se reutiliza la baseline publicada 95a1b2b, sin cambios de producto en esta rama.
+
+| Escenario | Resultado observado | Limite |
+| --- | --- | --- |
+| Jornada e identidad | B, Encargado, un paciente autorizado, stock 60 g, equipo activo 2 y preparacion 4/4 plegada | No se interpreta el resumen como autonomia humana |
+| Paciente y permiso | Busqueda Piloto, seleccion explicita; saldo 30/20/10 y permiso hasta 02/10 02:33:08 Santiago | Sin renovar el permiso ni modificar tratamiento |
+| Revision y retorno | Lote Piloto-B-20260908, 1 g y saldo hipotetico 9 g; Volver conserva lote/cantidad | Nunca se pulsa Confirmar entrega |
+| Descarte cancelado | Intentar Inventario abre dialogo; Seguir editando conserva 1 g/lote y foco retorna a Inventario | Descartar despues elimina solo esta preparacion local y vuelve al listado con busqueda Piloto y foco en paciente |
+| Recepcion y ajuste | Recibir lote y Gestionar lote inicialmente plegados; Ajustar existencias plegado al abrir Gestionar lote; ambos formularios abren y cierran intactos | Sin rellenar, enviar, guardar ni poner en cuarentena |
+| Inventario e historial | 60 g Disponible; acceso del lote aplica su filtro; busqueda 3150a49a y fecha accesible 2026-09-15 recuperan comprobante, producto, lote, periodo y responsable por UUID | Selector nativo manual externo/celular permanece pendiente |
+| Movimientos y limpieza | Limpiar elimina busqueda/fecha/lote; alternar a Movimientos muestra +100/-20/-10/-10 g, neto 60 g | Ningun movimiento nuevo |
+| Gestion comercial | Catalogo, Proveedores y Recepciones terminan la carga y muestran pagina sin registros; controles Nuevo producto/Nuevo proveedor visibles para encargado | No se crea nada; la recepcion historica de B no equivale a una recepcion comercial vinculada |
+| Equipo | Un encargado y un operador activos; dos invitaciones historicas aceptadas y correo entregado al servidor receptor | Se distingue estado de invitacion/entrega; sin invitar, reenviar ni retirar |
+| Recarga encargado | Identidad y acceso persisten, entrada Jornada; Pacientes 30/20/10 y permiso vigente, Inventario 60 g y comprobante 3150a49a recuperados nuevamente | No promete persistencia de filtros/seccion; navegador interno, no celular fisico |
+
+Se cerro la sesion del encargado antes de abrir Admin y el usuario completo
+personalmente el codigo de Privy. No se copian correos, contactos ni capturas
+autenticadas al repositorio.
+
+## Admin: 03:51-03:54 Santiago
+
+Cuenta administrativa y piloto simulado comprobados en el panel oficial. Main
+reconfirmado como 95a1b2b y CI 36820406618 success para ese SHA; los checks de un
+nuevo commit documental se verifican por separado, sin atribuirle los anteriores.
+
+| Escenario | Resultado observado | Limite |
+| --- | --- | --- |
+| Identidad y actores | Cuenta Admin correcta; ocho actores registrados, incluidos encargado/operador B activos; sin solicitudes profesionales pendientes | No cambia roles ni usa la aprobacion antigua |
+| Organizaciones y membresias | A, B y Browns independientes; B conserva su encargado y operador, Browns un encargado | Se espera que terminen de cargar los correos; acceso efectivo de Browns reutilizado de evidencia anterior, no una nueva sesion Browns |
+| Auditoria existente | Grant 01/10 02:33 para 4119236d y entrega 3150a49a del 15/09 visibles; resumen conserva cuatro entregas | No se procesa Calendar ni se ejecuta accion de negocio |
+| Invitaciones | Una pendiente vigente y una aceptada historica; estado de entrega al servidor receptor diferenciado | No se copia el destinatario pendiente ni se reenvia, cancela o invita |
+| Solicitudes y decision | Browns Aprobada; Revisar solicitud abre datos y estado existente | Sin aprobar, rechazar, corregir ni copiar el formulario privado |
+| Recarga Admin | Autenticacion y cuenta administrativa persisten; entrada Actividad y mismos registros | No acredita alta externa, autonomia ni celular fisico |
+
+Salida tecnica de este recorrido: encargado B y lecturas Admin pendientes
+completados, sin defectos bloqueantes reproducidos en estas tareas. No equivale
+a cerrar todas las regresiones de seguridad ni el sprint humano.
+
 ## Contraste del control de fecha
 
 La entrada exploratoria con locator.fill en el navegador interno no produjo
@@ -50,12 +91,13 @@ manual en navegador externo y celular real; este resultado no la cierra.
 
 ## Pendientes y siguiente accion
 
-- Encargado B: repetir lectura, saldo, lote y comprobante; abrir recepcion/ajuste
-  sin guardar y revisar Equipo. No renovar permisos ni repetir entrega.
+- Encargado B: recorrido tecnico anterior completado; no requiere repetir entrega,
+  recepcion ni ajuste para obtener evidencia. Evaluacion humana separada pendiente.
 - Ambos roles: tareas humanas sin indicar botones y celular fisico, teclado y
   navegacion inferior. La observacion del agente no sustituye esas pruebas.
-- Admin: reutilizar lecturas de la misma version funcional y completar solo
-  faltantes. Incorporacion externa requiere privacidad minima y contacto compatible.
+- Admin: lecturas de organizaciones, membresias, Incorporaciones y recarga
+  completadas; no envio ni decision nueva. Incorporacion externa requiere
+  privacidad minima, contacto compatible y acompanamiento.
 - Conservar pruebas pendientes de invitaciones, carreras, politica doctor-active
   y DEM-LEG-01. B y Browns siguen separados; stock de Browns no comprobado aqui.
 
