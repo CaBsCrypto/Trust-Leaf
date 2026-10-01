@@ -1,5 +1,22 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Correccion en curso: lectura compartida (01/10/2026)
+
+DEM-SEC-01 se trabaja en `fix/shared-patient-read-authorization`, desde main
+`8039377` (PR55), con CI 36684088051 PASS y despliegue oficial comprobados.
+Regresion integrada: baseline 14 PASS/5 fallos esperados; candidato 19/19 PASS.
+Una migracion incremental restringe el snapshot compartido al paciente activo
+y vigente, permiso y tratamiento vigentes y membresia actual. Conserva recibos
+propios e historial permitido, sin cambiar acciones ni decidir la politica del
+medico inactivo. [Evidencia y gate remoto](evidence/shared-patient-read/README.md).
+
+Publicacion aun bloqueada: CLI Supabase devuelve 401 al consultar historial.
+Usuario renovando sesion; no se genero respaldo ni se aplico migracion remota.
+DEM-SEC-02 sigue cerrado. Invitaciones externas y renovacion B permanecen
+pausadas hasta verificar la correccion publicada y los requisitos separados.
+La [matriz unica](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
+conserva tareas humanas, privacidad, politica medica y legado como pendientes.
+
 ## Corte vigente: demo y adopcion (30/09/2026)
 
 Base actualizada: PR52 integrado en `637e17c`; [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54)

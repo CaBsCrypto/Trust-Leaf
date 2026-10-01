@@ -197,4 +197,33 @@ const cancellation = await competing('pg_advisory_xact_lock(42826004)',[
   onboard('admin','cancel',{invitationRef:cancelInvite.invitationRef,operationId:randomUUID(),intent:'cancel'}),
 ]);
 assert.equal(cancellation.filter(r=>r.status==='fulfilled').length,1,'accept or cancel wins, never both');
+
+// Commit deactivation on one connection, then read on a separate connection.
+// This proves post-commit withdrawal, not cancellation of already in-flight reads.
+await sql(`update trustleaf_private.pilot_treatments set state='active' where treatment_ref=${literal(treatment2)};`);
+await mutation('a', 'dispense', { resourceRef: treatment2, batchRef: batchA, quantityMg: 1 });
+const sharedRead = async () => JSON.parse(await sql(`set role service_role; ${command('a','snapshot',{})}`, 'pilot-shared-reader'));
+const sharedBefore = await sharedRead();
+const ownReceipts = sharedBefore.deliveries.filter(d => d.organization_ref===orgA);
+assert.ok(sharedBefore.deliveries.some(d => d.treatment_ref===treatment2 && d.organization_ref===orgB));
+const immutableRows = () => sql(`select jsonb_build_object(
+  'deliveries',(select jsonb_agg(d order by delivery_ref) from trustleaf_private.pilot_deliveries d),
+  'movements',(select jsonb_agg(m order by movement_ref) from trustleaf_private.pilot_movements m),
+  'treatments',(select jsonb_agg(t order by treatment_ref) from trustleaf_private.pilot_treatments t)
+);`);
+const rowsBefore = await immutableRows();
+for (const change of ["state='suspended'", "state='revoked'", "state='expired'", "valid_until=clock_timestamp()-interval '1 second'"]) {
+  await sql(`begin;
+    update trustleaf_private.actor_bindings set ${change} where actor_ref=${literal(patient2Ref)};
+    commit;`, 'pilot-patient-state-writer');
+  const afterState = await sharedRead();
+  assert.ok(!afterState.treatments.some(t => t.treatment_ref===treatment2));
+  assert.ok(!afterState.grants.some(g => g.treatment_ref===treatment2));
+  assert.ok(!afterState.deliveries.some(d => d.treatment_ref===treatment2 && d.organization_ref===orgB));
+  assert.deepEqual(afterState.deliveries.filter(d => d.organization_ref===orgA), ownReceipts);
+  assert.equal(await immutableRows(), rowsBefore, 'reads and patient lifecycle changes never modify operational records');
+  await sql(`update trustleaf_private.actor_bindings set state='active',valid_until=null where actor_ref=${literal(patient2Ref)};`, 'pilot-patient-state-writer');
+}
+assert.ok((await sharedRead()).treatments.some(t => t.treatment_ref===treatment2));
+console.log('PASS: four patient lifecycle changes committed on independent PostgreSQL connections withdraw shared data while preserving own receipts and all operational rows.');
 console.log('PASS: independent PostgreSQL sessions validate pilot, commerce, onboarding acceptance/approval/cancellation, idempotency and response loss. Dedicated test DB retained.');

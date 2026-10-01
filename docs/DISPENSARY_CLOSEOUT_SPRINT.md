@@ -1,10 +1,20 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-09-30. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-10-01. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
 
 ## Demo y adopcion: 30/09/2026
+
+Actualizacion 01/10: DEM-SEC-01 en `fix/shared-patient-read-authorization`, base
+`8039377` (PR55), CI main 36684088051 PASS y despliegue oficial reconfirmados.
+Nuevo gate de snapshot en migracion incremental, sin cambios de contratos o
+acciones. Reproduccion integrada: baseline 14 PASS/5 fallos esperados; candidato
+19/19 PASS. Retira solo proyeccion compartida no autorizada y conserva recibos
+propios. Seis misiones independientes; pruebas/revision/publicacion se registran
+por separado en [evidencia DEM-SEC-01](evidence/shared-patient-read/README.md).
+Historial remoto bloqueado por credencial CLI 401; usuario renovando login.
+No respaldo ni migracion remotos ejecutados; cierre y pausa externa sin cambios.
 
 DEM-SEC-02 cerrado y publicado mediante [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54),
 main `65aaeb8e703c13e97cc5707dff1ebfb22e4e01a4`. Candidato `2b6abed` aprobado por
@@ -61,6 +71,7 @@ revisiones no escriben en produccion.
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
 | DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
+| DEM-SEC-01 / coordinador + seis agentes | En curso, publicacion bloqueada | Base 8039377; regresion permanente 19/19 PASS, baseline con 5 negativos; recibos propios y politicas medicas conservados | Revision/CI/preview y PostgreSQL independiente; renovar CLI, revisar historial, respaldo restaurable y migracion exclusiva antes de cerrar |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
 
 ### Recuperacion de CI: primera entrega del sprint 1
