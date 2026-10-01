@@ -1,17 +1,21 @@
 # Trust Leaf: mapa de producto y nueva experiencia
 
-## Correccion de lectura en curso (2026-10-01)
+## Lectura compartida publicada (2026-10-01)
 
-Base comprobada main `8039377`, PR55. DEM-SEC-01 tiene una correccion incremental
-local en rama propia: 19/19 escenarios SQL PASS frente a cinco negativos baseline.
-Retira tratamiento/grant/perfil/recibos ajenos de paciente inactivo, sin eliminar
-recibos propios ni alterar las politicas del medico o paciente. Las pantallas,
-contratos y escrituras se conservan. [Pruebas y publicacion](evidence/shared-patient-read/README.md).
-El CLI remoto requiere renovar login (401); no hay migracion aplicada ni cierre
-publicado. La [matriz unica](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
-mantiene la pausa de invitaciones y B, autonomia y movil fisico pendientes.
+PR56 integrado en main `199e1ae`, candidato dfca5ad con CI/preview y revision
+independiente aprobados. Migracion exclusiva 20261001010000 instalada tras
+historial/hash y respaldo cifrado restaurado; mensual ausente. 19/19 escenarios
+SQL PASS frente a cinco negativos baseline, PostgreSQL independiente PASS.
+Retira tratamiento/grant/perfil/recibos ajenos de paciente inactivo, conserva
+recibos propios y politicas del medico/paciente. Pantallas, contratos y acciones
+sin cambios. Despliegue y alias oficiales contrastados; CI main 36818824045 PASS.
+DEM-SEC-01 cerrado/publicado. [Pruebas y publicacion](evidence/shared-patient-read/README.md).
+Lectura paciente oficial 01/10: 30/20/10 y comprobante existente conservados.
+No se renovo B ni enviaron invitaciones. La [matriz unica](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
+mantiene confirmacion del paciente, privacidad previa a la invitacion, autonomia,
+teclado movil fisico y politica medica como puertas separadas.
 
-## Corte vigente (2026-09-30)
+## Corte historico (2026-09-30)
 
 Actualizacion: main `65aaeb8` integra PR54, despues de PR52 en `637e17c`. Las dos
 lecturas privadas heredadas Stellar estan retiradas en el dominio oficial:
