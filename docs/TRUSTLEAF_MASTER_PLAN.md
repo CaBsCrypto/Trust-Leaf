@@ -1,23 +1,34 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-## Correccion en curso: lectura compartida (01/10/2026)
+## Publicacion de lectura compartida (01/10/2026)
 
-DEM-SEC-01 se trabaja en `fix/shared-patient-read-authorization`, desde main
-`8039377` (PR55), con CI 36684088051 PASS y despliegue oficial comprobados.
-Regresion integrada: baseline 14 PASS/5 fallos esperados; candidato 19/19 PASS.
-Una migracion incremental restringe el snapshot compartido al paciente activo
-y vigente, permiso y tratamiento vigentes y membresia actual. Conserva recibos
-propios e historial permitido, sin cambiar acciones ni decidir la politica del
-medico inactivo. [Evidencia y gate remoto](evidence/shared-patient-read/README.md).
+DEM-SEC-01 integrado por [PR56](https://github.com/CaBsCrypto/Trust-Leaf/pull/56),
+main `199e1ae`, arbol identico al candidato dfca5ad. Revision independiente,
+CI candidato 36817670803 y preview aprobados; despliegue oficial/alias
+contrastados. La migracion exclusiva 20261001010000 se aplico tras comparar
+historial y funciones y restaurar el respaldo DPAPI de 49 tablas/262 filas.
+No se aplico el borrador mensual ni se modificaron registros de negocio.
+Regresion: baseline 14 PASS/5 fallos esperados; candidato 19/19 PASS y cuatro
+retiradas post-commit en PostgreSQL independiente. Conserva recibos propios y
+politica medica; no cambia contratos ni acciones.
+[Evidencia de revision, respaldo y publicacion](evidence/shared-patient-read/README.md).
 
-Publicacion aun bloqueada: CLI Supabase devuelve 401 al consultar historial.
-Usuario renovando sesion; no se genero respaldo ni se aplico migracion remota.
-DEM-SEC-02 sigue cerrado. Invitaciones externas y renovacion B permanecen
-pausadas hasta verificar la correccion publicada y los requisitos separados.
+CLI renovado. Historial: 34 migraciones, nueva version una sola vez y mensual
+ausente. CI de main 36818824045 PASS, comprobado independientemente del candidato.
+Paciente oficial mantiene 30/20/10 y comprobante 3150a49a tras actualizar datos;
+B sin permiso activo mostrado. No se renovo acceso, invito ni entrego.
+DEM-SEC-02 sigue cerrado. Siguiente recorrido: confirmacion especifica para B,
+revision 1 g sin entrega y comprobante con operador; no autorizar implicitamente.
+Las invitaciones externas requieren privacidad minima, contacto compatible y
+acompanamiento antes de enviarlas; no quedan habilitadas automaticamente.
 La [matriz unica](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026)
 conserva tareas humanas, privacidad, politica medica y legado como pendientes.
 
-## Corte vigente: demo y adopcion (30/09/2026)
+DEM-SEC-01 cerrado/publicado. Esto permite retomar la validacion acompanada, no
+cerrar el piloto completo. Carreras revocacion/cuarentena/retirada frente a
+entrega, politica doctor-active, DEM-LEG-01 y tareas humanas siguen separadas.
+
+## Corte historico: demo y adopcion (30/09/2026)
 
 Base actualizada: PR52 integrado en `637e17c`; [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54)
 publica DEM-SEC-02 en `65aaeb8`. Revision independiente, CI/preview del candidato

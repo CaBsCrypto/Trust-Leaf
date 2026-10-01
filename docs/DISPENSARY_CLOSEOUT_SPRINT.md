@@ -6,15 +6,18 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
-Actualizacion 01/10: DEM-SEC-01 en `fix/shared-patient-read-authorization`, base
-`8039377` (PR55), CI main 36684088051 PASS y despliegue oficial reconfirmados.
-Nuevo gate de snapshot en migracion incremental, sin cambios de contratos o
-acciones. Reproduccion integrada: baseline 14 PASS/5 fallos esperados; candidato
-19/19 PASS. Retira solo proyeccion compartida no autorizada y conserva recibos
-propios. Seis misiones independientes; pruebas/revision/publicacion se registran
-por separado en [evidencia DEM-SEC-01](evidence/shared-patient-read/README.md).
-Historial remoto bloqueado por credencial CLI 401; usuario renovando login.
-No respaldo ni migracion remotos ejecutados; cierre y pausa externa sin cambios.
+Actualizacion 01/10: PR56 integra DEM-SEC-01 en `199e1ae`, arbol identico al
+candidato dfca5ad revisado independientemente, CI 36817670803 PASS y preview
+aprobada. Migracion exclusiva aplicada tras revisar historial/hash y restaurar
+respaldo cifrado de 49 tablas/262 filas. Historial posterior: 34 versiones,
+nueva version una sola vez y mensual ausente. Despliegue/alias oficiales
+contrastados; CI main 36818824045 PASS comprobado por separado. No cambios de
+contratos, acciones ni datos de negocio. Baseline 14 PASS/5 negativos; candidato
+19/19 y PostgreSQL independiente PASS. Recibos propios/politica medica conservados.
+[Evidencia de seis misiones, respaldo y publicacion](evidence/shared-patient-read/README.md).
+Paciente oficial conserva 30/20/10 y comprobante 3150a49a tras actualizar datos.
+B sin grant activo visible. No autorizacion, entrega ni invitacion en esta fase.
+DEM-SEC-01 cerrado/publicado; no acredita cierre de los otros escenarios.
 
 DEM-SEC-02 cerrado y publicado mediante [PR54](https://github.com/CaBsCrypto/Trust-Leaf/pull/54),
 main `65aaeb8e703c13e97cc5707dff1ebfb22e4e01a4`. Candidato `2b6abed` aprobado por
@@ -24,11 +27,13 @@ Ready y alias www.trustleaf.org. Lecturas oficiales 30/09: 410/405/no-store en
 ambas rutas con IDs sinteticos; cuatro entradas HTML 200, cuatro APIs privadas
 401 sin sesion. No prueba autenticada ni exposicion previa de datos reales.
 [Reproduccion, revisiones, publicacion y limites](evidence/legacy-private-route-block/README.md).
-DEM-SEC-01 sigue bloqueando invitaciones y renovacion B. El cierre del PR52 ya no
-esta pendiente; los parrafos siguientes conservan la trazabilidad de esa entrega.
+La correccion compartida no habilita automaticamente invitaciones o renovacion
+B: confirmacion del paciente y privacidad previa a la incorporacion se comprueban
+por separado. El cierre del PR52 ya no esta pendiente; los parrafos siguientes
+conservan la trazabilidad de esa entrega.
 
-Esta matriz es el corte vigente; las tablas fechadas siguientes son evidencia
-historica, no nuevas aprobaciones. Ejecucion en `audit/demo-adoption-readiness`,
+La matriz siguiente es el corte vigente; las tablas fechadas posteriores son
+evidencia historica, no nuevas aprobaciones. Auditoria inicial en `audit/demo-adoption-readiness`,
 desde `origin/main` actualizado: `f1c8f0e1e2e3a3f6318a34283b2b82324f312965`
 (PR51 documental, contenido funcional PR50). Calidad confirmo main remoto, PR51
 fusionado, CI 36634542805 PASS sobre candidato aafe1aa y equivalencia funcional
@@ -51,27 +56,29 @@ su integracion y checks del ultimo head se consultan en
 [PR52](https://github.com/CaBsCrypto/Trust-Leaf/pull/52).
 
 [Guion, ocho misiones, sprints y limites](DEMO_ADOPTION_RUNBOOK.md).
-Decision de corte: BLOQUEADO para renovar acceso compartido e incorporar equipos
-externos mientras se corrige DEM-SEC-01. DEM-SEC-02 ya cerrado; la presentacion interna puede
-explicar registros ficticios, sin ofrecer validacion integral ni habilitacion real.
+Decision de corte: LISTO CON LIMITACIONES para retomar el ciclo acompanado,
+DEM-SEC-01/02 cerrados. La autorizacion B requiere confirmacion especifica
+del paciente. Incorporacion externa pendiente de privacidad minima, contacto
+compatible y acompanamiento. DEM-SEC-02 cerrado; no validacion integral ni
+habilitacion real. La presentacion interna puede explicar registros ficticios.
 Maximo una correccion funcional en curso; esta entrega documental no agrega fixes y las
 revisiones no escriben en produccion.
 
 | ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
 | --- | --- | --- | --- |
-| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR52 integrado en 637e17c; PR54 integra DEM-SEC-02 en 65aaeb8 con CI/preview del candidato y lecturas oficiales aprobadas | CI de main y cierres documentales se identifican por separado; DEM-SEC-01 y tareas humanas mantienen el piloto abierto |
-| DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; envio bloqueado por DEM-SEC-01; DEM-SEC-02 cerrado |
+| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR56 integrado en 199e1ae, CI candidato/preview/revision y CI main 36818824045 PASS; migracion y despliegue/alias oficiales contrastados | Tareas humanas mantienen el piloto abierto; cierre documental separado |
+| DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; no se envia ninguna invitacion en este cierre |
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
-| DEM-03 / Paciente | Bloqueado | Lecturas oficiales 29/09 y reconfirmacion 30/09: 30/20/10, sin grant B ni escrituras. DEM-SEC-01 paciente confirmado independientemente 4/4; medico inactivo es observacion de politica | Permiso B no renovado; correccion compartida sin retirar comprobantes propios |
+| DEM-03 / Paciente | Validacion de ciclo | Lectura oficial 01/10 tras migracion/actualizacion: 30/20/10, comprobante 3150a49a conservado, sin grant B ni escrituras | Confirmacion especifica para renovar B; revision 1 g con operador. Medico inactivo sigue como politica separada |
 | DEM-04 / Dispensario | Validacion | Nuevos commerce API 5/5, SQL y browser ambos roles/cinco anchos PASS. Recepcion atomica/replay/rollback/privacidad. B y Browns conservan evidencia publicada anterior | Recorrido actual ambos roles, stock actual, revision 1 g; no entrega nueva ni integracion comercial->entrega repetida |
-| DEM-05 / Seguridad | Bloqueado por DEM-SEC-01 | Paciente 4/4 contrastado por fixture independiente, 35 hashes iguales. DEM-SEC-02 cerrado por PR54 y comprobacion oficial de retirada | Fix P1 paciente preservando recibos propios/historial operativo; carreras PG, politica doctor-active y DEM-LEG-01 separados |
+| DEM-05 / Seguridad | Bloqueos DEM-SEC-01/02 cerrados | PR56 preserva recibos propios y retira proyeccion compartida no autorizada; fuentes/ACLs instaladas, CI main y lecturas contrastados | Carreras PG revocacion/cuarentena/retirada frente a entrega pendientes, politica doctor-active y DEM-LEG-01 separados. No se declara exposicion de datos reales ni habilitacion |
 | DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
 | DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
 | DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
-| DEM-SEC-01 / coordinador + seis agentes | En curso, publicacion bloqueada | Base 8039377; regresion permanente 19/19 PASS, baseline con 5 negativos; recibos propios y politicas medicas conservados | Revision/CI/preview y PostgreSQL independiente; renovar CLI, revisar historial, respaldo restaurable y migracion exclusiva antes de cerrar |
+| DEM-SEC-01 / coordinador + seis agentes | Cerrado, publicado | PR56 / 199e1ae; 19/19, cinco negativos baseline, PostgreSQL independiente, CI/preview/revision exacta y CI main PASS. Respaldo restaurado, migracion exclusiva, fuentes/ACLs y lectura paciente comprobados | No aprueba autonomia, telefono real ni incorporacion externa; carreras y politica medica siguen separadas |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
 
 ### Recuperacion de CI: primera entrega del sprint 1
