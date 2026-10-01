@@ -1,0 +1,10 @@
+PASS: four patient lifecycle changes committed on independent PostgreSQL connections withdraw shared data while preserving own receipts and all operational rows.
+PASS: grant-manager-control-first; independent backend wait observed, prior receipt preserved, new receipts=0, stock=99500 mg, used=500 mg.
+PASS: grant-manager-delivery-first; independent backend wait observed, prior receipt preserved, new receipts=1, stock=98500 mg, used=1500 mg.
+PASS: grant-operator-control-first; independent backend wait observed, prior receipt preserved, new receipts=0, stock=99500 mg, used=500 mg.
+PASS: grant-operator-delivery-first; independent backend wait observed, prior receipt preserved, new receipts=1, stock=98500 mg, used=1500 mg.
+PASS: removal-control-first; independent backend wait observed, prior receipt preserved, new receipts=0, stock=99500 mg, used=500 mg.
+PASS: removal-delivery-first; independent backend wait observed, prior receipt preserved, new receipts=1, stock=98500 mg, used=1500 mg.
+PASS: blocked-lot-control-first; independent backend wait observed, prior receipt preserved, new receipts=0, stock=99500 mg, used=500 mg.
+PASS: blocked-lot-delivery-first; independent backend wait observed, prior receipt preserved, new receipts=1, stock=98500 mg, used=1500 mg.
+PASS: independent PostgreSQL sessions validate pilot, commerce, onboarding acceptance/approval/cancellation, idempotency and response loss. Dedicated test DB retained.

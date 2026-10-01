@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { invitationInput, acceptanceInput } from './team-fixtures.mjs';
+import { runDispensingAccessRaces } from './dispensing-access-races.mjs';
 import assert from 'node:assert/strict';
 
 // Deliberately refuses hosted databases and requires an empty, dedicated local database.
@@ -22,7 +23,7 @@ if (process.env.PILOT_TEST_USE_LOCAL_SOCKET === 'true') {
   connectionEnv.PGHOST = '/var/run/postgresql';
 }
 const sql = (text, application = 'pilot-setup') => new Promise((resolve, reject) => {
-  const child = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
+  const child = spawn(process.env.PSQL_BIN ?? 'psql', ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose'], {
     env: { ...process.env, ...connectionEnv, PGAPPNAME: application, PGOPTIONS: '-c statement_timeout=20000 -c lock_timeout=15000' }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
   });
   let out = '', err = ''; child.stdout.on('data', b => { out += b; }); child.stderr.on('data', b => { err += b; });
@@ -226,4 +227,5 @@ for (const change of ["state='suspended'", "state='revoked'", "state='expired'",
 }
 assert.ok((await sharedRead()).treatments.some(t => t.treatment_ref===treatment2));
 console.log('PASS: four patient lifecycle changes committed on independent PostgreSQL connections withdraw shared data while preserving own receipts and all operational rows.');
+await runDispensingAccessRaces({ sql, command, mutation, agenda, teamCommand, connectionEnv });
 console.log('PASS: independent PostgreSQL sessions validate pilot, commerce, onboarding acceptance/approval/cancellation, idempotency and response loss. Dedicated test DB retained.');
