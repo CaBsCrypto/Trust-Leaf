@@ -1,5 +1,20 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Ciclo paciente y operador (01/10/2026)
+
+PR57 documental integrado en 95a1b2b: CI candidato y main 36820406618 PASS,
+publicacion/alias oficiales contrastados; codigo funcional sin cambios respecto
+a PR56 / 199e1ae. Paciente autoriza explicitamente B por 24 horas, vigencia
+hasta 02/10 02:33 Santiago persistente tras recarga. Operador B comprueba saldo
+30/20/10, revision 1 g con saldo hipotetico 9 g sin confirmar, cancelacion de
+descarte y retorno con busqueda conservada. Inventario 60 g y comprobante 3150a49a
+coincidente; filtros, Gestion por rol y recarga comprobados tecnicamente.
+[Evidencia, contraste de fecha y pendientes](evidence/patient-dispensary-cycle-20261001/README.md).
+Unica escritura de negocio: permiso B. Encargado actual, autonomia, teclado y
+celular fisico siguen pendientes. Selector de fecha externo no se declara
+resuelto por usar el control accesible. No habilita incorporacion sin privacidad
+minima ni actividad clinica/comercial real. Browns y borrador mensual intactos.
+
 ## Publicacion de lectura compartida (01/10/2026)
 
 DEM-SEC-01 integrado por [PR56](https://github.com/CaBsCrypto/Trust-Leaf/pull/56),
