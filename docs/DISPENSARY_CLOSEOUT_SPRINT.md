@@ -6,6 +6,24 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
+Actualizacion de ciclo 01/10 02:33-02:43 Santiago: usuario confirma permiso B por
+24 horas para 4119236d; guardado y recarga paciente muestran vigencia hasta 02/10
+02:33. Operador oficial: busqueda, saldo 30/20/10, revision 1 g sin confirmacion,
+saldo hipotetico 9 g, descarte cancelado, retorno, Inventario 60 g y recibo
+3150a49a coincidente. Filtros/limpieza, Gestion segun rol y recarga contrastados.
+Fecha funciona por control accesible; selector nativo externo sigue pendiente.
+PR57 integrado en 95a1b2b, solo documental; CI main 36820406618 PASS y despliegue/
+alias oficiales comprobados. [Evidencia del ciclo y limites](evidence/patient-dispensary-cycle-20261001/README.md).
+Actualizacion encargado B 01/10 03:41-03:47 Santiago: identidad/rol, saldo
+30/20/10, revision 1 g/9 g hipoteticos sin entrega, descarte cancelado y busqueda
+conservada comprobados. Inventario 60 g y comprobante 3150a49a persisten tras
+recarga. Recepcion/ajuste abren inicialmente plegados sin guardar; Catalogo,
+Proveedores, Recepciones y Equipo consultados sin cambios. Admin 03:51-03:54:
+identidad/recarga, organizaciones separadas, membresias B y estados de invitaciones/
+solicitudes comprobados; Browns Aprobada, sin decidir ni enviar. Pendientes humanos: autonomia, teclado/celular fisico,
+selector nativo externo y privacidad previa a incorporar. Unica escritura de
+negocio en el ciclo completo: permiso B; ninguna en el recorrido encargado.
+
 Actualizacion 01/10: PR56 integra DEM-SEC-01 en `199e1ae`, arbol identico al
 candidato dfca5ad revisado independientemente, CI 36817670803 PASS y preview
 aprobada. Migracion exclusiva aplicada tras revisar historial/hash y restaurar
@@ -57,8 +75,8 @@ su integracion y checks del ultimo head se consultan en
 
 [Guion, ocho misiones, sprints y limites](DEMO_ADOPTION_RUNBOOK.md).
 Decision de corte: LISTO CON LIMITACIONES para retomar el ciclo acompanado,
-DEM-SEC-01/02 cerrados. La autorizacion B requiere confirmacion especifica
-del paciente. Incorporacion externa pendiente de privacidad minima, contacto
+DEM-SEC-01/02 cerrados. La autorizacion B fue confirmada y persiste hasta 02/10
+02:33; no se renueva automaticamente. Incorporacion externa pendiente de privacidad minima, contacto
 compatible y acompanamiento. DEM-SEC-02 cerrado; no validacion integral ni
 habilitacion real. La presentacion interna puede explicar registros ficticios.
 Maximo una correccion funcional en curso; esta entrega documental no agrega fixes y las
@@ -67,10 +85,10 @@ revisiones no escriben en produccion.
 | ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
 | --- | --- | --- | --- |
 | DEM-00 / coordinador + calidad | Cerrado, base revisada | PR56 integrado en 199e1ae, CI candidato/preview/revision y CI main 36818824045 PASS; migracion y despliegue/alias oficiales contrastados | Tareas humanas mantienen el piloto abierto; cierre documental separado |
-| DEM-01 / Admin-incorporacion | Revision tecnica aprobada | Admin oficial 29/09 conserva identidad y organizaciones. Nuevos 19/19 casos aislados: enlaces/identidad, versiones, rollback de aprobacion y bloqueo de conversion por vias antiguas | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; no se envia ninguna invitacion en este cierre |
+| DEM-01 / Admin-incorporacion | Lecturas publicadas comprobadas, alta externa pendiente | Admin oficial 01/10: identidad/recarga, organizaciones A/B/Browns separadas, membresias B, invitacion pendiente y aceptada, solicitud Browns aprobada leidas sin cambios. Casos aislados 19/19 reutilizados: enlaces/identidad, versiones, rollback y bloqueo de conversion antigua | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; lectura de aprobacion no sustituye acceso efectivo; no se envia ninguna invitacion en este cierre |
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
-| DEM-03 / Paciente | Validacion de ciclo | Lectura oficial 01/10 tras migracion/actualizacion: 30/20/10, comprobante 3150a49a conservado, sin grant B ni escrituras | Confirmacion especifica para renovar B; revision 1 g con operador. Medico inactivo sigue como politica separada |
-| DEM-04 / Dispensario | Validacion | Nuevos commerce API 5/5, SQL y browser ambos roles/cinco anchos PASS. Recepcion atomica/replay/rollback/privacidad. B y Browns conservan evidencia publicada anterior | Recorrido actual ambos roles, stock actual, revision 1 g; no entrega nueva ni integracion comercial->entrega repetida |
+| DEM-03 / Paciente | Recorrido tecnico aprobado, humano pendiente | 01/10: consentimiento B, permiso hasta 02/10 02:33 persistente tras recarga; 30/20/10 y recibo 3150a49a coinciden con operador | Autonomia/teclado fisico; medico inactivo sigue como politica separada |
+| DEM-04 / Dispensario | Ambos roles comprobados tecnicamente, humano pendiente | 01/10 operador y encargado B: revision 1 g/9 g hipoteticos sin entrega, descarte/retorno, 60 g stock, recibo, filtros, Gestion segun rol y recarga; encargado abre recepcion/ajuste sin guardar y consulta Equipo; regresiones anteriores conservadas | Tareas humanas en computador/celular real, teclado y selector nativo externo; no integracion comercial->entrega repetida |
 | DEM-05 / Seguridad | Bloqueos DEM-SEC-01/02 cerrados | PR56 preserva recibos propios y retira proyeccion compartida no autorizada; fuentes/ACLs instaladas, CI main y lecturas contrastados | Carreras PG revocacion/cuarentena/retirada frente a entrega pendientes, politica doctor-active y DEM-LEG-01 separados. No se declara exposicion de datos reales ni habilitacion |
 | DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
