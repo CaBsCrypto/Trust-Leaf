@@ -6,6 +6,17 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
+Actualizacion 01/10, sprint de concurrencia desde main 2071c40: PR58 integrado,
+CI main 36828485700 PASS, despliegue documentado separado del candidato.
+Tres suites completas locales PostgreSQL independiente PASS; ocho carreras
+nuevas en ambos ordenes, incluyendo comprobante previo, journal/audit, versiones,
+stock/cupo y limpieza del operador retirado. Sin defecto del producto reproducido
+ni cambios funcionales. Entrega de pruebas en Validacion hasta revision y checks
+del ultimo candidato; CI PG17 no se sustituye por el resultado local PG18.
+[Evidencia y limites](evidence/dispensing-access-concurrency/README.md).
+No se escribe en B/Browns ni se renueva permiso. Privacidad/Meet, contacto y
+tareas humanas siguen como siguientes puertas; no habilita incorporacion por si sola.
+
 Actualizacion de ciclo 01/10 02:33-02:43 Santiago: usuario confirma permiso B por
 24 horas para 4119236d; guardado y recarga paciente muestran vigencia hasta 02/10
 02:33. Operador oficial: busqueda, saldo 30/20/10, revision 1 g sin confirmacion,
@@ -89,12 +100,13 @@ revisiones no escriben en produccion.
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
 | DEM-03 / Paciente | Recorrido tecnico aprobado, humano pendiente | 01/10: consentimiento B, permiso hasta 02/10 02:33 persistente tras recarga; 30/20/10 y recibo 3150a49a coinciden con operador | Autonomia/teclado fisico; medico inactivo sigue como politica separada |
 | DEM-04 / Dispensario | Ambos roles comprobados tecnicamente, humano pendiente | 01/10 operador y encargado B: revision 1 g/9 g hipoteticos sin entrega, descarte/retorno, 60 g stock, recibo, filtros, Gestion segun rol y recarga; encargado abre recepcion/ajuste sin guardar y consulta Equipo; regresiones anteriores conservadas | Tareas humanas en computador/celular real, teclado y selector nativo externo; no integracion comercial->entrega repetida |
-| DEM-05 / Seguridad | Bloqueos DEM-SEC-01/02 cerrados | PR56 preserva recibos propios y retira proyeccion compartida no autorizada; fuentes/ACLs instaladas, CI main y lecturas contrastados | Carreras PG revocacion/cuarentena/retirada frente a entrega pendientes, politica doctor-active y DEM-LEG-01 separados. No se declara exposicion de datos reales ni habilitacion |
+| DEM-05 / Seguridad | Bloqueos DEM-SEC-01/02 cerrados; concurrencia local aprobada | PR56 preserva recibos propios y retira proyeccion compartida no autorizada; ocho carreras de permiso/retirada/bloqueo frente a entrega, tres suites PostgreSQL independientes PASS | Revision y CI/preview del candidato de pruebas; politica doctor-active y DEM-LEG-01 separados. No se declara exposicion de datos reales ni habilitacion |
 | DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
 | DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
 | DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
+| DEM-CON-01 / coordinador + seis agentes | Validacion local aprobada; integracion consultable en PR59 | Ocho precedencias de entrega/revoke-grant, retirada y bloqueo; tres suites independientes PG18/Node22 PASS, recibos previos/replay conservados, cero cambios de producto o produccion | [Revision y checks del ultimo candidato](https://github.com/CaBsCrypto/Trust-Leaf/pull/59), incluido PostgreSQL17; no sustituye evaluacion humana ni privacidad minima |
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
 | DEM-SEC-01 / coordinador + seis agentes | Cerrado, publicado | PR56 / 199e1ae; 19/19, cinco negativos baseline, PostgreSQL independiente, CI/preview/revision exacta y CI main PASS. Respaldo restaurado, migracion exclusiva, fuentes/ACLs y lectura paciente comprobados | No aprueba autonomia, telefono real ni incorporacion externa; carreras y politica medica siguen separadas |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |

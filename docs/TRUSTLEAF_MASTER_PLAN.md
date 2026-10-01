@@ -1,5 +1,20 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Seguridad de entregas concurrentes (01/10/2026)
+
+Desde main `2071c40` (PR58 integrado, CI main 36828485700 PASS), nueva entrega
+exclusivamente de pruebas/documentacion. Ocho carreras de revoke-grant,
+retirada de operador y bloqueo del lote frente a entrega: ambas precedencias,
+encargado/operador para permiso, recibo previo conservado, rechazo sin descuento
+y replay sin duplicados. Tres suites completas en PostgreSQL local independiente
+PASS; tipos/build y regresiones de medico, paciente, comercio e incorporacion PASS.
+Sin defecto funcional reproducido, cambios de producto ni escrituras publicadas.
+Revision y CI/preview del ultimo candidato pendientes antes de integrar.
+[Metodo, resultados y limites](evidence/dispensing-access-concurrency/README.md).
+No cierra autonomia/celular real, privacidad previa a invitar, politica medica ni
+legado. Proxima puerta: revisar privacidad minima/Meet y preparar la evaluacion
+humana; primera incorporacion externa solo con destinatario y acompanamiento.
+
 ## Ciclo paciente y dispensario (01/10/2026)
 
 PR57 documental integrado en 95a1b2b: CI candidato y main 36820406618 PASS,
