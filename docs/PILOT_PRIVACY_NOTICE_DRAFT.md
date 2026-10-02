@@ -6,12 +6,21 @@ aceptada por ningun usuario. No sustituye una revision juridica.
 
 ## 1. Responsable y contacto
 
-- Responsable del tratamiento: [PENDIENTE DE DEFINICION POR EL PO Y REVISION].
+- Responsable del tratamiento propuesto: fundador / Product Owner de Trust
+  Leaf, quien indica operar solo (propuesta del 01/10/2026). Identificacion
+  formal y revision profesional: [PENDIENTES]. No se ha informado una razon
+  social; no inventar una ni dar por determinada la forma juridica del responsable.
 - Identificacion y domicilio del responsable: [PENDIENTE].
-- Canal para consultas y solicitudes sobre datos: [PENDIENTE DE DESIGNAR Y PROBAR].
-- Persona responsable de atender solicitudes e incidentes: [PENDIENTE].
+- Canal propuesto para consultas, solicitudes e incidentes:
+  `admin@trustleaf.org`. Recepcion, respuesta, acceso seguro y seguimiento:
+  [PENDIENTES DE PROBAR Y APROBAR]. No se ha enviado un correo de prueba.
+- Persona propuesta para atender solicitudes e incidentes: fundador / PO.
+  Disponibilidad y reemplazo: [PENDIENTES].
 
 No usar automaticamente el remitente de invitaciones como canal de privacidad.
+Este canal es una propuesta explicita del PO, no una inferencia del remitente.
+Una cuenta Privy Admin con ese correo no demuestra acceso al buzon ni atencion
+de solicitudes. No se crea otro correo ni se configura reenvio en esta entrega.
 Estos campos deben completarse y aprobarse antes de publicar el aviso o invitar
 a participantes externos. No ofrecer un canal que nadie atienda.
 

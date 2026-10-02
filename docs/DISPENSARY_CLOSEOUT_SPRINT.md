@@ -6,11 +6,20 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
-Actualizacion de correcciones: PR60 integrado en `9657c63`, CI main 36949993027
-PASS. `fix/bootstrap-safe-diagnostics` aborda exclusivamente DEM-PRIV-04;
-marcador baseline FALLA / candidato PASS, log limitado y respuestas conservadas.
-[Metodo y limites](evidence/bootstrap-safe-diagnostics/README.md). Integracion y
-publicacion requieren revision/checks del ultimo candidato, no solo CI de base.
+Actualizacion de contacto propuesto (01/10): PO indica fundador individual y
+`admin@trustleaf.org` como canal. [Aviso interno](PILOT_PRIVACY_NOTICE_DRAFT.md)
+y [procedimiento](PILOT_PRIVACY_PROCEDURE.md) registran la propuesta, no su
+aprobacion/activacion. Identificacion, buzon probado, disponibilidad, reemplazo,
+conservacion y condiciones profesionales/proveedores siguen pendientes.
+
+Actualizacion de correcciones: PR61 integrado en `a2bf39d`, candidato `33029aa`
+con revision independiente, CI 36955239595 y preview Ready; CI main 36955898544
+PASS. Deployment6799885477 success / Vercel `dpl_4xYXuytg4hwLicBsbG8Y7PuiFNsN`
+Ready, aliases oficiales comprobados. DEM-PRIV-04 del store cerrado: marcador
+baseline FALLA / candidato PASS, log limitado y respuestas conservadas.
+[Metodo y limites](evidence/bootstrap-safe-diagnostics/README.md). GET oficiales
+anonimos: cuatro pantallas200 HTML, operaciones/incorporacion401 con no-store,
+private; no acreditan recorridos autenticados o autonomia humana.
 DEM-PRIV-03/05, investigacion de revocacion/503 y privacidad operativa separados.
 
 Actualizacion privacidad 01/10: main `86e2016`, PR59 integrado, CI main
@@ -130,10 +139,10 @@ revisiones no escriben en produccion.
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
 | DEM-SEC-01 / coordinador + seis agentes | Cerrado, publicado | PR56 / 199e1ae; 19/19, cinco negativos baseline, PostgreSQL independiente, CI/preview/revision exacta y CI main PASS. Respaldo restaurado, migracion exclusiva, fuentes/ACLs y lectura paciente comprobados | No aprueba autonomia, telefono real ni incorporacion externa; carreras y politica medica siguen separadas |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
-| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos | Inventario y borrador de aviso sin responsable/canal/plazos/condiciones aprobadas; Footer sin aviso operativo | Definir y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
+| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos; responsable/canal propuestos | PO propone fundador individual y admin@trustleaf.org; identificacion, buzon probado, disponibilidad/reemplazo, plazos y condiciones no aprobados. Footer sin aviso operativo | Completar y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
 | DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
 | DEM-PRIV-03 / Seguridad | Preparado, P2 diagnostico | Parser Express aislado production registra fragmento JSON sintetico en stderr, respuesta400 no lo refleja; no prueba de fuga hosted | Rama fix separada, error seguro previo al handler/logs; no tocar producto en auditoria |
-| DEM-PRIV-04 / Seguridad | Validacion de correccion, P2 diagnostico | fix/bootstrap-safe-diagnostics desde9657c63: allowlist exacta y mismo marcador ahoraPASS, cliente y categorias conservados; nueva regresion CI | Revision/checks candidato y correspondencia publicada antes de cerrar; no se ejecuta bootstrap real ni se inspeccionan logs privados |
+| DEM-PRIV-04 / Seguridad | Cerrado tecnicamente, store publicado | PR61 / a2bf39d; 58/58, revision independiente, CI candidato36955239595 y main36955898544 PASS, preview/produccion Ready con aliases. Allowlist exacta, respuestas y categorias intactas | No se ejecuta bootstrap real ni se inspeccionan logs privados; no cierra PRIV07 del handler ni privacidad operativa |
 | DEM-PRIV-05 / calidad + Admin | Preparado, P2 funcional | Dos reproducciones: JSON invalido de SQL/Privy devuelve400 en onboarding; expectativa503 falla sin exposicion de payload | Rama fix independiente para distinguir input de fallo upstream; reproduccion negativa fuera del suite verde, no cierre por tests privacidad |
 | DEM-PRIV-06 / Paciente + seguridad | Preparado, P2 privacidad UI; reproducido en aislamiento | 12 casos encargado/operador 390/1440: revocar permiso/tratamiento/actor y fallar GET503 conserva proyeccion previa y Permiso vigente; 3 controles PASS. Cero POST, SQL deniega y no cambia filas; GET200/401/403 limpia | Definir retiro de proyeccion sensible ante lectura incierta y regresion en rama propia; conservar historial propio permitido y borradores no sensibles. No es nueva lectura SQL ajena ni exposicion publicada demostrada |
 | DEM-PRIV-07 / Seguridad + Admin | Preparado, P2 condicionado; entrada sintetica reproducida | Export real readiness con verificador real/reader sintetico: string/objeto/array en code alcanza log y HTTP503; cero red/store. No se ha constatado procedencia de ese error del SDK real | Acotar categorias en PR separado y revisar procedencia SDK; DEM-PRIV-04 solo sanea diagnostico del store |

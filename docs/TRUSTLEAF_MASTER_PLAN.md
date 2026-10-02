@@ -1,16 +1,30 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Responsable y canal: propuesta interna
+
+El PO propone operar como fundador individual y atender solicitudes/incidentes
+en `admin@trustleaf.org`. [Borrador](PILOT_PRIVACY_NOTICE_DRAFT.md) y
+[procedimiento](PILOT_PRIVACY_PROCEDURE.md) conservan estado interno, no aprobado
+ni activado. Faltan identificacion formal, prueba de recepcion/respuesta y
+acceso seguro, disponibilidad/reemplazo, conservacion y revision profesional.
+No se crea otro correo, no se prueba con contactos reales y no se publica un aviso.
+Invitaciones externas pausadas hasta aprobar las puertas del tablero.
+
 ## Correcciones de privacidad: primera entrega
 
-Desde `9657c63` (PR60 integrado, CI main 36949993027 PASS), rama
-`fix/bootstrap-safe-diagnostics`: corregir solo DEM-PRIV-04, codigo upstream
-sin acotar en logs. Reproduccion negativa antes / PASS despues; allowlist de
-codigos conocidos, sin cambiar identidad, roles o respuestas.
+PR61 integrado en `a2bf39d`, CI main 36955898544 PASS. Candidato `33029aa` desde
+base `9657c63`, revision independiente, 58/58 diagnosticos, CI 36955239595 PASS
+y preview Ready. Produccion6799885477 success y Vercel
+`dpl_4xYXuytg4hwLicBsbG8Y7PuiFNsN` Ready, aliases oficiales comprobados.
+DEM-PRIV-04 del store cerrado: reproduccion negativa antes / PASS despues;
+allowlist de codigos conocidos, sin cambiar identidad, roles o respuestas.
 [Evidencia](evidence/bootstrap-safe-diagnostics/README.md) y
 [tablero unico](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
-Revision, CI y preview del candidato previos a integrar. No se realiza bootstrap
-publicado ni se modifican B/Browns. Parser/JSON upstream y privacidad operativa
-siguen en entregas separadas; invitaciones externas permanecen pausadas.
+GET oficiales anonimos de cuatro pantallas200 y dos APIs privadas401/no-store,
+private. No acreditan uso autenticado ni autonomia; no se realiza bootstrap
+publicado ni se modifican B/Browns. Parser/JSON upstream, retencion tras fallo
+de lectura y riesgo condicionado del handler siguen separados. Privacidad
+operativa pendiente; invitaciones externas permanecen pausadas.
 
 ## Privacidad y demo sin llamadas (01/10/2026)
 
