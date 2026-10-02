@@ -448,7 +448,7 @@ try {
   await recover.route('**/api/operations-pilot', route => route.request().method() === 'GET'
     ? route.fulfill({ status: 503, json: {} }) : route.continue());
   await refresh(recover);
-  const readFailureAlert = recover.getByRole('alert').filter({ hasText: /^No fue posible confirmar la operacion\. Puedes reintentar\.$/ });
+  const readFailureAlert = recover.getByRole('alert').filter({ hasText: /^No se pudieron actualizar los datos\. Actualiza para continuar\.$/ });
   await readFailureAlert.waitFor();
   await recover.unroute('**/api/operations-pilot');
   await recover.evaluate(() => window.dispatchEvent(new Event('online')));

@@ -40,6 +40,11 @@ native JSON or transport exception.
   40 effects in its synthetic journal; these are not published movements.
 - SQL shared-read regression 19/19, operations 8/8, team and onboarding suites,
   commerce contracts, types and product build PASS.
+- First candidate CI passed types, isolated SQL, independent PostgreSQL
+  connections, PostgREST and both builds, then found an obsolete GET error-text
+  assertion in the existing operations browser suite. Only that expectation was
+  updated; the complete SQL-backed browser journey subsequently passed locally.
+  Latest-candidate CI is still required; the failed run is not an approval.
 
 The permanent runner owns and closes its loopback Vite server, browser and
 PGlite database. No real auth SDK is mounted. All API requests are intercepted,
