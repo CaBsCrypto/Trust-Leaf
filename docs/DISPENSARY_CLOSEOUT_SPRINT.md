@@ -6,22 +6,39 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
+Actualizacion de responsable propuesto (02/10): PO prefiere una empresa asociada
+a `browns.studio`, sin constitucion, razon social ni representacion confirmadas;
+mantiene `admin@trustleaf.org` como canal propuesto. [Aviso interno](PILOT_PRIVACY_NOTICE_DRAFT.md)
+y [procedimiento](PILOT_PRIVACY_PROCEDURE.md) registran la propuesta, no su
+aprobacion/activacion. Identificacion, buzon probado, disponibilidad, reemplazo,
+conservacion y condiciones profesionales/proveedores siguen pendientes.
+
+Actualizacion de correcciones: PR61 integrado en `a2bf39d`, candidato `33029aa`
+con revision independiente, CI 36955239595 y preview Ready; CI main 36955898544
+PASS. Deployment6799885477 success / Vercel `dpl_4xYXuytg4hwLicBsbG8Y7PuiFNsN`
+Ready, aliases oficiales comprobados. DEM-PRIV-04 del store cerrado: marcador
+baseline FALLA / candidato PASS, log limitado y respuestas conservadas.
+[Metodo y limites](evidence/bootstrap-safe-diagnostics/README.md). GET oficiales
+anonimos: cuatro pantallas200 HTML, operaciones/incorporacion401 con no-store,
+private; no acreditan recorridos autenticados o autonomia humana.
 Actualizacion 02/10: PR65 integrado en `063e406`, CI candidato36968164236 y
 main36968901251 PASS, preview Ready; production6801956660 success y aliases
 oficiales verificados. DEM-PRIV-07 cerrado tecnicamente, sin bootstrap real.
-Cuarta correccion activa `fix/onboarding-upstream-errors`: baseline 11 PASS/5
-negativos, candidato16/16 PASS, recorrido browser400/503 y SQL aislado PASS,
-tipos/build PASS; revision/CI/preview/publicacion pendientes antes de cerrar.
+Cuarta correccion PR66 integrada en `3243904`, candidato271579c con revision,
+CI36970170432 PASS y preview Ready: baseline 11 PASS/5 negativos, candidato16/16,
+recorrido browser400/503, SQL, concurrencia, tipos/build y regresiones PASS.
+Production6802267349 success vincula3243904 a Vercel dpl_7jwWjtx5ZTBF6gkhKKgLEHQtbG3P
+Ready, aliases oficiales verificados; cuatro pantallas200 y APIs privadas401
+con no-store/private. CI main36970907192 PASS comprobado, independiente
+del candidato. DEM-PRIV-05 cerrado tecnicamente/publicado; sin viaje autenticado
+nuevo, bootstrap ni escrituras publicadas. [Registro](evidence/onboarding-upstream-errors/README.md#current-correction-release).
 [Metodo, publicacion previa y limites](evidence/onboarding-upstream-errors/README.md).
 PR62 sigue borrador. Responsable formal, buzon, conservacion, condiciones de
 proveedores, aprobacion del aviso y tareas humanas no quedan resueltos por fixes.
 
-Actualizacion de correcciones: PR60 integrado en `9657c63`, CI main 36949993027
-PASS. `fix/bootstrap-safe-diagnostics` aborda exclusivamente DEM-PRIV-04;
-marcador baseline FALLA / candidato PASS, log limitado y respuestas conservadas.
-[Metodo y limites](evidence/bootstrap-safe-diagnostics/README.md). Integracion y
-publicacion requieren revision/checks del ultimo candidato, no solo CI de base.
-DEM-PRIV-03/05, investigacion de revocacion/503 y privacidad operativa separados.
+Los cortes fechados anteriores conservan su estado historico. El tablero actual
+no mantiene las correcciones ya integradas como trabajo activo. Privacidad
+operativa y tareas humanas siguen pendientes, sin invitaciones externas.
 
 Actualizacion privacidad 01/10: main `86e2016`, PR59 integrado, CI main
 36941802547 PASS (PG17), deployment 6797663287 success y alias Vercel oficiales
@@ -125,13 +142,13 @@ revisiones no escriben en produccion.
 
 | ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
 | --- | --- | --- | --- |
-| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR59 integrado en 86e2016, CI main 36941802547 PASS; deployment 6797663287/Vercel Ready y alias oficiales contrastados. PR59 solo pruebas/documentacion | Candidato de privacidad requiere sus propios checks; no hereda aprobacion del main; tareas humanas mantienen piloto abierto |
+| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR66 integrado3243904; candidato271579c, revision, CI36970170432 PASS/preview Ready; production6802267349/Vercel Ready y aliases verificados. PR61/63/64/65 separados e integrados | CI main36970907192 PASS comprobado por separado. Tareas humanas y privacidad operativa mantienen piloto abierto |
 | DEM-01 / Admin-incorporacion | Lecturas publicadas comprobadas, alta externa pendiente | Admin oficial 01/10: identidad/recarga, organizaciones A/B/Browns separadas, membresias B, invitacion pendiente y aceptada, solicitud Browns aprobada leidas sin cambios. Casos aislados 19/19 reutilizados: enlaces/identidad, versiones, rollback y bloqueo de conversion antigua | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; lectura de aprobacion no sustituye acceso efectivo; no se envia ninguna invitacion en este cierre |
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
 | DEM-03 / Paciente | Recorrido tecnico aprobado, humano pendiente | 01/10: consentimiento B, permiso hasta 02/10 02:33 persistente tras recarga; 30/20/10 y recibo 3150a49a coinciden con operador | Autonomia/teclado fisico; medico inactivo sigue como politica separada |
 | DEM-04 / Dispensario | Ambos roles comprobados tecnicamente, humano pendiente | 01/10 operador y encargado B: revision 1 g/9 g hipoteticos sin entrega, descarte/retorno, 60 g stock, recibo, filtros, Gestion segun rol y recarga; encargado abre recepcion/ajuste sin guardar y consulta Equipo; regresiones anteriores conservadas | Tareas humanas en computador/celular real, teclado y selector nativo externo; no integracion comercial->entrega repetida |
-| DEM-05 / Seguridad | DEM-SEC-01/02 y concurrencia cerrados tecnicamente | PR56 preserva recibos propios y retira proyeccion no autorizada; PR59 ocho carreras ambos ordenes, PG18 local y PG17 CI PASS | Diagnosticos DEM-PRIV-03/04/07 y retencion UI DEM-PRIV-06 separados; doctor-active y DEM-LEG-01 pendientes. Sin exposicion real declarada |
-| DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
+| DEM-05 / Seguridad | Bloqueos tecnicos acotados cerrados | PR56/59 permisos/concurrencia, PR61/63/64/65/66 diagnosticos, retirada de lectura incierta y JSON upstream revisados/publicados; escenarios/versiones separados en evidencia | doctor-active, DEM-LEG-01 y privacidad operativa pendientes; no se afirma saneamiento global ni exposicion real |
+| DEM-06 / UX | Validacion humana pendiente | QA ambos roles carga/foco/descarte y cinco anchos; PR63 corrige mensaje de fallo de lectura y retira proyeccion compartida, conserva borradores; candidatoCI PASS | Tareas humanas/teclado real y selector nativo externo pendientes; no acreditar autonomia por agente |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
 | DEM-08 / Regulatorio | Investigacion documental, revision profesional pendiente | Fuentes oficiales 01/10: vigencia general Ley21.719 01/12/2026; expedientes legal/privacidad, no certificacion | Primera demo excluye llamadas/eventos; Meet OPEN sin cambio ni prueba remota. Responsable/contacto, conservacion, contratos y revision juridica/clinica pendientes |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
@@ -140,11 +157,11 @@ revisiones no escriben en produccion.
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
 | DEM-SEC-01 / coordinador + seis agentes | Cerrado, publicado | PR56 / 199e1ae; 19/19, cinco negativos baseline, PostgreSQL independiente, CI/preview/revision exacta y CI main PASS. Respaldo restaurado, migracion exclusiva, fuentes/ACLs y lectura paciente comprobados | No aprueba autonomia, telefono real ni incorporacion externa; carreras y politica medica siguen separadas |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
-| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos | Inventario y borrador de aviso sin responsable/canal/plazos/condiciones aprobadas; Footer sin aviso operativo | Definir y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
+| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos; responsable/canal propuestos | PO prefiere empresa asociada a browns.studio y canal admin@trustleaf.org; constitucion, razon social, representacion, buzon probado, disponibilidad/reemplazo, plazos y condiciones no aprobados. Footer sin aviso operativo | Confirmar entidad, completar y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
 | DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
 | DEM-PRIV-03 / Seguridad | Cerrado tecnicamente e integrado | PR64 bec8edc, revision seguridad/calidad, CI36966407443/preview PASS; merge85b046a, CI main36967159314 PASS, production6801680234 success/aliases verificados. Cinco regresiones de parser y bloqueos heredados PASS | [Publicacion](evidence/bootstrap-handler-safe-errors/README.md#previous-correction-release). Express comprobado en aislamiento; no saneamiento global ni fuga hosted afirmada |
-| DEM-PRIV-04 / Seguridad | Validacion de correccion, P2 diagnostico | fix/bootstrap-safe-diagnostics desde9657c63: allowlist exacta y mismo marcador ahoraPASS, cliente y categorias conservados; nueva regresion CI | Revision/checks candidato y correspondencia publicada antes de cerrar; no se ejecuta bootstrap real ni se inspeccionan logs privados |
-| DEM-PRIV-05 / calidad + Admin | Validacion de correccion, P2 funcional | fix/onboarding-upstream-errors desde063e406: 11 PASS/5 negativos antes, 16/16 despues; SQL/browser400->nuevo ID y503->mismo ID/version2 una vez, tipos/build PASS | Revision, CI/preview del ultimo candidato y publicacion; [evidencia](evidence/onboarding-upstream-errors/README.md). No valida toda forma de JSON upstream ni habilita invitaciones |
+| DEM-PRIV-04 / Seguridad | Cerrado tecnicamente, store publicado | PR61 / a2bf39d; 58/58, revision independiente, CI candidato36955239595 y main36955898544 PASS, preview/produccion Ready con aliases. Allowlist exacta, respuestas y categorias intactas | No se ejecuta bootstrap real ni se inspeccionan logs privados; handler PRIV07 cerrado por separado, privacidad operativa pendiente |
+| DEM-PRIV-05 / calidad + Admin | Cerrado tecnicamente y publicado | PR66 271579c, revision seguridad/Admin/calidad, CI36970170432/preview PASS; merge3243904, CI main36970907192 PASS, production6802267349 success/Ready/aliases contrastados. 16/16 y browser400->nuevo ID /503->mismo ID/version2 una vez | [Evidencia](evidence/onboarding-upstream-errors/README.md). No valida toda forma de JSON upstream ni habilita invitaciones |
 | DEM-PRIV-06 / Paciente + seguridad | Cerrado tecnicamente y publicado | PR63 ea4afdd, revision independiente, CI36964636874 PASS, preview Ready; merge fbee6ea, production6801411840 success, aliases oficiales/asset contrastados. 30 revocaciones ambos roles/cinco anchos, borradores e ID preservados | [Evidencia](evidence/express-safe-json-errors/README.md#previous-correction-release). No autonomia, telefono real, cierre de privacidad externa ni proteccion de intenciones al abandonar Equipo |
 | DEM-PRIV-07 / Seguridad + Admin | Cerrado tecnicamente y publicado | PR65 62fa1c0, revision seguridad/Admin/calidad, CI36968164236/preview PASS; merge063e406, CI main36968901251 PASS, production6801956660 success/aliases verificados. 54/54 export real y 11 pares exactos, cero red/SDK | [Publicacion](evidence/onboarding-upstream-errors/README.md#previous-correction-release). Procedencia SDK real no constatada; sin bootstrap publicado ni cierre de condiciones de privacidad |
 | DEM-QA-02 / medico + calidad | Preparado, fixture | google-calendar-setup.test.ts falla por target de renovacion ausente; otras pruebas Calendar reutilizadas | Revisar/corregir fixture en entrega separada; no modifica Meet ni prueba configuracion remota |

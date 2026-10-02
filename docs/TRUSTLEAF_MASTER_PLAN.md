@@ -1,6 +1,31 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-## Privacidad: categorias publicadas, Incorporaciones en validacion (02/10/2026)
+## Responsable y canal: propuesta interna
+
+El PO prefiere una empresa asociada a `browns.studio` como responsable
+(02/10/2026); constitucion, razon social y representacion no confirmadas.
+Propone atender solicitudes/incidentes en `admin@trustleaf.org`. [Borrador](PILOT_PRIVACY_NOTICE_DRAFT.md) y
+[procedimiento](PILOT_PRIVACY_PROCEDURE.md) conservan estado interno, no aprobado
+ni activado. Faltan identificacion formal, prueba de recepcion/respuesta y
+acceso seguro, disponibilidad/reemplazo, conservacion y revision profesional.
+No se crea otro correo, no se prueba con contactos reales y no se publica un aviso.
+Invitaciones externas pausadas hasta aprobar las puertas del tablero.
+## Privacidad: correcciones integradas (02/10/2026)
+
+PR66 integrado en `3243904`, candidato `271579c` con revision independiente,
+CI36970170432 PASS y preview Ready. DEM-PRIV-05 separa JSON de peticion400 de
+fallo upstream503 y preserva recuperacion explicita con el mismo ID. Tipos,
+compilaciones, SQL, concurrencia y regresiones compartidas de navegador PASS.
+Production6802267349 success asocia3243904 con Vercel
+dpl_7jwWjtx5ZTBF6gkhKKgLEHQtbG3P Ready y aliases oficiales verificados.
+Cuatro pantallas200 y tres APIs privadas401/no-store/private, sin nuevas lecturas
+autenticadas. CI main36970907192 PASS comprobado, distinto del candidato.
+DEM-PRIV-03/04/05/06/07 cerrados tecnicamente en sus alcances, sin afirmar
+saneamiento global ni autonomia. Sin invitaciones, datos o permisos cambiados.
+[Evidencia y limites](evidence/onboarding-upstream-errors/README.md).
+PR62 actualizado documentalmente, conservando propuesta/no aprobacion del aviso.
+
+### Corte historico: categorias publicadas, Incorporaciones en validacion
 
 PR65 `62fa1c0` revisado por seguridad/Admin/calidad, CI36968164236 y preview
 PASS; merge `063e406`, CI main36968901251 PASS, production6801956660 success
@@ -17,7 +42,7 @@ externas pausadas; reunion solo con materiales completamente sinteticos.
 Los cortes anteriores conservan el estado de su fecha; el tablero unico registra
 el resultado vigente, sin convertir prueba local en publicacion.
 
-## Privacidad: parser integrado y handler en validacion (02/10/2026)
+### Corte historico: parser integrado y handler en validacion (02/10/2026)
 
 PR64 `bec8edc` con revision seguridad/calidad, CI `36966407443` y preview PASS,
 integrado en `85b046a`, CI main `36967159314` PASS; production `6801680234`
@@ -30,7 +55,7 @@ Una correccion funcional activa; JSON upstream de incorporacion queda despues.
 PR62 sigue borrador no aprobado ni aviso operativo; condiciones de privacidad,
 identificacion de la empresa propuesta, buzon y pruebas humanas siguen pendientes.
 
-## Privacidad: retirada ante lectura incierta (02/10/2026)
+### Corte historico: retirada ante lectura incierta (02/10/2026)
 
 PR63 integrado y publicado en `fbee6ea`, candidato `ea4afdd` con revision
 independiente, CI `36964636874` PASS y preview Ready; production `6801411840`
@@ -51,17 +76,21 @@ ni publicacion. Siguientes entregas independientes: parser Express, categorias
 del handler bootstrap y JSON upstream de incorporacion. Invitaciones externas
 pausadas; reunion limitada a materiales sinteticos y descubrimiento.
 
-## Correcciones de privacidad: primera entrega
+### Corte historico: primera entrega de privacidad
 
-Desde `9657c63` (PR60 integrado, CI main 36949993027 PASS), rama
-`fix/bootstrap-safe-diagnostics`: corregir solo DEM-PRIV-04, codigo upstream
-sin acotar en logs. Reproduccion negativa antes / PASS despues; allowlist de
-codigos conocidos, sin cambiar identidad, roles o respuestas.
+PR61 integrado en `a2bf39d`, CI main 36955898544 PASS. Candidato `33029aa` desde
+base `9657c63`, revision independiente, 58/58 diagnosticos, CI 36955239595 PASS
+y preview Ready. Produccion6799885477 success y Vercel
+`dpl_4xYXuytg4hwLicBsbG8Y7PuiFNsN` Ready, aliases oficiales comprobados.
+DEM-PRIV-04 del store cerrado: reproduccion negativa antes / PASS despues;
+allowlist de codigos conocidos, sin cambiar identidad, roles o respuestas.
 [Evidencia](evidence/bootstrap-safe-diagnostics/README.md) y
 [tablero unico](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
-Revision, CI y preview del candidato previos a integrar. No se realiza bootstrap
-publicado ni se modifican B/Browns. Parser/JSON upstream y privacidad operativa
-siguen en entregas separadas; invitaciones externas permanecen pausadas.
+GET oficiales anonimos de cuatro pantallas200 y dos APIs privadas401/no-store,
+private. No acreditan uso autenticado ni autonomia; no se realiza bootstrap
+publicado ni se modifican B/Browns. Parser/JSON upstream, retencion tras fallo
+de lectura y riesgo condicionado del handler siguen separados. Privacidad
+operativa pendiente; invitaciones externas permanecen pausadas.
 
 ## Privacidad y demo sin llamadas (01/10/2026)
 

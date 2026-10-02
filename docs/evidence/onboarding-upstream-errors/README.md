@@ -47,5 +47,21 @@ with Vercel `dpl_GTjiZrLTqEobrrP6FYbWiYFuLquC`, Ready and official aliases
 verified. No production bootstrap was invoked. This closes DEM-PRIV-07
 technically, not privacy governance, real-care eligibility or human autonomy.
 
-Release gates for this fourth correction: independent review, latest-candidate
-CI and preview, then merge and separate official deployment/read-only checks.
+## Current correction release
+
+PR66 candidate `271579c31e91c3258bcf20e88f8348422fb9a0d2`: Admin/quality
+independent standalone16/16, scoped security static review, no remaining blockers.
+Full candidate CI `36970170432` PASS (8m36s), including shared browser journeys,
+independent PostgreSQL17, PostgREST and disabled/enabled builds; preview Ready.
+Merge `32439041b51ba38206be72aad32a75c0b286813f`. GitHub production
+`6802267349` success associates that SHA with
+`https://trustleaf-krbeykvev-cabscryptocontacto-6028s-projects.vercel.app`.
+Vercel `dpl_7jwWjtx5ZTBF6gkhKKgLEHQtbG3P` Ready; trustleaf.org and
+www.trustleaf.org aliases verified. Main CI `36970907192` is a distinct run,
+independently confirmed PASS; its result is not inherited from the candidate.
+
+Official anonymous GET checks: four actor pages200; operations, commerce and
+onboarding APIs401 AUTH_REQUIRED with no-store/private. No production bootstrap,
+invalid business payload, invite or stock/clinical write was used for evidence.
+These checks do not establish an authenticated journey or human autonomy.
+Privacy notice remains internal/unapproved; external onboarding stays paused.
