@@ -16,8 +16,12 @@ PR66 integrado en `3243904`, candidato `271579c` con revision independiente,
 CI36970170432 PASS y preview Ready. DEM-PRIV-05 separa JSON de peticion400 de
 fallo upstream503 y preserva recuperacion explicita con el mismo ID. Tipos,
 compilaciones, SQL, concurrencia y regresiones compartidas de navegador PASS.
-CI main36970907192 y despliegue oficial se comprueban por separado; no atribuir
-los checks del candidato al merge. Sin invitaciones, datos o permisos cambiados.
+Production6802267349 success asocia3243904 con Vercel
+dpl_7jwWjtx5ZTBF6gkhKKgLEHQtbG3P Ready y aliases oficiales verificados.
+Cuatro pantallas200 y tres APIs privadas401/no-store/private, sin nuevas lecturas
+autenticadas. CI main36970907192 PASS comprobado, distinto del candidato.
+DEM-PRIV-03/04/05/06/07 cerrados tecnicamente en sus alcances, sin afirmar
+saneamiento global ni autonomia. Sin invitaciones, datos o permisos cambiados.
 [Evidencia y limites](evidence/onboarding-upstream-errors/README.md).
 PR62 actualizado documentalmente, conservando propuesta/no aprobacion del aviso.
 
