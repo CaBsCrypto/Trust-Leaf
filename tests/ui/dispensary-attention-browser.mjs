@@ -104,11 +104,13 @@ try {
     failure = true;
     await page.getByRole('button', {name:'Actualizar datos',exact:true}).click();
     await page.getByRole('alert').waitFor();
-    assert.equal(await page.getByRole('button', {name:'Confirmar entrega',exact:true}).isDisabled(), true);
+    await page.locator('.op-patient').waitFor({state:'hidden'});
+    assert.equal(await page.getByRole('button', {name:'Confirmar entrega',exact:true}).count(), 0);
     failure = false;
     await page.getByRole('button', {name:'Actualizar datos',exact:true}).click();
     await page.getByRole('alert').waitFor({state:'hidden'});
-    assert.equal(await page.getByRole('button', {name:'Confirmar entrega',exact:true}).isEnabled(), true);
+    await page.locator('.op-patient').first().waitFor();
+    assert.equal(await page.getByRole('button', {name:'Confirmar entrega',exact:true}).count(), 0, 'recovery requires explicit patient selection');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({path:`scratch/operations-qa/attention-${role}-${width}.png`,fullPage:true});
     data.grants = [];
