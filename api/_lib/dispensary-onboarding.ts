@@ -122,12 +122,17 @@ export async function dispensaryOnboardingHandler(
   if (!['GET','POST'].includes(req.method ?? '')) return res.status(405).json({ code: 'METHOD_NOT_ALLOWED' });
   const token = req.headers['privy-id-token'];
   if (typeof token !== 'string' || !token.trim()) return res.status(401).json({ code: 'AUTH_REQUIRED' });
+  let command: unknown;
   try {
-    const command: unknown = req.method === 'GET' ? { action: 'list' } : typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    command = req.method === 'GET' ? { action: 'list' } : typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch {
+    return res.status(400).json({ code: 'ONBOARDING_UNAVAILABLE' });
+  }
+  try {
     return res.status(200).json(await executeOnboarding({ token, command, env, verifier }));
   } catch (error) {
-    const e = error as { statusCode?: number; code?: string };
-    const status = error instanceof SyntaxError ? 400 : [400,401,403,409,429].includes(e.statusCode ?? 0) ? e.statusCode! : 503;
+    const e = error && typeof error === 'object' ? error as { statusCode?: number; code?: string } : {};
+    const status = error instanceof SyntaxError ? 503 : [400,401,403,409,429].includes(e.statusCode ?? 0) ? e.statusCode! : 503;
     return res.status(status).json({ code: e.code === 'ONBOARDING_DISABLED' ? e.code : 'ONBOARDING_UNAVAILABLE' });
   }
 }
