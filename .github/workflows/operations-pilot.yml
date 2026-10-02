@@ -55,6 +55,7 @@ jobs:
           npm run lint
           npm run test:privy-supabase-rbac
           node --experimental-strip-types tests/bootstrap-safe-diagnostics.test.ts
+          node --experimental-strip-types tests/bootstrap-handler-safe-errors.test.mjs
           node --experimental-strip-types tests/express-parser-errors.test.ts
           node --experimental-strip-types tests/read-failure-projection.test.ts
           npm run test:legacy-private-route-block
