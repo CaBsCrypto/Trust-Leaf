@@ -6,13 +6,26 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
+Actualizacion privacidad 01/10: main `86e2016`, PR59 integrado, CI main
+36941802547 PASS (PG17), deployment 6797663287 success y alias Vercel oficiales
+comprobados. Auditoria de seis agentes en `audit/pilot-privacy-readiness`.
+Decision PO: primera demo sin videollamada, aviso interno inicialmente borrador.
+[Inventario](PILOT_PRIVACY_READINESS.md), [aviso](PILOT_PRIVACY_NOTICE_DRAFT.md),
+[procedimiento](PILOT_PRIVACY_PROCEDURE.md) y
+[evidencia](evidence/pilot-privacy-readiness/README.md). Ninguna invitacion externa
+habilitada por esta auditoria; faltan responsable, canal, politica de conservacion,
+condiciones de proveedores, revision/aprobacion y publicacion del aviso.
+Diagnosticos con marcadores sinteticos y error upstream reproducidos se separan
+en siguientes ramas fix. No se afirma exposicion real ni se corrige producto aqui.
+Evaluacion humana/teclado fisico sin nueva evidencia permanece pendiente.
+
 Actualizacion 01/10, sprint de concurrencia desde main 2071c40: PR58 integrado,
 CI main 36828485700 PASS, despliegue documentado separado del candidato.
 Tres suites completas locales PostgreSQL independiente PASS; ocho carreras
 nuevas en ambos ordenes, incluyendo comprobante previo, journal/audit, versiones,
 stock/cupo y limpieza del operador retirado. Sin defecto del producto reproducido
-ni cambios funcionales. Entrega de pruebas en Validacion hasta revision y checks
-del ultimo candidato; CI PG17 no se sustituye por el resultado local PG18.
+ni cambios funcionales. Entrega ahora integrada por PR59, revision/checks del
+candidato aprobados; CI main 36941802547 PASS incluye PG17, distinto de local PG18.
 [Evidencia y limites](evidence/dispensing-access-concurrency/README.md).
 No se escribe en B/Browns ni se renueva permiso. Privacidad/Meet, contacto y
 tareas humanas siguen como siguientes puertas; no habilita incorporacion por si sola.
@@ -95,21 +108,28 @@ revisiones no escriben en produccion.
 
 | ID / responsable | Estado | Evidencia actual | Pendiente / siguiente accion |
 | --- | --- | --- | --- |
-| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR56 integrado en 199e1ae, CI candidato/preview/revision y CI main 36818824045 PASS; migracion y despliegue/alias oficiales contrastados | Tareas humanas mantienen el piloto abierto; cierre documental separado |
+| DEM-00 / coordinador + calidad | Cerrado, base revisada | PR59 integrado en 86e2016, CI main 36941802547 PASS; deployment 6797663287/Vercel Ready y alias oficiales contrastados. PR59 solo pruebas/documentacion | Candidato de privacidad requiere sus propios checks; no hereda aprobacion del main; tareas humanas mantienen piloto abierto |
 | DEM-01 / Admin-incorporacion | Lecturas publicadas comprobadas, alta externa pendiente | Admin oficial 01/10: identidad/recarga, organizaciones A/B/Browns separadas, membresias B, invitacion pendiente y aceptada, solicitud Browns aprobada leidas sin cambios. Casos aislados 19/19 reutilizados: enlaces/identidad, versiones, rollback y bloqueo de conversion antigua | Alta externa acompanada, privacidad minima y compatibilidad del primer contacto; lectura de aprobacion no sustituye acceso efectivo; no se envia ninguna invitacion en este cierre |
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
 | DEM-03 / Paciente | Recorrido tecnico aprobado, humano pendiente | 01/10: consentimiento B, permiso hasta 02/10 02:33 persistente tras recarga; 30/20/10 y recibo 3150a49a coinciden con operador | Autonomia/teclado fisico; medico inactivo sigue como politica separada |
 | DEM-04 / Dispensario | Ambos roles comprobados tecnicamente, humano pendiente | 01/10 operador y encargado B: revision 1 g/9 g hipoteticos sin entrega, descarte/retorno, 60 g stock, recibo, filtros, Gestion segun rol y recarga; encargado abre recepcion/ajuste sin guardar y consulta Equipo; regresiones anteriores conservadas | Tareas humanas en computador/celular real, teclado y selector nativo externo; no integracion comercial->entrega repetida |
-| DEM-05 / Seguridad | Bloqueos DEM-SEC-01/02 cerrados; concurrencia local aprobada | PR56 preserva recibos propios y retira proyeccion compartida no autorizada; ocho carreras de permiso/retirada/bloqueo frente a entrega, tres suites PostgreSQL independientes PASS | Revision y CI/preview del candidato de pruebas; politica doctor-active y DEM-LEG-01 separados. No se declara exposicion de datos reales ni habilitacion |
+| DEM-05 / Seguridad | DEM-SEC-01/02 y concurrencia cerrados tecnicamente | PR56 preserva recibos propios y retira proyeccion no autorizada; PR59 ocho carreras ambos ordenes, PG18 local y PG17 CI PASS | Diagnosticos DEM-PRIV-03/04 y riesgo no reproducido DEM-PRIV-06 separados; doctor-active y DEM-LEG-01 pendientes. Sin exposicion real declarada |
 | DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
-| DEM-08 / Regulatorio | Investigacion completada | Fuentes oficiales 30/09 contrastadas; documento compliance historico no validado; readiness actualizado con limites de consulta | Privacidad minima y Meet OPEN antes de demo externa; revision juridica/clinica sigue pendiente |
+| DEM-08 / Regulatorio | Investigacion documental, revision profesional pendiente | Fuentes oficiales 01/10: vigencia general Ley21.719 01/12/2026; expedientes legal/privacidad, no certificacion | Primera demo excluye llamadas/eventos; Meet OPEN sin cambio ni prueba remota. Responsable/contacto, conservacion, contratos y revision juridica/clinica pendientes |
 | DEM-09 / PO + coordinador | Preparado | Decision: reutilizar B/Browns y aislar escrituras; validar alta medica actual | Presentacion humana, privacidad minima y primer destinatario antes de invitar |
 | DEM-QA-01 / coordinador + seis agentes | Cerrado, pruebas | PR53 integrado; causa reproducida en fixture, tres suites Chromium consecutivas y revision independiente; CI/preview del candidato aprobados | No corrige DEM-SEC-01/02 ni acredita autonomia o celular real; continuar seguridad en ramas separadas |
-| DEM-CON-01 / coordinador + seis agentes | Validacion local aprobada; integracion consultable en PR59 | Ocho precedencias de entrega/revoke-grant, retirada y bloqueo; tres suites independientes PG18/Node22 PASS, recibos previos/replay conservados, cero cambios de producto o produccion | [Revision y checks del ultimo candidato](https://github.com/CaBsCrypto/Trust-Leaf/pull/59), incluido PostgreSQL17; no sustituye evaluacion humana ni privacidad minima |
+| DEM-CON-01 / coordinador + seis agentes | Cerrado, integrado | PR59 / 86e2016; ocho precedencias, tres suites independientes PG18 PASS, revision/CI/preview y PG17 CI main PASS; recibos/replay conservados | No sustituye evaluacion humana ni privacidad minima; [evidencia](evidence/dispensing-access-concurrency/README.md) |
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
 | DEM-SEC-01 / coordinador + seis agentes | Cerrado, publicado | PR56 / 199e1ae; 19/19, cinco negativos baseline, PostgreSQL independiente, CI/preview/revision exacta y CI main PASS. Respaldo restaurado, migracion exclusiva, fuentes/ACLs y lectura paciente comprobados | No aprueba autonomia, telefono real ni incorporacion externa; carreras y politica medica siguen separadas |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
+| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos | Inventario y borrador de aviso sin responsable/canal/plazos/condiciones aprobadas; Footer sin aviso operativo | Definir y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
+| DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
+| DEM-PRIV-03 / Seguridad | Preparado, P2 diagnostico | Parser Express aislado production registra fragmento JSON sintetico en stderr, respuesta400 no lo refleja; no prueba de fuga hosted | Rama fix separada, error seguro previo al handler/logs; no tocar producto en auditoria |
+| DEM-PRIV-04 / Seguridad | Preparado, P2 diagnostico | Bootstrap registra codigo string upstream sin acotar; marcador sintetico en console.error, cliente saneado | Rama fix separada y regresion de logging; no se inspeccionaron logs reales |
+| DEM-PRIV-05 / calidad + Admin | Preparado, P2 funcional | Dos reproducciones: JSON invalido de SQL/Privy devuelve400 en onboarding; expectativa503 falla sin exposicion de payload | Rama fix independiente para distinguir input de fallo upstream; reproduccion negativa fuera del suite verde, no cierre por tests privacidad |
+| DEM-PRIV-06 / Paciente + seguridad | Backlog, no reproducido | Inspeccion: snapshot previo conservado ante GET503, posible combinacion con revocacion remota | Fixture aislada antes de llamar defecto; no se demostro bypass SQL ni fuga |
+| DEM-QA-02 / medico + calidad | Preparado, fixture | google-calendar-setup.test.ts falla por target de renovacion ausente; otras pruebas Calendar reutilizadas | Revisar/corregir fixture en entrega separada; no modifica Meet ni prueba configuracion remota |
 
 ### Recuperacion de CI: primera entrega del sprint 1
 

@@ -8,6 +8,15 @@ const browser = await chromium.launch({ headless: true, channel: process.env.PLA
 await mkdir('scratch/operations-qa/onboarding', { recursive: true });
 const admin = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const manager = await browser.newPage({ viewport: { width: 390, height: 844 } });
+const externalRequests = [];
+for (const page of [admin, manager]) {
+  await page.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    if (url.origin === new URL(base).origin) return route.continue();
+    externalRequests.push(url.origin);
+    await route.abort('blockedbyclient');
+  });
+}
 admin.on('dialog', d => void d.accept());
 manager.on('dialog', d => void d.accept());
 try {
@@ -68,5 +77,7 @@ try {
   await manager.getByText('Encargado',{exact:true}).waitFor();
   await admin.screenshot({path:'scratch/operations-qa/onboarding/admin-approved.png',fullPage:true});
   await manager.screenshot({path:'scratch/operations-qa/onboarding/manager-approved.png',fullPage:true});
+  assert.deepEqual(externalRequests, [], 'onboarding must not attempt external browser requests');
   console.log('PASS browser: invite, acceptance, private draft, unsaved focus, reload, corrections, approval, persistent manager and five viewport widths. Isolated data only.');
+  console.log('PASS browser privacy: only the loopback fixture origin was requested; external HTTP requests blocked.');
 } finally { await browser.close(); }
