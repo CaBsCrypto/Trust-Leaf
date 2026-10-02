@@ -6,8 +6,9 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
-Actualizacion de contacto propuesto (01/10): PO indica fundador individual y
-`admin@trustleaf.org` como canal. [Aviso interno](PILOT_PRIVACY_NOTICE_DRAFT.md)
+Actualizacion de responsable propuesto (02/10): PO prefiere una empresa asociada
+a `browns.studio`, sin constitucion, razon social ni representacion confirmadas;
+mantiene `admin@trustleaf.org` como canal propuesto. [Aviso interno](PILOT_PRIVACY_NOTICE_DRAFT.md)
 y [procedimiento](PILOT_PRIVACY_PROCEDURE.md) registran la propuesta, no su
 aprobacion/activacion. Identificacion, buzon probado, disponibilidad, reemplazo,
 conservacion y condiciones profesionales/proveedores siguen pendientes.
@@ -139,7 +140,7 @@ revisiones no escriben en produccion.
 | DEM-SEC-02 / Seguridad + coordinador | Cerrado, publicado | PR54 / 65aaeb8; 198 + 325 casos locales y revision independiente; CI/preview 2b6abed PASS; retirada oficial 410/405/no-store contrastada | No implica cierre de DEM-SEC-01, autonomia o aprobacion de la UI Stellar heredada |
 | DEM-SEC-01 / coordinador + seis agentes | Cerrado, publicado | PR56 / 199e1ae; 19/19, cinco negativos baseline, PostgreSQL independiente, CI/preview/revision exacta y CI main PASS. Respaldo restaurado, migracion exclusiva, fuentes/ACLs y lectura paciente comprobados | No aprueba autonomia, telefono real ni incorporacion externa; carreras y politica medica siguen separadas |
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
-| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos; responsable/canal propuestos | PO propone fundador individual y admin@trustleaf.org; identificacion, buzon probado, disponibilidad/reemplazo, plazos y condiciones no aprobados. Footer sin aviso operativo | Completar y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
+| DEM-PRIV-01 / PO + privacidad | Bloqueado para externos; responsable/canal propuestos | PO prefiere empresa asociada a browns.studio y canal admin@trustleaf.org; constitucion, razon social, representacion, buzon probado, disponibilidad/reemplazo, plazos y condiciones no aprobados. Footer sin aviso operativo | Confirmar entidad, completar y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
 | DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
 | DEM-PRIV-03 / Seguridad | Preparado, P2 diagnostico | Parser Express aislado production registra fragmento JSON sintetico en stderr, respuesta400 no lo refleja; no prueba de fuga hosted | Rama fix separada, error seguro previo al handler/logs; no tocar producto en auditoria |
 | DEM-PRIV-04 / Seguridad | Cerrado tecnicamente, store publicado | PR61 / a2bf39d; 58/58, revision independiente, CI candidato36955239595 y main36955898544 PASS, preview/produccion Ready con aliases. Allowlist exacta, respuestas y categorias intactas | No se ejecuta bootstrap real ni se inspeccionan logs privados; no cierra PRIV07 del handler ni privacidad operativa |

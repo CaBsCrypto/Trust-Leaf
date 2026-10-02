@@ -2,8 +2,9 @@
 
 ## Responsable y canal: propuesta interna
 
-El PO propone operar como fundador individual y atender solicitudes/incidentes
-en `admin@trustleaf.org`. [Borrador](PILOT_PRIVACY_NOTICE_DRAFT.md) y
+El PO prefiere una empresa asociada a `browns.studio` como responsable
+(02/10/2026); constitucion, razon social y representacion no confirmadas.
+Propone atender solicitudes/incidentes en `admin@trustleaf.org`. [Borrador](PILOT_PRIVACY_NOTICE_DRAFT.md) y
 [procedimiento](PILOT_PRIVACY_PROCEDURE.md) conservan estado interno, no aprobado
 ni activado. Faltan identificacion formal, prueba de recepcion/respuesta y
 acceso seguro, disponibilidad/reemplazo, conservacion y revision profesional.

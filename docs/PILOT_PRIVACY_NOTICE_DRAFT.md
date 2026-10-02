@@ -6,10 +6,11 @@ aceptada por ningun usuario. No sustituye una revision juridica.
 
 ## 1. Responsable y contacto
 
-- Responsable del tratamiento propuesto: fundador / Product Owner de Trust
-  Leaf, quien indica operar solo (propuesta del 01/10/2026). Identificacion
-  formal y revision profesional: [PENDIENTES]. No se ha informado una razon
-  social; no inventar una ni dar por determinada la forma juridica del responsable.
+- Responsable del tratamiento propuesto: empresa asociada a `browns.studio`
+  (preferencia del PO del 02/10/2026, que actualiza su propuesta individual).
+  Constitucion, razon social, relacion con Trust Leaf, representacion e
+  identificacion formal: [PENDIENTES DE CONFIRMAR Y REVISAR]. El nombre comercial
+  no identifica por si solo una persona juridica; no inventar una razon social.
 - Identificacion y domicilio del responsable: [PENDIENTE].
 - Canal propuesto para consultas, solicitudes e incidentes:
   `admin@trustleaf.org`. Recepcion, respuesta, acceso seguro y seguimiento:

@@ -8,16 +8,18 @@ No autoriza cambios de acceso, exportaciones, borrado, rotaciones o restauracion
 
 | Funcion | Estado | Condicion previa |
 | --- | --- | --- |
-| Responsable de datos y persona de reemplazo | Propuesto por PO: fundador; reemplazo pendiente | Identificacion formal, alcance, disponibilidad y revision aprobados |
+| Responsable de datos y persona de reemplazo | Propuesta del PO: empresa asociada a browns.studio; entidad y reemplazo pendientes | Constitucion, razon social, representacion, alcance, disponibilidad y revision aprobados |
 | Canal de entrada y seguimiento privado | Propuesto por PO: admin@trustleaf.org; no probado ni activado | Probar recepcion, acceso seguro y respuesta con una solicitud sintetica; aprobar seguimiento |
 | Responsable tecnico | Coordinador durante auditoria; operacion futura pendiente | Facultades, escalamiento y accesos aprobados |
 | Revision profesional | Pendiente | Bases, plazos, excepciones, comunicacion y conservacion revisados |
 
 La revision tecnica no asume automaticamente responsabilidad juridica ni
 designa al administrador de la plataforma como responsable legal.
-Propuesta del PO del 01/10/2026: opera como fundador individual y atenderia el
-canal indicado. Esta anotacion no certifica su identificacion, el buzon o las
-condiciones legales. Sin envio de mensajes, creacion de correo ni activacion.
+Actualizacion del PO del 02/10/2026: prefiere una empresa asociada a browns.studio
+como responsable, sin razon social ni constitucion confirmadas. El fundador
+seguiria siendo la persona propuesta para atender el canal. Esta anotacion no
+certifica entidad, representacion, buzon ni condiciones legales. Sin envio de
+mensajes, creacion de correo ni activacion.
 
 ## A. Solicitudes sobre datos
 
