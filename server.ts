@@ -37,6 +37,7 @@ import {
 } from "./api/_lib/defindex";
 import { assertTestnetMutationEnabled } from "./api/_lib/pilot-safety";
 import { blockLegacyPrivateRoute } from "./api/_lib/legacy-private-route-block";
+import { handleExpressParserError } from "./api/_lib/express-parser-errors";
 import consolidatedReadinessHandler from './api/stellar/readiness';
 import { createLegacyAuthorizationMiddleware } from "./api/_lib/legacy-route-authorization";
 import {
@@ -128,6 +129,7 @@ async function startServer() {
     } catch { res.status(503).json({code:'TEAM_UNAVAILABLE'}); }
   });
   app.use(express.json());
+  app.use(handleExpressParserError);
   app.all('/api/team-invitations',(req,res) => {
     void consolidatedReadinessHandler({method:req.method,headers:req.headers,body:req.body,query:{__trustleaf_route:'team-invitations'}},res)
       .catch(()=>{if (!res.headersSent) res.status(503).json({code:'TEAM_UNAVAILABLE'});});
