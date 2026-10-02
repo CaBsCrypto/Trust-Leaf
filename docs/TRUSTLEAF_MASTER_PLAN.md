@@ -1,5 +1,18 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Privacidad: parser integrado y handler en validacion (02/10/2026)
+
+PR64 `bec8edc` con revision seguridad/calidad, CI `36966407443` y preview PASS,
+integrado en `85b046a`, CI main `36967159314` PASS; production `6801680234`
+success y aliases oficiales verificados. Parser Express probado en aislamiento,
+sin afirmar observacion de un proceso Express alojado ni saneamiento global.
+Ahora `fix/bootstrap-handler-safe-errors`: 11 pares exactos, 19 negativos antes
+y 54/54 regresiones despues; tipos/build/store/RBAC/consolidacion PASS.
+[Evidencia y limites](evidence/bootstrap-handler-safe-errors/README.md).
+Una correccion funcional activa; JSON upstream de incorporacion queda despues.
+PR62 sigue borrador no aprobado ni aviso operativo; condiciones de privacidad,
+identificacion de la empresa propuesta, buzon y pruebas humanas siguen pendientes.
+
 ## Privacidad: retirada ante lectura incierta (02/10/2026)
 
 PR63 integrado y publicado en `fbee6ea`, candidato `ea4afdd` con revision
