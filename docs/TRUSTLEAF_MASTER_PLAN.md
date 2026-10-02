@@ -1,5 +1,22 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Privacidad: categorias publicadas, Incorporaciones en validacion (02/10/2026)
+
+PR65 `62fa1c0` revisado por seguridad/Admin/calidad, CI36968164236 y preview
+PASS; merge `063e406`, CI main36968901251 PASS, production6801956660 success
+y aliases oficiales verificados. No se ejecuta bootstrap real. DEM-PRIV-07
+cerrado tecnicamente; primera y segunda correcciones conservan su evidencia.
+Ahora `fix/onboarding-upstream-errors`: separar JSON de peticion400 de fallo
+upstream503, sin modificar acciones, permisos o migraciones. 16/16, SQL aislado,
+browser400/503 con idempotencia y tipos/build PASS; revision/checks del candidato
+y publicacion siguen como puertas. [Evidencia y limites](evidence/onboarding-upstream-errors/README.md).
+PR62 sigue borrador, no aviso aprobado/publicado. Identificacion formal de empresa,
+buzon, conservacion, proveedores y evaluacion humana siguen pendientes. Invitaciones
+externas pausadas; reunion solo con materiales completamente sinteticos.
+
+Los cortes anteriores conservan el estado de su fecha; el tablero unico registra
+el resultado vigente, sin convertir prueba local en publicacion.
+
 ## Privacidad: parser integrado y handler en validacion (02/10/2026)
 
 PR64 `bec8edc` con revision seguridad/calidad, CI `36966407443` y preview PASS,

@@ -40,8 +40,42 @@ try {
   }
   await manager.evaluate(() => window.dispatchEvent(new Event('focus')));
   assert.equal(await manager.getByLabel('Nombre del encargado',{exact:true}).inputValue(),'Encargado Demo');
+  const saveAttempts = [], savedResults = [];
+  await manager.route('**/api/dispensary-onboarding', async route => {
+    const command = route.request().postDataJSON();
+    if (command.action !== 'save-draft') return route.continue();
+    saveAttempts.push(command);
+    // Client input rejection performs no SQL write. Corrected intent gets a new ID.
+    if (saveAttempts.length === 1) return route.fulfill({ status: 400, json: { code: 'ONBOARDING_UNAVAILABLE' } });
+    const response = await route.fetch(); assert.equal(response.status(), 200);
+    savedResults.push(await response.json());
+    // Commit succeeded but acknowledgement was lost; only explicit same-ID retry.
+    return saveAttempts.length === 2 ? route.fulfill({ status: 503, json: { code: 'ONBOARDING_UNAVAILABLE' } })
+      : route.fulfill({ response });
+  });
   await manager.getByRole('button',{name:'Guardar borrador',exact:true}).click();
-  await manager.getByRole('button',{name:'Revisar datos guardados',exact:true}).waitFor();
+  await manager.getByRole('alert').filter({hasText:'Revisa los datos y la aceptacion de participacion.'}).waitFor();
+  assert.equal(await manager.getByRole('button',{name:'Reintentar operacion pendiente',exact:true}).count(),0);
+  assert.equal(await manager.getByLabel('Nombre del encargado',{exact:true}).inputValue(),'Encargado Demo');
+  await manager.locator('.onboarding-form label').filter({hasText:'Descripcion de actividad'}).locator('textarea').fill('Pruebas de gestion sin atencion real. Datos corregidos');
+  await manager.getByRole('button',{name:'Guardar borrador',exact:true}).click();
+  await manager.getByRole('alert').filter({hasText:'No se pudo confirmar el resultado. Reintenta sin cambiar la operacion.'}).waitFor();
+  assert.equal(await manager.getByRole('button',{name:'Guardar borrador',exact:true}).isDisabled(),true);
+  assert.equal(await manager.getByRole('button',{name:'Revisar datos guardados',exact:true}).isDisabled(),true);
+  assert.equal(await manager.getByLabel('Nombre del encargado',{exact:true}).inputValue(),'Encargado Demo');
+  assert.equal(saveAttempts.length,2, 'no automatic retry');
+  const retryCompleted = manager.waitForResponse(response => response.url() === base + '/api/dispensary-onboarding'
+    && response.request().method() === 'POST' && response.request().postDataJSON()?.action === 'save-draft'
+    && response.status() === 200);
+  await manager.getByRole('button',{name:'Reintentar operacion pendiente',exact:true}).click();
+  await retryCompleted;
+  await manager.locator('.onboarding-form button:enabled').filter({hasText:'Revisar datos guardados'}).waitFor();
+  assert.equal(saveAttempts.length,3);
+  assert.notEqual(saveAttempts[0].operationId, saveAttempts[1].operationId);
+  assert.deepEqual(saveAttempts[1], saveAttempts[2], 'uncertain command is retried unchanged');
+  assert.equal(savedResults[0].application.version,2);
+  assert.equal(savedResults[1].application.version,2, 'same SQL save not repeated');
+  await manager.unroute('**/api/dispensary-onboarding');
   await manager.reload();
   await manager.getByLabel('Nombre del encargado',{exact:true}).waitFor();
   assert.equal(await manager.getByLabel('Nombre del encargado',{exact:true}).inputValue(),'Encargado Demo');
@@ -78,6 +112,6 @@ try {
   await admin.screenshot({path:'scratch/operations-qa/onboarding/admin-approved.png',fullPage:true});
   await manager.screenshot({path:'scratch/operations-qa/onboarding/manager-approved.png',fullPage:true});
   assert.deepEqual(externalRequests, [], 'onboarding must not attempt external browser requests');
-  console.log('PASS browser: invite, acceptance, private draft, unsaved focus, reload, corrections, approval, persistent manager and five viewport widths. Isolated data only.');
+  console.log('PASS browser: invite, acceptance, private draft,400 correction/new intent,503 same-ID lost-response recovery once, unsaved focus, reload, corrections, approval, persistent manager and five viewport widths. Isolated data only.');
   console.log('PASS browser privacy: only the loopback fixture origin was requested; external HTTP requests blocked.');
 } finally { await browser.close(); }

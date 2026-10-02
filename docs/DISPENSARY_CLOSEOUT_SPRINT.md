@@ -1,10 +1,20 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-10-01. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-10-02. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
 
 ## Demo y adopcion: 30/09/2026
+
+Actualizacion 02/10: PR65 integrado en `063e406`, CI candidato36968164236 y
+main36968901251 PASS, preview Ready; production6801956660 success y aliases
+oficiales verificados. DEM-PRIV-07 cerrado tecnicamente, sin bootstrap real.
+Cuarta correccion activa `fix/onboarding-upstream-errors`: baseline 11 PASS/5
+negativos, candidato16/16 PASS, recorrido browser400/503 y SQL aislado PASS,
+tipos/build PASS; revision/CI/preview/publicacion pendientes antes de cerrar.
+[Metodo, publicacion previa y limites](evidence/onboarding-upstream-errors/README.md).
+PR62 sigue borrador. Responsable formal, buzon, conservacion, condiciones de
+proveedores, aprobacion del aviso y tareas humanas no quedan resueltos por fixes.
 
 Actualizacion de correcciones: PR60 integrado en `9657c63`, CI main 36949993027
 PASS. `fix/bootstrap-safe-diagnostics` aborda exclusivamente DEM-PRIV-04;
@@ -134,9 +144,9 @@ revisiones no escriben en produccion.
 | DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
 | DEM-PRIV-03 / Seguridad | Cerrado tecnicamente e integrado | PR64 bec8edc, revision seguridad/calidad, CI36966407443/preview PASS; merge85b046a, CI main36967159314 PASS, production6801680234 success/aliases verificados. Cinco regresiones de parser y bloqueos heredados PASS | [Publicacion](evidence/bootstrap-handler-safe-errors/README.md#previous-correction-release). Express comprobado en aislamiento; no saneamiento global ni fuga hosted afirmada |
 | DEM-PRIV-04 / Seguridad | Validacion de correccion, P2 diagnostico | fix/bootstrap-safe-diagnostics desde9657c63: allowlist exacta y mismo marcador ahoraPASS, cliente y categorias conservados; nueva regresion CI | Revision/checks candidato y correspondencia publicada antes de cerrar; no se ejecuta bootstrap real ni se inspeccionan logs privados |
-| DEM-PRIV-05 / calidad + Admin | Preparado, P2 funcional | Dos reproducciones: JSON invalido de SQL/Privy devuelve400 en onboarding; expectativa503 falla sin exposicion de payload | Rama fix independiente para distinguir input de fallo upstream; reproduccion negativa fuera del suite verde, no cierre por tests privacidad |
+| DEM-PRIV-05 / calidad + Admin | Validacion de correccion, P2 funcional | fix/onboarding-upstream-errors desde063e406: 11 PASS/5 negativos antes, 16/16 despues; SQL/browser400->nuevo ID y503->mismo ID/version2 una vez, tipos/build PASS | Revision, CI/preview del ultimo candidato y publicacion; [evidencia](evidence/onboarding-upstream-errors/README.md). No valida toda forma de JSON upstream ni habilita invitaciones |
 | DEM-PRIV-06 / Paciente + seguridad | Cerrado tecnicamente y publicado | PR63 ea4afdd, revision independiente, CI36964636874 PASS, preview Ready; merge fbee6ea, production6801411840 success, aliases oficiales/asset contrastados. 30 revocaciones ambos roles/cinco anchos, borradores e ID preservados | [Evidencia](evidence/express-safe-json-errors/README.md#previous-correction-release). No autonomia, telefono real, cierre de privacidad externa ni proteccion de intenciones al abandonar Equipo |
-| DEM-PRIV-07 / Seguridad + Admin | Validacion de correccion, P2 condicionado | fix/bootstrap-handler-safe-errors desde85b046a: 19 negativos antes, 54/54 PASS despues en export real/verificador real con reader/almacen sinteticos; 11 pares exactos, cero red/SDK. Store58, RBAC, consolidacion, tipos/build PASS | Revision, CI/preview del ultimo commit y publicacion; [evidencia](evidence/bootstrap-handler-safe-errors/README.md). Procedencia SDK real no constatada; sin bootstrap publicado |
+| DEM-PRIV-07 / Seguridad + Admin | Cerrado tecnicamente y publicado | PR65 62fa1c0, revision seguridad/Admin/calidad, CI36968164236/preview PASS; merge063e406, CI main36968901251 PASS, production6801956660 success/aliases verificados. 54/54 export real y 11 pares exactos, cero red/SDK | [Publicacion](evidence/onboarding-upstream-errors/README.md#previous-correction-release). Procedencia SDK real no constatada; sin bootstrap publicado ni cierre de condiciones de privacidad |
 | DEM-QA-02 / medico + calidad | Preparado, fixture | google-calendar-setup.test.ts falla por target de renovacion ausente; otras pruebas Calendar reutilizadas | Revisar/corregir fixture en entrega separada; no modifica Meet ni prueba configuracion remota |
 
 ### Recuperacion de CI: primera entrega del sprint 1
