@@ -1,6 +1,6 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-10-01. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-10-02. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
 
@@ -21,7 +21,20 @@ baseline FALLA / candidato PASS, log limitado y respuestas conservadas.
 [Metodo y limites](evidence/bootstrap-safe-diagnostics/README.md). GET oficiales
 anonimos: cuatro pantallas200 HTML, operaciones/incorporacion401 con no-store,
 private; no acreditan recorridos autenticados o autonomia humana.
-DEM-PRIV-03/05, investigacion de revocacion/503 y privacidad operativa separados.
+Actualizacion 02/10: PR65 integrado en `063e406`, CI candidato36968164236 y
+main36968901251 PASS, preview Ready; production6801956660 success y aliases
+oficiales verificados. DEM-PRIV-07 cerrado tecnicamente, sin bootstrap real.
+Cuarta correccion PR66 integrada en `3243904`, candidato271579c con revision,
+CI36970170432 PASS y preview Ready: baseline 11 PASS/5 negativos, candidato16/16,
+recorrido browser400/503, SQL, concurrencia, tipos/build y regresiones PASS.
+CI main36970907192 y publicacion se comprueban separadamente antes del cierre.
+[Metodo, publicacion previa y limites](evidence/onboarding-upstream-errors/README.md).
+PR62 sigue borrador. Responsable formal, buzon, conservacion, condiciones de
+proveedores, aprobacion del aviso y tareas humanas no quedan resueltos por fixes.
+
+Los cortes fechados anteriores conservan su estado historico. El tablero actual
+no mantiene las correcciones ya integradas como trabajo activo. Privacidad
+operativa y tareas humanas siguen pendientes, sin invitaciones externas.
 
 Actualizacion privacidad 01/10: main `86e2016`, PR59 integrado, CI main
 36941802547 PASS (PG17), deployment 6797663287 success y alias Vercel oficiales
@@ -142,11 +155,11 @@ revisiones no escriben en produccion.
 | DEM-LEG-01 / Medico + Paciente | Preparado, legado | MockupPortal convierte fallos de validacion en exito sintetico y conserva cache de dashboard no segmentada; reproduccion aislada, no fuga ni entrega publicada demostradas | Revision/fix independiente; no habilitar ni demostrar UI heredada como elegibilidad clinica; piloto conectado Supabase separado |
 | DEM-PRIV-01 / PO + privacidad | Bloqueado para externos; responsable/canal propuestos | PO prefiere empresa asociada a browns.studio y canal admin@trustleaf.org; constitucion, razon social, representacion, buzon probado, disponibilidad/reemplazo, plazos y condiciones no aprobados. Footer sin aviso operativo | Confirmar entidad, completar y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
 | DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
-| DEM-PRIV-03 / Seguridad | Preparado, P2 diagnostico | Parser Express aislado production registra fragmento JSON sintetico en stderr, respuesta400 no lo refleja; no prueba de fuga hosted | Rama fix separada, error seguro previo al handler/logs; no tocar producto en auditoria |
-| DEM-PRIV-04 / Seguridad | Cerrado tecnicamente, store publicado | PR61 / a2bf39d; 58/58, revision independiente, CI candidato36955239595 y main36955898544 PASS, preview/produccion Ready con aliases. Allowlist exacta, respuestas y categorias intactas | No se ejecuta bootstrap real ni se inspeccionan logs privados; no cierra PRIV07 del handler ni privacidad operativa |
-| DEM-PRIV-05 / calidad + Admin | Preparado, P2 funcional | Dos reproducciones: JSON invalido de SQL/Privy devuelve400 en onboarding; expectativa503 falla sin exposicion de payload | Rama fix independiente para distinguir input de fallo upstream; reproduccion negativa fuera del suite verde, no cierre por tests privacidad |
-| DEM-PRIV-06 / Paciente + seguridad | Preparado, P2 privacidad UI; reproducido en aislamiento | 12 casos encargado/operador 390/1440: revocar permiso/tratamiento/actor y fallar GET503 conserva proyeccion previa y Permiso vigente; 3 controles PASS. Cero POST, SQL deniega y no cambia filas; GET200/401/403 limpia | Definir retiro de proyeccion sensible ante lectura incierta y regresion en rama propia; conservar historial propio permitido y borradores no sensibles. No es nueva lectura SQL ajena ni exposicion publicada demostrada |
-| DEM-PRIV-07 / Seguridad + Admin | Preparado, P2 condicionado; entrada sintetica reproducida | Export real readiness con verificador real/reader sintetico: string/objeto/array en code alcanza log y HTTP503; cero red/store. No se ha constatado procedencia de ese error del SDK real | Acotar categorias en PR separado y revisar procedencia SDK; DEM-PRIV-04 solo sanea diagnostico del store |
+| DEM-PRIV-03 / Seguridad | Cerrado tecnicamente e integrado | PR64 bec8edc, revision seguridad/calidad, CI36966407443/preview PASS; merge85b046a, CI main36967159314 PASS, production6801680234 success/aliases verificados. Cinco regresiones de parser y bloqueos heredados PASS | [Publicacion](evidence/bootstrap-handler-safe-errors/README.md#previous-correction-release). Express comprobado en aislamiento; no saneamiento global ni fuga hosted afirmada |
+| DEM-PRIV-04 / Seguridad | Cerrado tecnicamente, store publicado | PR61 / a2bf39d; 58/58, revision independiente, CI candidato36955239595 y main36955898544 PASS, preview/produccion Ready con aliases. Allowlist exacta, respuestas y categorias intactas | No se ejecuta bootstrap real ni se inspeccionan logs privados; handler PRIV07 cerrado por separado, privacidad operativa pendiente |
+| DEM-PRIV-05 / calidad + Admin | Integrado, publicacion pendiente | PR66 271579c, revision seguridad/Admin/calidad, CI36970170432/preview PASS; merge3243904. 11 PASS/5 negativos antes, 16/16 despues; SQL/browser400->nuevo ID y503->mismo ID/version2 una vez | CI main36970907192 y despliegue oficial por contrastar; [evidencia](evidence/onboarding-upstream-errors/README.md). No valida toda forma de JSON upstream ni habilita invitaciones |
+| DEM-PRIV-06 / Paciente + seguridad | Cerrado tecnicamente y publicado | PR63 ea4afdd, revision independiente, CI36964636874 PASS, preview Ready; merge fbee6ea, production6801411840 success, aliases oficiales/asset contrastados. 30 revocaciones ambos roles/cinco anchos, borradores e ID preservados | [Evidencia](evidence/express-safe-json-errors/README.md#previous-correction-release). No autonomia, telefono real, cierre de privacidad externa ni proteccion de intenciones al abandonar Equipo |
+| DEM-PRIV-07 / Seguridad + Admin | Cerrado tecnicamente y publicado | PR65 62fa1c0, revision seguridad/Admin/calidad, CI36968164236/preview PASS; merge063e406, CI main36968901251 PASS, production6801956660 success/aliases verificados. 54/54 export real y 11 pares exactos, cero red/SDK | [Publicacion](evidence/onboarding-upstream-errors/README.md#previous-correction-release). Procedencia SDK real no constatada; sin bootstrap publicado ni cierre de condiciones de privacidad |
 | DEM-QA-02 / medico + calidad | Preparado, fixture | google-calendar-setup.test.ts falla por target de renovacion ausente; otras pruebas Calendar reutilizadas | Revisar/corregir fixture en entrega separada; no modifica Meet ni prueba configuracion remota |
 
 ### Recuperacion de CI: primera entrega del sprint 1

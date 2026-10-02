@@ -286,6 +286,22 @@ function readJsonBody(value: unknown): Record<string, unknown> | null {
   }
 }
 
+const bootstrapErrorStatuses = new Map<string, number>([
+  ['PRIVY_IDENTITY_TOKEN_INVALID', 401], ['PRIVY_IDENTITY_SUBJECT_INVALID', 401],
+  ['PRIVY_SERVER_CONFIGURATION_MISSING', 503], ['BOOTSTRAP_CONFIGURATION_MISSING', 503],
+  ['SUPABASE_URL_MISSING', 503], ['SUPABASE_URL_INVALID', 503], ['SUPABASE_SERVER_KEY_MISSING', 503],
+  ['PRIVY_ADMIN_BOOTSTRAP_UNAVAILABLE', 503], ['PRIVY_ADMIN_BOOTSTRAP_SERVER_KEY_INVALID', 503],
+  ['PRIVY_ADMIN_BOOTSTRAP_SCHEMA_UNAVAILABLE', 503], ['PRIVY_ACTOR_BINDING_INVALID', 503],
+]);
+
+function bootstrapFailure(error: unknown) {
+  const candidate = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+  const code = typeof candidate.code === 'string' ? candidate.code : '';
+  const statusCode = bootstrapErrorStatuses.get(code);
+  return statusCode !== undefined && candidate.statusCode === statusCode
+    ? { code, statusCode } : { code: 'BOOTSTRAP_UNAVAILABLE', statusCode: 503 };
+}
+
 async function bootstrapPrivyAdmin(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
   const token = readPrivyToken(req.headers ?? {});
@@ -298,13 +314,10 @@ async function bootstrapPrivyAdmin(req: any, res: any) {
     if (actor.role !== 'admin' || actor.state !== 'active') return res.status(503).json({ code: 'BOOTSTRAP_INVALID_RESULT' });
     return res.status(200).json({ authorized: true, role: 'admin', actorRef: actor.actorRef });
   } catch (error) {
-    const candidate = error as { code?: string; statusCode?: number };
+    const failure = bootstrapFailure(error);
     // Emit only a stable category: never the Privy token, email, subject or database payload.
-    console.error('Privy admin bootstrap denied.', {
-      code: candidate.code ?? 'BOOTSTRAP_UNAVAILABLE',
-      statusCode: candidate.statusCode ?? 503,
-    });
-    return res.status(candidate.statusCode ?? 503).json({ code: candidate.code ?? 'BOOTSTRAP_UNAVAILABLE' });
+    console.error('Privy admin bootstrap denied.', failure);
+    return res.status(failure.statusCode).json({ code: failure.code });
   }
 }
 

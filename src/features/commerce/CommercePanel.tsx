@@ -13,7 +13,7 @@ const amount = (value: FormDataEntryValue | null, optional = true): number | nul
   return Number(value);
 };
 
-export default function CommercePanel({ data, changed, guardChanged }: { data: PilotSnapshot; changed: () => void; guardChanged: (guard: { dirty: boolean; pending: boolean }) => void }) {
+export default function CommercePanel({ data, changed, guardChanged, writesDisabled = false }: { data: PilotSnapshot; changed: () => void; guardChanged: (guard: { dirty: boolean; pending: boolean }) => void; writesDisabled?: boolean }) {
   const identity = useTrustLeafPrivyIdentity();
   const manager = data.membership?.role === 'manager';
   const [collection, setCollection] = useState<Collection>('products');
@@ -34,6 +34,17 @@ export default function CommercePanel({ data, changed, guardChanged }: { data: P
   const [supplierError, setSupplierError] = useState('');
   const abort = useRef(new AbortController());
   const lock = useRef(false);
+  const writeAllowed = useRef(false);
+  writeAllowed.current = manager && !writesDisabled && !readError && !!page;
+  const previousManager = useRef(manager);
+  useEffect(() => {
+    if (previousManager.current === manager) return;
+    previousManager.current = manager;
+    setPage(null); setSelected(null); setEditor(false); setDirty(false); setSupplierPage(null); setNotice('');
+    if (!manager && collection === 'suppliers') setCollection('products');
+    setRevision(n => n + 1);
+    // Uncertain intent remains scoped to this actor/organization, hidden until manager access returns.
+  }, [manager, collection]);
   useEffect(() => { guardChanged({ dirty, pending: pending !== null }); }, [dirty, pending, guardChanged]);
   useEffect(() => () => guardChanged({ dirty: false, pending: false }), [guardChanged]);
   useEffect(() => {
@@ -50,6 +61,7 @@ export default function CommercePanel({ data, changed, guardChanged }: { data: P
     const token = await identity.getIdentityToken(); signal.throwIfAborted();
     if (!token) throw Object.assign(new Error('Inicia sesion nuevamente.'), { status: 401 });
     const read = ['products', 'suppliers', 'receipts'].includes(command.action);
+    if (!read && !writeAllowed.current) throw new Error('Actualiza los permisos antes de reintentar la misma operacion.');
     const parameters = new URLSearchParams({ collection: command.action,
       ...Object.fromEntries(Object.entries(command.input).map(([key, value]) => [key, String(value)])) });
     const response = await fetch(`/api/dispensary-commerce${read ? `?${parameters}` : ''}`, {
@@ -83,7 +95,7 @@ export default function CommercePanel({ data, changed, guardChanged }: { data: P
     const timer = setInterval(refresh, 15000);
     window.addEventListener('focus', refresh); window.addEventListener('online', refresh);
     return () => { controller.abort(); clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('online', refresh); };
-  }, [collection, offset, revision, identity.subject]);
+  }, [collection, offset, revision, identity.subject, manager]);
   useEffect(() => {
     if (!manager || collection !== 'products') return;
     const controller = new AbortController();
@@ -94,7 +106,7 @@ export default function CommercePanel({ data, changed, guardChanged }: { data: P
     return () => controller.abort();
   }, [manager, collection, supplierOffset, revision]);
   async function execute(command: CommerceCommand) {
-    if (lock.current) return;
+    if (lock.current || !writeAllowed.current) return;
     lock.current = true; setBusy(true); setPending(command); setError(''); setNotice(''); setRevision(n => n + 1);
     try {
       const result: CommerceMutationResult = await request(command, abort.current.signal);
@@ -112,7 +124,7 @@ export default function CommercePanel({ data, changed, guardChanged }: { data: P
       if (!abort.current.signal.aborted) { setBusy(false); setRevision(n => n + 1); }
     }
   }
-  const disabled = busy || !!pending || !!readError || !page;
+  const disabled = busy || !!pending || !!readError || !page || writesDisabled;
   function submit(event: FormEvent<HTMLFormElement>, action: 'save-product' | 'save-supplier' | 'receive' | 'link-batch') {
     event.preventDefault(); if (disabled) return;
     const values = new FormData(event.currentTarget);
@@ -148,9 +160,9 @@ export default function CommercePanel({ data, changed, guardChanged }: { data: P
     </div>
     {(error || readError) && <p role="alert" className="op-error">{error || readError}</p>}
     {notice && <p role="status" className="op-success op-reference">{notice}</p>}
-    {pending && !busy && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar la misma operacion</button>}
+    {pending && !busy && manager && <button className="op-command" disabled={writesDisabled || !!readError || !page} onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar la misma operacion</button>}
     {!page && !readError && <p role="status">Cargando registros...</p>}
-    {page?.items.map(item => 'code' in item ? <article className="op-row" key={item.product_ref}>
+    {page?.items.filter(item => manager || !('internal_reference' in item)).map(item => 'code' in item ? <article className="op-row" key={item.product_ref}>
       <h3>{item.name}</h3><p>{item.code} · {item.presentation} · {item.archived ? 'Archivado' : 'Activo'}</p>
       <p>Precio de referencia: {money(item.reference_price_clp)} · Reposicion: {formatGrams(item.reorder_mg)}</p>
       {manager && <button className="op-command" disabled={disabled} onClick={() => { if (!discard()) return; setSelected(item); setEditor(true); }}>Abrir producto</button>}

@@ -11,24 +11,24 @@ export default function DispensaryAttention({ data, search, onSearch, disabled, 
   submit: (input: Record<string, unknown>) => void; history: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
-  const { confirmDiscard, discardDialog } = useDiscardDialog();
+  const { confirmDiscard, discardDialog } = useDiscardDialog(!!readError);
   const [selected, setSelected] = useState<string | null>(null);
   const [treatmentRef, setTreatmentRef] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   useEffect(() => { onDirtyChange?.(dirty); return () => onDirtyChange?.(false); }, [dirty, onDirtyChange]);
   useEffect(() => {
-    if (!dirty && !disabled) return;
+    if (!dirty && (!disabled || readError)) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty, disabled]);
+  }, [dirty, disabled, readError]);
   const heading = useRef<HTMLHeadingElement>(null);
   const origin = useRef<HTMLButtonElement | null>(null);
   const scroll = useRef(0);
   const previousReceipt = useRef(receiptRef);
   const now = Date.now();
-  const authorized = (data.treatments ?? []).filter(t => currentPeriod(t, now) && data.grants?.some(g =>
+  const authorized = (readError ? [] : data.treatments ?? []).filter(t => currentPeriod(t, now) && data.grants?.some(g =>
     g.treatment_ref === t.treatment_ref && g.organization_ref === data.membership?.organization_ref && Date.parse(g.expires_at) > now));
   const patients = [...new Set(authorized.map(t => t.patient_ref))];
   const treatments = authorized.filter(t => t.patient_ref === selected);
@@ -47,8 +47,10 @@ export default function DispensaryAttention({ data, search, onSearch, disabled, 
     requestAnimationFrame(() => { origin.current?.focus({ preventScroll: true }); window.scrollTo(0, scroll.current); });
   }
   useEffect(() => {
-    // Missing authorization removes the detail immediately; transport errors retain the last snapshot.
-    if (selected && !treatment && !readError) { setSelected(null); setTreatmentRef(null); setDirty(false); setSubmitted(false); }
+    if (readError || (selected && !treatment)) {
+      setSelected(null); setTreatmentRef(null); setDirty(false); setSubmitted(false);
+      previousReceipt.current = receiptRef; origin.current = null;
+    }
   }, [selected, treatment, readError]);
   useEffect(() => { if (selected) heading.current?.focus(); }, [selected]);
   useEffect(() => { if (receipt) setDirty(false); }, [receipt]);
@@ -56,7 +58,7 @@ export default function DispensaryAttention({ data, search, onSearch, disabled, 
     {discardDialog}
     <div className="op-patient-list">
       <h2>Pacientes autorizados <span className="op-muted">({patients.length})</span></h2>
-      <label className="op-search">Buscar paciente por nombre o referencia<input type="search" value={search} onChange={event => onSearch(event.target.value)} placeholder="Nombre o referencia del paciente"/></label>
+      <label className="op-search">Buscar paciente por nombre o referencia<input type="search" disabled={!!readError} value={search} onChange={event => onSearch(event.target.value)} placeholder="Nombre o referencia del paciente"/></label>
       {!readError && !visible.length && <p className="op-empty">{query ? 'No hay pacientes para esta busqueda.' : 'No hay pacientes con permiso vigente.'}</p>}
       {visible.map(ref => {
         const items = authorized.filter(t => t.patient_ref === ref);
@@ -73,7 +75,7 @@ export default function DispensaryAttention({ data, search, onSearch, disabled, 
       })}
     </div>
     <section className="op-patient-detail" aria-label="Detalle del paciente">
-      {!treatment && <p className="op-empty">Selecciona un paciente para revisar su tratamiento.</p>}
+      {!treatment && <p className="op-empty">{readError ? 'La atencion no esta disponible hasta verificar los datos.' : 'Selecciona un paciente para revisar su tratamiento.'}</p>}
       {treatment && period && <>
         <button className="op-command op-back" disabled={disabled} onClick={back}><ArrowLeft size={16}/>Volver a pacientes</button>
         <h2 ref={heading} tabIndex={-1}>{profile?.name ?? 'Perfil de prueba pendiente'}</h2>

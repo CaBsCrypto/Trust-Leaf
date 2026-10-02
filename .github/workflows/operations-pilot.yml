@@ -55,6 +55,9 @@ jobs:
           npm run lint
           npm run test:privy-supabase-rbac
           node --experimental-strip-types tests/bootstrap-safe-diagnostics.test.ts
+          node --experimental-strip-types tests/bootstrap-handler-safe-errors.test.mjs
+          node --experimental-strip-types tests/express-parser-errors.test.ts
+          node --experimental-strip-types tests/read-failure-projection.test.ts
           npm run test:legacy-private-route-block
           npm run test:legacy-route-auth
           npm run test:legacy-object-auth
@@ -67,6 +70,7 @@ jobs:
           npm run test:shared-patient-read
           npm run test:team-invitations
           npm run test:dispensary-onboarding
+          node --experimental-strip-types tests/onboarding-upstream-errors.test.mjs
           node --experimental-strip-types tests/dispensary-onboarding-privacy.test.ts
           npm run test:dispensary-lifecycle
           node --experimental-strip-types tests/dispensary-commerce.test.ts
@@ -138,6 +142,8 @@ jobs:
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium OPERATIONS_TEST_URL=http://127.0.0.1:4323 node tests/ui/medical-note-guard.browser.mjs
       - name: Isolated inventory drafts
         run: PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/inventory-draft-guard.browser.mjs
+      - name: Isolated shared patient read failures
+        run: PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/shared-patient-read-failure.browser.mjs
       - name: Isolated commerce browser journey
         run: |
           VITE_COMMERCE_CATALOG_ENABLED=true node node_modules/vite/bin/vite.js --config tests/ui/vite-operations.config.mjs --port 4322 > scratch/commerce-server.log 2>&1 &
@@ -158,4 +164,5 @@ jobs:
             scratch/medical-note-guard
             scratch/medical-server.log
             scratch/inventory-draft-guard
+            scratch/shared-patient-read-failure
           retention-days: 7

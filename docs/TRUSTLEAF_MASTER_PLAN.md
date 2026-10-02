@@ -10,8 +10,69 @@ ni activado. Faltan identificacion formal, prueba de recepcion/respuesta y
 acceso seguro, disponibilidad/reemplazo, conservacion y revision profesional.
 No se crea otro correo, no se prueba con contactos reales y no se publica un aviso.
 Invitaciones externas pausadas hasta aprobar las puertas del tablero.
+## Privacidad: correcciones integradas (02/10/2026)
 
-## Correcciones de privacidad: primera entrega
+PR66 integrado en `3243904`, candidato `271579c` con revision independiente,
+CI36970170432 PASS y preview Ready. DEM-PRIV-05 separa JSON de peticion400 de
+fallo upstream503 y preserva recuperacion explicita con el mismo ID. Tipos,
+compilaciones, SQL, concurrencia y regresiones compartidas de navegador PASS.
+CI main36970907192 y despliegue oficial se comprueban por separado; no atribuir
+los checks del candidato al merge. Sin invitaciones, datos o permisos cambiados.
+[Evidencia y limites](evidence/onboarding-upstream-errors/README.md).
+PR62 actualizado documentalmente, conservando propuesta/no aprobacion del aviso.
+
+### Corte historico: categorias publicadas, Incorporaciones en validacion
+
+PR65 `62fa1c0` revisado por seguridad/Admin/calidad, CI36968164236 y preview
+PASS; merge `063e406`, CI main36968901251 PASS, production6801956660 success
+y aliases oficiales verificados. No se ejecuta bootstrap real. DEM-PRIV-07
+cerrado tecnicamente; primera y segunda correcciones conservan su evidencia.
+Ahora `fix/onboarding-upstream-errors`: separar JSON de peticion400 de fallo
+upstream503, sin modificar acciones, permisos o migraciones. 16/16, SQL aislado,
+browser400/503 con idempotencia y tipos/build PASS; revision/checks del candidato
+y publicacion siguen como puertas. [Evidencia y limites](evidence/onboarding-upstream-errors/README.md).
+PR62 sigue borrador, no aviso aprobado/publicado. Identificacion formal de empresa,
+buzon, conservacion, proveedores y evaluacion humana siguen pendientes. Invitaciones
+externas pausadas; reunion solo con materiales completamente sinteticos.
+
+Los cortes anteriores conservan el estado de su fecha; el tablero unico registra
+el resultado vigente, sin convertir prueba local en publicacion.
+
+### Corte historico: parser integrado y handler en validacion (02/10/2026)
+
+PR64 `bec8edc` con revision seguridad/calidad, CI `36966407443` y preview PASS,
+integrado en `85b046a`, CI main `36967159314` PASS; production `6801680234`
+success y aliases oficiales verificados. Parser Express probado en aislamiento,
+sin afirmar observacion de un proceso Express alojado ni saneamiento global.
+Ahora `fix/bootstrap-handler-safe-errors`: 11 pares exactos, 19 negativos antes
+y 54/54 regresiones despues; tipos/build/store/RBAC/consolidacion PASS.
+[Evidencia y limites](evidence/bootstrap-handler-safe-errors/README.md).
+Una correccion funcional activa; JSON upstream de incorporacion queda despues.
+PR62 sigue borrador no aprobado ni aviso operativo; condiciones de privacidad,
+identificacion de la empresa propuesta, buzon y pruebas humanas siguen pendientes.
+
+### Corte historico: retirada ante lectura incierta (02/10/2026)
+
+PR63 integrado y publicado en `fbee6ea`, candidato `ea4afdd` con revision
+independiente, CI `36964636874` PASS y preview Ready; production `6801411840`
+success, aliases oficiales y marcador del App contrastados. Solo lecturas
+anonimas de publicacion, sin escrituras. [Registro de publicacion](evidence/express-safe-json-errors/README.md#previous-correction-release).
+Siguiente correccion activa: `fix/express-safe-json-errors`, parser acotado,
+regresiones prod/dev aisladas, tipos/build y revision antes de integrar.
+
+Desde main `a2bf39d`, `fix/shared-patient-read-failure-guard` aborda DEM-PRIV-06.
+Proyeccion compartida retirada ante errores; inventario/comprobantes propios
+conservados como datos anteriores de solo lectura, borradores de inventario y
+reintentos con el mismo identificador preservados. Notas/perfil propios no se
+redactan como si fueran datos compartidos. Sin cambios de API o migraciones.
+[Reproduccion, regresiones y limites](evidence/shared-patient-read-failure/README.md).
+Revision y checks del candidato antes de integrar; no declarar publicado por
+pruebas locales. PR62 sigue como propuesta documental del aviso, no aprobacion
+ni publicacion. Siguientes entregas independientes: parser Express, categorias
+del handler bootstrap y JSON upstream de incorporacion. Invitaciones externas
+pausadas; reunion limitada a materiales sinteticos y descubrimiento.
+
+### Corte historico: primera entrega de privacidad
 
 PR61 integrado en `a2bf39d`, CI main 36955898544 PASS. Candidato `33029aa` desde
 base `9657c63`, revision independiente, 58/58 diagnosticos, CI 36955239595 PASS

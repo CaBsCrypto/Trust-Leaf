@@ -1,5 +1,6 @@
 import { useDiscardDialog } from './useDiscardDialog';
 import { batchState, batchLabels } from './batchPresentation';
+import { readFailureProjection } from './readFailureProjection';
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Activity, CalendarDays, ClipboardList, History, House, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
@@ -36,9 +37,12 @@ export default function OperationsWorkspace({ email, onSignOut, embedded = false
 function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSignOut?: () => void; embedded: boolean }) {
   const identity = useTrustLeafPrivyIdentity();
   const [data, setData] = useState<PilotSnapshot | null>(null);
+  const [readError, setReadError] = useState('');
   const [tab, setSelectedTab] = useState('today');
+  const activeSection = useRef(tab);
+  activeSection.current = tab;
   const initialSection = useRef(false);
-  const { confirmDiscard, discardDialog } = useDiscardDialog(data ? `${data.role}:${data.joined}:${data.membership?.organization_ref}:${data.membership?.role}` : undefined);
+  const { confirmDiscard, discardDialog } = useDiscardDialog(data ? `${data.role}:${data.joined}:${data.membership?.organization_ref}:${data.membership?.role}:${!!readError}` : undefined);
   const sectionBody = useRef<HTMLDivElement>(null);
   const [attentionDirty, setAttentionDirty] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, NoteDraft>>({});
@@ -99,16 +103,16 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const openBatchHistory = async (batchRef: string) => { if (await setTab('history')) setHistoryBatch(batchRef); };
   const openDailySection = async (next: string) => { if (await setTab(next)) { if (next === 'team') setManagementView('team'); } };
   const [error, setError] = useState('');
-  const [readError, setReadError] = useState('');
   const [notice, setNotice] = useState('');
   const [receiptRef, setReceiptRef] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PilotCommand | null>(null);
-  const pendingContext = useRef<{ id: unknown; role?: PilotRole; organizationRef?: string } | null>(null);
+  const pendingContext = useRef<{ id: unknown; subject?: string; actorRef?: string; role?: PilotRole; organizationRef?: string } | null>(null);
   const [revision, setRevision] = useState(0);
   const lock = useRef(false);
   const controller = useRef(new AbortController());
   const requestNumber = useRef(0);
+  const readScope = useRef('');
   useEffect(() => { controller.current = new AbortController(); return () => { controller.current.abort(); requestNumber.current++; }; }, []);
   useEffect(() => {
     if (!notesDirty && !stockDirty && !(pending && ['save-note', 'complete-encounter', 'receive-batch', 'adjust-stock', 'set-batch-state'].includes(pending.action))) return;
@@ -168,6 +172,12 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         const result = await request(undefined, read.signal);
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
         if (result.synthetic !== true || !['doctor', 'patient', 'dispensary', 'admin'].includes(result.role)) throw new Error('Respuesta operativa no disponible.');
+        const scope = `${result.role}:${result.actorRef}:${result.joined}:${result.membership?.organization_ref}:${result.membership?.role}`;
+        if (readScope.current && scope !== readScope.current) {
+          setSearch(''); setAttentionDirty(false); setReceiptRef(null); setNotice('');
+          setHistoryDate(''); setHistoryBatch(''); setStockDrafts({});
+        }
+        readScope.current = scope;
         if (!initialSection.current) {
           initialSection.current = true;
           if (result.role === 'dispensary' && result.membership?.role === 'manager') setSelectedTab('home');
@@ -176,7 +186,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       } catch (e) {
         if (read.signal.aborted || current !== requestNumber.current || sequence !== readSequence) return;
         if ([401, 403].includes((e as { status?: number }).status ?? 0)) { setData(null); setNoteDrafts({}); }
-        setReadError((e as Error).message);
+        else setData(readFailureProjection);
+        setAttentionDirty(false); setReceiptRef(null);
+        if (readScope.current.startsWith('dispensary:') || [401, 403].includes((e as { status?: number }).status ?? 0)) setNotice('');
+        if (readScope.current.startsWith('dispensary:') && activeSection.current === 'today') setSearch('');
+        const status = (e as { status?: number }).status;
+        setReadError(status === 401 ? 'Inicia sesion nuevamente.' : status === 403 ? 'Esta cuenta no tiene permiso para consultar estos datos.'
+          : 'No se pudieron actualizar los datos. Actualiza para continuar.');
       }
     }
     void refresh();
@@ -195,8 +211,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     if (['receive-batch', 'adjust-stock', 'set-batch-state'].includes(command.action) && (data.role !== 'dispensary' || data.membership?.role !== 'manager')) return;
     if (pendingContext.current?.id === command.input.operationId) {
       const createdOrganization = command.action === 'create-organization' && !pendingContext.current.organizationRef;
-      if (pendingContext.current.role !== data?.role || (!createdOrganization && pendingContext.current.organizationRef !== data?.membership?.organization_ref)) return;
-    } else pendingContext.current = { id: command.input.operationId, role: data?.role, organizationRef: data?.membership?.organization_ref };
+      if (pendingContext.current.subject !== identity.subject || pendingContext.current.actorRef !== data.actorRef || pendingContext.current.role !== data?.role || (!createdOrganization && pendingContext.current.organizationRef !== data?.membership?.organization_ref)) return;
+    } else pendingContext.current = { id: command.input.operationId, subject: identity.subject, actorRef: data.actorRef, role: data?.role, organizationRef: data?.membership?.organization_ref };
     lock.current = true; setBusy(true); setPending(command); setError(''); setReadError(''); setNotice(''); requestNumber.current++;
     try {
       const result = await request(command);
@@ -216,7 +232,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     } catch (e) {
       if (controller.current.signal.aborted) return;
       setError((e as Error).message);
-      if ([401, 403].includes((e as { status?: number }).status ?? 0)) { setData(null); setNoteDrafts({}); }
+      if ([401, 403].includes((e as { status?: number }).status ?? 0)) { setData(null); setNoteDrafts({}); setNotice(''); setReceiptRef(null); setAttentionDirty(false); setSearch(''); }
       if ([400, 401, 403, 409].includes((e as { status?: number }).status ?? 0)) setPending(null);
     } finally {
       if (!controller.current.signal.aborted) {
@@ -241,11 +257,11 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   }
   const query = search.trim().toLocaleLowerCase();
   const matches = (value: string) => value.toLocaleLowerCase().includes(query);
-  const disabled = busy || pending !== null;
+  const disabled = busy || pending !== null || !!readError;
   const visibleError = readError || error;
   const role = data?.role;
   const withoutTeam = role === 'dispensary' && data?.staffOnly && !data.membership?.organization_ref;
-  const pendingContextMatches = !pending || (pendingContext.current?.role === role &&
+  const pendingContextMatches = !pending || (pendingContext.current?.subject === identity.subject && pendingContext.current?.actorRef === data?.actorRef && pendingContext.current?.role === role &&
     (pendingContext.current?.organizationRef === data?.membership?.organization_ref || (pending.action === 'create-organization' && !pendingContext.current?.organizationRef)) &&
     (!['receive-batch', 'adjust-stock', 'set-batch-state'].includes(pending.action) || data?.membership?.role === 'manager'));
   const searchHint = tab === 'inventory' ? 'Codigo de lote o producto'
@@ -289,7 +305,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
       {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
       <div className="op-toolbar">{role === 'dispensary' && data?.joined && !withoutTeam && <button className="op-management-tab" role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}><Settings size={16}/>{import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'}</button>}<span className="op-simulation">Piloto simulado</span>
         <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
-        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={busy || ((role === 'dispensary' || role === 'doctor') && disabled && pendingContextMatches)} onClick={async () => {
+        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={busy || ((role === 'dispensary' || role === 'doctor') && pending !== null && pendingContextMatches)} onClick={async () => {
           if (pending && (!data || !pendingContextMatches)) {
             if (await confirmDiscard('Hay una operacion sin confirmar que podria estar guardada. Cerrar sesion abandona su recuperacion. Comprueba el historial antes de repetirla.')) onSignOut();
             return;
@@ -303,6 +319,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
     <div className="op-content">
       {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
       {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
+      {readError && role === 'dispensary' && <p role="status">No se pudo verificar la autorizacion del paciente. Actualiza para continuar. El inventario y el historial propios son datos anteriores, solo lectura.</p>}
       {pending && !busy && data && (data.joined || pending.action === 'join') && !readError && !withoutTeam && pendingContextMatches && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
       {pending && data && !pendingContextMatches && <p role="alert">La operacion pendiente pertenece al acceso anterior. No puede reintentarse con la organizacion o permisos actuales. Comprueba su historial antes de repetirla.</p>}
       {!data && !visibleError && <p role="status">Verificando permisos...</p>}
@@ -331,7 +348,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'onboarding' && role === 'admin' && <AdminOnboarding/>}
         {!(role === 'dispensary' && tab === 'today') && tab !== 'onboarding' && tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
-        {tab === 'today' && role === 'dispensary' && <DispensaryAttention data={data} search={search} onSearch={setSearch} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
+        {tab === 'today' && role === 'dispensary' && <DispensaryAttention key={`${data.actorRef}:${data.membership?.organization_ref}:${data.membership?.role}`} data={data} search={search} onSearch={setSearch} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
         {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
@@ -430,13 +447,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         {tab === 'team' && <>
           {role === 'dispensary' && data.membership?.organization_ref && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' && <>
             <div className="op-tabs" role="group" aria-label="Gestion del dispensario"><button aria-pressed={managementView === 'commerce'} onClick={async () => { if (!await leaveCommerce()) return; setManagementView('commerce'); setSearch(''); }}>Registros comerciales</button><button aria-pressed={managementView === 'team'} disabled={commerceGuard.pending} onClick={async () => { if (!await leaveCommerce()) return; setManagementView('team'); setSearch(''); }}>Equipo</button></div>
-            {managementView === 'commerce' && <CommercePanel key={data.membership.organization_ref} data={data} changed={() => setRevision(n => n + 1)} guardChanged={setCommerceGuard}/>}
+            {managementView === 'commerce' && <CommercePanel key={`${data.actorRef}:${data.membership.organization_ref}`} data={data} writesDisabled={!!readError} changed={() => setRevision(n => n + 1)} guardChanged={setCommerceGuard}/>}
           </>}
           {(role !== 'dispensary' || !data.membership?.organization_ref || import.meta.env.VITE_COMMERCE_CATALOG_ENABLED !== 'true' || managementView === 'team') && <>
           <h2><Users size={20}/>Organizacion y equipo</h2>
           {role === 'admin' && !data.organizations?.length && <Empty>No hay organizaciones registradas.</Empty>}
           {role === 'dispensary' && !data.staffOnly && !data.membership?.organization_ref && <CommandForm label="Crear dispensario de prueba" disabled={disabled} fields={[{ name: 'name', label: 'Nombre del dispensario', maxLength: 100 }]} submit={v => mutate('create-organization', v)}/>}
-          {role === 'dispensary' && data.membership?.organization_ref && <TeamPanel search={search} revision={revision} disabled={disabled} remove={actorRef => mutate('remove-operator', { resourceRef: actorRef })}/>}
+          {role === 'dispensary' && data.membership?.organization_ref && <TeamPanel key={`${data.actorRef}:${data.membership.organization_ref}:${data.membership.role}`} search={search} revision={revision} disabled={disabled} remove={actorRef => mutate('remove-operator', { resourceRef: actorRef })}/>}
           {role === 'admin' && <AdminOrganizationTeams organizations={data.organizations ?? []} members={data.members ?? []} search={search} revision={revision}/>}
           </>}
         </>}
