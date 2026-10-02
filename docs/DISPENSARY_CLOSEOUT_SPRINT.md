@@ -6,6 +6,13 @@ Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de product
 
 ## Demo y adopcion: 30/09/2026
 
+Actualizacion de correcciones: PR60 integrado en `9657c63`, CI main 36949993027
+PASS. `fix/bootstrap-safe-diagnostics` aborda exclusivamente DEM-PRIV-04;
+marcador baseline FALLA / candidato PASS, log limitado y respuestas conservadas.
+[Metodo y limites](evidence/bootstrap-safe-diagnostics/README.md). Integracion y
+publicacion requieren revision/checks del ultimo candidato, no solo CI de base.
+DEM-PRIV-03/05, investigacion de revocacion/503 y privacidad operativa separados.
+
 Actualizacion privacidad 01/10: main `86e2016`, PR59 integrado, CI main
 36941802547 PASS (PG17), deployment 6797663287 success y alias Vercel oficiales
 comprobados. Auditoria de seis agentes en `audit/pilot-privacy-readiness`.
@@ -113,7 +120,7 @@ revisiones no escriben en produccion.
 | DEM-02 / Medico | Revision tecnica aprobada | Oficial 29/09: filtros 4/0/3/2/9, reserva f1e7b1d6/Meet, nota v2, tratamiento 4119236d 30/20/10 y recibo 3150a49a persistentes. Nuevo fixture: participar y comenzar explicitamente PASS; guard de notas reutilizado mismo codigo | Alta completa Privy/revision de cuenta nueva no repetida; no receta legal ni autonomia |
 | DEM-03 / Paciente | Recorrido tecnico aprobado, humano pendiente | 01/10: consentimiento B, permiso hasta 02/10 02:33 persistente tras recarga; 30/20/10 y recibo 3150a49a coinciden con operador | Autonomia/teclado fisico; medico inactivo sigue como politica separada |
 | DEM-04 / Dispensario | Ambos roles comprobados tecnicamente, humano pendiente | 01/10 operador y encargado B: revision 1 g/9 g hipoteticos sin entrega, descarte/retorno, 60 g stock, recibo, filtros, Gestion segun rol y recarga; encargado abre recepcion/ajuste sin guardar y consulta Equipo; regresiones anteriores conservadas | Tareas humanas en computador/celular real, teclado y selector nativo externo; no integracion comercial->entrega repetida |
-| DEM-05 / Seguridad | DEM-SEC-01/02 y concurrencia cerrados tecnicamente | PR56 preserva recibos propios y retira proyeccion no autorizada; PR59 ocho carreras ambos ordenes, PG18 local y PG17 CI PASS | Diagnosticos DEM-PRIV-03/04 y riesgo no reproducido DEM-PRIV-06 separados; doctor-active y DEM-LEG-01 pendientes. Sin exposicion real declarada |
+| DEM-05 / Seguridad | DEM-SEC-01/02 y concurrencia cerrados tecnicamente | PR56 preserva recibos propios y retira proyeccion no autorizada; PR59 ocho carreras ambos ordenes, PG18 local y PG17 CI PASS | Diagnosticos DEM-PRIV-03/04/07 y retencion UI DEM-PRIV-06 separados; doctor-active y DEM-LEG-01 pendientes. Sin exposicion real declarada |
 | DEM-06 / UX | Validacion | Nueva QA ambos roles 390/1440: carga, foco, Escape, descarte y recuperacion conservan datos/borrador; cero POST. Responsive anterior cinco anchos reutilizado | DEM-UX-01 mensaje confuso de lectura; tareas humanas/teclado real pendientes |
 | DEM-07 / Calidad | Revision tecnica aprobada | Referencia/publicacion confirmadas. CI tipos, builds off/on, browser y PostgreSQL independiente PASS; PostgREST usa service_role aislado | No acredita gateway real por si solo. Main sin proteccion de rama: riesgo de proceso, propuesta separada, sin cambiar permisos |
 | DEM-08 / Regulatorio | Investigacion documental, revision profesional pendiente | Fuentes oficiales 01/10: vigencia general Ley21.719 01/12/2026; expedientes legal/privacidad, no certificacion | Primera demo excluye llamadas/eventos; Meet OPEN sin cambio ni prueba remota. Responsable/contacto, conservacion, contratos y revision juridica/clinica pendientes |
@@ -126,9 +133,10 @@ revisiones no escriben en produccion.
 | DEM-PRIV-01 / PO + privacidad | Bloqueado para externos | Inventario y borrador de aviso sin responsable/canal/plazos/condiciones aprobadas; Footer sin aviso operativo | Definir y probar canal, revisar finalidades/proveedores/conservacion, aprobar y publicar en otra entrega; sin invitaciones |
 | DEM-PRIV-02 / PO + Admin + privacidad | Preparado, decision pendiente | consent_at de participacion, version de formulario; sin aviso versionado aceptado. Copias de perfil en journal privado | Definir evidencia necesaria y retencion con revision profesional; no atribuir borrador a consentimientos previos |
 | DEM-PRIV-03 / Seguridad | Preparado, P2 diagnostico | Parser Express aislado production registra fragmento JSON sintetico en stderr, respuesta400 no lo refleja; no prueba de fuga hosted | Rama fix separada, error seguro previo al handler/logs; no tocar producto en auditoria |
-| DEM-PRIV-04 / Seguridad | Preparado, P2 diagnostico | Bootstrap registra codigo string upstream sin acotar; marcador sintetico en console.error, cliente saneado | Rama fix separada y regresion de logging; no se inspeccionaron logs reales |
+| DEM-PRIV-04 / Seguridad | Validacion de correccion, P2 diagnostico | fix/bootstrap-safe-diagnostics desde9657c63: allowlist exacta y mismo marcador ahoraPASS, cliente y categorias conservados; nueva regresion CI | Revision/checks candidato y correspondencia publicada antes de cerrar; no se ejecuta bootstrap real ni se inspeccionan logs privados |
 | DEM-PRIV-05 / calidad + Admin | Preparado, P2 funcional | Dos reproducciones: JSON invalido de SQL/Privy devuelve400 en onboarding; expectativa503 falla sin exposicion de payload | Rama fix independiente para distinguir input de fallo upstream; reproduccion negativa fuera del suite verde, no cierre por tests privacidad |
-| DEM-PRIV-06 / Paciente + seguridad | Backlog, no reproducido | Inspeccion: snapshot previo conservado ante GET503, posible combinacion con revocacion remota | Fixture aislada antes de llamar defecto; no se demostro bypass SQL ni fuga |
+| DEM-PRIV-06 / Paciente + seguridad | Preparado, P2 privacidad UI; reproducido en aislamiento | 12 casos encargado/operador 390/1440: revocar permiso/tratamiento/actor y fallar GET503 conserva proyeccion previa y Permiso vigente; 3 controles PASS. Cero POST, SQL deniega y no cambia filas; GET200/401/403 limpia | Definir retiro de proyeccion sensible ante lectura incierta y regresion en rama propia; conservar historial propio permitido y borradores no sensibles. No es nueva lectura SQL ajena ni exposicion publicada demostrada |
+| DEM-PRIV-07 / Seguridad + Admin | Preparado, P2 condicionado; entrada sintetica reproducida | Export real readiness con verificador real/reader sintetico: string/objeto/array en code alcanza log y HTTP503; cero red/store. No se ha constatado procedencia de ese error del SDK real | Acotar categorias en PR separado y revisar procedencia SDK; DEM-PRIV-04 solo sanea diagnostico del store |
 | DEM-QA-02 / medico + calidad | Preparado, fixture | google-calendar-setup.test.ts falla por target de renovacion ausente; otras pruebas Calendar reutilizadas | Revisar/corregir fixture en entrega separada; no modifica Meet ni prueba configuracion remota |
 
 ### Recuperacion de CI: primera entrega del sprint 1

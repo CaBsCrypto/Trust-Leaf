@@ -1,5 +1,17 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Correcciones de privacidad: primera entrega
+
+Desde `9657c63` (PR60 integrado, CI main 36949993027 PASS), rama
+`fix/bootstrap-safe-diagnostics`: corregir solo DEM-PRIV-04, codigo upstream
+sin acotar en logs. Reproduccion negativa antes / PASS despues; allowlist de
+codigos conocidos, sin cambiar identidad, roles o respuestas.
+[Evidencia](evidence/bootstrap-safe-diagnostics/README.md) y
+[tablero unico](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
+Revision, CI y preview del candidato previos a integrar. No se realiza bootstrap
+publicado ni se modifican B/Browns. Parser/JSON upstream y privacidad operativa
+siguen en entregas separadas; invitaciones externas permanecen pausadas.
+
 ## Privacidad y demo sin llamadas (01/10/2026)
 
 Base main `86e2016`, PR59 integrado, CI main 36941802547 PASS y despliegue/alias

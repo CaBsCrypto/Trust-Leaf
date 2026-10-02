@@ -53,6 +53,8 @@ jobs:
       - name: Types and isolated regression tests
         run: |
           npm run lint
+          npm run test:privy-supabase-rbac
+          node --experimental-strip-types tests/bootstrap-safe-diagnostics.test.ts
           npm run test:legacy-private-route-block
           npm run test:legacy-route-auth
           npm run test:legacy-object-auth
