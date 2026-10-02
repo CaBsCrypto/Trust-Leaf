@@ -1,5 +1,19 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Privacidad: retirada ante lectura incierta (02/10/2026)
+
+Desde main `a2bf39d`, `fix/shared-patient-read-failure-guard` aborda DEM-PRIV-06.
+Proyeccion compartida retirada ante errores; inventario/comprobantes propios
+conservados como datos anteriores de solo lectura, borradores de inventario y
+reintentos con el mismo identificador preservados. Notas/perfil propios no se
+redactan como si fueran datos compartidos. Sin cambios de API o migraciones.
+[Reproduccion, regresiones y limites](evidence/shared-patient-read-failure/README.md).
+Revision y checks del candidato antes de integrar; no declarar publicado por
+pruebas locales. PR62 sigue como propuesta documental del aviso, no aprobacion
+ni publicacion. Siguientes entregas independientes: parser Express, categorias
+del handler bootstrap y JSON upstream de incorporacion. Invitaciones externas
+pausadas; reunion limitada a materiales sinteticos y descubrimiento.
+
 ## Correcciones de privacidad: primera entrega
 
 Desde `9657c63` (PR60 integrado, CI main 36949993027 PASS), rama

@@ -21,6 +21,8 @@ export default function TeamPanel({ search, revision, disabled, remove }: { sear
   const lock = useRef(false);
   const generation = useRef(0);
   const controller = useRef(new AbortController());
+  const writeAllowed = useRef(false);
+  writeAllowed.current = !disabled && !readError && data?.membership.role === 'manager';
   useEffect(() => { controller.current = new AbortController(); return () => { controller.current.abort(); generation.current++; }; }, []);
   useEffect(() => {
     const read = new AbortController();
@@ -41,10 +43,12 @@ export default function TeamPanel({ search, revision, disabled, remove }: { sear
     return () => { read.abort(); clearInterval(timer); window.removeEventListener('focus', visible); window.removeEventListener('online', visible); };
   }, [revision, version, identity.tokenReady]);
   async function execute(command: TeamCommand) {
-    if (lock.current) return;
+    if (lock.current || !writeAllowed.current) return;
     lock.current = true; generation.current++; setBusy(true); setPending(command); setError(''); setNotice('');
     try {
-      await teamRequest(identity, command, controller.current.signal);
+      await teamRequest(identity, command, controller.current.signal, () => {
+        if (!writeAllowed.current) throw new Error('Actualiza los permisos antes de reintentar la misma operacion.');
+      });
       if (!controller.current.signal.aborted) { setPending(null); setConfirmation(null); setEmail(''); setNotice('Cambio guardado. Consulta el estado de envio.'); }
     } catch (e) {
       if (!controller.current.signal.aborted) {
@@ -60,7 +64,7 @@ export default function TeamPanel({ search, revision, disabled, remove }: { sear
   const matches = (value: string) => value.toLowerCase().includes(search.toLowerCase());
   return <section className="op-team">
     {(error || readError) && <p role="alert" className="op-error">{error || readError}</p>}{notice && <p role="status" className="op-success">{notice}</p>}
-    {pending && !busy && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
+    {pending && !busy && <button className="op-command" disabled={disabled || !!readError || !data} onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
     {!data && !error && !readError && <p role="status">Cargando equipo...</p>}
     {data && <><h3>{data.organization.name}</h3><p>{data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>
       {!data.invitationsEnabled && <p role="status">Invitaciones deshabilitadas temporalmente.</p>}
