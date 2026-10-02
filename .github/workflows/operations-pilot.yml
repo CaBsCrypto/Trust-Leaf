@@ -65,6 +65,7 @@ jobs:
           npm run test:shared-patient-read
           npm run test:team-invitations
           npm run test:dispensary-onboarding
+          node --experimental-strip-types tests/dispensary-onboarding-privacy.test.ts
           npm run test:dispensary-lifecycle
           node --experimental-strip-types tests/dispensary-commerce.test.ts
           node tests/sql/dispensary-commerce.mjs

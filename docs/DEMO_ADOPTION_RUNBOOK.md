@@ -7,6 +7,48 @@ La fuente unica de estado, responsables, resultados y bloqueos es el
 [tablero de cierre](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
 Este documento describe la ejecucion; no mantiene otra matriz de aprobaciones.
 
+## Demo sin llamadas: 01/10/2026
+
+Base comprobada main `86e2016`, PR59 integrado y CI main 36941802547 PASS;
+despliegue oficial contrastado en el [expediente](PILOT_PRIVACY_READINESS.md).
+Esta actualizacion prevalece sobre las instrucciones historicas siguientes.
+DEMO EXTERNA PAUSADA hasta completar privacidad minima y aprobacion del aviso.
+No se presenta un borrador editorial como aviso publicado ni aceptado.
+
+Guion seguro, para ensayo interno y posterior presentacion autorizada:
+
+1. Identidad y organizacion: cuenta/rol correcto tras entrar y recargar. En
+   material compartido, ocultar correos, nombres reales y contactos. Dos pestanas
+   no son sesiones independientes. Usuario introduce codigos directamente.
+2. Admin: leer invitacion, solicitud y decision existentes; explicar que
+   aprobar no acredita establecimiento/profesional ni sustituye acceso efectivo.
+   No enviar, reenviar, aprobar o corregir para obtener evidencia de la demo.
+3. Medico/paciente: registros ficticios existentes de consulta, tratamiento y
+   comprobante; explicar saldo. No crear/cancelar reserva, iniciar/cerrar consulta,
+   guardar nota, abrir Meet, OAuth o procesar Calendar. Reserva/cancelacion puede
+   enviar correo real aun sin videollamada; no incluir esas acciones en el guion.
+4. B: comprobar permiso vigente antes de mostrar Atenciones. Vigencia 02/10
+   02:33 es una observacion previa, no garantia actual. Si falta, no renovar por
+   cuenta del paciente: continuar Inventario/Historial o solicitar confirmacion
+   separada en otro recorrido. Revisar 1 g sin confirmar solo si el cupo actual
+   lo permite; volver a editar/cancelar descarte y recuperar recibo existente.
+5. Browns: preparacion separada del encargado, catalogo/recepcion de 100 g y
+   lote existentes, Equipo segun rol. No sugerir que ese lote alimenta la entrega
+   de B ni que Browns tiene operador/paciente propios ya comprobados. Sin guardar.
+6. Cierre: preguntar donde se pierde contexto y registrar ayudas sin payloads
+   privados. Compras, Caja, Conteos y uso clinico/comercial real quedan fuera.
+
+Prueba humana disponible: sin indicar botones, localizar un lote y recuperar
+su comprobante; luego explicar saldo/revision si hay permiso. Registrar rol,
+version, navegador/dispositivo, autonomia o ayuda y observaciones de teclado/
+barra inferior. Celular fisico pendiente si no hay participante; no convertir
+capturas responsive ni tareas del agente en aprobacion humana.
+
+[Aviso borrador](PILOT_PRIVACY_NOTICE_DRAFT.md) y
+[procedimiento propuesto](PILOT_PRIVACY_PROCEDURE.md) requieren responsable,
+canal probado, conservacion, proveedores y revision/aprobacion. Excluir llamada
+no borra eventos Google existentes ni verifica revocacion de enlaces antiguos.
+
 ## Objetivo y decisiones
 
 Demostrar Admin -> medico -> paciente -> dispensario -> comprobante con registros
@@ -52,10 +94,9 @@ terminar una auditoria automatizada.
 
 ## Recorrido publicado, sin nuevas operaciones
 
-- Puerta previa: mientras DEM-SEC-01 permanezca abierto, no renovar el permiso
-  de B, aunque exista confirmacion del paciente. Las invitaciones externas
-  tambien requieren cerrar DEM-SEC-02 (frontera heredada).
-  Retomar esos pasos solo tras correccion revisada, publicada y comprobada.
+- Puerta actual: DEM-SEC-01/02 cerrados/publicados. Las invitaciones externas
+  siguen pausadas por privacidad; renovar B requiere confirmacion especifica
+  del paciente en un recorrido autorizado, no durante esta auditoria.
 - Paciente `crwom01@gmail.com`: solicitar confirmacion especifica antes de
   compartir perfil ficticio, tratamiento `4119236d` y entregas con B durante
   24 horas. No incluir notas clinicas. Comprobar permiso y recarga. No autorizar
@@ -109,8 +150,8 @@ borradores, democion e idempotencia. La matriz unica registra resultados y limit
 Actualizacion: PR52 integrado en 637e17c. DEM-SEC-02 cerrado por PR54 en 65aaeb8,
 CI/preview del candidato aprobados y retirada 410/405/no-store comprobada en el
 dominio oficial. [Evidencia y limites](evidence/legacy-private-route-block/README.md).
-Siguiente: DEM-SEC-01 con su entrega de lectura compartida revisada. No levantar
-invitaciones ni renovar el permiso de B; DEM-LEG-01 conserva los problemas de
+Actualizacion 01/10: DEM-SEC-01 cerrado por PR56 y PR59 integra concurrencia
+en 86e2016 con PG17 CI PASS. No levantar invitaciones por ello; DEM-LEG-01 conserva los problemas de
 fallback/cache del portal Stellar como trabajo independiente.
 
 ## Presentacion y colaboracion humana

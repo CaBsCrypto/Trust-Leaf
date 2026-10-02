@@ -1,5 +1,24 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Privacidad y demo sin llamadas (01/10/2026)
+
+Base main `86e2016`, PR59 integrado, CI main 36941802547 PASS y despliegue/alias
+oficiales comprobados. Auditoria en `audit/pilot-privacy-readiness`, seis agentes,
+sin cambios de producto ni escrituras publicadas. Primera demo sin videollamada,
+grabacion ni generacion de eventos; B/Browns separados. Incorporacion externa
+PAUSADA: definir responsable/contacto, conservacion, proveedores y aprobar/publicar
+aviso en entrega separada. Aviso editorial draft-2026-10-01 no aceptado por usuarios.
+
+[Inventario y brechas](PILOT_PRIVACY_READINESS.md),
+[borrador interno del aviso](PILOT_PRIVACY_NOTICE_DRAFT.md),
+[procedimiento propuesto](PILOT_PRIVACY_PROCEDURE.md) y
+[evidencia tecnica](evidence/pilot-privacy-readiness/README.md).
+El [tablero unico](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026) conserva
+hallazgos de diagnostico reproducidos en aislamiento, error de clasificacion
+upstream y pendientes humanos. Ninguno se corrige dentro del PR de auditoria.
+Almacenamiento privado no se presenta como cifrado de todos los campos;
+participacion no equivale a aceptacion de un aviso versionado. No habilita uso real.
+
 ## Seguridad de entregas concurrentes (01/10/2026)
 
 Desde main `2071c40` (PR58 integrado, CI main 36828485700 PASS), nueva entrega
@@ -9,7 +28,8 @@ encargado/operador para permiso, recibo previo conservado, rechazo sin descuento
 y replay sin duplicados. Tres suites completas en PostgreSQL local independiente
 PASS; tipos/build y regresiones de medico, paciente, comercio e incorporacion PASS.
 Sin defecto funcional reproducido, cambios de producto ni escrituras publicadas.
-Revision y CI/preview del ultimo candidato pendientes antes de integrar.
+PR59 integrado en `86e2016`; revision/CI/preview aprobados y CI main
+36941802547 PASS, incluido PostgreSQL17. Despliegue oficial comprobado por separado.
 [Metodo, resultados y limites](evidence/dispensing-access-concurrency/README.md).
 No cierra autonomia/celular real, privacidad previa a invitar, politica medica ni
 legado. Proxima puerta: revisar privacidad minima/Meet y preparar la evaluacion
