@@ -6,6 +6,13 @@ Fecha de corte: 2026-10-01, America/Santiago. Auditoria desde
 La fuente unica de estados y responsables es el
 [tablero](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
 
+Actualizacion posterior a la auditoria: PR60 integrado en `9657c63`, CI main
+36949993027 PASS. Primera correccion DEM-PRIV-04 en rama
+`fix/bootstrap-safe-diagnostics`: marcador negativo ahora PASS, codigos de log
+limitados sin cambiar respuestas ni permisos. [Evidencia y puerta de integracion](evidence/bootstrap-safe-diagnostics/README.md).
+Los hallazgos siguientes conservan la reproduccion original de la auditoria;
+no representan aprobacion del aviso ni de incorporacion externa.
+
 ## Decision de esta entrega
 
 LISTO PARA ENSAYO INTERNO CON LIMITACIONES; INCORPORACION EXTERNA PAUSADA.
@@ -124,9 +131,19 @@ publicada demostrada. No se corrigio producto dentro de esta auditoria.
   `SyntaxError` en onboarding, aunque el origen sea proveedor. Dos reproducciones
   negativas aisladas; no hay payload privado reflejado. Separar error cliente
   de indisponibilidad upstream en rama propia, manteniendo reintento idempotente.
-- DEM-PRIV-06 / pendiente de reproducir: snapshot compartido podria permanecer
-  visible durante GET503 tras revocacion remota; inspeccion no demuestra bypass
-  SQL ni fuga. Confirmar con fixture antes de definir correccion.
+- DEM-PRIV-06 / P2 privacidad UI, actualizado: reproducido en 12 escenarios
+  aislados de encargado/operador a 390/1440 px. Revocar permiso, tratamiento o
+  actor y devolver GET503 conserva nombre/contactos, saldo, periodos y recibo
+  compartido previo; la fila sigue diciendo Permiso vigente. No aparecen notas
+  clinicas. Las entregas siguen bloqueadas (cero POST; SQL 42501/PT409 sin
+  cambios), y GET200/401/403 retira la proyeccion. Tres controles PASS.
+  Es retencion visible de datos antes autorizados, no una nueva lectura ajena
+  ni exposicion publicada demostrada. Politica y correccion en entrega separada.
+- DEM-PRIV-07 / P2 condicionado: catch de bootstrap en readiness toma
+  code/statusCode sin validar. Export real con verificador real y reader
+  sintetico reproduce codigo string/objeto/array en log y HTTP503, cero red o
+  store. Procedencia de ese error en SDK real pendiente; sin afirmar fuga
+  publicada. PR separado: DEM-PRIV-04 limita solo el diagnostico del store.
 - DEM-QA-02 / prueba heredada: fixture `google-calendar-setup.test.ts` no incluye
   target de renovacion requerido por codigo vigente. FALLA aislada conocida,
   no fallo de configuracion remota. Corregir fixture/revisar en entrega separada;

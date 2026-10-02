@@ -154,7 +154,8 @@ async function readSafeSupabaseDiagnostic(response: Response) {
   try { body = await response.json(); } catch { return fallback; }
   if (!body || typeof body !== 'object') return fallback;
   const code = (body as Record<string, unknown>).code;
-  const upstreamCode = typeof code === 'string' ? code : 'unknown';
+  const upstreamCode = typeof code === 'string' && ['42501', 'PGRST202', '42883'].includes(code)
+    ? code : 'unknown';
   console.error('Supabase Privy bootstrap gateway response.', {
     httpStatus: response.status,
     upstreamCode,
