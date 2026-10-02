@@ -22,7 +22,8 @@ or destroyed transports consume known errors without writing or forwarding.
   declared/chunked oversize return bounded JSON. Valid object/array/empty/gzip
   requests preserve behavior. Default 102400-byte JSON and 65536-byte raw limits
   remain intact; raw whitespace/CRLF/UTF-8 and invalid JSON bytes are unchanged.
-- All console methods and stderr captured: zero parser diagnostics. External
+- Console debug/info/log/warn/error and stderr captured: zero parser diagnostics.
+  Stdout and other console methods are not captured. External
   fetch/socket requests blocked and counted: zero attempts. Owned servers close.
 - Existing retired-route regression: 198 actual export and 325 Express HTTP
   cases PASS, zero Stellar/fetch calls. Types and product build PASS.
@@ -46,5 +47,5 @@ GitHub production `6801411840` success associates that SHA with
 Public App asset on www.trustleaf.org contains the bounded failed-read message.
 Four actor pages return 200; private operations/commerce/onboarding reads without
 a session return 401 and `no-store, private`. These are anonymous release checks,
-not another authenticated four-actor journey. Main CI `36965393118` was running
-when this follow-up was prepared; candidate approval is recorded separately.
+not another authenticated four-actor journey. Main CI `36965393118` completed
+successfully; candidate approval is recorded separately.
