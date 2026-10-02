@@ -2,6 +2,13 @@
 
 ## Privacidad: retirada ante lectura incierta (02/10/2026)
 
+PR63 integrado y publicado en `fbee6ea`, candidato `ea4afdd` con revision
+independiente, CI `36964636874` PASS y preview Ready; production `6801411840`
+success, aliases oficiales y marcador del App contrastados. Solo lecturas
+anonimas de publicacion, sin escrituras. [Registro de publicacion](evidence/express-safe-json-errors/README.md#previous-correction-release).
+Siguiente correccion activa: `fix/express-safe-json-errors`, parser acotado,
+regresiones prod/dev aisladas, tipos/build y revision antes de integrar.
+
 Desde main `a2bf39d`, `fix/shared-patient-read-failure-guard` aborda DEM-PRIV-06.
 Proyeccion compartida retirada ante errores; inventario/comprobantes propios
 conservados como datos anteriores de solo lectura, borradores de inventario y
