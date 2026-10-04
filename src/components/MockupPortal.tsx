@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, MapPin, ArrowRight, ShieldCheck, CheckCircle, Database, Package, Trash2, Plus, Minus, Globe, Upload, Images, Leaf, Bell, Copy } from 'lucide-react';
 
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import { useLanguage } from '../context/LanguageContext';
 
@@ -1005,57 +1005,6 @@ function buildDemoPatientDashboard(patientAddress = DEMO_PATIENT_ADDRESS): Patie
 
 
 
-function buildDemoPrescriptionValidation(
-
-  prescriptionId = Number(DEMO_PRESCRIPTION_ID),
-
-): DispensaryPrescriptionValidation {
-
-  return {
-
-    prescription: {
-
-      id: prescriptionId,
-
-      patient: DEMO_PATIENT_ADDRESS,
-
-      doctor: 'GDHHRMBOY22KGDH26KTQKTVNVGZ3GFHGL25ZT3HDTOST36U5V3L765RV',
-
-      medicationHash: 'demo-minimal-prescription-hash',
-
-      expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-
-      totalQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-
-      dispensedQuantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-      remainingQuantity: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS - DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-      status: 'active',
-
-    },
-
-    validation: {
-
-      canDispense: true,
-
-      reason: 'Receta preparada. El dispensario ve saldo, vigencia y permiso minimo, no ficha clinica.',
-
-    },
-
-    lastRecord: {
-
-      id: 1,
-
-      quantity: DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-      dispensary: 'GDRERO3UET6MOXRL2BQRTBI4FB7RUY6DLNHOLLJC5WX4SYWHMJBZP4WX',
-
-    },
-
-  };
-
-}
 
 
 
@@ -1990,6 +1939,8 @@ const MOCK_GLOBAL_DISPENSARIES: Record<string, any[]> = {
 import PrivyAgenda from './PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 
+const LEGACY_PRIVATE_READ_UNAVAILABLE = 'Lectura heredada no disponible. Usa el piloto conectado de Trust Leaf.';
+
 export default function MockupPortal({
 
   isOpen,
@@ -2105,13 +2056,7 @@ export default function MockupPortal({
 
   );
 
-  const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(() => {
-
-    const saved = localStorage.getItem('trust_patient_dashboard');
-
-    return saved ? JSON.parse(saved) : null;
-
-  });
+  const [patientDashboard, setPatientDashboard] = useState<PatientDashboardData | null>(null);
 
   const [patientDashboardLoading, setPatientDashboardLoading] = useState(false);
 
@@ -2183,22 +2128,9 @@ export default function MockupPortal({
 
   );
 
-  const [prescriptionAllowance, setPrescriptionAllowance] = useState(() => {
-
-    const saved = localStorage.getItem('trust_prescription_allowance');
-
-    return saved
-
-      ? JSON.parse(saved)
-
-      : {
-
-          monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-
-          usedGrams: DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-        };
-
+  const [prescriptionAllowance, setPrescriptionAllowance] = useState({
+    monthlyLimitGrams: 0,
+    usedGrams: 0,
   });
 
   const [dispenseBusy, setDispenseBusy] = useState(false);
@@ -2247,13 +2179,7 @@ export default function MockupPortal({
 
   const [clinicalAccessState, setClinicalAccessState] = useState<Record<string, 'private' | 'authorized' | 'revoked'>>({});
 
-  const [privacyPermissions, setPrivacyPermissions] = useState<PrivacyPermission[]>(() => {
-
-    const saved = localStorage.getItem('trust_privacy_permissions');
-
-    return saved ? JSON.parse(saved) : [];
-
-  });
+  const [privacyPermissions, setPrivacyPermissions] = useState<PrivacyPermission[]>([]);
 
   const [selectedDoctorForPermissionName, setSelectedDoctorForPermissionName] = useState<string>('Dr. Alejandro Merino');
 
@@ -2379,13 +2305,7 @@ export default function MockupPortal({
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const [activePickups, setActivePickups] = useState<any[]>(() => {
-
-    const saved = localStorage.getItem('trust_pickups');
-
-    return saved ? JSON.parse(saved) : [];
-
-  });
+  const [activePickups, setActivePickups] = useState<any[]>([]);
 
   // ââ Toast notification system ââââââââââââââââââââââââââââââââââââââââââââ
 
@@ -2405,13 +2325,7 @@ export default function MockupPortal({
 
   const pendingPickupCount = activePickups.filter((p: any) => p.status === 'pending').length;
 
-  const [hasPrescription, setHasPrescription] = useState(() => {
-
-    const saved = localStorage.getItem('trust_has_rx');
-
-    return saved === 'true';
-
-  });
+  const [hasPrescription, setHasPrescription] = useState(false);
 
   const [cart, setCart] = useState<any[]>(() => {
 
@@ -2561,31 +2475,12 @@ export default function MockupPortal({
 
   // Persist state
 
-  useEffect(() => {
-
-    localStorage.setItem('trust_pickups', JSON.stringify(activePickups));
-
-  }, [activePickups]);
 
 
 
-  useEffect(() => {
-
-    localStorage.setItem('trust_has_rx', String(hasPrescription));
-
-  }, [hasPrescription]);
 
 
 
-  useEffect(() => {
-
-    if (patientDashboard) {
-
-      localStorage.setItem('trust_patient_dashboard', JSON.stringify(patientDashboard));
-
-    }
-
-  }, [patientDashboard]);
 
 
 
@@ -2641,11 +2536,6 @@ export default function MockupPortal({
 
 
 
-  useEffect(() => {
-
-    localStorage.setItem('trust_prescription_allowance', JSON.stringify(prescriptionAllowance));
-
-  }, [prescriptionAllowance]);
 
 
 
@@ -2717,25 +2607,6 @@ export default function MockupPortal({
 
       
 
-      const savedDashboard = localStorage.getItem('trust_patient_dashboard');
-
-      if (savedDashboard) {
-
-        const parsed = JSON.parse(savedDashboard);
-
-        if (parsed.patientAddress === DEMO_PATIENT_ADDRESS) {
-
-          localStorage.removeItem('trust_patient_dashboard');
-
-          setPatientDashboard(null);
-
-          setHasPrescription(false);
-
-          localStorage.setItem('trust_has_rx', 'false');
-
-        }
-
-      }
 
     }
 
@@ -2911,11 +2782,6 @@ export default function MockupPortal({
 
 
 
-  useEffect(() => {
-
-    localStorage.setItem('trust_privacy_permissions', JSON.stringify(privacyPermissions));
-
-  }, [privacyPermissions]);
 
 
 
@@ -2939,11 +2805,13 @@ export default function MockupPortal({
 
   useEffect(() => {
 
+    let cancelled = false;
+    setSessionWallet('');
     if (session?.email) {
 
       deriveStellarPublicKey(session.email).then((w) => {
 
-        if (w) setSessionWallet(w);
+        if (!cancelled && w) setSessionWallet(w);
 
       });
 
@@ -2953,6 +2821,7 @@ export default function MockupPortal({
 
     }
 
+    return () => { cancelled = true; };
   }, [session?.email]);
 
 
@@ -2982,6 +2851,34 @@ export default function MockupPortal({
     return walletSetup.freighterAddress ?? walletSetup.contractAccount;
 
   }, [walletConnected, walletSetup.contractAccount, walletSetup.freighterAddress, walletSetup.primaryMethod]);
+
+  const privateContextGeneration = useRef(0);
+  // These private Stellar reads were permanently retired. Never hydrate their old shared cache.
+  useLayoutEffect(() => {
+    privateContextGeneration.current++;
+    for (const key of ['trust_patient_dashboard', 'trust_has_rx', 'trust_prescription_allowance',
+      'trust_privacy_permissions', 'trust_pickups']) {
+      try { localStorage.removeItem(key); } catch { /* Memory must still be cleared if storage is unavailable. */ }
+    }
+    setPatientDashboard(null);
+    setPatientDashboardLoading(false);
+    setPatientDashboardError(LEGACY_PRIVATE_READ_UNAVAILABLE);
+    setPrescriptionValidation(null);
+    setPrescriptionValidationError(LEGACY_PRIVATE_READ_UNAVAILABLE);
+    setHasPrescription(false);
+    setPrescriptionAllowance({ monthlyLimitGrams: 0, usedGrams: 0 });
+    setDispensaryValidation(null);
+    setSelectedQrPermission(null);
+    setPrivacyPermissions([]);
+    setActivePickups([]);
+    setSelectedPrescription(null);
+    setSelectedTraceRecord(null);
+    setProcessingPickup(null);
+    setDispenseSuccess(null);
+    setCart([]);
+    return () => { privateContextGeneration.current++; };
+  }, [session?.email, session?.role, session?.mode, session?.createdAt, patientIdentityAddress,
+    privyIdentity.subject, privyIdentity.authenticated, privyIdentity.ready]);
 
 
 
@@ -3469,135 +3366,6 @@ export default function MockupPortal({
 
 
 
-  useEffect(() => {
-
-    if (!patientIdentityAddress) {
-
-      setPatientDashboardError(null);
-
-      return;
-
-    }
-
-
-
-    let cancelled = false;
-
-
-
-    const loadPatientDashboard = async () => {
-
-      setPatientDashboardLoading(true);
-
-      setPatientDashboardError(null);
-
-
-
-      try {
-
-        const response = await fetch(`/api/stellar/patient/${patientIdentityAddress}/dashboard`);
-
-        const payload = await response.json();
-
-
-
-        if (!response.ok) {
-
-          throw new Error(payload.message || 'No fue posible cargar el estado on-chain del paciente.');
-
-        }
-
-
-
-        if (cancelled) {
-
-          return;
-
-        }
-
-
-
-        const isDemo = session?.mode === 'demo' || walletSetup.primaryMethod === 'demo';
-
-        if (isDemo && payload.summary.total === 0) {
-
-          setPatientDashboard(buildDemoPatientDashboard(patientIdentityAddress));
-
-          setHasPrescription(true);
-
-          return;
-
-        }
-
-
-
-        setPatientDashboard(payload);
-
-        setHasPrescription(payload.summary.total > 0);
-
-
-
-        try {
-
-          const pickups = await trustDataStore.loadPickups(auth.currentUser?.uid || patientIdentityAddress);
-
-          if (!cancelled) {
-
-            setActivePickups(pickups);
-
-          }
-
-        } catch (pickError) {
-
-          console.error("Error fetching pickups:", pickError);
-
-        }
-
-      } catch (error) {
-
-        if (cancelled) {
-
-          return;
-
-        }
-
-
-
-        setPatientDashboardError(
-
-          error instanceof Error
-
-            ? error.message
-
-            : 'No fue posible cargar el estado on-chain del paciente.',
-
-        );
-
-      } finally {
-
-        if (!cancelled) {
-
-          setPatientDashboardLoading(false);
-
-        }
-
-      }
-
-    };
-
-
-
-    loadPatientDashboard();
-
-
-
-    return () => {
-
-      cancelled = true;
-
-    };
-
-  }, [patientIdentityAddress]);
 
 
 
@@ -3733,134 +3501,9 @@ export default function MockupPortal({
 
 
 
-  useEffect(() => {
 
-    if (activeView !== 'dispensaries' || activePrescription) {
 
-      return;
 
-    }
-
-
-
-    const shouldRefreshDemoRx =
-
-      !dispensePrescriptionId.trim() || dispensePrescriptionId === DEMO_PRESCRIPTION_ID;
-
-
-
-    if (!shouldRefreshDemoRx) {
-
-      return;
-
-    }
-
-
-
-    let cancelled = false;
-
-
-
-    const loadDemoPrescription = async () => {
-
-      try {
-
-        const response = await fetch(`/api/stellar/patient/${DEMO_PATIENT_ADDRESS}/dashboard`);
-
-        const payload = await response.json();
-
-
-
-        if (!response.ok) {
-
-          return;
-
-        }
-
-
-
-        const demoActivePrescription = payload.prescriptions?.find(
-
-          (prescription: PatientPrescriptionRecord) => prescription.status === 'active',
-
-        );
-
-
-
-        if (!cancelled && demoActivePrescription) {
-
-          setDispensePrescriptionId(String(demoActivePrescription.id));
-
-        }
-
-      } catch {
-
-        // Keep the static demo fallback if the read endpoint is unavailable.
-
-      }
-
-    };
-
-
-
-    loadDemoPrescription();
-
-
-
-    return () => {
-
-      cancelled = true;
-
-    };
-
-  }, [activePrescription, activeView, dispensePrescriptionId]);
-
-
-
-  useEffect(() => {
-
-    if (!isDispensaryPortal || activeView !== 'dispensaries') {
-
-      return;
-
-    }
-
-
-
-    if (!dispensePrescriptionId.trim()) {
-
-      setDispensePrescriptionId(DEMO_PRESCRIPTION_ID);
-
-    }
-
-
-
-    setPatientDashboard((current) => current ?? buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
-
-    setHasPrescription(true);
-
-    setPrescriptionValidation((current) => current ?? buildDemoPrescriptionValidation(resolvedPrescriptionId));
-
-    setPrescriptionAllowance((current: any) => ({
-
-      ...current,
-
-      monthlyLimitGrams: Number(current.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-
-      usedGrams: Number(current.usedGrams) || DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-    }));
-
-
-
-    let cancelled = false;
-    if (!dispensaryValidation) {
-      void Promise.resolve(latestDispensaryPermission ?? createPrivacyPermission('dispensary-prescription', false))
-        .then(permission => { if (!cancelled) setDispensaryValidation(permission); });
-    }
-    return () => { cancelled = true; };
-
-  }, [activeView, isDispensaryPortal]);
 
 
 
@@ -4008,11 +3651,9 @@ export default function MockupPortal({
 
     setDoctorPatientAddress(DEMO_PATIENT_ADDRESS);
 
-    setPatientDashboard((current) => current ?? buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
-
-    setHasPrescription(true);
-
-    localStorage.setItem('trust_has_rx', 'true');
+    setPatientDashboard(null);
+    setHasPrescription(false);
+    setPatientDashboardError(LEGACY_PRIVATE_READ_UNAVAILABLE);
 
     localStorage.setItem('trust_latest_prescription_id', DEMO_PRESCRIPTION_ID);
 
@@ -4070,13 +3711,7 @@ export default function MockupPortal({
 
     setDispensaryValidation(null);
 
-    setPrescriptionAllowance({
-
-      monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-
-      usedGrams: DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-    });
+    setPrescriptionAllowance({ monthlyLimitGrams: 0, usedGrams: 0 });
 
     setDispensePrescriptionId(DEMO_PRESCRIPTION_ID);
 
@@ -4830,13 +4465,6 @@ export default function MockupPortal({
 
 
 
-      if (dashboard) {
-
-        setPatientDashboard(dashboard);
-
-        setHasPrescription(dashboard.summary.total > 0);
-
-      }
 
       setDoctorIssueSuccess(
 
@@ -5538,49 +5166,11 @@ export default function MockupPortal({
 
 
 
-    setPatientDashboard((current) => ({
+    setPatientDashboard(null);
 
-      patientAddress: targetPatientAddress,
+    setHasPrescription(false);
 
-      network: stellarConfig.networkLabel,
-
-      rpcUrl: stellarConfig.rpcUrl,
-
-      latestLedger: current?.latestLedger ?? 2540000 + issuedId,
-
-      latestLedgerClosedAt: issuedAt.toISOString(),
-
-      registryContractId: current?.registryContractId ?? 'DoctorRegistry demo',
-
-      prescriptionContractId: current?.prescriptionContractId ?? 'Prescription demo',
-
-      summary: {
-
-        total: (current?.summary.total ?? 0) + 1,
-
-        active: (current?.summary.active ?? 0) + 1,
-
-        used: current?.summary.used ?? 0,
-
-        expired: current?.summary.expired ?? 0,
-
-      },
-
-      prescriptions: [demoPrescription, ...(current?.prescriptions ?? [])],
-
-      dispenseRecords: current?.dispenseRecords ?? [],
-
-    }));
-
-    setHasPrescription(true);
-
-    setPrescriptionAllowance({
-
-      monthlyLimitGrams: Math.max(1, Number(doctorIssueForm.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS),
-
-      usedGrams: 0,
-
-    });
+    setPrescriptionAllowance({ monthlyLimitGrams: 0, usedGrams: 0 });
 
     localStorage.setItem('trust_latest_prescription_id', String(issuedId));
 
@@ -5592,9 +5182,8 @@ export default function MockupPortal({
 
     );
 
-    const dispensaryPermission = await createPrivacyPermission('dispensary-prescription', false);
 
-    setDispensaryValidation(dispensaryPermission);
+    setDispensaryValidation(null);
 
     setRecentActivity((prev: any[]) => [
 
@@ -5966,12 +5555,9 @@ export default function MockupPortal({
 
 
 
-    if (prescriptionValidation && !prescriptionValidation.validation.canDispense) {
-
-      setDispenseError(prescriptionValidation.validation.reason);
-
+    if (!prescriptionValidation?.validation.canDispense) {
+      setDispenseError(LEGACY_PRIVATE_READ_UNAVAILABLE);
       return;
-
     }
 
 
@@ -6157,13 +5743,6 @@ export default function MockupPortal({
 
 
 
-      if (dashboard) {
-
-        setPatientDashboard(dashboard);
-
-        setHasPrescription(dashboard.summary.total > 0);
-
-      }
 
       setDispenseSuccess(
 
@@ -6518,6 +6097,13 @@ export default function MockupPortal({
 
   const createPrivacyPermission = async (kind: PrivacyPermissionKind, openQr = true, targetActorName?: string) => {
 
+    if (kind === 'dispensary-prescription') {
+      setPrescriptionValidationError(LEGACY_PRIVATE_READ_UNAVAILABLE);
+      showToast(LEGACY_PRIVATE_READ_UNAVAILABLE, 'error');
+      return null;
+    }
+    const generation = privateContextGeneration.current;
+
     const isMedical = kind === 'medical-consultation';
 
     const actor = targetActorName ?? (isMedical ? clinicalAccessDoctor : selectedDispensary?.name ?? 'Green Leaf Center');
@@ -6563,6 +6149,8 @@ export default function MockupPortal({
     } else {
       setPrivacyPermissions((current) => [permission, ...current]);
     }
+
+    if (generation !== privateContextGeneration.current) return null;
 
     setRecentActivity((prev: any[]) => [
 
@@ -6642,10 +6230,9 @@ export default function MockupPortal({
 
     const prescriptionId = Number(DEMO_PRESCRIPTION_ID);
 
-    const [medicalPermission, dispensaryPermission] = await Promise.all([
-      createPrivacyPermission('medical-consultation', false),
-      createPrivacyPermission('dispensary-prescription', false),
-    ]);
+    const medicalPermission = await createPrivacyPermission('medical-consultation', false);
+
+    if (!medicalPermission) return;
 
 
 
@@ -6723,21 +6310,16 @@ export default function MockupPortal({
 
     ]);
 
-    setPatientDashboard(buildDemoPatientDashboard(DEMO_PATIENT_ADDRESS));
+    setPatientDashboard(null);
 
-    setHasPrescription(true);
+    setHasPrescription(false);
 
-    setPrescriptionAllowance({
-
-      monthlyLimitGrams: DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS,
-
-      usedGrams: DEFAULT_PRESCRIPTION_USED_GRAMS,
-
-    });
+    setPrescriptionAllowance({ monthlyLimitGrams: 0, usedGrams: 0 });
 
     setDispensePrescriptionId(String(prescriptionId));
 
-    setPrescriptionValidation(buildDemoPrescriptionValidation(prescriptionId));
+    setPrescriptionValidation(null);
+    setPrescriptionValidationError(LEGACY_PRIVATE_READ_UNAVAILABLE);
 
     setSelectedDispensary(null);
 
@@ -6747,7 +6329,7 @@ export default function MockupPortal({
 
     setDispensaryStep('inventory');
 
-    setDispensaryValidation(dispensaryPermission);
+    setDispensaryValidation(null);
 
     setSelectedQrPermission(null);
 
@@ -6769,7 +6351,7 @@ export default function MockupPortal({
 
         id: `act-recording-permissions-${Date.now()}`,
 
-        action: `Permisos listos: ${medicalPermission.actor} y ${dispensaryPermission.actor}`,
+        action: `Vista previa: ${medicalPermission.actor}. Lectura de dispensario no disponible.`,
 
         date: 'Ahora',
 
@@ -6784,8 +6366,6 @@ export default function MockupPortal({
     localStorage.setItem('trust_latest_prescription_id', String(prescriptionId));
 
     localStorage.setItem('trust_dispense_prescription_id', String(prescriptionId));
-
-    localStorage.setItem('trust_has_rx', 'true');
 
     switchView('overview');
 
@@ -6807,6 +6387,8 @@ export default function MockupPortal({
 
     const permission = latestMedicalPermission ?? await createPrivacyPermission('medical-consultation', false);
 
+    if (!permission) return;
+
     setSelectedQrPermission(permission);
 
     setConsultationStatus('checked_in', consultationId);
@@ -6816,141 +6398,20 @@ export default function MockupPortal({
 
 
   const validatePrescriptionQrForDispensary = async () => {
-
-    const operator = buildOperatorDispensary();
-
-    setSelectedDispensary(operator);
-
-    setDispensaryStep('inventory');
-
-    const permission = latestDispensaryPermission ?? await createPrivacyPermission('dispensary-prescription', false);
-
-    setDispensaryValidation(permission);
-
-    setSelectedQrPermission(permission);
-
+    setDispensaryValidation(null);
+    setSelectedQrPermission(null);
+    setPrescriptionValidationError(LEGACY_PRIVATE_READ_UNAVAILABLE);
+    showToast(LEGACY_PRIVATE_READ_UNAVAILABLE, 'error');
   };
 
 
 
-  const validatePrescriptionOnTestnet = async (overrideId?: number) => {
-
-    const rawId = overrideId !== undefined ? String(overrideId) : dispensePrescriptionId;
-
-    const prescriptionId = Number(rawId.match(/\d+/)?.[0] ?? Number.NaN);
-
-
-
-    if (!Number.isFinite(prescriptionId)) {
-
-      setPrescriptionValidationError('Ingresa un numero de receta valido.');
-
-      setPrescriptionValidation(null);
-
-      return;
-
-    }
-
-
-
-    setPrescriptionValidationBusy(true);
-
-    setPrescriptionValidationError(null);
-
+  const validatePrescriptionOnTestnet = async (_overrideId?: number) => {
     setPrescriptionValidation(null);
-
-
-
-    try {
-
-      const response = await fetch('/api/stellar/dispensary/validate-prescription', {
-
-        method: 'POST',
-
-        headers: { 'Content-Type': 'application/json' },
-
-        body: JSON.stringify({ prescriptionId }),
-
-      });
-
-      const payload = await response.json();
-
-
-
-      if (!response.ok) {
-
-        throw new Error(payload.message || 'No fue posible validar la receta en testnet.');
-
-      }
-
-
-
-      setPrescriptionValidation(payload);
-
-      setPrescriptionAllowance((current: any) => ({
-
-        ...current,
-
-        monthlyLimitGrams: payload.prescription.totalQuantity || current.monthlyLimitGrams,
-
-        usedGrams: payload.prescription.dispensedQuantity ?? current.usedGrams,
-
-      }));
-
-      setDoctorPatientAddress(payload.prescription.patient);
-
-      setHasPrescription(payload.validation.canDispense);
-
-      const permission = latestDispensaryPermission ?? await createPrivacyPermission('dispensary-prescription', false);
-
-      setDispensaryValidation(permission);
-
-    } catch (error) {
-
-      if (isDispensaryPortal || prescriptionId === Number(DEMO_PRESCRIPTION_ID)) {
-
-        const demoValidation = buildDemoPrescriptionValidation(prescriptionId);
-
-        setPrescriptionValidation(demoValidation);
-
-        setPrescriptionAllowance((current: any) => ({
-
-          ...current,
-
-          monthlyLimitGrams: demoValidation.prescription.totalQuantity,
-
-          usedGrams: demoValidation.prescription.dispensedQuantity,
-
-        }));
-
-        setDoctorPatientAddress(demoValidation.prescription.patient);
-
-        setHasPrescription(true);
-
-        const permission = latestDispensaryPermission ?? await createPrivacyPermission('dispensary-prescription', false);
-
-        setDispensaryValidation(permission);
-
-        setPrescriptionValidationError(null);
-
-        return;
-
-      }
-
-
-
-      setPrescriptionValidationError(
-
-        error instanceof Error ? error.message : 'No fue posible validar la receta en testnet.',
-
-      );
-
-    } finally {
-
-      setPrescriptionValidationBusy(false);
-
-    }
-
+    setHasPrescription(false);
+    setDispensaryValidation(null);
+    setPrescriptionValidationBusy(false);
+    setPrescriptionValidationError(LEGACY_PRIVATE_READ_UNAVAILABLE);
   };
 
 
@@ -7425,7 +6886,7 @@ export default function MockupPortal({
 
   }, [cart]);
 
-  const prescriptionMonthlyLimitGrams = Number(prescriptionAllowance.monthlyLimitGrams) || DEFAULT_PRESCRIPTION_MONTHLY_LIMIT_GRAMS;
+  const prescriptionMonthlyLimitGrams = Number(prescriptionAllowance.monthlyLimitGrams) || 0;
 
   const prescriptionUsedGrams = Number(prescriptionAllowance.usedGrams) || 0;
 
@@ -7433,13 +6894,13 @@ export default function MockupPortal({
 
   const prescriptionProjectedGrams = prescriptionUsedGrams + cartGrams;
 
-  const prescriptionUsagePercent = Math.min(
+  const prescriptionUsagePercent = prescriptionMonthlyLimitGrams > 0 ? Math.min(
 
     100,
 
     Math.round((prescriptionProjectedGrams / prescriptionMonthlyLimitGrams) * 100),
 
-  );
+  ) : 0;
 
   const cartExceedsPrescriptionLimit = cartGrams > prescriptionRemainingGrams;
 
@@ -7455,44 +6916,9 @@ export default function MockupPortal({
 
 
 
-  const handleStartPickup = (pickup: any) => {
-
-    setProcessingPickup(pickup);
-
-    setPickupStep('scanning');
-
-    
-
-    setTimeout(() => {
-
-      setPickupStep('verifying');
-
-      
-
-      setTimeout(() => {
-
-        setPickupStep('success');
-
-        setActivePickups(prev => prev.filter(p => p.id !== pickup.id));
-
-        const finalActivity = { 
-
-          id: `act-pick-${Date.now()}`,
-
-          action: `Retiro exitoso: ${pickup.strain.name}`, 
-
-          date: "ReciÃ©n", 
-
-          icon: "CheckCircle" 
-
-        };
-
-        setRecentActivity(prev => [finalActivity, ...prev]);
-
-      }, 3500);
-
-    }, 2500);
-
+  const handleStartPickup = (_pickup: any) => {
+    setDispenseError(LEGACY_PRIVATE_READ_UNAVAILABLE);
+    showToast(LEGACY_PRIVATE_READ_UNAVAILABLE, 'error');
   };
 
 
@@ -8603,13 +8029,13 @@ export default function MockupPortal({
 
               onClick={() => void validatePrescriptionOnTestnet()}
 
-              disabled={prescriptionValidationBusy}
+              disabled
 
               className="w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory disabled:opacity-50"
 
             >
 
-              {prescriptionValidationBusy ? 'Validando receta...' : 'Validar receta'}
+              Validación heredada no disponible
 
             </button>
 
@@ -8745,7 +8171,7 @@ export default function MockupPortal({
 
                 onClick={handleCompleteOnchainDispense}
 
-                disabled={dispenseBusy || cartExceedsPrescriptionLimit || !cart.length || !Number.isFinite(resolvedPrescriptionId)}
+                disabled={!prescriptionValidation?.validation.canDispense || dispenseBusy || cartExceedsPrescriptionLimit || !cart.length || !Number.isFinite(resolvedPrescriptionId)}
 
                 className="mt-5 w-full rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory disabled:opacity-45"
 
@@ -9250,6 +8676,9 @@ export default function MockupPortal({
             {/* Content Mockup */}
 
             <div className="flex-1 overflow-y-auto bg-white mb-[80px] md:mb-0">
+              <div role="status" className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950">
+                {LEGACY_PRIVATE_READ_UNAVAILABLE} Esta vista no valida elegibilidad para entregar.
+              </div>
 
               <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 px-6 md:px-8 py-4 md:py-6 border-b border-brand-green-deep/5 flex justify-between items-center">
 
@@ -13140,13 +12569,13 @@ export default function MockupPortal({
 
                                 onClick={() => void validatePrescriptionOnTestnet()}
 
-                                disabled={prescriptionValidationBusy}
+                                disabled
 
                                 className="self-end rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-brand-ivory transition-colors hover:bg-brand-green-mid"
 
                               >
 
-                                {prescriptionValidationBusy ? 'Validando...' : 'Validar receta'}
+                                Validación heredada no disponible
 
                               </button>
 
@@ -17886,7 +17315,7 @@ export default function MockupPortal({
 
                               <span className="text-[10px] font-bold uppercase tracking-widest text-brand-green-mid/50">
 
-                                Receta validada
+                                Identificador no validado
 
                               </span>
 
@@ -17900,19 +17329,15 @@ export default function MockupPortal({
 
                                     <p className="mt-1 text-xs leading-relaxed text-brand-green-mid/55">
 
-                                      {activePrescription
-
-                                        ? 'Detectada automÃ¡ticamente desde la wallet del paciente.'
-
-                                        : 'Usamos la Ãºltima receta emitida o la receta activa de testnet.'}
+                                      Lectura heredada no disponible. Este identificador no acredita vigencia ni saldo.
 
                                     </p>
 
                                   </div>
 
-                                  <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-green-700">
+                                  <span className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-800">
 
-                                    Vigente
+                                    No validado
 
                                   </span>
 
@@ -17994,7 +17419,7 @@ export default function MockupPortal({
 
                               onClick={handleCompleteOnchainDispense}
 
-                              disabled={dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId)}
+                              disabled={!prescriptionValidation?.validation.canDispense || dispenseBusy || cartExceedsPrescriptionLimit || !Number.isFinite(resolvedPrescriptionId)}
 
                               className="w-full py-5 bg-brand-green-deep text-brand-ivory rounded-2xl font-bold shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
 

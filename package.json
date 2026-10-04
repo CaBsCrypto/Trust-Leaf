@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:legacy-ui-read-safety": "node --experimental-strip-types tests/legacy-ui-read-safety.test.ts",
     "test:dispensary-onboarding": "tsx tests/dispensary-invitation-entry.test.ts && tsx tests/dispensary-onboarding.test.ts && node tests/sql/dispensary-onboarding.mjs",
     "test:team-invitations": "node --experimental-strip-types tests/team-invitations.test.ts && node tests/sql/team-invitations.mjs",
     "test:operations-pilot": "node --experimental-strip-types tests/operations-pilot.test.ts",
