@@ -58,6 +58,7 @@ jobs:
           node --experimental-strip-types tests/bootstrap-handler-safe-errors.test.mjs
           node --experimental-strip-types tests/express-parser-errors.test.ts
           node --experimental-strip-types tests/read-failure-projection.test.ts
+          node --experimental-strip-types tests/private-preview-config-errors.test.mjs
           npm run test:legacy-private-route-block
           npm run test:legacy-route-auth
           npm run test:legacy-object-auth
