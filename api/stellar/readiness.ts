@@ -15,6 +15,10 @@ import { googleCalendarHandler } from '../_lib/google-calendar-handler.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+  // Construct the provider only inside the handler's authenticated error boundary.
+  const privateVerifier = {
+    verify: (token: string) => createPrivyIdentityVerifier(process.env).verify(token),
+  };
   if (route === 'dispensary-onboarding') {
     res.setHeader('Cache-Control','no-store, private');
     try {
@@ -24,7 +28,7 @@ export default async function handler(req: any, res: any) {
   }
   if (route === 'dispensary-commerce') {
     const { dispensaryCommerceHandler } = await import('../_lib/dispensary-commerce.js');
-    return dispensaryCommerceHandler(req, res, process.env, createPrivyIdentityVerifier(process.env));
+    return dispensaryCommerceHandler(req, res, process.env, privateVerifier);
   }
   if (route === 'team-invitations') {
     res.setHeader('Cache-Control','no-store, private');
@@ -35,7 +39,7 @@ export default async function handler(req: any, res: any) {
   }
   if (route === 'operations-pilot') {
     const { operationsPilotHandler } = await import('../_lib/operations-pilot.js');
-    return operationsPilotHandler(req, res, process.env, createPrivyIdentityVerifier(process.env));
+    return operationsPilotHandler(req, res, process.env, privateVerifier);
   }
   if (route === 'calendar-worker') {
     const { calendarCron } = await import('../_lib/google-calendar-cron.js');
