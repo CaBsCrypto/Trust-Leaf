@@ -1,0 +1,619 @@
+{
+  "status": "PASS",
+  "origin": "http://127.0.0.1:52495",
+  "stages": [
+    {
+      "name": "fresh-sql-read-preconditions",
+      "status": "PASS"
+    },
+    {
+      "name": "unsaved-invitation-survives-list-and-cancelled-actor-change",
+      "status": "PASS"
+    },
+    {
+      "name": "admin-invites-manager",
+      "status": "PASS"
+    },
+    {
+      "name": "manager-accepts-and-submits",
+      "status": "PASS"
+    },
+    {
+      "name": "admin-approves-and-manager-reloads",
+      "status": "PASS"
+    },
+    {
+      "name": "manager-invites-worker-and-worker-accepts",
+      "status": "PASS"
+    },
+    {
+      "name": "manager-catalog-and-100g-receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "doctor-publishes-patient-reserves",
+      "status": "PASS"
+    },
+    {
+      "name": "doctor-consults-and-issues-30g-treatment",
+      "status": "PASS"
+    },
+    {
+      "name": "patient-saves-profile",
+      "status": "PASS"
+    },
+    {
+      "name": "unsaved-profile-survives-grant-and-cancelled-actor-change",
+      "status": "PASS"
+    },
+    {
+      "name": "worker-dispenses-10g-local-and-both-receipts",
+      "status": "PASS"
+    },
+    {
+      "name": "review-1g-only-and-discard-without-post",
+      "status": "PASS"
+    },
+    {
+      "name": "manager-worker-five-widths",
+      "status": "PASS"
+    },
+    {
+      "name": "final-read-only-isolation-and-single-write",
+      "status": "PASS"
+    }
+  ],
+  "screenshots": [
+    {
+      "actor": "newManager",
+      "width": 360,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newManager-360.png"
+    },
+    {
+      "actor": "newManager",
+      "width": 390,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newManager-390.png"
+    },
+    {
+      "actor": "newManager",
+      "width": 768,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newManager-768.png"
+    },
+    {
+      "actor": "newManager",
+      "width": 1024,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newManager-1024.png"
+    },
+    {
+      "actor": "newManager",
+      "width": 1440,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newManager-1440.png"
+    },
+    {
+      "actor": "newWorker",
+      "width": 360,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newWorker-360.png"
+    },
+    {
+      "actor": "newWorker",
+      "width": 390,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newWorker-390.png"
+    },
+    {
+      "actor": "newWorker",
+      "width": 768,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newWorker-768.png"
+    },
+    {
+      "actor": "newWorker",
+      "width": 1024,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newWorker-1024.png"
+    },
+    {
+      "actor": "newWorker",
+      "width": 1440,
+      "path": "D:\\00 CODEX - OPENIA\\projects\\trust-leaf\\wt-main-release\\scratch\\local-demo\\journey\\newWorker-1440.png"
+    }
+  ],
+  "qaReads": [
+    {
+      "path": "/api/operations-pilot",
+      "actor": "admin"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "doctor"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager",
+      "expectedStatus": 403
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker",
+      "expectedStatus": 403
+    },
+    {
+      "path": "/__local_demo/health",
+      "actor": "admin"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "admin"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager",
+      "expectedStatus": 403
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/dispensary-commerce?collection=receipts&limit=25&offset=0",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/dispensary-commerce?collection=receipts&limit=25&offset=0",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newManager"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "doctor"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "doctor"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "newWorker"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "actor": "patient"
+    },
+    {
+      "path": "/api/dispensary-commerce?collection=receipts&limit=25&offset=0",
+      "actor": "newManager"
+    },
+    {
+      "path": "/__local_demo/health",
+      "actor": "newWorker"
+    }
+  ],
+  "externalAttempts": [],
+  "unexpectedRequests": [],
+  "headerViolations": [],
+  "httpErrors": [],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "requestFailures": [],
+  "expectedRequestFailures": [
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "receive",
+      "actor": "newManager",
+      "error": "net::ERR_FAILED"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "dispense",
+      "actor": "newWorker",
+      "error": "net::ERR_FAILED"
+    }
+  ],
+  "expectedConsoleErrors": [
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "receive",
+      "message": "Failed to load resource: net::ERR_FAILED"
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "dispense",
+      "message": "Failed to load resource: net::ERR_FAILED"
+    }
+  ],
+  "uncertainRetries": [
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "receive",
+      "actor": "newManager",
+      "attempts": 2,
+      "sameCommand": true,
+      "operationId": "571f3243-d447-40c8-a0fe-b1832be16156",
+      "resourceRef": "4535f1aa-b8a2-474e-9794-77b4343f403a",
+      "replayed": true,
+      "sqlWrites": 1
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "dispense",
+      "actor": "newWorker",
+      "attempts": 2,
+      "sameCommand": true,
+      "operationId": "ee0b598d-db7d-4382-bdf6-33bffd402086",
+      "resourceRef": "ed6f3a2a-91f3-4bf6-87a1-f92d38b4d1ac",
+      "replayed": true,
+      "sqlWrites": 1
+    }
+  ],
+  "posts": [
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "list",
+      "actor": "admin",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "list",
+      "actor": "admin",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "invite",
+      "actor": "admin",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "list",
+      "actor": "admin",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "inspect",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "accept",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "save-draft",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "submit",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "list",
+      "actor": "admin",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "review",
+      "actor": "admin",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "list",
+      "actor": "admin",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/team-invitations",
+      "action": "list",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/team-invitations",
+      "action": "create",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/team-invitations",
+      "action": "list",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/team-invitations",
+      "action": "inspect",
+      "actor": "newWorker",
+      "readOnly": true
+    },
+    {
+      "path": "/api/team-invitations",
+      "action": "accept",
+      "actor": "newWorker",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "save-supplier",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "save-product",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "receive",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-commerce",
+      "action": "receive",
+      "actor": "newManager",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "join",
+      "actor": "doctor",
+      "readOnly": false
+    },
+    {
+      "path": "/api/agenda",
+      "action": "publish",
+      "actor": "doctor",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "join",
+      "actor": "patient",
+      "readOnly": false
+    },
+    {
+      "path": "/api/agenda",
+      "action": "reserve",
+      "actor": "patient",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "start-encounter",
+      "actor": "doctor",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "save-note",
+      "actor": "doctor",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "complete-encounter",
+      "actor": "doctor",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "save-profile",
+      "actor": "patient",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "grant",
+      "actor": "patient",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "dispense",
+      "actor": "newWorker",
+      "readOnly": false
+    },
+    {
+      "path": "/api/operations-pilot",
+      "action": "dispense",
+      "actor": "newWorker",
+      "readOnly": false
+    },
+    {
+      "path": "/api/dispensary-onboarding",
+      "action": "read-draft",
+      "actor": "newManager",
+      "readOnly": true
+    }
+  ],
+  "cleanup": {
+    "contextClosed": true,
+    "browserClosed": true
+  },
+  "limits": [
+    "Uses an already-running SQL-backed synthetic server; never starts or resets it.",
+    "No provider, production, reset, cross-tab, or negative transport scenario is exercised here.",
+    "Responsive captures cover manager inventory and worker receipts at five widths."
+  ],
+  "generation": 1,
+  "treatment": {
+    "allowanceMg": 30000,
+    "periodCount": 1,
+    "durationHours": 720,
+    "encounterState": "completed",
+    "encounterVersion": 3
+  },
+  "receipt": {
+    "deliveryRef": "ed6f3a2a-91f3-4bf6-87a1-f92d38b4d1ac",
+    "quantityMg": 10000,
+    "stockMg": 90000,
+    "remainingMg": 20000
+  }
+}

@@ -1,22 +1,22 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 
-export async function operationsDatabase() {
+export async function operationsDatabase({ migrationNames, namespace = 'pilot-fixture', roles } = {}) {
   const db = new PGlite();
   await db.exec(`create role anon; create role authenticated; create role service_role;
     create schema auth; create function auth.uid() returns uuid language sql stable as $$select null::uuid$$;
     grant usage on schema auth to anon,authenticated,service_role;`);
   const migrations = new URL('../../supabase/migrations/', import.meta.url);
   // This separate, untracked draft is not part of the pilot's migration dependency chain.
-  for (const name of (await readdir(migrations)).filter(n => n.endsWith('.sql') && n !== '20260906120000_monthly_dispensing_quota.sql').sort()) {
+  for (const name of migrationNames ?? (await readdir(migrations)).filter(n => n.endsWith('.sql') && n !== '20260906120000_monthly_dispensing_quota.sql').sort()) {
     await db.exec(await readFile(new URL(name, migrations), 'utf8'));
   }
-  const subjects = Object.fromEntries(['admin', 'doctor', 'patient', 'dispensary', 'dispensaryB', 'dispensaryRecovery', 'operator', 'otherDoctor', 'otherPatient']
-    .map(key => [key, `did:privy:pilot-fixture-${key}`]));
+  const keys = roles ? Object.keys(roles) : ['admin', 'doctor', 'patient', 'dispensary', 'dispensaryB', 'dispensaryRecovery', 'operator', 'otherDoctor', 'otherPatient'];
+  const subjects = Object.fromEntries(keys.map(key => [key, `did:privy:${namespace}-${key}`]));
   const actors = {};
   actors.admin = (await db.query('select * from public.trustleaf_bootstrap_first_privy_admin($1)', [subjects.admin])).rows[0].actor_ref;
   for (const key of Object.keys(subjects).filter(k => k !== 'admin')) {
-    const role = key.includes('Doctor') ? 'doctor' : key.includes('Patient') ? 'patient' : key.startsWith('dispensary') || key === 'operator' ? 'dispensary' : key;
+    const role = roles?.[key] ?? (key.includes('Doctor') ? 'doctor' : key.includes('Patient') ? 'patient' : key.startsWith('dispensary') || key === 'operator' ? 'dispensary' : key);
     const row = (await db.query('select * from public.trustleaf_enroll_privy_actor($1,$2)', [subjects[key], role])).rows[0];
     actors[key] = row.actor_ref;
     if (role !== 'patient') await db.query('select * from public.trustleaf_review_pending_privy_actor($1,$2,$3,$4,$5)',

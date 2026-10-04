@@ -1,20 +1,26 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
-## Demo local del ciclo completo: primera entrega (04/10/2026)
+## Demo local del ciclo completo: legado publicado y ensayo aislado (04/10/2026)
 
 Base comprobada `3243904`: PR66 publicado, CI candidato36970170432 y
 main36970907192 PASS; correspondencia de despliegue registrada en su evidencia.
 PR62 continua DRAFT, sin aviso aprobado ni publicado. Invitaciones externas
 pausadas; responsable formal, buzon y condiciones operativas pendientes.
 
-Primero `fix/legacy-ui-read-safety`: DEM-LEG-01 reproducido con diez negativos;
-retirar lecturas privadas Stellar, cache no segmentada y elegibilidad sintetica.
+DEM-LEG-01 cerrado tecnicamente por PR67: candidato2b5f460, CI37238853970 y
+preview Ready, merge/main5416e16 con CI37239605057 PASS. Despliegue6847562853,
+Vercel dpl_5qW6ANyox6FhZ8XxiAd4U36f6NUx y aliases oficiales comprobados.
+Lecturas retiradas410 privadas; sin escrituras de negocio publicadas.
 [Regresion y puertas](evidence/legacy-ui-read-safety/README.md).
-Despues, desde main integrado, `feat/local-four-actor-demo`: interfaces existentes,
-PGlite y buzon simulados, identidades sinteticas, loopback exclusivo y sin
-proveedores externos. Escenario nuevo 100 g recibidos, tratamiento30 g y entrega
-local10 g: saldo20 g/stock90 g. No copiar B/Browns ni presentar autenticacion
-simulada como validacion Privy. Demo y ensayo humano no cerrados todavia.
+PR68 resolvio por separado un fallo previo de configuracion del verificador en
+preview, sin modificar credenciales ni banderas. Su evidencia permanece separada.
+Ahora `feat/local-four-actor-demo` desde5416e16: componentes existentes, SQL
+PGlite real y buzon simulado, identidades sinteticas y loopback exclusivo.
+Escenario nuevo100 g/30 g/10 g -> saldo20 g/stock90 g. Interfaces, controles y
+comandos reales; no copiar B/Browns ni presentar identidad simulada como Privy.
+[Inicio y guion local](../tests/local-demo/README.md). Validacion tecnica y
+ensayo humano se registran por separado en el tablero; no cerrar la demo sin
+revision contigo. No se publica una ruta de demo ni el aviso PR62.
 
 ## Privacidad: categorias publicadas, Incorporaciones en validacion (02/10/2026)
 

@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+@source '../../src/components/PrivyAgenda.tsx';
+body { margin: 0; background: #f6f7f8; color: #202627; font-family: Arial, sans-serif; }
+.local-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #d9e0df; background: #fff; }
+.local-toolbar strong { font-size: 14px; margin-right: auto; }
+.local-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.local-toolbar select, .local-toolbar button, .local-inbox button { min-height: 44px; border: 1px solid #bec9c6; border-radius: 6px; background: #fff; color: #202627; padding: 8px 12px; }
+.local-account { font-size: 12px; overflow-wrap: anywhere; }
+.local-account span { display: block; color: #566261; }
+.local-product { max-width: 1600px; margin: auto; padding: 20px; }
+.local-inbox { width: min(720px, calc(100% - 24px)); max-height: 85dvh; border: 1px solid #c2ceca; border-radius: 8px; padding: 20px; }
+.local-inbox::backdrop { background: #20262770; }
+.local-inbox header { display: flex; align-items: center; justify-content: space-between; }
+.local-inbox h2 { font-size: 20px; }.local-inbox h3 { font-size: 16px; }
+.local-inbox article { padding: 16px 0; border-top: 1px solid #d9e0df; }
+.local-inbox pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; }
+.local-error { padding: 12px 20px; color: #a42e2e; }
+.local-demo button:focus-visible, .local-demo select:focus-visible { outline: 2px solid #16785c; outline-offset: 3px; }
+@media (max-width: 1023px) { .local-product { padding: 12px; padding-bottom: calc(90px + env(safe-area-inset-bottom)); } .local-toolbar { padding: 10px 12px; gap: 8px; } .local-toolbar strong { flex-basis: 100%; } .local-account { flex: 1; } }
+@media (max-width: 479px) { .local-toolbar label { flex-basis: 100%; justify-content: space-between; } .local-toolbar select { flex: 1; max-width: 210px; } }
+@media (prefers-reduced-motion: reduce) { .local-demo *, .local-demo *::before, .local-demo *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

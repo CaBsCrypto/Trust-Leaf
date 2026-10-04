@@ -3,6 +3,7 @@
 .env.*
 node_modules
 tests/ui
+tests/local-demo
 scratch
 dist
 soroban/target*/**
