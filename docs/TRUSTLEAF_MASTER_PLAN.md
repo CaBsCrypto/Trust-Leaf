@@ -1,5 +1,21 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Demo local del ciclo completo: primera entrega (04/10/2026)
+
+Base comprobada `3243904`: PR66 publicado, CI candidato36970170432 y
+main36970907192 PASS; correspondencia de despliegue registrada en su evidencia.
+PR62 continua DRAFT, sin aviso aprobado ni publicado. Invitaciones externas
+pausadas; responsable formal, buzon y condiciones operativas pendientes.
+
+Primero `fix/legacy-ui-read-safety`: DEM-LEG-01 reproducido con diez negativos;
+retirar lecturas privadas Stellar, cache no segmentada y elegibilidad sintetica.
+[Regresion y puertas](evidence/legacy-ui-read-safety/README.md).
+Despues, desde main integrado, `feat/local-four-actor-demo`: interfaces existentes,
+PGlite y buzon simulados, identidades sinteticas, loopback exclusivo y sin
+proveedores externos. Escenario nuevo 100 g recibidos, tratamiento30 g y entrega
+local10 g: saldo20 g/stock90 g. No copiar B/Browns ni presentar autenticacion
+simulada como validacion Privy. Demo y ensayo humano no cerrados todavia.
+
 ## Privacidad: categorias publicadas, Incorporaciones en validacion (02/10/2026)
 
 PR65 `62fa1c0` revisado por seguridad/Admin/calidad, CI36968164236 y preview
