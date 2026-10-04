@@ -61,6 +61,7 @@ jobs:
           node --experimental-strip-types tests/private-preview-config-errors.test.mjs
           npm run test:legacy-private-route-block
           npm run test:legacy-ui-read-safety
+          npm run test:local-demo
           npm run test:legacy-route-auth
           npm run test:legacy-object-auth
           npm run test:pilot-safety
@@ -109,6 +110,7 @@ jobs:
         run: |
           VITE_OPERATIONS_PILOT_ENABLED=false npm run build
           VITE_OPERATIONS_PILOT_ENABLED=true VITE_COMMERCE_CATALOG_ENABLED=true VITE_DISPENSARY_ONBOARDING_ENABLED=true npm run build
+          node tests/local-demo/public-build.test.mjs
       - name: Browser integration with synthetic identities
         run: |
           npm install --prefix /tmp/trustleaf-browser --no-package-lock playwright@1.58.2
@@ -158,6 +160,8 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/ui/commerce-browser.mjs
+      - name: Local four-actor demo
+        run: PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium node tests/local-demo/run-journey.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -170,4 +174,6 @@ jobs:
             scratch/inventory-draft-guard
             scratch/shared-patient-read-failure
             scratch/legacy-ui-read-safety
+            scratch/local-demo
+            scratch/local-demo-server.log
           retention-days: 7

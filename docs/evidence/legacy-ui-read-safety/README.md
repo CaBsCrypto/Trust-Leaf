@@ -82,3 +82,22 @@ presentation text and full-panel layout are outside this scoped correction.
 No credentials, real addresses, authenticated screenshots or production business
 writes are evidence for this correction. B, Browns and the monthly draft remain
 untouched. This delivery does not approve PR62's privacy draft or external invites.
+
+## Release: 04/10/2026
+
+[PR67](https://github.com/CaBsCrypto/Trust-Leaf/pull/67) merged only after
+independent review, [candidate CI37238853970](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/37238853970)
+PASS and preview dpl_FWwZh7vRLrD22jgBTnhPNhA4vNQP Ready for `2b5f460`.
+Main `5416e162381d73ea3f3557378672a1036096e824` has its own
+[CI37239605057](https://github.com/CaBsCrypto/Trust-Leaf/actions/runs/37239605057) PASS.
+GitHub production deployment6847562853 success associates that SHA with
+trustleaf-f4uyep4wh-cabscryptocontacto-6028s-projects.vercel.app;
+Vercel dpl_5qW6ANyox6FhZ8XxiAd4U36f6NUx Ready and official aliases were inspected.
+Anonymous official reads of both retired routes returned410/no-store/private
+using synthetic identifiers, with no business writes.
+
+The preview exposed an earlier missing-provider-configuration error, reproduced
+independently and fixed first by [PR68](https://github.com/CaBsCrypto/Trust-Leaf/pull/68).
+Its [separate evidence](../private-preview-config-errors/README.md) records the
+lazy verifier boundary, twelve actual-export cases, review and release. No
+configuration or credential was copied to make the preview pass.

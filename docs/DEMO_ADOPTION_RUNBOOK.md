@@ -7,6 +7,31 @@ La fuente unica de estado, responsables, resultados y bloqueos es el
 [tablero de cierre](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
 Este documento describe la ejecucion; no mantiene otra matriz de aprobaciones.
 
+## Ensayo local del ciclo completo: 04/10/2026
+
+Esta alternativa usa exclusivamente interfaces existentes y SQL efimero local.
+No necesita cambiar de cuenta real, introducir codigos Privy ni renovar B.
+[Arranque reproducible y guion de20-30 minutos](../tests/local-demo/README.md).
+Admin, medico, paciente, encargado y operador son identidades simuladas;
+la pantalla siempre indica datos sinteticos. Nunca introducir contactos reales.
+
+Orden: invitacion/buzon local -> solicitud -> aprobacion -> operador -> catalogo
+-> recepcion100 g -> reserva -> consulta explicita y nota -> tratamiento30 g
+en un periodo -> autorizacion -> entrega local10 g -> comprobante compartido.
+Saldo20 g/stock90 g; la revision posterior1 g no se confirma ni cambia registros.
+Las escrituras de este guion ocurren solo en PGlite y no acreditan autenticacion,
+habilitacion profesional, concurrencia PostgreSQL o autonomia humana.
+
+Recarga/cambio de actor conservan registros mientras vive el proceso. Reiniciar
+el escenario o el proceso los elimina expresamente. Invitar no llama Resend;
+Calendar/Meet/Firebase/Stellar y conexiones externas estan bloqueados. El ensayo
+no usa referencias ni pacientes de B/Browns. No hay Compras, Caja o Conteos.
+La matriz unica mantiene el resultado tecnico; realizar despues el ensayo contigo
+y registrar ayudas. Celular fisico y teclado real permanecen aparte.
+
+El guion publicado historico siguiente conserva su fecha y restricciones. PR62
+no se convierte en aviso aprobado/publicado; incorporacion externa sigue pausada.
+
 ## Demo sin llamadas: 01/10/2026
 
 Base comprobada main `86e2016`, PR59 integrado y CI main 36941802547 PASS;

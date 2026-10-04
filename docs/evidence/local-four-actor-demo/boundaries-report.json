@@ -1,0 +1,46 @@
+{
+  "status": "PASS",
+  "crossTabReset": true,
+  "lateResponseWithdrawn": true,
+  "lateMailboxWithdrawn": true,
+  "explicitRecovery": true,
+  "blocked": [
+    {
+      "name": "fetch",
+      "blocked": true
+    },
+    {
+      "name": "other-loopback",
+      "blocked": true
+    },
+    {
+      "name": "xhr",
+      "blocked": true
+    },
+    {
+      "name": "websocket",
+      "blocked": true
+    },
+    {
+      "name": "eventsource",
+      "blocked": true
+    },
+    {
+      "name": "beacon",
+      "blocked": true
+    },
+    {
+      "name": "popup",
+      "blocked": true
+    },
+    {
+      "name": "anchor",
+      "blocked": true
+    }
+  ],
+  "externalAttempts": [],
+  "pageErrors": [],
+  "limits": [
+    "Synthetic identities, viewport browser only; not an OS sandbox or physical-phone autonomy approval."
+  ]
+}
