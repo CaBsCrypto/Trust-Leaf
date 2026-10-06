@@ -7,6 +7,47 @@ La fuente unica de estado, responsables, resultados y bloqueos es el
 [tablero de cierre](DISPENSARY_CLOSEOUT_SPRINT.md#demo-y-adopcion-30092026).
 Este documento describe la ejecucion; no mantiene otra matriz de aprobaciones.
 
+## Presentacion del escenario existente 06/10/2026
+
+Guion de20-30 minutos, sin videollamada ni nuevas operaciones. Confirmar banner
+local, identidad y datos actuales antes de iniciar. No usar cuentas reales.
+
+| Minutos | Actor | Demostracion |
+| --- | --- | --- |
+| 0-4 | Admin | Invitacion aceptada, solicitud ficticia aprobada; distinguir aprobacion de acceso efectivo |
+| 4-8 | Encargado | Demo Horizonte, catalogo, recepcion100 g existente y equipo; stock actual90 g |
+| 8-13 | Medico y paciente | Reserva, consulta finalizada, nota ficticia y tratamiento30 g/un periodo; no receta real |
+| 13-19 | Operador | Buscar Camila Demo, explicar30/10/20 g; revisar1 g, hipotetico19 g, volver sin confirmar |
+| 19-24 | Paciente y dispensario | Mismo comprobante10 g, producto/lote; no crear otra entrega |
+| 24-30 | Equipo invitado | Recoger diferencias con su trabajo; Compras/Caja/Conteos son futuros |
+
+Si el permiso24 h vencio, no renovarlo automaticamente. Solicitar decision
+explicita para el ensayo; hasta entonces mostrar inventario/historial propio.
+El ensayo no valida cuentas Privy reales ni acepta condiciones externas.
+
+### Recuperacion tras reinicio
+
+No reiniciar el proceso4331 ni usar Reiniciar escenario para preparar esta
+presentacion si conserva los datos. Reinicio elimina SQL efimero. Si ocurre,
+usar `npm run demo:local -- 4331` y el enlace de
+arranque local sin copiar su fragmento al chat o Git. Seguir una sola vez el
+guion de tests/local-demo/README.md con participacion sintetica explicita:
+incorporacion, operador, producto, unica recepcion100 g, reserva/consulta,
+tratamiento30 g/un periodo, permiso y unica entrega10 g. Comprobar20/90 y
+comprobante antes de presentar; no copiar B/Browns ni manipular la base.
+
+### Registro de observaciones
+
+| Tarea | Rol/dispositivo | Resultado | Ayuda necesaria | Friccion reproducible | Prioridad / siguiente accion |
+| --- | --- | --- | --- | --- | --- |
+| Encontrar paciente y explicar saldo | Pendiente humano | Pendiente | No medida | No determinada | Evaluacion acompanada |
+| Revisar sin entregar y volver | Pendiente humano | Pendiente | No medida | No determinada | Evaluacion acompanada |
+| Encontrar lote y comprobante | Pendiente humano | Pendiente | No medida | No determinada | Evaluacion acompanada |
+
+Registrar respuestas, no inferir autonomia del recorrido del agente. Celular
+fisico y teclado real siguen pendientes por disponibilidad. Una correccion
+reproducida se separa en fix/PR; no ampliar el alcance comercial por suposicion.
+
 ## Ensayo local del ciclo completo: 04/10/2026
 
 Esta alternativa usa exclusivamente interfaces existentes y SQL efimero local.

@@ -1,5 +1,20 @@
 # Trust Leaf: alcance, narrativa y plan maestro
 
+## Consolidacion de la demo: 06/10/2026
+
+PR69 integrado en `0d56f3d21de61f324a31eb8ed4415a92890159aa`;
+CI main37243688374 PASS. Deployment GitHub6848233409 Production success
+asociado al mismo SHA. Disponibilidad publica oficial HTTP200 comprobada;
+esto no acredita por si solo el SHA servido por el alias ni una sesion privada.
+El laboratorio esta en Git, no en rutas publicas, y usa SQL temporal local.
+[Matriz unica y dictamen](DISPENSARY_CLOSEOUT_SPRINT.md#consolidacion-06102026),
+[evidencia y correspondencia](evidence/demo-validation-closeout/README.md) y
+[guion de presentacion](DEMO_ADOPTION_RUNBOOK.md#presentacion-del-escenario-existente-06102026).
+Recorrido del agente y regresiones aisladas aprobados; autonomia humana,
+celular fisico y condiciones de privacidad pendientes. PR62 sigue OPEN/DRAFT.
+Las secciones fechadas anteriores son cortes historicos, no nuevos bloqueos
+ni autorizaciones actuales. B/Browns y borrador mensual intactos.
+
 ## Demo local del ciclo completo: legado publicado y ensayo aislado (04/10/2026)
 
 Base comprobada `3243904`: PR66 publicado, CI candidato36970170432 y
