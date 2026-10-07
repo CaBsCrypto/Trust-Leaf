@@ -1,8 +1,53 @@
 # Sprint S1: cerrar la experiencia publicada del dispensario
 
-Actualizado: 2026-10-02. Sprint de una semana de referencia, sin fecha final
+Actualizado: 2026-10-06. Sprint de una semana de referencia, sin fecha final
 comprometida hasta disponer de ambos participantes. Sin ejecucion automatica.
 Fuente de estado: este tablero, enlazado desde el plan maestro y mapa de producto.
+
+## Consolidacion 06/10/2026
+
+Dictamen: **listo con limitaciones para presentacion sintetica local**.
+Incorporacion externa: **bloqueada por condiciones de privacidad pendientes**.
+Base `0d56f3d`, PR69 integrado, CI37243688374 PASS; deployment6848233409
+Production success. Alias oficial disponible; SHA efectivo del alias y nuevas
+lecturas autenticadas no reconfirmados en esta entrega documental.
+Las entradas anteriores conservan su fecha; no reabren fixes publicados.
+
+| Escenario | Version / entorno | Resultado y evidencia | Pendiente / responsable |
+| --- | --- | --- | --- |
+| Admin invita, encargado solicita, Admin aprueba | 0d56f3d / local PGlite | Agente: una solicitud aprobada visible, acceso posterior a Demo Horizonte | Autenticacion/proveedor real: coordinador y PO |
+| Equipo, catalogo y recepcion | Misma base / local | Agente: operador aceptado, producto DEMO-LOCAL-001, lote DEMO-LOCAL-LOT-001, recepcion100 g y movimiento visibles tras recarga | Uso humano: PO/dispensario |
+| Medico y paciente | Misma base / local | Agente: reserva, inicio explicito, nota ficticia v2, consulta finalizada, tratamiento78c0b751 de30 g/un periodo; misma nota en paciente | Alta profesional y prescripcion real fuera del piloto |
+| Autorizacion, entrega y comprobante | Misma base / local | Agente: perfil sintetico, permiso24 h, una entrega10 g, saldo20 g, stock90 g; comprobante da950e4a coincidente | Permiso local puede vencer; no renovarlo implicitamente |
+| Operador y encargado: revision/retorno | Misma base / local | Agente: revisar1 g sin confirmar, hipotetico19 g; cancelar descarte conserva lote/cantidad; volver conserva busqueda | Autonomia no acreditada |
+| Lectura compartida SQL | Misma base / PGlite aislado | 19/19 PASS: aislamiento, inactividad, vencimiento, revocacion, retirada; comprobantes propios conservados | Gateway hosted distinto del ensayo |
+| Fallos de lectura UI | Misma base / Chromium aislado | PASS ambos roles360/390/768/1024/1440,503/red/JSON invalido,401/403, cambios de identidad, borradores y respuesta incierta | Viewports, no celular fisico |
+| Guard y API | Misma base / aislado | test:local-demo PASS,13 rechazos Node; guard de respuesta incierta/reset; operations-pilot8/8 PASS | No equivale a sandbox del sistema operativo |
+| Tipos y concurrencia | Misma base / 06-10 | lint PASS; PostgreSQL18 WSL en cluster temporal55436: conexiones independientes, cupo/stock, comercio, incorporacion, idempotencia y carreras de acceso PASS; cluster detenido | No bases remotas ni demo abiertas alteradas |
+| Producto publicado | main / remoto | CI y deployment identificados; evidencia historica medico/paciente/B/Browns conservada | Nuevas lecturas privadas requieren sesion; no marcar como repetidas |
+| Privacidad | PR62 OPEN/DRAFT45a45f1 | Borrador interno no aprobado ni publicado | PO: responsable formal, buzon probado, retencion, proveedores y aprobacion |
+| Celular y autonomia | Sin nueva prueba | Pendiente; PO confirmo sin celular disponible | PO y primer equipo |
+
+[Metodo y correspondencia](evidence/demo-validation-closeout/README.md).
+Resultados recientes de terminal y navegador son evidencia de sesion, no
+artefactos nuevos de CI. No se inventan capturas ni reportes persistidos.
+
+Revisiones independientes (solo lectura): Admin, medico, paciente, dispensario,
+seguridad, calidad/UX. Indicios por reproducir, no defectos confirmados:
+control de revocacion deshabilitado fuera de periodo; nombres de lote/catalogo
+pueden diferir tras renombrar o vincular; recepcion libre sigue siendo una via
+distinta de recepcion comercial. No corregir dentro de este PR documental.
+Precio de referencia y supplier_ref pueden formar parte de la proyeccion del
+operador; no prometer ocultamiento de toda informacion comercial.
+
+Puerta de primera invitacion: responsable y canal verificados, condiciones y
+aviso aprobados/publicados mediante entrega separada, decision sobre evidencia
+de aceptacion, destinatario confirmado, compatibilidad de cuenta/rol y
+autorizacion explicita del PO. Autorizar el envio no acredita autenticacion,
+aceptacion, aprobacion ni acceso efectivo del primer encargado; esos pasos
+se validan acompanados despues. El nombre browns.studio no
+confirma una entidad juridica. Participacion antigua no acepta un nuevo aviso.
+
 
 ## Demo y adopcion: 30/09/2026
 
