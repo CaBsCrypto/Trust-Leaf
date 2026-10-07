@@ -78,4 +78,3 @@ No ejecutar exportaciones sensibles como parte de esta entrega documental.
 
 Matriz final: recuperado / reproducible / conservado en equipo anterior / bloqueado.
 B, Browns, historiales y privacidad pendiente no cambian. La migracion no habilita operacion clinica o comercial real.
-
