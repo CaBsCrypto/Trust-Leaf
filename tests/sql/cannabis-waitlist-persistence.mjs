@@ -13,7 +13,7 @@ const port = 5221;
 const origin = `http://127.0.0.1:${port}`;
 const endpoint = `${origin}/api/cannabis-waitlist`;
 const normalizedEmail = 'waitlist-persistence@example.test';
-const audiences = ['patient', 'dispensary'];
+const audiences = ['patient', 'doctor', 'dispensary'];
 process.env.TRUSTLEAF_LOCAL_WAITLIST_INSTANCE = instance;
 
 async function withServer(run) {
@@ -102,6 +102,7 @@ await withServer(async () => {
 const beforeRestart = await storedCounts();
 assert.deepEqual(beforeRestart.map(({ audience, total, normalized }) => ({ audience, total, normalized })), [
   { audience: 'dispensary', total: 1, normalized: 1 },
+  { audience: 'doctor', total: 1, normalized: 1 },
   { audience: 'patient', total: 1, normalized: 1 },
 ]);
 assert.ok(beforeRestart.every(row => row.created_at), 'each signup has its own creation timestamp');
@@ -111,5 +112,5 @@ await withServer(async () => {
   await expectPrivateFiles();
 });
 
-assert.deepEqual(await storedCounts(), beforeRestart, 'restarting preserves both original signups and their timestamps');
-console.log('PASS: both private signup records survived a local Vite restart, with normalization, deduplication and file isolation.');
+assert.deepEqual(await storedCounts(), beforeRestart, 'restarting preserves all original signups and their timestamps');
+console.log('PASS: all three private signup records survived a local Vite restart, with normalization, deduplication and file isolation.');

@@ -36,14 +36,16 @@ async function request(options: Partial<Parameters<typeof cannabisWaitlistHandle
 
 const first = await request();
 const repeat = await request();
+const doctor = await request({ body: JSON.stringify({ audience: 'doctor', email }) });
 const dispensary = await request({ body: JSON.stringify({ audience: 'dispensary', email }) });
-for (const result of [first, repeat, dispensary]) {
+for (const result of [first, repeat, doctor, dispensary]) {
   assert.equal(result.status, 200);
   assert.deepEqual(result.body, { registered: true });
 }
 assert.deepEqual(calls, [
   { p_audience: 'patient', p_email: email },
   { p_audience: 'patient', p_email: email },
+  { p_audience: 'doctor', p_email: email },
   { p_audience: 'dispensary', p_email: email },
 ]);
 
@@ -54,7 +56,7 @@ for (const [options, config, expected] of [
   [{}, {}, 503],
   [{ headers: { ...goodRequest.headers, 'content-type': 'text/plain' } }, env, 415],
   [{ headers: { ...goodRequest.headers, 'content-length': String(CANNABIS_WAITLIST_MAX_BODY_BYTES + 1) } }, env, 413],
-  [{ body: { audience: 'doctor', email } }, env, 400],
+  [{ body: { audience: 'other', email } }, env, 400],
   [{ body: { audience: 'patient', email: 'invalid' } }, env, 400],
   [{ body: { audience: 'patient', email, notes: 'unexpected field' } }, env, 400],
   [{ body: '{' }, env, 400],
@@ -64,7 +66,7 @@ for (const [options, config, expected] of [
   assert.equal(result.status, expected);
   assert.deepEqual(result.body, { registered: false });
 }
-assert.equal(calls.length, 3, 'Invalid and disabled requests must not reach storage.');
+assert.equal(calls.length, 4, 'Invalid and disabled requests must not reach storage.');
 
 const unavailable = await request({}, env, async () => Response.json({ detail: email }, { status: 500 }));
 assert.equal(unavailable.status, 503);

@@ -1,4 +1,4 @@
-import type { WaitlistAudience } from '../../src/lib/waitlist.js';
+import { waitlistAudiences, type WaitlistAudience } from '../../src/lib/waitlist.js';
 
 const cannabisOrigin = 'https://cannabis.trustleaf.org';
 export const CANNABIS_WAITLIST_MAX_BODY_BYTES = 1_024;
@@ -33,11 +33,12 @@ function readSignup(body: unknown): Signup {
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 2
     || !Object.hasOwn(input, 'audience') || !Object.hasOwn(input, 'email')) throw signupError(400);
 
-  const { audience, email: value } = input as Record<string, unknown>;
+  const { audience: requestedAudience, email: value } = input as Record<string, unknown>;
+  const audience = waitlistAudiences.find(audience => audience === requestedAudience);
   const email = typeof value === 'string' && value.length <= CANNABIS_WAITLIST_MAX_BODY_BYTES
     ? value.trim().toLowerCase()
     : '';
-  if ((audience !== 'patient' && audience !== 'dispensary') || email.length > 254 || !emailPattern.test(email)) {
+  if (!audience || email.length > 254 || !emailPattern.test(email)) {
     throw signupError(400);
   }
   return { audience, email };

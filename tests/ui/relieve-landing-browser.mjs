@@ -39,15 +39,37 @@ async function checkSectionFit(section, label) {
 async function checkWaitlistForms() {
   const email = 'waitlist-verification@example.test';
   const cases = [
-    ['patient', 'paciente', 'pacientes'],
-    ['dispensary', 'dispensario', 'dispensarios'],
+    ['patient', 'paciente', 'Pacientes'],
+    ['doctor', 'medico', 'Médicos'],
+    ['dispensary', 'dispensario', 'Dispensarios'],
   ];
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${baseUrl}/#lista-de-espera`, { waitUntil: 'domcontentloaded' });
+  const cards = page.locator('#lista-de-espera article');
+  await cards.first().waitFor();
+  assert.deepEqual(await cards.evaluateAll(elements => elements.map(element => element.id)),
+    cases.map(([, anchor]) => `lista-de-espera-${anchor}`), 'patients are first in reading order');
+  const boxes = await cards.evaluateAll(elements => elements.map(element => {
+    const { left, bottom, top } = element.getBoundingClientRect();
+    return { left, bottom, top };
+  }));
+  assert.ok(boxes.every((box, index) => box.left === boxes[0].left && (!index || box.top >= boxes[index - 1].bottom)),
+    'mobile waitlist cards are stacked in reading order');
+  await checkSectionFit(page.locator('#lista-de-espera'), 'mobile waitlists');
+  assert.equal(await page.getByRole('textbox', { name: 'Correo electrónico' }).count(), 0, 'email fields are hidden until a list is selected');
+  await page.locator('#lista-de-espera').screenshot({ path: fileURLToPath(new URL('waitlist-buttons-390.png', output)) });
   for (const [audience, anchor, label] of cases) {
-    await page.goto(`${baseUrl}/#lista-de-espera-${anchor}`, { waitUntil: 'domcontentloaded' });
-    const block = page.locator(`#lista-de-espera-${anchor}`);
-    const form = page.getByRole('form', { name: `Lista de espera para ${label}`, exact: true });
-    await form.getByRole('textbox', { name: 'Correo electrónico', exact: true }).fill(email);
-    const submit = form.getByRole('button', { name: 'Inscribirme', exact: true });
+    const trigger = page.locator(`#lista-de-espera-${anchor}`).getByRole('button', { name: label, exact: true });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: `Lista de espera para ${label.toLowerCase()}`, exact: true });
+    await dialog.waitFor();
+    const field = dialog.getByRole('textbox', { name: 'Correo electrónico', exact: true });
+    assert.ok(await field.evaluate(element => document.activeElement === element), 'focus moves to the email field');
+    if (audience === 'doctor') {
+      await page.screenshot({ path: fileURLToPath(new URL('waitlist-doctor-popup-390.png', output)) });
+    }
+    await field.fill(email);
+    const submit = dialog.getByRole('button', { name: 'Inscribirme', exact: true });
     const [result] = await Promise.all([
       page.waitForResponse(response => response.url() === `${baseUrl}/api/cannabis-waitlist`
         && response.request().method() === 'POST'),
@@ -55,9 +77,13 @@ async function checkWaitlistForms() {
     ]);
     assert.equal(result.status(), 200, `${label}: waitlist submission`);
     assert.deepEqual(result.request().postDataJSON(), { audience, email });
-    await block.getByText(`Inscripción de prueba registrada para ${label}.`, { exact: true }).waitFor();
+    await dialog.getByText(`Inscripción de prueba registrada para ${label.toLowerCase()}.`, { exact: true }).waitFor();
+    if (audience === 'doctor') await page.keyboard.press('Escape');
+    else await dialog.getByRole('button', { name: 'Cerrar', exact: true }).click();
+    await dialog.waitFor({ state: 'detached' });
+    assert.ok(await trigger.evaluate(element => document.activeElement === element), 'focus returns to the selected list');
   }
-  console.log('The same synthetic email was accepted in the patient and dispensary waitlists with distinct audience values.');
+  console.log('Mobile order and separate patient, doctor and dispensary signups passed.');
 }
 
 async function checkTechnicalRoutes() {
@@ -224,7 +250,7 @@ try {
 
   console.log('TrustLeaf landing passed at 320/390/768/1024/1440 px, with mobile navigation, ES/EN, traceability and portal destinations.');
   if (checkWaitlist) {
-    console.log('Local waitlist mode verified the landing and both forms. Run normal preview mode to verify the protected access screens, technical views and QR.');
+    console.log('Local waitlist mode verified the landing and all three forms. Run normal preview mode to verify the protected access screens, technical views and QR.');
   } else {
     await checkTechnicalRoutes();
     console.log('The four TrustLeaf technical views passed at 390/1440 px.');

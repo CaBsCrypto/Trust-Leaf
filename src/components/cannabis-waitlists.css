@@ -11,19 +11,48 @@
   letter-spacing: -.045em;
 }
 .tl-waitlists > p { margin: .65rem 0 1.5rem; color: #365748; }
-.tl-waitlist-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; }
-.tl-waitlist-card {
-  padding: clamp(1rem, 2.4vw, 2rem);
+.tl-waitlist-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: 1.5rem; }
+.tl-waitlist-card { scroll-margin-top: 6rem; }
+.tl-waitlist-trigger {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  min-height: 4.25rem;
+  padding: .65rem .85rem;
   border: 1px solid var(--tl-brand-line);
   border-radius: 1.25rem;
   background: var(--tl-brand-soft);
-  scroll-margin-top: 6rem;
+  color: var(--tl-brand-ink);
+  font-weight: 680;
+  text-align: start;
+  cursor: pointer;
 }
+.tl-waitlist-trigger:hover:not(:disabled) { border-color: #789b87; }
+.tl-waitlist-trigger:disabled { opacity: .62; cursor: default; }
+.tl-waitlist-trigger .tl-relieve-icon { width: 2.5rem; height: 2.5rem; }
 
-.tl-waitlist-card h3 { margin: .85rem 0 .35rem; font-size: clamp(1.15rem, 2.1vw, 1.5rem); font-weight: 680; line-height: 1.2; }
-.tl-waitlist-card > p { margin: 0 0 1.2rem; color: #365748; }
-.tl-waitlist-card label { display: block; margin-bottom: .35rem; font-weight: 650; }
-.tl-waitlist-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; }
+.tl-waitlist-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(100% - 2rem, 28rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border: 1px solid var(--tl-brand-line);
+  border-radius: 1.25rem;
+  background: #fff;
+  color: var(--tl-brand-ink);
+}
+.tl-waitlist-dialog::backdrop { background: rgb(13 40 30 / 55%); }
+.tl-waitlist-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.tl-waitlist-dialog h3 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.5rem); font-weight: 680; line-height: 1.2; }
+.tl-waitlist-close { display: grid; place-items: center; flex: 0 0 44px; min-height: 44px; border-radius: .65rem; background: var(--tl-brand-soft); cursor: pointer; }
+.tl-waitlist-dialog > p { margin: .65rem 0 1.2rem; color: #365748; }
+.tl-waitlist-dialog label { display: block; margin-bottom: .35rem; font-weight: 650; }
+.tl-waitlist-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
 .tl-waitlist-fields input {
   width: 100%;
   min-height: 44px;
@@ -32,12 +61,13 @@
   border: 1px solid #789b87;
   border-radius: .65rem;
   color: var(--tl-brand-ink);
+  font-size: 1rem;
 }
 
 .tl-waitlist-fields button:disabled, .tl-waitlist-fields input:disabled { opacity: .62; }
-.tl-waitlist-card .tl-waitlist-feedback { margin: .7rem 0 0; color: #075d42; font-weight: 600; }
-.tl-waitlist-card .tl-waitlist-error { color: #8c2925; }
+.tl-waitlist-dialog .tl-waitlist-feedback { margin: .7rem 0 0; color: #075d42; font-weight: 600; }
+.tl-waitlist-dialog .tl-waitlist-error { color: #8c2925; }
 
-@media (max-width: 700px) {
-  .tl-waitlist-cards, .tl-waitlist-fields { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 800px) {
+  .tl-waitlist-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
