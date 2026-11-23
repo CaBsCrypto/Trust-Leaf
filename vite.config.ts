@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       hmr: process.env.DISABLE_HMR !== 'true',
+      fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/scratch/cannabis-waitlists/**'] },
     },
     build: {
       // Raise the warning threshold — we've already split the bundles below.

@@ -1,0 +1,106 @@
+.tl-operations.dispensary-intake {
+  background: #f6faf7;
+  color: var(--tl-brand-ink, #102e23);
+  font-family: var(--tl-brand-font, 'Instrument Sans', system-ui, sans-serif);
+}
+
+.dispensary-intake .op-header {
+  padding-inline: max(24px, calc((100vw - 920px) / 2));
+  background: #fff;
+  border-color: var(--tl-brand-line, #d4e6dc);
+}
+
+.dispensary-intake .op-brand {
+  color: var(--tl-brand-action, #075d42);
+}
+
+.dispensary-intake > .op-content {
+  max-width: 966px;
+}
+
+.dispensary-intake .onboarding-review,
+.dispensary-intake .onboarding-form,
+.dispensary-intake .onboarding-details,
+.dispensary-intake .dispensary-intake-status {
+  max-width: none;
+  border: 1px solid var(--tl-brand-line, #d4e6dc);
+  border-radius: 12px;
+  padding: clamp(14px, 3vw, 24px);
+}
+
+.dispensary-intake .onboarding-form,
+.dispensary-intake .onboarding-details {
+  background: #fff;
+}
+
+.dispensary-intake .onboarding-review,
+.dispensary-intake .dispensary-intake-status {
+  background: var(--tl-brand-soft, #edf8f1);
+}
+
+.dispensary-intake .dispensary-intake-status {
+  margin-top: 16px;
+}
+
+.dispensary-intake .dispensary-intake-status[data-state="changes_requested"],
+.dispensary-intake .dispensary-intake-status[data-state="rejected"] {
+  background: #fff;
+}
+
+.dispensary-intake .onboarding-review h2,
+.dispensary-intake .dispensary-intake-status h2,
+.dispensary-intake .dispensary-intake-status p {
+  margin: 0;
+}
+
+.dispensary-intake .dispensary-intake-status p {
+  margin-top: 8px;
+}
+
+.dispensary-intake .onboarding-form input:not([type="checkbox"]) {
+  min-height: 44px;
+}
+
+.dispensary-intake .onboarding-form label {
+  min-width: 0;
+}
+
+.dispensary-intake .onboarding-form:focus,
+.dispensary-intake h3[tabindex]:focus {
+  outline: 2px solid var(--tl-brand-action, #075d42);
+  outline-offset: 3px;
+}
+
+.dispensary-intake .op-check {
+  margin-block: 12px;
+  min-height: 44px;
+  align-items: center;
+}
+
+.dispensary-intake .op-check input {
+  accent-color: var(--tl-brand-action, #075d42);
+}
+
+.tl-operations.dispensary-intake .op-command {
+  border-radius: 8px;
+}
+
+.tl-operations.dispensary-intake .dispensary-intake-primary {
+  border-color: var(--tl-brand-action, #075d42);
+  background: var(--tl-brand-action, #075d42);
+  color: #fff;
+}
+
+.tl-operations.dispensary-intake .dispensary-intake-primary:hover:not(:disabled) {
+  background: #064934;
+}
+
+@media (max-width: 600px) {
+  .dispensary-intake .op-header {
+    padding-inline: 16px;
+  }
+
+  .dispensary-intake .op-toolbar > .op-command {
+    flex: 1 1 140px;
+  }
+}

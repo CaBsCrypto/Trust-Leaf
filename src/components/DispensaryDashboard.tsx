@@ -224,7 +224,7 @@ export default function DispensaryDashboard({
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-2xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial operativa</p>
-            <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Dispensario autorizado en Trust Leaf</h3>
+            <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Dispensario autorizado en TrustLeaf</h3>
             <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
               Módulo integral de autogestión: administra tu catálogo clínico, coordina tu personal de farmacia y audita las dispensaciones.
             </p>
@@ -379,7 +379,7 @@ export default function DispensaryDashboard({
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Mesa de validación</p>
                   <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Recibir paciente con receta</h3>
                   <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-                    El operador puede escanear QR o ingresar el número de receta. Trust Leaf muestra vigencia, saldo y permiso mínimo antes de preparar el retiro.
+                    El operador puede escanear QR o ingresar el número de receta. TrustLeaf muestra vigencia, saldo y permiso mínimo antes de preparar el retiro.
                   </p>
                 </div>
                 <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
@@ -573,7 +573,7 @@ export default function DispensaryDashboard({
                 <input
                   value={inventoryForm.lab}
                   onChange={(e) => setInventoryForm(prev => ({ ...prev, lab: e.target.value }))}
-                  placeholder="Trust Leaf QC"
+                  placeholder="Nombre del laboratorio"
                   className="mt-1 w-full px-4 py-2.5 bg-brand-neutral rounded-xl text-sm focus:outline-none"
                 />
               </label>
@@ -682,7 +682,7 @@ export default function DispensaryDashboard({
           <div className="rounded-[28px] border border-brand-green-deep/10 bg-white p-5 md:p-6 shadow-sm">
             <h3 className="text-xl font-serif text-brand-green-deep">Miembros Autorizados y Personal Clínico</h3>
             <p className="mt-1 text-sm text-brand-green-mid/70 leading-relaxed">
-              Controla qué operadores de tu farmacia o dispensario tienen credenciales operativas en Trust Leaf. Asigna roles de control para auditoría criptográfica.
+              Controla qué operadores de tu farmacia o dispensario tienen credenciales operativas en TrustLeaf. Asigna roles de control para auditoría criptográfica.
             </p>
           </div>
 

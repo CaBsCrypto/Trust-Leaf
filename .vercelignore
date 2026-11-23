@@ -17,3 +17,12 @@ soroban/target*/**
 api/stellar/contracts.ts
 api/stellar/derive-wallet.ts
 api/stellar/faucet.ts
+
+# Development-only visual review entry and incomplete local dependency cache.
+visual-preview.html
+src/dev
+node_modules.incomplete
+
+vite.visual.config.ts
+.vite-visual-cache
+dist-visual

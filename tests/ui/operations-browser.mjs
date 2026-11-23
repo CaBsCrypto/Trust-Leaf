@@ -39,7 +39,7 @@ try {
   const { doctor, patient, dispensary, dispensaryB, admin } = pages;
   await navigateSection(dispensary, 'Inicio');
   await dispensary.locator('.op-preparation summary').click();
-  assert.equal(await dispensary.getByLabel('Pendiente', {exact:true}).count(), 4);
+  assert.equal(await dispensary.locator('.op-preparation').getByText('Pendiente', { exact: true }).count(), 4);
   await patient.getByRole('tab', {name:'Tratamientos',exact:true}).click();
   await patient.getByLabel('Nombre ficticio', {exact:true}).fill('Paciente QA');
   await patient.getByLabel('Correo ficticio', {exact:true}).fill('paciente@example.test');
@@ -291,7 +291,7 @@ try {
   assert.equal(await patient.locator('.op-reference').filter({ hasText: 'Comprobante:' }).count(), 2);
   // An in-flight draft and its contents must not survive an identity transition.
   await doctor.evaluate(() => window.dispatchEvent(new CustomEvent('fixture-identity', { detail: 'otherPatient' })));
-  await doctor.getByRole('heading', { name: 'Mi atencion', exact: true }).waitFor();
+  await doctor.getByRole('heading', { name: 'Mi atención', exact: true }).waitFor();
   assert.equal(await doctor.getByText('NOTA FICTICIA PARA QA:', { exact: false }).count(), 0);
   await navigateSection(dispensary, 'Equipo');
   await operator.route('**/api/operations-pilot', route => route.request().method() === 'GET'

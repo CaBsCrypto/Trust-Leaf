@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { migrationNames } from '../local-demo/migrations.mjs';
 import { joinTeam } from './team-fixtures.mjs';
 import { operationsDatabase } from './operations-db.mjs';
 
-const { db, subjects, actors, call, agenda } = await operationsDatabase();
+const stockMigration = '20261122010000_pilot_movement_stock_after.sql';
+const { db, subjects, actors, call, agenda } = await operationsDatabase({ migrationNames: migrationNames.filter(name => name !== stockMigration) });
 const mutation = (key, action, input = {}) => call(key, action, { ...input, operationId: randomUUID() });
 const snapshot = key => call(key, 'snapshot');
 const forbidden = promise => assert.rejects(promise, { code: '42501' });
@@ -71,8 +74,12 @@ try {
   assert.deepEqual(minimal.notes, []);
   assert.equal(minimal.treatments[0].booking_ref, undefined);
   const batchInput = { lotCode: 'TEST-001', product: 'Flor ficticia', sourceReference: 'TEST-ORIGIN-001', expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(), quantityMg: 100000 };
-  const batchA = (await mutation('dispensary', 'receive-batch', batchInput)).resourceRef;
   const batchB = (await mutation('dispensaryB', 'receive-batch', batchInput)).resourceRef;
+  await db.exec('reset role');
+  await db.exec(await readFile(new URL(`../../supabase/migrations/${stockMigration}`, import.meta.url), 'utf8'));
+  await db.exec('set role service_role');
+  assert.equal((await snapshot('dispensaryB')).movements[0].stock_after_mg, null, 'an existing movement gets no invented historical balance');
+  const batchA = (await mutation('dispensary', 'receive-batch', batchInput)).resourceRef;
   await forbidden(mutation('operator', 'receive-batch', { ...batchInput, lotCode: 'TEST-002' }));
   await forbidden(mutation('dispensaryB', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 10000 }));
   const first = { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 10000, operationId: randomUUID() };
@@ -88,14 +95,23 @@ try {
       assert.equal(d.product, 'Flor ficticia');
       assert.equal(d.lot_code, 'TEST-001');
       assert.equal(d.organization_name, d.organization_ref === orgA ? 'Dispensario A simulado' : 'Dispensario B simulado');
-      for (const field of ['stock_mg', 'source_reference', 'email', 'phone', 'notes']) assert.equal(d[field], undefined);
+      for (const field of ['stock_mg', 'stock_after_mg', 'source_reference', 'email', 'phone', 'notes']) assert.equal(d[field], undefined);
     }
   }
   assert.deepEqual((await snapshot('patient')).batches, [], 'descriptions do not expose inventory');
+  assert.deepEqual((await snapshot('patient')).movements, [], 'the patient cannot read private stock movements');
   assert.deepEqual((await snapshot('otherPatient')).deliveries, []);
   assert.deepEqual((await call('otherPatient', 'snapshot', { patientRef: actors.patient })).deliveries, []);
-  assert.equal((await snapshot('dispensary')).batches[0].stock_mg, 90000);
-  assert.equal((await snapshot('dispensaryB')).batches[0].stock_mg, 80000);
+  const inventoryA = await snapshot('dispensary'), inventoryB = await snapshot('dispensaryB');
+  const reception = inventoryA.movements.find(movement => movement.delivery_ref === null);
+  assert.equal(reception.stock_after_mg, 100000);
+  const deliveryMovement = inventoryA.movements.find(movement => movement.delivery_ref === receipt.resourceRef);
+  assert.equal(deliveryMovement.batch_ref, batchA);
+  assert.equal(deliveryMovement.quantity_mg, -10000);
+  assert.equal(deliveryMovement.stock_after_mg, 90000);
+  assert.equal(inventoryA.batches[0].stock_mg, 90000);
+  assert.equal(inventoryB.batches[0].stock_mg, 80000);
+  assert.equal(inventoryB.movements.some(movement => movement.delivery_ref === receipt.resourceRef), false);
   await conflict(mutation('operator', 'dispense', { resourceRef: t.treatment_ref, batchRef: batchA, quantityMg: 1 }));
   assert.equal((await snapshot('patient')).organizations.length, 0, 'exhausted quota closes directory');
 
@@ -119,6 +135,20 @@ try {
   await forbidden(mutation('operator', 'adjust-stock', { resourceRef: batchA, version: 4, quantityMg: -1000, reason: 'No permission' }));
   await conflict(mutation('dispensary', 'adjust-stock', { resourceRef: batchA, version: 4, quantityMg: -999999, reason: 'Negative stock' }));
   await mutation('dispensary', 'adjust-stock', { resourceRef: batchA, version: 4, quantityMg: 1000, reason: 'Ajuste simulado de inventario' });
+  const adjustedInventory = await snapshot('dispensary');
+  assert.equal(adjustedInventory.batches[0].stock_mg, 91000);
+  assert.equal(adjustedInventory.movements.find(movement => movement.quantity_mg === 1000).stock_after_mg, 91000);
+  assert.equal(adjustedInventory.movements.find(movement => movement.movement_ref === deliveryMovement.movement_ref).stock_after_mg, 90000);
+  assert.equal(adjustedInventory.deliveries.find(delivery => delivery.delivery_ref === receipt.resourceRef).stock_movement, undefined);
+  await owner(`insert into trustleaf_private.pilot_movements(batch_ref,operator_ref,quantity_mg,reason)
+    select $1,$2,1,'Movimiento ficticio para historial' from generate_series(1,200)`, [batchA, actors.dispensary]);
+  const pagedInventory = await snapshot('operator');
+  assert.equal(pagedInventory.movements.length, 200);
+  assert.equal(pagedInventory.movements.some(movement => movement.delivery_ref === receipt.resourceRef), false);
+  assert.deepEqual(pagedInventory.deliveries.find(delivery => delivery.delivery_ref === receipt.resourceRef).stock_movement, deliveryMovement);
+  for (const key of ['patient', 'dispensaryB']) {
+    assert.equal((await snapshot(key)).deliveries.find(delivery => delivery.delivery_ref === receipt.resourceRef).stock_movement, undefined);
+  }
   assert.equal((await snapshot('patient')).treatments[0].periods[0].used_mg, 30000, 'stock adjustment never restores quota');
   await mutation('dispensary', 'remove-operator', { resourceRef: actors.operator });
   assert.equal((await snapshot('operator')).deliveries?.length ?? 0, 0, 'removed operator receives no receipt metadata');

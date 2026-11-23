@@ -34,4 +34,5 @@ export const migrationNames = [
   '20260921010000_dispensary_commerce.sql',
   '20260922010000_dispensary_onboarding.sql',
   '20261001010000_shared_patient_read_authorization.sql',
+  '20261122010000_pilot_movement_stock_after.sql',
 ];

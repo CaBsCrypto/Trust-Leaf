@@ -16,8 +16,9 @@ export type Batch = { batch_ref: string; organization_ref: string; lot_code: str
   expires_at: string; state: 'active' | 'quarantined'; version: number; stock_mg: number };
 export type Delivery = { delivery_ref: string; treatment_ref: string; organization_ref: string; operator_ref: string;
   batch_ref: string; period_index: number; quantity_mg: number; created_at: string;
-  organization_name?: string | null; product?: string | null; lot_code?: string | null };
-export type Movement = { movement_ref: string; batch_ref: string; operator_ref: string; quantity_mg: number; reason: string; created_at: string };
+  organization_name?: string | null; product?: string | null; lot_code?: string | null; stock_movement?: Movement };
+export type Movement = { movement_ref: string; batch_ref: string; operator_ref: string; quantity_mg: number; reason: string; created_at: string;
+  delivery_ref?: string | null; stock_after_mg?: number | null };
 export type Grant = { treatment_ref: string; organization_ref: string; expires_at: string };
 export type PatientProfile = { patient_ref: string; name: string; email: string; phone: string; version: number };
 export type PilotSnapshot = { joined: boolean; synthetic: true; role: PilotRole; actorRef: string; asOf?: string; staffOnly?: boolean;

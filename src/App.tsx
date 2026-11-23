@@ -1,9 +1,9 @@
 import React, { Component, lazy, Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Database, Leaf, ShieldCheck, ShoppingBag, Stethoscope, UserRound, X, Fingerprint, Key, Check, Clock, Lock, Copy, ExternalLink, FileText } from 'lucide-react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Footer from './components/Footer';
+import LandingPage from './components/LandingPage';
+import AccountAccessFrame from './components/AccountAccessFrame';
+import TechnicalFrame, { TechnicalIntro } from './components/TechnicalFrame';
 import PrivyActorDirectory from './components/PrivyActorDirectory';
 import OperationsWorkspace from './features/operations/OperationsWorkspace';
 import DispensaryOnboarding from './features/onboarding/DispensaryOnboarding';
@@ -12,6 +12,8 @@ import TeamInvitationGate from './features/operations/TeamInvitationGate';
 import GoogleCalendarConnection from './components/GoogleCalendarConnection';
 import PrivySessionBoundary from './components/PrivySessionBoundary';
 import { readPrivyAdminJson } from './lib/privyRead';
+import { BRAND_NAME, BRAND_TITLE } from './lib/brand';
+import './styles/trustleaf-legacy.css';
 import type { PortalView } from './components/MockupPortal';
 import {
   trustDataStore,
@@ -662,7 +664,7 @@ function AppContent() {
         <AuthGate
           role="patient"
           title="Entra como paciente"
-          description="Tu cuenta Trust Leaf sera el punto de control para ficha clinica, recetas, permisos y trazabilidad. Las fees de red quedan patrocinadas por Trust Leaf."
+          description={`Usa tu cuenta ${BRAND_NAME} para consultar tu atención, tus tratamientos y tus permisos.`}
           primaryAction="Entrar al portal"
           demoAction="Entrar con paciente de prueba"
           defaultEmail="paciente@trustleaf.test"
@@ -745,7 +747,7 @@ function AppContent() {
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
                   <Leaf size={20} />
                 </span>
-                <span className="text-lg font-bold">Trust Leaf Piloto</span>
+                <span className="text-lg font-bold">{BRAND_NAME} Piloto</span>
               </div>
               <button onClick={endSession} className="text-sm font-bold text-brand-green-deep/60 hover:text-brand-green-deep cursor-pointer">
                 Cerrar sesión
@@ -824,7 +826,7 @@ function AppContent() {
         <AuthGate
           role="doctor"
           title="Cuenta profesional"
-          description="Primero el medico crea su cuenta y solicita alta. La wallet puede conectarse ahora o quedar como credencial gestionada por Trust Leaf al aprobar."
+          description={`Crea tu cuenta y solicita el alta profesional. Puedes conectar tu wallet ahora o elegir una credencial gestionada por ${BRAND_NAME} al aprobarse la solicitud.`}
           primaryAction="Crear cuenta y solicitar alta"
           demoAction="Entrar como medico de prueba"
           defaultEmail="medico@trustleaf.test"
@@ -864,7 +866,7 @@ function AppContent() {
           demoAction="Entrar como medico aprobado"
           defaultEmail="medico@trustleaf.test"
           defaultName="Dra. Sofia Lagos"
-          onBack={() => navigate('/medico')}
+          onBack={() => navigate(privyIdentity.enabled ? '/' : '/medico')}
           key={`doctor:${privyIdentity.subject ?? 'signed-out'}`}
           onStart={startProfessionalSession}
           onPasskeySignIn={handlePasskeySignIn('doctor')}
@@ -913,7 +915,7 @@ function AppContent() {
         <AuthGate
           role="dispensary"
           title="Cuenta de dispensario"
-          description="El dispensario crea cuenta, solicita alta y luego admin habilita la credencial operativa. La wallet puede conectarse o ser gestionada por Trust Leaf."
+          description={`Crea la cuenta y solicita el alta del dispensario. Tras la aprobación, podrás usar una wallet propia o una credencial gestionada por ${BRAND_NAME}.`}
           primaryAction="Crear cuenta y solicitar alta"
           demoAction="Entrar como dispensario de prueba"
           defaultEmail="dispensario@trustleaf.test"
@@ -953,7 +955,7 @@ function AppContent() {
           demoAction="Entrar como dispensario aprobado"
           defaultEmail="dispensario@trustleaf.test"
           defaultName="Green Leaf Center"
-          onBack={() => navigate('/dispensario')}
+          onBack={() => navigate(privyIdentity.enabled ? '/' : '/dispensario')}
           key={`dispensary:${privyIdentity.subject ?? 'signed-out'}`}
           onStart={startProfessionalSession}
           onPasskeySignIn={handlePasskeySignIn('dispensary')}
@@ -1097,231 +1099,7 @@ function AppContent() {
     );
   }
 
-  return (
-    <div className="min-h-screen selection:bg-brand-gold/30 selection:text-brand-green-deep relative overflow-hidden bg-brand-ivory">
-      <Navbar 
-        onPortalClick={() => navigate('/paciente')} 
-        showTechnicalDetails={showTechnicalDetails}
-        onToggleTechnicalDetails={() => setShowTechnicalDetails(prev => !prev)}
-      />
-      <main>
-        <Hero onStartClick={() => navigate('/paciente')} />
-        <NetworkPreview onNavigate={navigate} />
-        <ProfessionalAccess onNavigate={navigate} />
-        
-        <section className="px-6 py-14 md:px-12 md:py-18">
-           <div className="mx-auto grid max-w-6xl grid-cols-1 overflow-hidden rounded-3xl border border-brand-green-deep/10 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="p-8 md:p-12">
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Siguiente paso</p>
-                <motion.h2
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="mt-3 text-4xl font-serif leading-tight text-brand-green-deep md:text-6xl"
-                >
-                   {t.closure.title}
-                </motion.h2>
-                <p className="mt-5 max-w-xl text-sm font-medium leading-relaxed text-brand-green-mid/70 md:text-base">
-                   {t.closure.desc}
-                </p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <button
-                     onClick={() => navigate('/paciente')}
-                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-8 py-4 text-base font-bold text-brand-ivory shadow-xl transition-all hover:bg-brand-green-mid active:scale-95"
-                  >
-                    {t.closure.cta}
-                    <ArrowRight size={18} />
-                  </button>
-                  <button
-                     onClick={() => navigate('/medico')}
-                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-brand-green-deep/10 bg-brand-neutral px-8 py-4 text-base font-bold text-brand-green-deep transition-all hover:border-brand-gold/50"
-                  >
-                    Soy profesional
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-brand-green-deep p-6 text-brand-ivory md:p-8">
-                <div className="grid h-full grid-cols-1 gap-3">
-                  {[
-                    ['Paciente', 'Crear expediente privado y buscar médico validado.', <UserRound size={18} />],
-                    ['Médico', 'Solicitar alta, configurar agenda y emitir receta.', <Stethoscope size={18} />],
-                    ['Dispensario', 'Postular inventario y registrar entregas trazables.', <ShoppingBag size={18} />],
-                  ].map(([title, desc, icon]) => (
-                    <button
-                      key={title as string}
-                      onClick={() => navigate(title === 'Paciente' ? '/paciente' : title === 'Médico' ? '/medico' : '/dispensario')}
-                      className="group flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-colors hover:bg-white/10"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-gold text-brand-green-deep">
-                        {icon}
-                      </span>
-                      <span>
-                        <span className="block text-sm font-bold">{title}</span>
-                        <span className="mt-1 block text-xs leading-relaxed text-brand-ivory/62">{desc}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-           </div>
-        </section>
-      </main>
-      <Footer />
-      </div>
-  );
-}
-
-function NetworkPreview({ onNavigate }: { onNavigate: (path: string) => void }) {
-  const [selectedDetail, setSelectedDetail] = useState<null | {
-    title: string;
-    desc: string;
-    action: string;
-    path: string;
-    icon: ReactNode;
-    eyebrow: string;
-    invite: string;
-    points: string[];
-  }>(null);
-
-  const flowSteps = [
-    {
-      title: 'Expediente privado',
-      desc: 'Únete para controlar tu historial, recetas y accesos privados.',
-      action: 'Unirme como paciente',
-      path: '/paciente',
-      icon: <Activity size={20} />,
-      eyebrow: 'Paciente',
-      invite: 'Crea tu espacio privado para agendar con médicos, recibir recetas y revisar dispensarios autorizados.',
-      points: [
-        'Historial clínico portable con síntomas, exámenes y tratamiento.',
-        'Acceso por consentimiento temporal para médicos o validadores.',
-        'Hashes verificables sin publicar diagnóstico ni documentos completos.',
-      ],
-    },
-    {
-      title: 'Receta verificable',
-      desc: 'Postula como profesional y opera recetas verificables.',
-      action: 'Registrarme como médico',
-      path: '/medico',
-      icon: <Stethoscope size={20} />,
-      eyebrow: 'Médico',
-      invite: 'Solicita alta profesional para que el equipo admin revise licencia, especialidad y wallet antes de habilitar tu panel.',
-      points: [
-        'Agenda y seguimiento de pacientes desde el panel profesional.',
-        'Emisión de receta vinculada a wallet y evidencia autorizada.',
-        'Dosis, vigencia y saldo disponible listos para validación.',
-      ],
-    },
-    {
-      title: 'Entrega trazable',
-      desc: 'Suma tu dispensario para validar recetas y operar inventario.',
-      action: 'Unir mi dispensario',
-      path: '/dispensario',
-      icon: <ShoppingBag size={20} />,
-      eyebrow: 'Dispensario',
-      invite: 'Postula tu dispensario para operar inventario, validar recetas y registrar entregas cuando admin apruebe el acceso.',
-      points: [
-        'Inventario por producto, lote y formato medicinal.',
-        'Validación de receta vigente sin exponer historia clínica.',
-        'Registro de entrega parcial para no quemar todo el tratamiento.',
-      ],
-    },
-  ];
-
-  return (
-    <section id="red" className="relative overflow-hidden bg-white py-12 md:py-16">
-      <div aria-hidden="true" className="absolute inset-0">
-        <img
-          src="https://images.pexels.com/photos/7667731/pexels-photo-7667731.jpeg?auto=compress&cs=tinysrgb&w=1800"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.09]"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-white/88 to-brand-neutral/70" />
-      </div>
-      <div className="container relative mx-auto px-6 md:px-12">
-        <div className="mb-8 max-w-3xl">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Red Trust Leaf</p>
-          <h2 className="mt-2 text-3xl font-serif text-brand-green-deep md:text-5xl">
-            Privacidad clínica, receta verificable y medicina trazable.
-          </h2>
-          <p className="mt-4 text-sm leading-relaxed text-brand-green-mid/70 md:text-base">
-            La plataforma separa lo que ve cada actor: el paciente controla sus datos, el médico valida el tratamiento y el dispensario confirma solo lo necesario para entregar.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {flowSteps.map((item) => (
-            <button
-              key={item.title}
-              onClick={() => setSelectedDetail(item)}
-              className="group rounded-2xl border border-brand-green-deep/10 bg-white/82 p-5 text-left shadow-sm backdrop-blur-sm transition-colors hover:border-brand-gold/50 hover:bg-white"
-            >
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green-deep text-brand-gold">
-                {item.icon}
-              </div>
-              <h3 className="text-xl font-bold text-brand-green-deep">{item.title}</h3>
-              <p className="mt-2 min-h-[64px] text-sm leading-relaxed text-brand-green-mid/70">{item.desc}</p>
-              <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand-green-deep group-hover:text-brand-gold">
-                {item.action}
-                <ArrowRight size={15} />
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedDetail && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-brand-green-deep/75 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedDetail(null)}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 18, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-brand-green-deep/10 bg-brand-neutral/60 p-6">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">{selectedDetail.eyebrow}</p>
-                <h3 className="mt-2 text-3xl font-serif text-brand-green-deep">{selectedDetail.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-brand-green-mid/70">{selectedDetail.desc}</p>
-                <p className="mt-4 rounded-2xl border border-brand-gold/20 bg-white/70 p-4 text-sm font-bold leading-relaxed text-brand-green-deep">
-                  {selectedDetail.invite}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedDetail(null)}
-                className="rounded-full p-2 text-brand-green-mid hover:bg-white"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-3 p-6">
-              {selectedDetail.points.map((point) => (
-                <div key={point} className="flex gap-3 rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/50 p-4">
-                  <ShieldCheck size={17} className="mt-0.5 shrink-0 text-brand-gold" />
-                  <p className="text-sm leading-relaxed text-brand-green-deep">{point}</p>
-                </div>
-              ))}
-              <button
-                onClick={() => onNavigate(selectedDetail.path)}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-deep px-5 py-4 text-sm font-bold text-brand-ivory"
-              >
-                {selectedDetail.action}
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </section>
-  );
+  return <LandingPage onNavigate={navigate} showTechnicalDetails={showTechnicalDetails} onToggleTechnicalDetails={() => setShowTechnicalDetails(prev => !prev)} />;
 }
 
 function MvpStatusRoute({
@@ -1391,51 +1169,27 @@ function MvpStatusRoute({
   ];
 
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
-      <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
-          <button onClick={onBack} className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
-              <Leaf size={20} />
-            </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
-          </button>
-          <button
-            onClick={() => onNavigate('/paciente')}
-            className="rounded-full bg-brand-green-deep px-4 py-2 text-sm font-bold text-brand-ivory"
-          >
-            Abrir portal
-          </button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl space-y-6 px-5 py-8 md:px-8 md:py-12">
-        <section className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_0.82fr]">
-          <div className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory shadow-2xl md:p-10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">SCRUM status</p>
-            <h1 className="mt-5 max-w-3xl text-4xl font-serif leading-tight md:text-6xl">
-              MVP listo para evolucionar a piloto real.
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-              Esta vista resume contratos, Firebase, passkeys y rutas por actor. La demo sigue disponible, pero el foco ahora es cerrar readiness de piloto en Testnet.
-            </p>
-            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <TechnicalFrame onBack={onBack} badge="Diagnóstico · Testnet">
+        <TechnicalIntro title="Estado del piloto" label="Servicios y contratos" icon={Activity}>
+            <p>Revisa la disponibilidad de los servicios y los accesos de cada perfil.</p>
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                ['Produccion', 'www.trustleaf.org'],
+                ['Canal', 'cannabis.trustleaf.org'],
                 ['Red', readiness?.network ?? 'Stellar Testnet'],
                 ['Sprint', 'Piloto real Testnet'],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold/80">{label}</p>
-                  <p className="mt-1 break-all text-sm font-bold text-brand-ivory">{value}</p>
+                <div key={label} className="rounded-xl border border-brand-green-deep/10 bg-white p-4">
+                  <p className="text-xs font-semibold text-brand-green-mid">{label}</p>
+                  <p className="mt-1 break-words text-sm font-bold text-brand-green-deep">{value}</p>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Readiness</p>
-            <h2 className="mt-2 text-2xl font-serif">Estado tecnico</h2>
+            <button type="button" onClick={() => onNavigate('/paciente')} className="mt-5 min-h-11 rounded-xl bg-brand-green-deep px-4 py-2 text-sm font-bold text-white">
+              Abrir portal
+            </button>
+        </TechnicalIntro>
+        <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6" aria-labelledby="tl-status-heading">
+            <h2 id="tl-status-heading" className="text-2xl font-semibold">Estado técnico</h2>
             <div className="mt-5 space-y-3">
               {checks.map(([label, done, desc]) => (
                 <div key={label as string} className={`rounded-2xl border p-4 ${done ? 'border-green-100 bg-green-50' : 'border-amber-100 bg-amber-50'}`}>
@@ -1450,11 +1204,10 @@ function MvpStatusRoute({
               ))}
             </div>
             {readinessError && (
-              <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+              <div role="alert" className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                 {readinessError}
               </div>
             )}
-          </div>
         </section>
 
         <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm">
@@ -1530,74 +1283,7 @@ function MvpStatusRoute({
             </div>
           </section>
         )}
-      </main>
-    </div>
-  );
-}
-
-function ProfessionalAccess({ onNavigate }: { onNavigate: (path: string) => void }) {
-  const entries = [
-    {
-      path: '/paciente',
-      label: 'Pacientes',
-      desc: 'Entrar al portal, buscar médico y revisar recetas.',
-      icon: <UserRound size={18} />,
-    },
-    {
-      path: '/medico',
-      label: 'Médicos',
-      desc: 'Solicitar alta o entrar al panel de emision.',
-      icon: <Stethoscope size={18} />,
-    },
-    {
-      path: '/dispensario',
-      label: 'Dispensarios',
-      desc: 'Solicitar alta, validar receta y registrar entregas.',
-      icon: <ShoppingBag size={18} />,
-    },
-    {
-      path: '/admin',
-      label: 'Admin',
-      desc: 'Revisar solicitudes y estado operacional.',
-      icon: <ShieldCheck size={18} />,
-    },
-  ];
-
-  return (
-    <section id="profesionales" className="relative z-10 px-6 py-10 md:px-12">
-      <div className="mx-auto max-w-6xl rounded-2xl border border-brand-green-deep/10 bg-white/86 p-5 shadow-sm backdrop-blur-md md:p-6">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.7fr] lg:items-start">
-          <div className="max-w-md">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Accesos separados</p>
-            <h3 className="mt-2 text-2xl font-serif text-brand-green-deep">Cada rol tiene su propio camino.</h3>
-            <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
-              Cada actor entra por su propio flujo y ve solo sus herramientas.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {entries.map((entry) => (
-              <button
-                key={entry.path}
-                onClick={() => onNavigate(entry.path)}
-                className="group flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-brand-green-deep/10 bg-brand-ivory/70 p-4 text-left transition-colors hover:border-brand-gold/50 hover:bg-white"
-              >
-                <span>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
-                    {entry.icon}
-                  </span>
-                  <span className="mt-4 block text-base font-bold text-brand-green-deep">{entry.label}</span>
-                  <span className="mt-2 block text-xs leading-relaxed text-brand-green-mid/65">{entry.desc}</span>
-                </span>
-                <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-brand-green-deep group-hover:text-brand-gold">
-                  Entrar
-                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
+    </TechnicalFrame>
   );
 }
 
@@ -1608,7 +1294,7 @@ function PortalLoading() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green-deep text-brand-ivory">
           <Leaf size={22} />
         </div>
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold">Trust Leaf</p>
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-gold">{BRAND_NAME}</p>
         <p className="mt-2 text-lg font-bold text-brand-green-deep">Cargando portal...</p>
       </div>
     </div>
@@ -1709,9 +1395,11 @@ function AuthGate({
   const [pendingNotice, setPendingNotice] = useState<string | null>(null);
   const [privySessionChecking, setPrivySessionChecking] = useState(false);
   const [privySessionRevision, setPrivySessionRevision] = useState(0);
+  const [privyVerificationError, setPrivyVerificationError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setPrivyVerificationError(null);
     if (!privyIdentity.enabled || !privyIdentity.authenticated) {
       setPrivyState(null);
       setPrivySessionChecking(false);
@@ -1730,15 +1418,27 @@ function AuthGate({
         // A restored browser session can briefly lack a fresh token. Keep the
         // sign-in path usable instead of presenting a false authorization error.
         if (!cancelled) {
-          setPrivyState({ authorized: false });
-          setError(sessionError instanceof Error && sessionError.message === 'AUTH_REQUIRED'
+          setPrivyState(null);
+          setPrivyVerificationError(sessionError instanceof Error && sessionError.message === 'AUTH_REQUIRED'
             ? 'La sesión todavía se está restaurando. Reintenta la verificación.'
             : 'No fue posible confirmar esta identidad. Vuelve a intentarlo.');
         }
       } finally { if (!cancelled) setPrivySessionChecking(false); }
     })();
     return () => { cancelled = true; };
-  }, [privyIdentity.authenticated, privyIdentity.enabled, privyIdentity.subject, privySessionRevision]);
+  }, [privyIdentity.authenticated, privyIdentity.enabled, privyIdentity.subject, privyIdentity.tokenReady, privySessionRevision]);
+
+  const runPrivyAccountAction = async (action: () => Promise<void>, failureMessage: string) => {
+    setPrivyBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch {
+      setError(failureMessage);
+    } finally {
+      setPrivyBusy(false);
+    }
+  };
 
   const enrollWithPrivy = async (resend = false) => {
     setPrivyBusy(true);
@@ -1764,7 +1464,7 @@ function AuthGate({
     } catch (enrollmentError) {
       const code = enrollmentError instanceof Error ? enrollmentError.message : '';
       if (code === 'AUTH_REQUIRED') setError('Tu sesión de Privy todavía no está lista. Verifica la cuenta e intenta nuevamente.');
-      else if (code === 'ROLE_MISMATCH') setError('Esta cuenta ya está asociada a otro rol en Trust Leaf.');
+      else if (code === 'ROLE_MISMATCH') setError('Esta cuenta ya está asociada a otro rol en TrustLeaf.');
       else if (code === 'PRIVY_ENROLLMENT_INVALID') setError('No fue posible validar el tipo de cuenta solicitado.');
       else setError('No fue posible enviar la solicitud. Vuelve a intentarlo.');
     } finally { setPrivyBusy(false); }
@@ -1811,23 +1511,134 @@ function AuthGate({
   }[role];
 
   if (privyIdentity.enabled) {
-    const hasOtherRole = Boolean(privyState?.role && privyState.role !== role);
-    const isPending = privyState?.role === role && privyState.state === 'pending';
-    const active = privyState?.role === role && privyState.authorized;
+    const descriptionByRole = {
+      patient: 'Ingresa para consultar tu agenda, tus atenciones y tus tratamientos.',
+      doctor: 'Ingresa para gestionar consultas y tratamientos con tu cuenta profesional.',
+      dispensary: 'Ingresa para consultar tu jornada, inventario y entregas.',
+      admin: 'Ingresa con una cuenta autorizada para administración.',
+    };
+    const switchAccount = () => void runPrivyAccountAction(
+      () => privyIdentity.logout(),
+      'No fue posible cerrar la sesión. Vuelve a intentarlo.',
+    );
+    const retryVerification = () => {
+      setError(null);
+      setPrivyVerificationError(null);
+      setPrivySessionChecking(true);
+      setPrivySessionRevision(revision => revision + 1);
+    };
+    let content: ReactNode;
+    if (!privyIdentity.authenticated) {
+      content = <>
+        <h2>Ingresa para continuar</h2>
+        <p>Usa Google o tu correo.</p>
+        <div className="tl-account-actions">
+          <button
+            type="button"
+            className="tl-account-action is-primary"
+            disabled={!privyIdentity.ready || privyBusy}
+            onClick={() => void runPrivyAccountAction(
+              () => privyIdentity.beginLogin(),
+              'No fue posible abrir el ingreso. Vuelve a intentarlo.',
+            )}
+          >
+            {privyIdentity.ready && !privyBusy ? 'Continuar con Privy' : 'Preparando acceso…'}
+          </button>
+        </div>
+      </>;
+    } else if (privyVerificationError) {
+      content = <>
+        <h2>No pudimos verificar tu cuenta</h2>
+        <p role="alert" className="tl-account-alert">{privyVerificationError}</p>
+        <div className="tl-account-actions">
+          <button type="button" className="tl-account-action is-primary" onClick={retryVerification}>
+            Reintentar verificación
+          </button>
+        </div>
+      </>;
+    } else if (privySessionChecking || !privyState) {
+      content = <>
+        <h2>Verificando cuenta</h2>
+        <p role="status">Estamos comprobando los permisos de tu sesión.</p>
+      </>;
+    } else if (privyState.role && privyState.role !== role) {
+      content = <>
+        <h2>Acceso no autorizado</h2>
+        <p>Esta identidad está registrada con otro rol.</p>
+        <div className="tl-account-actions">
+          <button type="button" className="tl-account-action" disabled={privyBusy} onClick={switchAccount}>
+            Usar otra cuenta
+          </button>
+        </div>
+      </>;
+    } else if (privyState.role === role && privyState.state === 'pending') {
+      content = <>
+        <h2>Solicitud en revisión</h2>
+        <p>Tu solicitud está en manos de administración. Puedes agregar un perfil simulado para completar la prueba.</p>
+        {pendingNotice && <p role="status">{pendingNotice}</p>}
+        <div className="tl-account-actions">
+          <button type="button" className="tl-account-action is-primary" disabled={privyBusy} onClick={() => void submitTestApplication()}>
+            {privyBusy ? 'Enviando…' : 'Agregar datos simulados'}
+          </button>
+          <button type="button" className="tl-account-action" disabled={privyBusy} onClick={() => void enrollWithPrivy(true)}>
+            Reenviar solicitud
+          </button>
+        </div>
+      </>;
+    } else if (privyState.role === role && privyState.authorized) {
+      content = <>
+        <h2>Cuenta autorizada</h2>
+        <p>Tu identidad y tus permisos están confirmados.</p>
+        {privyState.email && <p className="tl-account-email">Conectado como {privyState.email}</p>}
+        <div className="tl-account-actions">
+          <button type="button" className="tl-account-action is-primary" onClick={() => onStart(role, {
+            email: privyState.email ?? `${role}@privy.trustleaf`,
+            name: 'Cuenta Trust Leaf',
+            mode: 'email',
+          })}>
+            Continuar
+          </button>
+        </div>
+      </>;
+    } else if (privyState.role) {
+      content = <>
+        <h2>Acceso no autorizado</h2>
+        <p>Tu cuenta no tiene permisos vigentes para esta sección. Consulta con administración.</p>
+        <div className="tl-account-actions">
+          <button type="button" className="tl-account-action" disabled={privyBusy} onClick={switchAccount}>
+            Usar otra cuenta
+          </button>
+        </div>
+      </>;
+    } else {
+      const isPatient = role === 'patient';
+      content = <>
+        <h2>{isPatient ? 'Activa tu acceso' : 'Solicitud de prueba'}</h2>
+        <p>{isPatient ? 'Completa el acceso a tu espacio de paciente.' : 'Envía un perfil simulado para que administración revise tu solicitud.'}</p>
+        <div className="tl-account-actions">
+          <button
+            type="button"
+            className="tl-account-action is-primary"
+            disabled={privyBusy}
+            onClick={() => void (isPatient ? enrollWithPrivy() : submitTestApplication())}
+          >
+            {privyBusy ? (isPatient ? 'Creando acceso…' : 'Enviando…') : isPatient ? primaryAction : 'Usar datos simulados de prueba'}
+          </button>
+        </div>
+      </>;
+    }
     return (
-      <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
-        <header className="border-b border-brand-green-deep/10 bg-white/75"><div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4"><button onClick={onBack} className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory"><Leaf size={20} /></span><span className="text-lg font-bold">Trust Leaf</span></button></div></header>
-        <main className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9"><p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Identidad protegida</p><h1 className="mt-6 text-4xl font-serif leading-tight">{title}</h1><p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">Privy verifica tu identidad. Trust Leaf aplica los permisos y el estado de tu cuenta desde Supabase.</p></section>
-          <section className="rounded-[32px] border border-brand-green-deep/10 bg-white p-6 shadow-sm flex flex-col justify-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Acceso seguro</p>
-            {privyState?.email && <p className="mt-3 text-xs font-medium text-brand-green-mid/70">Conectado como {privyState.email}</p>}
-            {!privyIdentity.authenticated ? <><h2 className="mt-2 text-2xl font-serif">Ingresa para continuar</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Puedes usar Google o tu correo. No necesitas saldo ni una wallet previa.</p><button disabled={!privyIdentity.ready} onClick={() => void privyIdentity.beginLogin()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyIdentity.ready ? 'Continuar con Privy' : 'Preparando acceso...'}</button></> : privySessionChecking || !privyState ? <><h2 className="mt-2 text-2xl font-serif">Verificando cuenta</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Estamos confirmando tu identidad antes de mostrar las acciones disponibles.</p></> : hasOtherRole ? <><h2 className="mt-2 text-2xl font-serif">Acceso no autorizado</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Esta identidad ya está registrada con otro rol y no puede cambiarse desde esta pantalla.</p><button onClick={() => void privyIdentity.logout()} className="mt-6 rounded-xl border border-brand-green-deep/15 px-5 py-3 text-sm font-bold">Usar otra cuenta</button></> : isPending ? <><h2 className="mt-2 text-2xl font-serif">Solicitud en revisión</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Tu identidad está confirmada y tu solicitud ya fue enviada a administración.</p><p className="mt-3 text-xs leading-relaxed text-brand-green-mid/55">Durante esta prueba, puedes adjuntar un perfil simulado para que administración valide el flujo completo.</p>{pendingNotice && <p className="mt-3 text-sm text-brand-green-mid">{pendingNotice}</p>}<button disabled={privyBusy} onClick={() => void submitTestApplication()} className="mt-5 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyBusy ? 'Enviando...' : 'Agregar datos simulados'}</button><button disabled={privyBusy} onClick={() => void enrollWithPrivy(true)} className="mt-3 rounded-xl border border-brand-green-deep/15 px-5 py-3 text-sm font-bold disabled:opacity-50">Reenviar solicitud</button></> : active ? <><h2 className="mt-2 text-2xl font-serif">Cuenta autorizada</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Tu identidad y permisos están confirmados.</p><button onClick={() => onStart(role, { email: privyState.email ?? `${role}@privy.trustleaf`, name: 'Cuenta Trust Leaf', mode: 'email' })} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white">Continuar</button></> : <><h2 className="mt-2 text-2xl font-serif">Solicitud de prueba</h2><p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">Se creará un perfil profesional simulado, sin datos reales, para validar revisión y permisos.</p>{role === 'patient' ? <button disabled={privyBusy} onClick={() => void enrollWithPrivy()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyBusy ? 'Creando acceso...' : primaryAction}</button> : <button disabled={privyBusy} onClick={() => void submitTestApplication()} className="mt-6 rounded-xl bg-brand-green-deep px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{privyBusy ? 'Enviando solicitud...' : 'Usar datos simulados de prueba'}</button>}</>}
-            {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
-            {error && privyIdentity.authenticated && <button onClick={() => { setError(null); setPrivySessionRevision((revision) => revision + 1); }} className="mt-3 text-sm font-bold text-brand-green-deep underline">Reintentar verificación</button>}
-          </section>
-        </main>
-      </div>
+      <AccountAccessFrame title={title} description={descriptionByRole[role]} onBack={onBack}>
+        {content}
+        {error && <p role="alert" className="tl-account-alert">{error}</p>}
+        {error && privyIdentity.authenticated && !privyVerificationError && (
+          <div className="tl-account-actions">
+            <button type="button" className="tl-account-action" disabled={privyBusy} onClick={retryVerification}>
+              Reintentar verificación
+            </button>
+          </div>
+        )}
+      </AccountAccessFrame>
     );
   }
 
@@ -1913,14 +1724,14 @@ function AuthGate({
   };
 
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+    <div className="tl-legacy-page min-h-screen">
       <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
           <button onClick={onBack} className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
               <Leaf size={20} />
             </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
+            <span className="text-lg font-bold">{BRAND_NAME}</span>
           </button>
           <span className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
             {roleLabel}
@@ -1930,7 +1741,7 @@ function AuthGate({
 
       <main className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
         <section className="rounded-[32px] bg-brand-green-deep p-7 text-brand-ivory md:p-9">
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso Trust Leaf</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso a {BRAND_NAME}</p>
           <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">{title}</h1>
           <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">{description}</p>
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1945,7 +1756,7 @@ function AuthGate({
               <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Primer ingreso</p>
               <h2 className="mt-2 text-2xl font-serif">Elige tu rol en el piloto</h2>
               <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65 mb-6">
-                Hola <strong className="text-brand-green-deep">{pendingGoogleUser.displayName || pendingGoogleUser.email}</strong>. Para configurar tu cuenta Stellar y permisos, indícanos qué rol cumples en Trust Leaf:
+                Hola <strong className="text-brand-green-deep">{pendingGoogleUser.displayName || pendingGoogleUser.email}</strong>. Para configurar tu cuenta Stellar y permisos, indícanos qué rol cumples en {BRAND_NAME}:
               </p>
 
               {error && (
@@ -2079,14 +1890,14 @@ function OperationalPendingRoute({
   onBack: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+    <div className="tl-legacy-page min-h-screen">
       <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
           <button onClick={onBack} className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
               <Leaf size={20} />
             </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
+            <span className="text-lg font-bold">{BRAND_NAME}</span>
           </button>
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
             Pendiente
@@ -2188,15 +1999,22 @@ function AdminAuthGate({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationRevision, setVerificationRevision] = useState(0);
+  const [denied, setDenied] = useState(false);
   const firebaseStatus = getFirebaseRuntimeStatus();
   const usingPrivy = privyIdentity.enabled;
 
   useEffect(() => {
-    if (!usingPrivy || !privyIdentity.authenticated) return;
+    if (!usingPrivy) return;
+    if (!privyIdentity.authenticated) {
+      setDenied(false);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       setBusy(true);
       setError(null);
+      setDenied(false);
       try {
         const token = await privyIdentity.getIdentityToken();
         if (!token) throw new Error('No fue posible confirmar la sesión de Privy.');
@@ -2208,6 +2026,7 @@ function AdminAuthGate({
           return;
         }
         if (!cancelled) {
+          setDenied(true);
           setError('Acceso no autorizado. Esta cuenta no tiene permisos de administrador.');
         }
       } catch (err) {
@@ -2217,7 +2036,7 @@ function AdminAuthGate({
       }
     })();
     return () => { cancelled = true; };
-  }, [privyIdentity.authenticated, privyIdentity.enabled]);
+  }, [privyIdentity.authenticated, privyIdentity.enabled, privyIdentity.subject, privyIdentity.tokenReady, verificationRevision]);
   const authStatusText =
     usingPrivy
       ? privyIdentity.authenticated
@@ -2239,15 +2058,95 @@ function AdminAuthGate({
         ? 'Acceso no autorizado'
         : 'Documento appAdministrators/{uid}';
 
+  const accessDetails = [
+    ['Auth', authStatusText],
+    [usingPrivy ? 'Permisos' : 'Allowlist', permissionStatusText],
+  ];
+
+  if (usingPrivy) {
+    const runAccountAction = async (action: () => Promise<void>, message: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        await action();
+      } catch {
+        setError(message);
+      } finally {
+        setBusy(false);
+      }
+    };
+    const authenticated = privyIdentity.authenticated;
+    return (
+      <AccountAccessFrame
+        title="Acceso de administración"
+        description="Privy confirma tu identidad. El acceso requiere una cuenta incluida en la lista administrativa privada."
+        onBack={onBack}
+      >
+        {!authenticated ? (
+          <>
+            <h2>Ingresa para continuar</h2>
+            <p>{permissionStatusText}.</p>
+            <div className="tl-account-actions">
+              <button
+                type="button"
+                className="tl-account-action is-primary"
+                onClick={() => void runAccountAction(
+                  () => privyIdentity.beginLogin(),
+                  'No fue posible abrir el ingreso. Vuelve a intentarlo.',
+                )}
+                disabled={busy || !privyIdentity.ready}
+              >
+                {busy || !privyIdentity.ready ? 'Preparando acceso…' : 'Continuar con Privy'}
+              </button>
+            </div>
+          </>
+        ) : error ? (
+          <>
+            <h2>{denied ? 'Acceso no autorizado' : 'No pudimos verificar tu cuenta'}</h2>
+            <div className="tl-account-actions">
+              {!denied && (
+                <button
+                  type="button"
+                  className="tl-account-action is-primary"
+                  disabled={busy}
+                  onClick={() => setVerificationRevision(value => value + 1)}
+                >
+                  Reintentar verificación
+                </button>
+              )}
+              <button
+                type="button"
+                className={denied ? 'tl-account-action is-primary' : 'tl-account-action'}
+                disabled={busy}
+                onClick={() => void runAccountAction(
+                  () => privyIdentity.logout(),
+                  'No fue posible cerrar la sesión. Vuelve a intentarlo.',
+                )}
+              >
+                Usar otra cuenta
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2>Verificando cuenta</h2>
+            <p role="status">Estamos comprobando los permisos de administración.</p>
+          </>
+        )}
+        {error && <p role="alert" className="tl-account-alert">{error}</p>}
+      </AccountAccessFrame>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+    <div className="tl-legacy-page min-h-screen">
       <header className="border-b border-brand-green-deep/10 bg-white/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
           <button onClick={onBack} className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
               <Leaf size={20} />
             </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
+            <span className="text-lg font-bold">{BRAND_NAME}</span>
           </button>
           <span className="rounded-full border border-brand-green-deep/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-green-mid">
             Admin
@@ -2260,14 +2159,11 @@ function AdminAuthGate({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Acceso protegido</p>
           <h1 className="mt-6 text-4xl font-serif leading-tight md:text-5xl">Admin aprueba actores antes de tocar Testnet.</h1>
           <p className="mt-5 text-sm leading-relaxed text-brand-ivory/70">
-            {usingPrivy
-              ? 'Privy confirma la identidad. Supabase decide si esa identidad tiene autorización administrativa antes de aprobar actores.'
-              : 'El panel admin actual usa Firebase Auth durante la transición. El acceso de grabación queda disponible solo para revisar el flujo completo.'}
+            El panel admin actual usa Firebase Auth durante la transición. El acceso de grabación queda disponible solo para revisar el flujo completo.
           </p>
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
-              ['Auth', authStatusText],
-              [usingPrivy ? 'Permisos' : 'Allowlist', permissionStatusText],
+              ...accessDetails,
               ['On-chain', 'Registro manual y auditable en Stellar Testnet'],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -2283,19 +2179,17 @@ function AdminAuthGate({
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Sesión Protegida</p>
             <h2 className="mt-2 text-2xl font-serif text-brand-green-deep">Administrador de Red</h2>
             <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
-              {usingPrivy
-                ? 'Inicia sesión con Privy. Una cuenta autenticada no recibe privilegios hasta que Supabase valide su rol administrativo.'
-                : 'Este portal usa la autenticación transitoria actual. Solo la cuenta autorizada de administrador tiene privilegios de firma y aprobación.'}
+              Este portal usa la autenticación transitoria actual. Solo la cuenta autorizada de administrador tiene privilegios de firma y aprobación.
             </p>
 
             <div className={`mt-5 rounded-2xl border p-4 text-xs leading-relaxed ${
-              usingPrivy || firebaseStatus.configured
+              firebaseStatus.configured
                 ? 'border-green-100 bg-green-50/80 text-green-800'
                 : 'border-amber-100 bg-amber-50/80 text-amber-800'
             }`}>
               <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
-                <span className={`inline-block h-2 w-2 rounded-full ${usingPrivy || firebaseStatus.configured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                {usingPrivy ? 'Privy Activo' : firebaseStatus.configured ? 'Firebase Activo' : 'Firebase en Modo Local'}
+                <span className={`inline-block h-2 w-2 rounded-full ${firebaseStatus.configured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                {firebaseStatus.configured ? 'Firebase Activo' : 'Firebase en Modo Local'}
               </div>
               <p className="mt-1.5 text-brand-green-deep/80">
                 El acceso requiere una identidad autenticada incluida en la lista administrativa privada.
@@ -2309,17 +2203,13 @@ function AdminAuthGate({
                   setBusy(true);
                   setError(null);
                   try {
-                    if (usingPrivy) {
-                      await privyIdentity.beginLogin();
-                    } else {
-                      const result = await signInWithGoogle();
-                      if (!result || !result.user) {
-                        throw new Error("Inicio de sesión cancelado o fallido.");
-                      }
+                    const result = await signInWithGoogle();
+                    if (!result || !result.user) {
+                      throw new Error("Inicio de sesión cancelado o fallido.");
                     }
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
-                    if (!usingPrivy) await signOutAdmin();
+                    await signOutAdmin();
                   } finally {
                     setBusy(false);
                   }
@@ -2327,37 +2217,16 @@ function AdminAuthGate({
                 disabled={busy || authState.mode === 'checking'}
                 className="flex items-center justify-center gap-3 rounded-2xl bg-brand-gold text-brand-green-deep border border-brand-gold px-5 py-4 text-sm font-bold shadow-md hover:bg-brand-ivory hover:-translate-y-0.5 duration-300 disabled:cursor-wait disabled:opacity-60 cursor-pointer group w-full"
               >
-                {!usingPrivy && <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                   <g transform="matrix(1, 0, 0, 1, 0, 0)">
                     <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.58h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4C21.68,11.89 21.56,11.43 21.35,11.1z" fill="#4285F4" />
                     <path d="M12,21c2.43,0 4.47,-0.8 5.96,-2.18l-2.58,-2c-0.73,0.49 -1.66,0.78 -2.63,0.78 -2.03,0 -3.75,-1.37 -4.36,-3.22H2.33v2.66C3.81,17.43 7.64,21 12,21z" fill="#34A853" />
                     <path d="M7.64,14.38c-0.16,-0.49 -0.25,-1 -0.25,-1.53s0.09,-1.04 0.25,-1.53V8.66H2.33C1.79,9.73 1.48,10.93 1.48,12s0.31,2.27 0.85,3.34L7.64,14.38z" fill="#FBBC05" />
                     <path d="M12,5.38c1.32,0 2.51,0.45 3.44,1.35l2.58,-2.58C16.46,2.69 14.43,2 12,2 7.64,2 3.81,5.57 2.33,9.34l3.05,2.38C5.99,6.75 7.71,5.38 12,5.38z" fill="#EA4335" />
                   </g>
-                </svg>}
-                {busy ? 'Verificando...' : usingPrivy ? 'Continuar con Privy' : 'Iniciar Sesión con Google'}
+                </svg>
+                {busy ? 'Verificando...' : 'Iniciar Sesión con Google'}
               </button>
-
-              {usingPrivy && privyIdentity.authenticated && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setBusy(true);
-                    setError(null);
-                    try {
-                      await privyIdentity.logout();
-                    } catch {
-                      setError('No fue posible cerrar la sesión actual de Privy.');
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                  disabled={busy}
-                  className="flex items-center justify-center rounded-2xl border border-brand-green-deep/15 bg-white px-5 py-3 text-sm font-bold text-brand-green-deep transition hover:bg-brand-neutral disabled:cursor-wait disabled:opacity-60"
-                >
-                  Cambiar método de ingreso
-                </button>
-              )}
 
               {(error || authState.error || authState.mode === 'not-admin') && (
                 <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-red-700 leading-relaxed">
@@ -2405,8 +2274,8 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
     setLoading(true);
     setLoadError(false);
     try {
-    const payload = await readPrivyAdminJson<{ actors?: typeof actors }>('/api/auth/privy/admin/pending-actors', privyIdentity);
-    setActors(Array.isArray(payload.actors) ? payload.actors : []);
+      const payload = await readPrivyAdminJson<{ actors?: typeof actors }>('/api/auth/privy/admin/pending-actors', privyIdentity);
+      setActors(Array.isArray(payload.actors) ? payload.actors : []);
     } catch (error) { setLoadError(true); throw error; }
     finally { setLoading(false); }
   };
@@ -2443,13 +2312,61 @@ function PrivyActorReviewQueue({ privyIdentity }: { privyIdentity: TrustLeafPriv
   return (
     <section className="rounded-2xl border border-brand-green-deep/10 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Solicitudes verificadas</p><h2 className="mt-1 text-xl font-serif">Aprobaciones de cuentas</h2></div>
+        <h2 id="tl-admin-requests-heading" className="tl-admin-section-title">Solicitudes de acceso</h2>
         <button disabled={loading || Boolean(busy)} onClick={() => { setNotice(null); void load().catch(() => setNotice('No fue posible cargar las solicitudes privadas.')); }} className="rounded-xl border border-brand-green-deep/10 px-3 py-2 text-xs font-bold disabled:opacity-50">Actualizar</button>
       </div>
-      {notice && <p className="mt-4 text-sm text-brand-green-mid">{notice}</p>}
+      {notice && <p role={loadError ? 'alert' : 'status'} className="mt-4 text-sm text-brand-green-mid">{notice}</p>}
       {loading ? <p role="status" className="mt-4 text-sm">Cargando solicitudes...</p> : loadError ? null : actors.length === 0 ? <p className="mt-4 text-sm text-brand-green-mid/70">No hay solicitudes profesionales pendientes.</p> : <div className="mt-4 space-y-3">{actors.map((actor) => <div key={actor.actorRef} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-neutral p-4"><div><p className="font-bold capitalize">{actor.role === 'doctor' ? 'Médico' : 'Dispensario'}</p><p className="text-xs text-brand-green-mid/65">Solicitud pendiente de revisión</p>{actor.testProfile ? <div className="mt-2 text-xs text-brand-green-mid/75"><p className="font-semibold">Datos simulados: {actor.testProfile.displayName}</p><p>{actor.testProfile.registrationReference} · {actor.testProfile.reviewContext}</p></div> : <p className="mt-2 text-xs text-amber-700">Faltan datos de revisión.</p>}</div><div className="flex gap-2"><button disabled={Boolean(busy)} onClick={() => void review(actor, 'reject')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">Rechazar</button><button disabled={Boolean(busy) || !actor.testProfile} onClick={() => void review(actor, 'approve')} className="rounded-xl bg-brand-green-deep px-3 py-2 text-xs font-bold text-brand-ivory disabled:opacity-50">{busy === `${actor.actorRef}:approve` ? 'Autorizando...' : 'Autorizar'}</button></div></div>)}</div>}
     </section>
   );
+}
+
+function PrivyAdminSections({ identity, email }: { identity: TrustLeafPrivyIdentity; email?: string }) {
+  const [section, setSection] = useState<'requests' | 'directory' | 'oversight'>('requests');
+  const calendarEnabled = import.meta.env.VITE_GOOGLE_CALENDAR_ENABLED === 'true';
+  const pilotEnabled = import.meta.env.VITE_OPERATIONS_PILOT_ENABLED === 'true';
+  const sections = [
+    { id: 'requests', label: 'Solicitudes' },
+    { id: 'directory', label: 'Directorio' },
+    ...(calendarEnabled || pilotEnabled ? [{ id: 'oversight', label: 'Supervisión' } as const] : []),
+  ] as const;
+
+  return <>
+    <nav className="tl-admin-nav" aria-label="Secciones de administración">
+      {sections.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          aria-controls={`tl-admin-panel-${id}`}
+          aria-pressed={section === id}
+          onClick={() => setSection(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </nav>
+    <section id="tl-admin-panel-requests" className="tl-admin-panel" aria-labelledby="tl-admin-requests-heading" hidden={section !== 'requests'}>
+      <PrivyActorReviewQueue privyIdentity={identity}/>
+    </section>
+    <section id="tl-admin-panel-directory" className="tl-admin-panel" aria-label="Directorio" hidden={section !== 'directory'}>
+      <PrivyActorDirectory identity={identity}/>
+    </section>
+    {(calendarEnabled || pilotEnabled) && (
+      <section
+        id="tl-admin-panel-oversight"
+        className="tl-admin-panel space-y-5"
+        aria-labelledby="tl-admin-oversight-heading"
+        hidden={section !== 'oversight'}
+      >
+        <h2 id="tl-admin-oversight-heading" className="tl-admin-section-title">Supervisión</h2>
+        {calendarEnabled && <section className="rounded-2xl border border-brand-green-deep/10 p-4" aria-label="Calendario central">
+          <h3 className="tl-admin-section-heading">Calendario central</h3>
+          <GoogleCalendarConnection key={identity.subject}/>
+        </section>}
+        {pilotEnabled && <OperationsWorkspace email={email} embedded/>}
+      </section>
+    )}
+  </>;
 }
 
 function AdminRoute({
@@ -2485,6 +2402,7 @@ function AdminRoute({
   onRevokeDispensaryOnchain: (request: DispensaryRegistration) => Promise<unknown>;
   privyIdentity: TrustLeafPrivyIdentity;
 }) {
+  const usingPrivy = privyIdentity.enabled;
   const pending = registrations.filter((request) => request.status === 'pending');
   const approved = registrations.filter((request) => request.status === 'approved');
   const pendingDoctors = doctorRegistrations.filter((request) => request.status === 'pending');
@@ -2617,15 +2535,13 @@ function AdminRoute({
   };
 
   return (
-    <div className="min-h-screen bg-brand-ivory text-brand-green-deep">
-      <div className="border-b border-brand-green-deep/10 bg-white/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div className={usingPrivy ? 'tl-admin-privy' : 'tl-legacy-page min-h-screen'}>
+      <div className={`border-b border-brand-green-deep/10 bg-white/80 backdrop-blur-md ${usingPrivy ? 'tl-admin-top' : ''}`}>
+        <div className="max-w-6xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-gold">Trust Leaf</p>
-            <h1 className="text-2xl md:text-3xl font-serif">Admin Operacional</h1>
-            <p className="mt-1 text-xs text-brand-green-mid/60">
-              Gestión privada de accesos y aprobaciones
-            </p>
+            <p className="text-sm font-semibold">{usingPrivy ? BRAND_TITLE : BRAND_NAME}</p>
+            <h1 className={`text-2xl md:text-3xl ${usingPrivy ? 'tl-admin-title' : 'font-serif'}`}>{usingPrivy ? 'Administración' : 'Admin Operacional'}</h1>
+            {!usingPrivy && <p className="mt-1 text-xs text-brand-green-mid/60">Gestión privada de accesos y aprobaciones</p>}
           </div>
           <div className="flex items-center gap-2">
             {session && (
@@ -2635,30 +2551,22 @@ function AdminRoute({
             )}
             <button
               onClick={onSignOut}
-              className="px-4 py-2 rounded-xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:bg-brand-neutral transition-colors"
+              className={usingPrivy ? 'tl-account-action text-sm' : 'px-4 py-2 rounded-xl border border-brand-green-deep/10 bg-white text-sm font-bold text-brand-green-deep hover:bg-brand-neutral transition-colors'}
             >
               Salir
             </button>
             <button
               onClick={onBack}
-              className="px-4 py-2 rounded-xl bg-brand-green-deep text-brand-ivory text-sm font-bold hover:bg-brand-green-mid transition-colors"
+              className={usingPrivy ? 'tl-account-action is-primary text-sm' : 'px-4 py-2 rounded-xl bg-brand-green-deep text-brand-ivory text-sm font-bold hover:bg-brand-green-mid transition-colors'}
             >
-              Volver al landing
+              {usingPrivy ? 'Volver al inicio' : 'Volver al landing'}
             </button>
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        {privyIdentity.enabled && privyIdentity.authenticated && import.meta.env.VITE_GOOGLE_CALENDAR_ENABLED === 'true' && <GoogleCalendarConnection key={privyIdentity.subject}/>}
-        {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorReviewQueue privyIdentity={privyIdentity} />}
-        {privyIdentity.enabled && privyIdentity.authenticated && <PrivyActorDirectory identity={privyIdentity} />}
-        {privyIdentity.enabled && privyIdentity.authenticated && import.meta.env.VITE_OPERATIONS_PILOT_ENABLED === 'true' && <OperationsWorkspace email={session?.email} embedded/>}
-        {privyIdentity.enabled && (
-          <section className="rounded-2xl border border-brand-green-deep/10 bg-brand-neutral/45 px-5 py-4 text-sm leading-relaxed text-brand-green-mid">
-            Privy valida la identidad y Supabase controla los permisos. Las solicitudes profesionales se revisan desde la cola superior.
-          </section>
-        )}
+        {usingPrivy && privyIdentity.authenticated && <PrivyAdminSections identity={privyIdentity} email={session?.email}/>}
         {!privyIdentity.enabled && <>
         <section className="rounded-3xl border border-brand-green-deep/10 bg-[#fbf7ef] p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -3766,14 +3674,14 @@ function DispensaryRegistrationRoute({
   };
 
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+    <div className="tl-legacy-page min-h-screen">
       <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
           <button onClick={onBack} className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
               <Leaf size={20} />
             </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
+            <span className="text-lg font-bold">{BRAND_NAME}</span>
           </button>
           <div className="flex items-center gap-2">
             {session && (
@@ -3813,7 +3721,7 @@ function DispensaryRegistrationRoute({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro de dispensario</p>
           <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Después operas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-            El dispensario completa su solicitud, Trust Leaf revisa desde admin y, al aprobar, queda listo para validar recetas y registrar entregas. La credencial Stellar puede conectarse ahora o crearse al aprobar.
+            El dispensario completa su solicitud, {BRAND_NAME} revisa la solicitud y, al aprobar, queda listo para validar recetas y registrar entregas. La credencial Stellar puede conectarse ahora o crearse al aprobar.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -3909,7 +3817,7 @@ function DispensaryRegistrationRoute({
                       onClick={() => setRegistrationForm((current) => ({ ...current, wallet: DEFAULT_DISPENSARY_WALLET }))}
                       className="mt-2 rounded-xl border border-brand-green-deep/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-green-deep"
                     >
-                      Usar credencial gestionada Trust Leaf
+                      Usar credencial gestionada por {BRAND_NAME}
                     </button>
                   )}
                 </label>
@@ -4074,14 +3982,14 @@ function DoctorRegistrationRoute({
   };
 
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+    <div className="tl-legacy-page min-h-screen">
       <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
           <button onClick={onBack} className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
               <Leaf size={20} />
             </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
+            <span className="text-lg font-bold">{BRAND_NAME}</span>
           </button>
           <div className="flex items-center gap-2">
             {session && (
@@ -4121,7 +4029,7 @@ function DoctorRegistrationRoute({
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-brand-gold">Registro médico</p>
           <h1 className="mt-8 text-4xl font-serif leading-tight md:text-6xl">Primero solicita el alta. Después emites recetas.</h1>
           <p className="mt-6 text-sm leading-relaxed text-brand-ivory/70 md:text-base">
-            El medico presenta licencia y especialidad. Puede conectar wallet ahora o dejar que Trust Leaf cree una credencial profesional al aprobar el alta.
+            El medico presenta licencia y especialidad. Puede conectar wallet ahora o dejar que {BRAND_NAME} cree una credencial profesional al aprobar el alta.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -4445,14 +4353,14 @@ function RoleRoutePage({
   };
 
   return (
-    <div className="min-h-screen bg-[#edf2ee] text-brand-green-deep">
+    <div className="tl-legacy-page min-h-screen">
       <header className="sticky top-0 z-40 border-b border-brand-green-deep/10 bg-[#edf2ee]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
           <button onClick={onBack} className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green-deep text-brand-ivory">
               <Leaf size={20} />
             </span>
-            <span className="text-lg font-bold">Trust Leaf</span>
+            <span className="text-lg font-bold">{BRAND_NAME}</span>
           </button>
           <nav className="hidden items-center gap-2 md:flex">
             {ROLE_ROUTES.map((item) => (

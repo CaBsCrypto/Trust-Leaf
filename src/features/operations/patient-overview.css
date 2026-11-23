@@ -1,0 +1,64 @@
+.op-patient-overview { margin-bottom: 18px; }
+
+.op-patient-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+}
+
+.tl-operations .op-patient-links .op-patient-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 82px;
+  padding: 13px 16px;
+  border: 1px solid var(--tl-brand-line);
+  border-radius: 15px;
+  background: #fff;
+  color: var(--tl-brand-ink);
+  text-align: start;
+}
+
+.tl-operations .op-patient-links .op-patient-link-treatment {
+  background: linear-gradient(120deg, #fff, var(--tl-brand-soft));
+}
+
+.tl-operations .op-patient-links .op-patient-link:hover {
+  border-color: var(--tl-brand-action);
+  background: var(--tl-brand-soft);
+}
+
+.op-patient-link-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--tl-brand-soft);
+}
+
+.op-patient-link-icon, .op-patient-link > svg { color: var(--tl-brand-action); }
+.op-patient-link strong, .op-patient-link small { display: block; }
+.op-patient-link small { margin-top: 4px; color: var(--care-muted, #4a6258); }
+.op-patient-link > span { min-width: 0; }
+
+.op-patient-link-relief {
+  position: absolute;
+  z-index: -1;
+  right: 24px;
+  bottom: -9px;
+  width: 91px;
+  height: auto;
+  opacity: .47;
+  pointer-events: none;
+}
+
+@media (max-width: 650px) {
+  .op-patient-links { grid-template-columns: minmax(0, 1fr); }
+  .tl-operations .op-patient-links .op-patient-link { min-height: 72px; }
+}

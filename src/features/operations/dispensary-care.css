@@ -1,0 +1,207 @@
+.op-dispensary .dispensary-task-overview {
+  color: var(--tl-brand-ink, #102e23);
+  padding-bottom: 20px;
+  border-color: var(--tl-brand-line, #d4e6dc);
+}
+
+.op-dispensary .dispensary-task-overview h2 {
+  display: block;
+  margin: 0 0 12px;
+  font-family: var(--tl-brand-font, 'Instrument Sans', system-ui, sans-serif);
+}
+
+.op-dispensary .dispensary-task-overview .op-daily-metrics {
+  gap: 12px;
+}
+
+.tl-operations.op-dispensary .dispensary-task-overview .op-daily-metrics button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 86px;
+  padding: 14px;
+  border: 1px solid var(--tl-brand-line, #d4e6dc);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--tl-brand-ink, #102e23);
+}
+
+.tl-operations.op-dispensary .dispensary-task-overview .op-daily-metrics button[data-priority="true"] {
+  background: var(--tl-brand-soft, #edf8f1);
+}
+
+.tl-operations.op-dispensary .dispensary-task-overview .op-daily-metrics button:hover {
+  border-color: var(--tl-brand-action, #075d42);
+}
+
+.op-dispensary .dispensary-task-overview .op-daily-metrics button:focus-visible,
+.op-dispensary .dispensary-task-preparation summary:focus-visible {
+  outline: 2px solid var(--tl-brand-action, #075d42);
+  outline-offset: 3px;
+}
+
+.op-dispensary .dispensary-stock-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.op-dispensary .dispensary-stock-notice svg {
+  flex: none;
+}
+
+.op-dispensary .dispensary-task-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--tl-brand-soft, #edf8f1);
+  color: var(--tl-brand-action, #075d42);
+}
+
+.op-dispensary .dispensary-task-overview .op-daily-metrics svg {
+  position: static;
+  display: block;
+}
+
+.op-dispensary .dispensary-task-metric span,
+.op-dispensary .dispensary-task-metric strong {
+  display: block;
+}
+
+.op-dispensary .dispensary-task-metric strong {
+  color: var(--tl-brand-action, #075d42);
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.op-dispensary .dispensary-task-arrow {
+  color: var(--tl-brand-action, #075d42);
+}
+
+.op-dispensary details.dispensary-task-preparation {
+  margin-top: 16px;
+  padding: 0 14px;
+  border: 1px solid var(--tl-brand-line, #d4e6dc);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--tl-brand-ink, #102e23);
+}
+
+.op-dispensary .dispensary-task-preparation summary {
+  padding: 14px 0;
+  font-weight: 600;
+}
+
+.op-dispensary .dispensary-task-preparation .op-line > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.op-dispensary .dispensary-task-preparation .op-line > span svg {
+  flex: none;
+  color: var(--tl-brand-action, #075d42);
+}
+
+.op-dispensary .dispensary-task-preparation .op-line small {
+  margin-top: 2px;
+}
+
+.op-dispensary .dispensary-task-preparation .op-line:last-child {
+  border-bottom: 0;
+}
+
+.op-dispensary .op-attention .op-desk-quantity {
+  border: 1px solid var(--tl-brand-line, #d4e6dc);
+  border-radius: 12px;
+  background: var(--tl-brand-soft, #edf8f1);
+  color: var(--tl-brand-ink, #102e23);
+}
+
+.op-dispensary .op-attention .op-desk-quantity button,
+.op-dispensary .dispensary-task-review-actions button:first-child {
+  border-color: var(--tl-brand-action, #075d42);
+  background: var(--tl-brand-action, #075d42);
+  color: #fff;
+}
+
+.op-dispensary .op-attention .op-desk-quantity button:hover:not(:disabled),
+.op-dispensary .dispensary-task-review-actions button:first-child:hover:not(:disabled) {
+  background: #064934;
+}
+
+.op-dispensary .dispensary-task-review {
+  border: 1px solid #c9e3d3;
+  border-radius: 12px;
+  background: var(--tl-brand-soft, #edf8f1);
+  color: var(--tl-brand-ink, #102e23);
+  padding: 16px;
+}
+
+.op-dispensary .dispensary-task-review h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.op-dispensary .dispensary-task-review h3 svg {
+  flex: none;
+  color: var(--tl-brand-action, #075d42);
+}
+
+.op-dispensary .dispensary-task-review-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--tl-brand-line, #d4e6dc);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.op-dispensary .dispensary-task-review-details dt {
+  color: #365748;
+  font-size: 12px;
+}
+
+.op-dispensary .dispensary-task-review-details dd {
+  margin: 2px 0 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.op-dispensary .dispensary-task-review-actions .op-command {
+  margin: 0;
+}
+
+@media (max-width: 1200px) {
+  .op-dispensary .dispensary-task-overview .op-daily-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .tl-operations.op-dispensary .dispensary-task-overview .op-daily-metrics button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .op-dispensary .dispensary-task-overview .dispensary-task-icon {
+    grid-column: 1 / -1;
+  }
+
+  .op-dispensary .dispensary-task-review-actions .op-command {
+    width: 100%;
+  }
+
+  .op-dispensary .dispensary-task-review-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

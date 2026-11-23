@@ -5,6 +5,8 @@ import { X, User, Activity, FileText, ShoppingBag, Search, Stethoscope, Star, Ma
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import { useLanguage } from '../context/LanguageContext';
+import { BRAND_NAME } from '../lib/brand';
+import '../styles/trustleaf-legacy.css';
 
 import WalletOnboarding, { WalletSetupState } from './WalletOnboarding';
 
@@ -1828,7 +1830,7 @@ const MOCK_GLOBAL_REGIONS = [
 
     continent: 'AmÃ©rica',
 
-    requirements: ['Documento de identidad', 'ValidaciÃ³n Trust Leaf'],
+    requirements: ['Documento de identidad', 'ValidaciÃ³n TrustLeaf'],
 
     description: 'Pioneros en regulaciÃ³n. Acceso simple para pacientes internacionales validados.'
 
@@ -1939,7 +1941,7 @@ const MOCK_GLOBAL_DISPENSARIES: Record<string, any[]> = {
 import PrivyAgenda from './PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
 
-const LEGACY_PRIVATE_READ_UNAVAILABLE = 'Lectura heredada no disponible. Usa el piloto conectado de Trust Leaf.';
+const LEGACY_PRIVATE_READ_UNAVAILABLE = 'Lectura heredada no disponible. Usa el piloto conectado de TrustLeaf.';
 
 export default function MockupPortal({
 
@@ -1955,7 +1957,7 @@ export default function MockupPortal({
 
   showTechnicalDetails: showTechnicalDetailsProp = false,
 
-  roleLabel = 'Trust Leaf Portal',
+  roleLabel = 'TrustLeaf Portal',
 
   onSignOut,
 
@@ -2173,7 +2175,7 @@ export default function MockupPortal({
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; text: string; time: string; read: boolean; type: string }>>([
-    { id: 'notif-1', text: 'Tu credencial médica ha sido autorizada on-chain por la gobernanza de Trust Leaf.', time: 'Ayer', read: false, type: 'system' }
+    { id: 'notif-1', text: 'Tu credencial médica ha sido autorizada on-chain por la gobernanza de TrustLeaf.', time: 'Ayer', read: false, type: 'system' }
   ]);
   const [dismissedCredentialBanner, setDismissedCredentialBanner] = useState(() => localStorage.getItem('trust_dismiss_credential_banner') === 'true');
 
@@ -3517,7 +3519,7 @@ export default function MockupPortal({
 
     try {
 
-      const passkeyLabel = auth.currentUser?.email || auth.currentUser?.displayName || 'Paciente Trust Leaf';
+      const passkeyLabel = auth.currentUser?.email || auth.currentUser?.displayName || 'Paciente TrustLeaf';
 
       const result = await connectOrCreatePasskeyWallet(passkeyLabel, { authenticatorAttachment: attachment });
 
@@ -3961,7 +3963,7 @@ export default function MockupPortal({
 
       doc.setFontSize(22);
 
-      doc.text('TRUST LEAF', 15, 20);
+      doc.text(BRAND_NAME, 15, 20);
 
 
 
@@ -5517,7 +5519,7 @@ export default function MockupPortal({
 
         ? `Retiro de prueba registrado. Record ${recordId}. La receta mantiene saldo para futuras entregas.`
 
-        : 'El contrato testnet marcÃ³ esta receta sin cupo activo. Trust Leaf conserva un retiro fraccionado privado mientras la siguiente versiÃ³n de contratos maneja gramos restantes por periodo.',
+        : 'El contrato testnet marcÃ³ esta receta sin cupo activo. TrustLeaf conserva un retiro fraccionado privado mientras la siguiente versiÃ³n de contratos maneja gramos restantes por periodo.',
 
     );
 
@@ -7037,7 +7039,7 @@ export default function MockupPortal({
 
     'patient-account': {
 
-      eyebrow: 'Cuenta Trust Leaf',
+      eyebrow: 'Cuenta TrustLeaf',
 
       title: 'Identidad y acceso',
 
@@ -8233,7 +8235,7 @@ export default function MockupPortal({
 
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
 
-            className={`bg-brand-ivory w-full h-full overflow-hidden flex flex-col md:flex-row relative ${pageMode ? 'max-w-none rounded-none shadow-none md:h-full' : 'max-w-5xl md:h-[85vh] rounded-none md:rounded-[32px] shadow-2xl'}`}
+            className={`tl-legacy-workspace w-full h-full overflow-hidden flex flex-col md:flex-row relative ${pageMode ? 'max-w-none rounded-none shadow-none md:h-full' : 'max-w-5xl md:h-[85vh] rounded-none md:rounded-[32px] shadow-2xl'}`}
 
             onClick={(e) => e.stopPropagation()}
 
@@ -8283,13 +8285,15 @@ export default function MockupPortal({
 
             {/* Sidebar Mockup (Desktop) / Bottom Nav (Mobile) */}
 
-            <div className="hidden md:flex w-64 bg-brand-green-deep p-6 text-brand-ivory flex-col gap-8">
+            <div className="tl-legacy-sidebar hidden md:flex w-64 shrink-0 p-6 text-brand-ivory flex-col gap-8">
 
               <div className="flex items-center gap-2">
 
-                <div className="w-8 h-8 bg-brand-gold rounded-lg" />
-
-                <span className="font-bold">{roleLabel}</span>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100/15"><Leaf size={19} aria-hidden="true" /></span>
+                <div className="min-w-0">
+                  <strong className="block text-lg">{BRAND_NAME}</strong>
+                  <span className="block break-words text-xs text-white/80">{roleLabel}</span>
+                </div>
 
               </div>
 
@@ -8698,7 +8702,7 @@ export default function MockupPortal({
 
                   {activeView === 'traveler' && t.portal.viewTraveler}
 
-                  {activeView === 'profile' && 'Mi Cuenta Trust Leaf'}
+                  {activeView === 'profile' && 'Mi Cuenta TrustLeaf'}
 
                 </h3>
 
@@ -9662,7 +9666,7 @@ export default function MockupPortal({
 
                               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold">Cuenta del paciente</p>
 
-                              <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Cuenta Trust Leaf</h5>
+                              <h5 className="text-2xl font-serif text-brand-green-deep mt-1">Cuenta TrustLeaf</h5>
 
                             </div>
 
@@ -10272,11 +10276,11 @@ export default function MockupPortal({
 
                             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-gold">Identidad verificable</p>
 
-                            <h3 className="mt-2 text-3xl md:text-4xl font-serif text-brand-green-deep">Mi Cuenta Trust Leaf</h3>
+                            <h3 className="mt-2 text-3xl md:text-4xl font-serif text-brand-green-deep">Mi Cuenta TrustLeaf</h3>
 
                             <p className="mt-3 text-sm md:text-base leading-relaxed text-brand-green-mid/70">
 
-                              Esta cuenta no es una billetera para manejar saldo. Es tu identidad medica verificable: recetas, permisos, retiros y trazabilidad quedan bajo tu control, mientras Trust Leaf patrocina las fees de red.
+                              Esta cuenta no es una billetera para manejar saldo. Es tu identidad medica verificable: recetas, permisos, retiros y trazabilidad quedan bajo tu control, mientras TrustLeaf patrocina las fees de red.
 
                             </p>
 
@@ -10306,7 +10310,7 @@ export default function MockupPortal({
 
                             <p className="mt-3 rounded-2xl border border-brand-gold/20 bg-brand-gold/10 px-4 py-3 text-xs leading-relaxed text-brand-green-mid/75">
 
-                              Fees patrocinadas por Trust Leaf. El paciente firma consentimiento y propiedad; no necesita cargar saldo.
+                              Fees patrocinadas por TrustLeaf. El paciente firma consentimiento y propiedad; no necesita cargar saldo.
 
                             </p>
 
@@ -12199,7 +12203,7 @@ export default function MockupPortal({
 
                               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold">Credencial operativa</p>
 
-                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Dispensario autorizado en Trust Leaf</h3>
+                              <h3 className="mt-1 text-2xl font-serif text-brand-green-deep">Dispensario autorizado en TrustLeaf</h3>
 
                               <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/70">
 
@@ -12441,7 +12445,7 @@ export default function MockupPortal({
 
                                 <p className="mt-2 text-sm leading-relaxed text-brand-green-mid/65">
 
-                                  El operador puede escanear QR o ingresar el numero de receta. Trust Leaf muestra vigencia, saldo y permiso minimo antes de preparar el retiro.
+                                  El operador puede escanear QR o ingresar el numero de receta. TrustLeaf muestra vigencia, saldo y permiso minimo antes de preparar el retiro.
 
                                 </p>
 
@@ -13465,7 +13469,7 @@ export default function MockupPortal({
 
                                 <p className="mt-3 text-[11px] leading-relaxed text-brand-green-mid/55">
 
-                                  Al confirmar, Trust Leaf registra receta, lote, cantidad, dispensario y prueba verificable. El diagnostico del paciente no se comparte.
+                                  Al confirmar, TrustLeaf registra receta, lote, cantidad, dispensario y prueba verificable. El diagnostico del paciente no se comparte.
 
                                 </p>
 
@@ -15575,7 +15579,7 @@ export default function MockupPortal({
 
                        <p className="text-xs text-brand-green-mid/50 font-medium max-w-sm mx-auto">
 
-                         Trust Leaf utiliza tecnologÃ­a blockchain para asegurar que cada gramo de medicina sea rastreable desde el cultivo hasta sus manos. Esta informaciÃ³n es auditable y protege su derecho al acceso legal.
+                         TrustLeaf utiliza tecnologÃ­a blockchain para asegurar que cada gramo de medicina sea rastreable desde el cultivo hasta sus manos. Esta informaciÃ³n es auditable y protege su derecho al acceso legal.
 
                        </p>
 
@@ -15859,7 +15863,7 @@ export default function MockupPortal({
 
                               <p className="text-sm md:text-base text-brand-green-mid/70 max-w-2xl">
 
-                                Todos los establecimientos listados a continuaciÃ³n han completado la integraciÃ³n con Trust Leaf. Su historial de salud y receta digital serÃ¡ verificado automÃ¡ticamente al ingresar con su cÃ³digo QR.
+                                Todos los establecimientos listados a continuaciÃ³n han completado la integraciÃ³n con TrustLeaf. Su historial de salud y receta digital serÃ¡ verificado automÃ¡ticamente al ingresar con su cÃ³digo QR.
 
                               </p>
 
@@ -16147,7 +16151,7 @@ export default function MockupPortal({
 
                           <p className="text-[13px] text-brand-green-mid/70 leading-relaxed max-w-2xl">
 
-                             Trust Leaf actÃºa como orÃ¡culo de datos criptogrÃ¡ficos entre sistemas de salud nacionales. El acceso a la medicina en el extranjero estÃ¡ sujeto a las leyes locales. Siempre verifique las regulaciones del paÃ­s de destino antes de compartir su credencial médica.
+                             TrustLeaf actÃºa como orÃ¡culo de datos criptogrÃ¡ficos entre sistemas de salud nacionales. El acceso a la medicina en el extranjero estÃ¡ sujeto a las leyes locales. Siempre verifique las regulaciones del paÃ­s de destino antes de compartir su credencial médica.
 
                           </p>
 
@@ -16869,7 +16873,7 @@ export default function MockupPortal({
 
                                <p className="text-sm font-bold text-brand-green-deep leading-tight">Seguridad Validada por Red</p>
 
-                               <p className="text-[11px] text-brand-green-mid/60 mt-1">Todas las cepas en este catÃ¡logo poseen el sello Trust Leaf de trazabilidad digital.</p>
+                               <p className="text-[11px] text-brand-green-mid/60 mt-1">Todas las cepas en este catÃ¡logo poseen el sello TrustLeaf de trazabilidad digital.</p>
 
                             </div>
 
@@ -16901,7 +16905,7 @@ export default function MockupPortal({
 
                                <div className="flex items-center gap-2 mb-4 text-[11px] font-bold text-brand-gold uppercase tracking-[0.2em]">
 
-                                  <ShieldCheck size={16} /> Trust Leaf Verified
+                                  <ShieldCheck size={16} /> TrustLeaf Verified
 
                                </div>
 
@@ -17441,7 +17445,7 @@ export default function MockupPortal({
 
                             <p className="text-[10px] text-center text-brand-green-mid/40 font-bold uppercase tracking-widest px-8 leading-relaxed">
 
-                               Al confirmar, Trust Leaf registra una entrega fraccionada vinculada a la receta médica y mantiene visible el cupo restante.
+                               Al confirmar, TrustLeaf registra una entrega fraccionada vinculada a la receta médica y mantiene visible el cupo restante.
 
                             </p>
 
@@ -19425,7 +19429,7 @@ export default function MockupPortal({
 
                   <h4 className="text-lg md:text-xl font-serif text-brand-green-deep">Detalle de Receta</h4>
 
-                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mt-1">ValidaciÃ³n Digital Trust Leaf</p>
+                  <p className="text-[10px] font-bold text-brand-gold uppercase tracking-[0.2em] mt-1">ValidaciÃ³n Digital TrustLeaf</p>
 
                 </div>
 
@@ -19565,7 +19569,7 @@ export default function MockupPortal({
 
                     <p className="text-xs font-bold text-brand-green-deep">Certificado de Autenticidad</p>
 
-                    <p className="text-[10px] text-brand-green-mid/60">Este documento ha sido verificado por la red Trust Leaf.</p>
+                    <p className="text-[10px] text-brand-green-mid/60">Este documento ha sido verificado por la red TrustLeaf.</p>
 
                   </div>
 

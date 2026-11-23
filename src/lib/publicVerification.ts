@@ -25,6 +25,9 @@ const SIGNATURE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const UNAVAILABLE: PublicVerificationResult = { demo: true, evidenceExists: false, proofMatches: false, status: 'unavailable' };
 
 const DEMO_RECORDS: readonly DemoEvidenceRecord[] = [
+  // Read-only review fixtures must resolve on a cold page load, independently
+  // of the mutable simulation store or any other browser tab.
+  { handle: 'tl_demo_A7mQ2vJ9xK4pR8wN6yT3uF5zB1cD0eGhL', status: 'active', commitment: 'cmt_demo_active_01', signature: 'iNbZ8-2idR0rHqfXp-7YefpAq-svn1CjFmtUlXt2zbM' },
   { handle: 'tl_demo_P9kL3sV7nM2qW8xR5tY1uC6bF4dE0aJzH', status: 'revoked', commitment: 'cmt_demo_revoked_02', signature: 'baniiyTTPDUUazlt7h-wZ2rInt40x21IYklQ70PjbGE' },
   { handle: 'tl_demo_Z4xC8vB2nM6qW1rT5yU9iO3pL7kJ0hGfD', status: 'expired', commitment: 'cmt_demo_expired_03', signature: 'IpXapbzc_D7fnF9VkQu5SbaK1OfmoGTTHhqaPV4zSXg' },
 ] as const;
@@ -56,8 +59,6 @@ export const demoPublicReceiptVerifier: PublicReceiptVerifier = {
     const [handle = '', signature = '', extra] = token.split('.');
     let result = UNAVAILABLE;
     if (!extra && HANDLE_PATTERN.test(handle) && SIGNATURE_PATTERN.test(signature)) {
-      const sharedReceipt = sharedSyntheticReceiptStore.read();
-      if (matchesSyntheticToken(token, sharedReceipt)) result = publicProjection(sharedReceipt);
       const record = DEMO_RECORDS.find(candidate => candidate.handle === handle);
       if (record) {
         const expected = await demoSignature(record);
@@ -83,5 +84,5 @@ export function createOpaqueDemoHandle(): string {
   return `tl_demo_${toBase64Url(bytes.buffer)}`;
 }
 
-export const DEMO_PUBLIC_VERIFICATION_TOKENS = [SYNTHETIC_RECEIPT_TOKEN, ...DEMO_RECORDS.map(record => `${record.handle}.${record.signature}`)];
-import { matchesSyntheticToken, publicProjection, sharedSyntheticReceiptStore, SYNTHETIC_RECEIPT_TOKEN } from '../../shared/receipt-demo-contract.ts';
+export const DEMO_PUBLIC_VERIFICATION_TOKENS = DEMO_RECORDS.map(record => `${record.handle}.${record.signature}`);
+import { sharedSyntheticReceiptStore } from '../../shared/receipt-demo-contract.ts';

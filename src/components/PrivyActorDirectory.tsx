@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 import type { TrustLeafPrivyIdentity } from './privyIdentityContext';
 import { readPrivyAdminJson } from '../lib/privyRead';
+import './administration-review.css';
 
 type Actor = { actorRef: string; email: string | null; role: string; state: string };
-const labels: Record<string, string> = { admin: 'Administrador', doctor: 'Medico', dispensary: 'Dispensario', patient: 'Paciente', active: 'Activo', pending: 'Pendiente', suspended: 'Suspendido', revoked: 'Revocado', expired: 'Vencido' };
+const labels: Record<string, string> = { admin: 'Administrador', doctor: 'Médico', dispensary: 'Dispensario', patient: 'Paciente', active: 'Activo', pending: 'Pendiente', suspended: 'Suspendido', revoked: 'Revocado', expired: 'Vencido' };
 
 export default function PrivyActorDirectory({ identity }: { identity: TrustLeafPrivyIdentity }) {
+  const headingId = useId();
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [actors, setActors] = useState<Actor[]>([]);
@@ -34,10 +36,36 @@ export default function PrivyActorDirectory({ identity }: { identity: TrustLeafP
     })();
     return () => { cancelled = true; controller.abort(); };
   }, [page, revision, identity.subject, identity.ready, identity.tokenReady]);
-  const buttonStyle = 'flex h-9 w-9 items-center justify-center rounded border border-brand-green-deep/20 disabled:opacity-40';
-  return <section className="mt-8 border-t border-brand-green-deep/15 pt-6">
-    <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-serif">Actores registrados</h2><button type="button" title="Actualizar actores" aria-label="Actualizar actores" disabled={loading} className={buttonStyle} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} /></button></div>
-    {loading ? <p role="status" className="mt-4 text-sm">Cargando actores...</p> : error ? <p role="alert" className="mt-4 text-sm text-red-700">No fue posible cargar los actores. Actualiza para reintentar.</p> : actors.length === 0 ? <p className="mt-4 text-sm">No hay actores en esta pagina.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full table-fixed text-left text-sm"><thead><tr className="border-b"><th className="w-1/2 py-3 pr-3">Correo de Privy</th><th className="w-1/4 py-3 pr-3">Rol</th><th className="w-1/4 py-3">Estado</th></tr></thead><tbody>{actors.map(actor => <tr key={actor.actorRef} className="border-b border-brand-green-deep/10"><td className="break-words py-3 pr-3">{actor.email ?? 'No disponible'}</td><td className="break-words py-3 pr-3">{labels[actor.role] ?? actor.role}</td><td className="break-words py-3">{labels[actor.state] ?? actor.state}</td></tr>)}</tbody></table></div>}
-    <div className="mt-4 flex items-center justify-end gap-3"><button type="button" title="Pagina anterior" aria-label="Pagina anterior" className={buttonStyle} disabled={loading || page === 0} onClick={() => setPage(Math.max(0, page - 25))}><ArrowLeft size={16} /></button><span className="text-sm">{Math.floor(page / 25) + 1}</span><button type="button" title="Pagina siguiente" aria-label="Pagina siguiente" className={buttonStyle} disabled={loading || error || nextOffset === null} onClick={() => { if (nextOffset !== null) setPage(nextOffset); }}><ArrowRight size={16} /></button></div>
+  return <section className="tl-admin-directory" aria-labelledby={headingId}>
+    <div className="tl-admin-directory-heading">
+      <h2 id={headingId}>Actores registrados</h2>
+      <button type="button" aria-label="Actualizar actores" disabled={loading} className="tl-admin-directory-button" onClick={() => setRevision(value => value + 1)}>
+        <RefreshCw size={16} aria-hidden="true" /> Actualizar
+      </button>
+    </div>
+    {loading ? <p role="status" className="tl-admin-directory-state">Cargando actores...</p>
+      : error ? <p role="alert" className="tl-admin-directory-state is-error">No fue posible cargar los actores. Actualiza para reintentar.</p>
+      : actors.length === 0 ? <p className="tl-admin-directory-state">No hay actores en esta página.</p>
+      : <table className="tl-admin-directory-table" role="table" aria-labelledby={headingId}>
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" role="columnheader">Correo de Privy</th>
+            <th scope="col" role="columnheader">Rol</th>
+            <th scope="col" role="columnheader">Estado</th>
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          {actors.map(actor => <tr key={actor.actorRef} role="row">
+            <td role="cell"><span className="tl-admin-mobile-label" aria-hidden="true">Correo de Privy</span>{actor.email ?? 'No disponible'}</td>
+            <td role="cell"><span className="tl-admin-mobile-label" aria-hidden="true">Rol</span>{labels[actor.role] ?? actor.role}</td>
+            <td role="cell"><span className="tl-admin-mobile-label" aria-hidden="true">Estado</span><span className="tl-admin-record-status">{labels[actor.state] ?? actor.state}</span></td>
+          </tr>)}
+        </tbody>
+      </table>}
+    <nav className="tl-admin-directory-pages" aria-label="Paginación del directorio">
+      <button type="button" aria-label="Pagina anterior" className="tl-admin-directory-button" disabled={loading || page === 0} onClick={() => setPage(Math.max(0, page - 25))}><ArrowLeft size={16} aria-hidden="true" /></button>
+      <span role="status">Página {Math.floor(page / 25) + 1}</span>
+      <button type="button" aria-label="Pagina siguiente" className="tl-admin-directory-button" disabled={loading || error || nextOffset === null} onClick={() => { if (nextOffset !== null) setPage(nextOffset); }}><ArrowRight size={16} aria-hidden="true" /></button>
+    </nav>
   </section>;
 }

@@ -8,6 +8,7 @@ const expectedRewrites = new Map([
   ['/api/stellar/contracts', '/api/stellar/readiness?__trustleaf_route=contracts'],
   ['/api/stellar/derive-wallet', '/api/stellar/readiness?__trustleaf_route=derive-wallet'],
   ['/api/stellar/faucet', '/api/stellar/readiness?__trustleaf_route=faucet'],
+  ['/api/cannabis-waitlist', '/api/stellar/readiness?__trustleaf_route=cannabis-waitlist'],
 ]);
 
 async function files(dir) {
@@ -32,7 +33,7 @@ const endpoints = (await files(join(root, 'api')))
 assert.ok(endpoints.length <= 12, `Vercel Hobby function budget exceeded: ${endpoints.length}`);
 
 const handler = await readFile(join(root, 'api/stellar/readiness.ts'), 'utf8');
-for (const token of ['contracts', 'derive-wallet', 'faucet', 'assertTestnetMutationEnabled', 'sendPilotSafetyError', "res.status(404)"]) {
+for (const token of ['contracts', 'derive-wallet', 'faucet', 'cannabisWaitlistHandler', 'assertTestnetMutationEnabled', 'sendPilotSafetyError', "res.status(404)"]) {
   assert.match(handler, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 }
 

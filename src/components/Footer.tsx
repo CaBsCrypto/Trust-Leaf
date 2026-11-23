@@ -1,5 +1,6 @@
 import { Leaf, Instagram, Twitter, Linkedin } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { BRAND_NAME } from '../lib/brand';
 
 export default function Footer() {
   const { t } = useLanguage();
@@ -13,7 +14,7 @@ export default function Footer() {
               <div className="p-1.5 bg-brand-green-deep rounded-lg text-brand-ivory">
                 <Leaf size={20} />
               </div>
-              <span className="text-xl font-bold tracking-tight text-brand-green-deep italic">Trust Leaf</span>
+              <span className="text-xl font-bold tracking-tight text-brand-green-deep italic">{BRAND_NAME}</span>
             </div>
             <p className="text-brand-green-mid/60 text-sm leading-relaxed mb-6 font-medium">
               Redefiniendo el acceso y la confianza en la salud transfronteriza a través de un ecosistema premium y unificado.

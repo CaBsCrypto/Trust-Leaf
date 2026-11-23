@@ -5,6 +5,11 @@ import { createOpaqueDemoHandle, DEMO_PUBLIC_VERIFICATION_TOKENS, demoPublicRece
 const allowed = ['demo', 'evidenceExists', 'proofMatches', 'status'].sort();
 const forbidden = /rut|name|patient|doctor|diagnos|dose|gram|quantity|dispens|history|wallet|address|contract|timestamp|expiresAt|issuedBy/i;
 
+// Direct QR links and independent tabs start without the demo initialization.
+for (const [index, status] of ['active', 'revoked', 'expired'].entries()) {
+  const result = await demoPublicReceiptVerifier.verify(DEMO_PUBLIC_VERIFICATION_TOKENS[index], `cold-page-${index}`);
+  assert.deepEqual(result, { demo: true, evidenceExists: true, proofMatches: true, status }, 'read-only demo references must resolve before the simulation is initialized');
+}
 resetPublicVerificationDemoState();
 const statuses = new Set<string>();
 for (const [index, token] of DEMO_PUBLIC_VERIFICATION_TOKENS.entries()) {

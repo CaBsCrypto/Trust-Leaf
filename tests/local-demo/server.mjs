@@ -21,7 +21,9 @@ export async function startDemo(port = 4331, runtimeFactory = createRuntime) {
     } }] } } });
   lockSubprocesses();
   const assets = new Map(output.output.map(item => ['/' + item.fileName, { body: item.type === 'chunk' ? item.code : item.source,
-    type: item.fileName.endsWith('.js') ? 'text/javascript' : item.fileName.endsWith('.css') ? 'text/css' : 'text/html' }]));
+    type: item.fileName.endsWith('.js') ? 'text/javascript'
+      : item.fileName.endsWith('.css') ? 'text/css'
+      : item.fileName.endsWith('.png') ? 'image/png' : 'text/html' }]));
   const bootstrap = randomBytes(32).toString('base64url');
   let runtime = await runtimeFactory(1), queue = Promise.resolve(), closing = false, admitting = true, origin;
   const serialize = task => { const result = queue.then(task); queue = result.catch(() => {}); return result; };

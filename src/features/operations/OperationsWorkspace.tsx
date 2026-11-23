@@ -1,9 +1,12 @@
 import { useDiscardDialog } from './useDiscardDialog';
 import { batchState, batchLabels } from './batchPresentation';
 import { readFailureProjection } from './readFailureProjection';
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
-import { Activity, CalendarDays, ClipboardList, History, House, Settings, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
+import { useDispensaryAccess } from './useDispensaryAccess';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { Activity, CalendarDays, ClipboardList, History, LogOut, Package, Plus, RefreshCw, Save, ShieldCheck, Users, X } from 'lucide-react';
 import TeamPanel from './TeamPanel';
+import DoctorOverview from './DoctorOverview';
+import PatientOverview from './PatientOverview';
 import AdminOnboarding from '../onboarding/AdminOnboarding';
 import CommercePanel from '../commerce/CommercePanel';
 import BatchCatalogDetails from '../commerce/BatchCatalogDetails';
@@ -12,11 +15,14 @@ import DispensaryAttention from './DispensaryAttention';
 import { Preparation, ProfileForm, DailyOverview } from './DispensaryDaily';
 import PrivyAgenda, { type AgendaTarget } from '../../components/PrivyAgenda';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
-import { currentPeriod, formatGrams, gramsToMg, type Booking, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
+import { WorkspaceFrame, WorkspaceNotice } from './WorkspaceFrame';
+import { WorkspaceHeaderTab, WorkspaceNavigation, workspacePanelId, workspaceTabId, type WorkspaceTab } from './WorkspaceNavigation';
+import { currentPeriod, formatGrams, gramsToMg, type Booking, type Delivery, type Movement, type PilotAction, type PilotCommand, type PilotRole, type PilotSnapshot, type Treatment } from './contracts';
 import './operations.css';
 import './dispensary-desk.css';
+import './care-workspace.css';
 
-const titles: Record<PilotRole, string> = { doctor: 'Mi consulta', patient: 'Mi atencion', dispensary: 'Mi dispensario', admin: 'Supervision del piloto' };
+const titles: Record<PilotRole, string> = { doctor: 'Mi consulta', patient: 'Mi atención', dispensary: 'Mi dispensario', admin: 'Supervisión del piloto' };
 const date = (value: string) => new Date(value).toLocaleString('es-CL', { timeZone: 'America/Santiago', dateStyle: 'short', timeStyle: 'short' });
 const short = (value: string) => value.slice(0, 8);
 const consultationFilters = [['pending', 'Pendientes'], ['active', 'En atención'], ['completed', 'Finalizadas'], ['cancelled', 'Canceladas'], ['all', 'Todas']] as const;
@@ -24,6 +30,7 @@ type ConsultationFilter = typeof consultationFilters[number][0];
 type Mutate = (action: PilotAction, input: Record<string, unknown>) => void;
 type NoteDraft = { text: string; baseline: string; version: number; acknowledged?: boolean };
 type StockDraft = { values: Record<string, string>; organizationRef: string; version?: number };
+type TraceTarget = { kind: 'delivery' | 'movement' | 'batch'; ref: string };
 const receiptDefaults = { lotCode: '', product: 'Flor de prueba', sourceReference: '', expiresAt: '', grams: '100' };
 const adjustmentDefaults = { grams: '', reason: '' };
 type Field = { name: string; label: string; type?: 'text' | 'number' | 'textarea' | 'select' | 'datetime-local'; value?: string;
@@ -36,14 +43,17 @@ export default function OperationsWorkspace({ email, onSignOut, embedded = false
 
 function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSignOut?: () => void; embedded: boolean }) {
   const identity = useTrustLeafPrivyIdentity();
+  const workspaceId = useId();
   const [data, setData] = useState<PilotSnapshot | null>(null);
   const [readError, setReadError] = useState('');
+  const authorizedTreatments = useDispensaryAccess(data, !readError);
   const [tab, setSelectedTab] = useState('today');
   const activeSection = useRef(tab);
   activeSection.current = tab;
   const initialSection = useRef(false);
   const { confirmDiscard, discardDialog } = useDiscardDialog(data ? `${data.role}:${data.joined}:${data.membership?.organization_ref}:${data.membership?.role}:${!!readError}` : undefined);
   const sectionBody = useRef<HTMLDivElement>(null);
+  const patientRecord = useRef<HTMLHeadingElement>(null);
   const [attentionDirty, setAttentionDirty] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, NoteDraft>>({});
   const [stockDrafts, setStockDrafts] = useState<Record<string, StockDraft>>({});
@@ -86,21 +96,34 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   const [historyDate, setHistoryDate] = useState('');
   const [historyBatch, setHistoryBatch] = useState('');
   const [historyView, setHistoryView] = useState<'deliveries' | 'movements'>('deliveries');
+  const [trace, setTrace] = useState<TraceTarget | null>(null);
+  const traceHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (trace) traceHeading.current?.focus(); }, [trace]);
   const [agendaTarget, setAgendaTarget] = useState<AgendaTarget>();
-  const setTab = async (next: string, target?: AgendaTarget) => {
+  const setTab = async (next: string, target?: AgendaTarget, traceTarget?: TraceTarget) => {
     if (next !== tab && data?.role === 'dispensary' && (busy || pending)) return;
     if (next !== tab && !await leaveNotes()) return;
     if (next !== tab && !await leaveStock()) return;
     if (next !== tab && attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
     if (!await leaveCommerce()) return;
-    setSearch(''); setAgendaTarget(target); setSelectedTab(next);
-    if (data?.role === 'dispensary') requestAnimationFrame(() => sectionBody.current?.focus({ preventScroll: true }));
+    setSearch(''); setAgendaTarget(target); setTrace(traceTarget ?? null); setSelectedTab(next);
+    if (next !== tab && !traceTarget) requestAnimationFrame(() => sectionBody.current?.focus({ preventScroll: true }));
     if (next !== tab && data?.role === 'dispensary') {
       setInventoryFilter('all'); setHistoryDate(''); setHistoryBatch(''); setHistoryView('deliveries');
     }
     return true;
   };
   const openBatchHistory = async (batchRef: string) => { if (await setTab('history')) setHistoryBatch(batchRef); };
+  const openDelivery = async (ref: string) => {
+    if (await setTab('history', undefined, { kind: 'delivery', ref })) {
+      setHistoryView('deliveries'); setHistoryDate(''); setHistoryBatch('');
+    }
+  };
+  const openMovement = (movement: Movement) => {
+    setSearch(''); setHistoryDate(''); setHistoryBatch(movement.batch_ref); setHistoryView('movements');
+    setTrace({ kind: 'movement', ref: movement.movement_ref });
+  };
+  const openStockBatch = (ref: string) => setTab('inventory', undefined, { kind: 'batch', ref });
   const openDailySection = async (next: string) => { if (await setTab(next)) { if (next === 'team') setManagementView('team'); } };
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -175,7 +198,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         const scope = `${result.role}:${result.actorRef}:${result.joined}:${result.membership?.organization_ref}:${result.membership?.role}`;
         if (readScope.current && scope !== readScope.current) {
           setSearch(''); setAttentionDirty(false); setReceiptRef(null); setNotice('');
-          setHistoryDate(''); setHistoryBatch(''); setStockDrafts({});
+          setHistoryDate(''); setHistoryBatch(''); setTrace(null); setStockDrafts({});
         }
         readScope.current = scope;
         if (!initialSection.current) {
@@ -283,74 +306,112 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
   });
   const treatments = (data?.treatments ?? []).filter(t => matches(`${t.patient_ref} ${t.treatment_ref} ${data?.patientProfiles?.find(p => p.patient_ref === t.patient_ref)?.name ?? ''}`));
   const now = Date.now();
+  const organizationRef = data?.membership?.organization_ref;
+  const ownBatches = new Map(data?.batches?.filter(batch => batch.organization_ref === organizationRef).map(batch => [batch.batch_ref, batch]));
+  const ownMovements = (data?.movements ?? []).filter(movement => ownBatches.has(movement.batch_ref));
+  const movementsByDelivery = new Map(ownMovements.filter(movement => movement.delivery_ref).map(movement => [movement.delivery_ref, movement]));
+  const movementForDelivery = (delivery: Delivery) => {
+    if (!organizationRef || delivery.organization_ref !== organizationRef || !ownBatches.has(delivery.batch_ref)) return;
+    const movement = movementsByDelivery.get(delivery.delivery_ref) ?? delivery.stock_movement;
+    if (movement?.delivery_ref === delivery.delivery_ref && movement.batch_ref === delivery.batch_ref) return movement;
+  };
+  const selectedArchivedMovement = trace?.kind === 'movement'
+    ? data?.deliveries?.map(movementForDelivery).find(movement => movement?.movement_ref === trace.ref)
+    : undefined;
+  const stockMovements = selectedArchivedMovement && !ownMovements.some(movement => movement.movement_ref === selectedArchivedMovement.movement_ref)
+    ? [...ownMovements, selectedArchivedMovement] : ownMovements;
   const visibleBatches = (data?.batches ?? []).filter(b => matches(`${b.lot_code} ${b.product}`) && (inventoryFilter === 'all' || batchState(b) === inventoryFilter));
   const historyMatches = (batchRef: string, createdAt: string) => role !== 'dispensary' || ((!historyBatch || batchRef === historyBatch) && (!historyDate || new Intl.DateTimeFormat('en-CA', {timeZone:'America/Santiago'}).format(new Date(createdAt)) === historyDate));
   const visibleDeliveries = (data?.deliveries ?? []).filter(d => {
+    const maySeeTreatment = role !== 'dispensary' || authorizedTreatments.has(d.treatment_ref);
+    if (!maySeeTreatment && d.organization_ref !== organizationRef) return false;
     const batch = data?.batches?.find(b => b.batch_ref === d.batch_ref);
-    return matches(`${d.treatment_ref} ${d.delivery_ref} ${role === 'dispensary' ? `${d.product ?? batch?.product ?? ''} ${d.lot_code ?? batch?.lot_code ?? ''}` : ''}`) && historyMatches(d.batch_ref,d.created_at);
+    return matches(`${maySeeTreatment ? d.treatment_ref : ''} ${d.delivery_ref} ${role === 'dispensary' ? `${d.product ?? batch?.product ?? ''} ${d.lot_code ?? batch?.lot_code ?? ''}` : ''}`) && historyMatches(d.batch_ref,d.created_at);
   }).sort((a,b) => b.created_at.localeCompare(a.created_at) || a.delivery_ref.localeCompare(b.delivery_ref));
-  const visibleMovements = (data?.movements ?? []).filter(m => {
-    const batch = data?.batches?.find(b => b.batch_ref === m.batch_ref);
+  const visibleMovements = stockMovements.filter(m => {
+    const batch = ownBatches.get(m.batch_ref);
     return matches(`${m.movement_ref} ${m.batch_ref} ${m.reason} ${batch?.product ?? ''} ${batch?.lot_code ?? ''}`) && historyMatches(m.batch_ref,m.created_at);
   }).sort((a,b) => b.created_at.localeCompare(a.created_at) || a.movement_ref.localeCompare(b.movement_ref));
-  const historyLots = new Map((data?.deliveries ?? []).map(d => [d.batch_ref, `${d.product ?? 'Producto no disponible'} · ${d.lot_code ?? short(d.batch_ref)}`]));
+  const historyLots = new Map((data?.deliveries ?? []).filter(d => d.organization_ref === organizationRef || authorizedTreatments.has(d.treatment_ref))
+    .map(d => [d.batch_ref, `${d.product ?? 'Producto no disponible'} · ${d.lot_code ?? short(d.batch_ref)}`]));
   for (const b of data?.batches ?? []) historyLots.set(b.batch_ref, `${b.product} · ${b.lot_code}`);
-  const tabs = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ...(import.meta.env.VITE_DISPENSARY_ONBOARDING_ENABLED === 'true' ? [['onboarding', 'Incorporaciones']] : []), ['demo', 'POV de prueba']]
+  const tabs: WorkspaceTab[] = role === 'admin' ? [['today', 'Actividad'], ['team', 'Organizaciones'], ...(import.meta.env.VITE_DISPENSARY_ONBOARDING_ENABLED === 'true' ? [['onboarding', 'Incorporaciones'] as const] : []), ['demo', 'POV de prueba']]
     : role === 'dispensary' ? [['home', 'Jornada'], ['today', 'Pacientes'], ['inventory', 'Inventario'], ['history', 'Historial'], ['team', import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo']]
     : [['today', role === 'doctor' ? 'Consultas' : 'Mi atencion'], ['agenda', 'Agenda'], ['treatment', 'Tratamientos'], ['history', 'Historial']];
+  const teamTab = role === 'dispensary' && data?.joined && !withoutTeam ? tabs.find(([id]) => id === 'team') : undefined;
+  const membership = role === 'dispensary' && data?.membership?.organization_ref ? data.membership : undefined;
+  const title = role === 'dispensary'
+    ? data?.organizations?.find(o => o.organization_ref === membership?.organization_ref)?.name ?? titles.dispensary
+    : role ? titles[role] : 'Panel operativo';
 
-  return <section className={`tl-operations ${role === 'dispensary' ? 'op-dispensary' : ''} ${embedded ? '' : 'tl-operations-page'}`}>
-    <header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>{role === 'dispensary' ? data?.organizations?.find(o => o.organization_ref === data.membership?.organization_ref)?.name ?? titles.dispensary : role ? titles[role] : 'Panel operativo'}</h1>
-      <p className="op-email">{email ?? identity.email ?? 'Cuenta conectada'}</p>
-      {role === 'dispensary' && data?.membership?.organization_ref && <p className="op-email">{data.membership.role === 'manager' ? 'Encargado' : 'Operador'}</p>}</div>
-      <div className="op-toolbar">{role === 'dispensary' && data?.joined && !withoutTeam && <button className="op-management-tab" role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}><Settings size={16}/>{import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' ? 'Gestion' : 'Equipo'}</button>}<span className="op-simulation">Piloto simulado</span>
-        <button title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18}/></button>
-        {onSignOut && <button title="Cerrar sesion" aria-label="Cerrar sesion" disabled={busy || ((role === 'dispensary' || role === 'doctor') && pending !== null && pendingContextMatches)} onClick={async () => {
-          if (pending && (!data || !pendingContextMatches)) {
-            if (await confirmDiscard('Hay una operacion sin confirmar que podria estar guardada. Cerrar sesion abandona su recuperacion. Comprueba el historial antes de repetirla.')) onSignOut();
-            return;
-          }
-          if (!await leaveNotes()) return;
-          if (!await leaveStock()) return;
-          if (attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
-          if (await leaveCommerce()) onSignOut();
-        }}><LogOut size={18}/></button>}</div></header>
-    {discardDialog}
-    <div className="op-content">
-      {notice && !withoutTeam && <p role="status" className="op-success">{notice}</p>}
-      {visibleError && <p role="alert" className="op-error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</p>}
-      {readError && role === 'dispensary' && <p role="status">No se pudo verificar la autorizacion del paciente. Actualiza para continuar. El inventario y el historial propios son datos anteriores, solo lectura.</p>}
-      {pending && !busy && data && (data.joined || pending.action === 'join') && !readError && !withoutTeam && pendingContextMatches && <button className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16}/>Reintentar operacion</button>}
-      {pending && data && !pendingContextMatches && <p role="alert">La operacion pendiente pertenece al acceso anterior. No puede reintentarse con la organizacion o permisos actuales. Comprueba su historial antes de repetirla.</p>}
-      {!data && !visibleError && <p role="status">Verificando permisos...</p>}
-      {data && !data.joined && !withoutTeam && <div className="op-empty"><ShieldCheck size={32}/><h2>Participar en el piloto</h2>
+  async function signOut() {
+    if (!onSignOut) return;
+    if (pending && (!data || !pendingContextMatches)) {
+      if (await confirmDiscard('Hay una operacion sin confirmar que podria estar guardada. Cerrar sesion abandona su recuperacion. Comprueba el historial antes de repetirla.')) onSignOut();
+      return;
+    }
+    if (!await leaveNotes()) return;
+    if (!await leaveStock()) return;
+    if (attentionDirty && !await confirmDiscard('La preparacion de entrega se perdera. No se registrara ninguna entrega.')) return;
+    if (await leaveCommerce()) onSignOut();
+  }
+
+  return <WorkspaceFrame
+    role={role}
+    title={title}
+    email={email ?? identity.email ?? 'Cuenta conectada'}
+    membershipLabel={membership && (membership.role === 'manager' ? 'Encargado' : 'Operador')}
+    embedded={embedded}
+    dialog={discardDialog}
+    toolbar={<>
+      {teamTab && <WorkspaceHeaderTab id={workspaceId} item={teamTab} tabs={tabs} selected={tab} onSelect={next => void setTab(next)}/>}
+      <span className="op-simulation">Piloto simulado</span>
+      <button type="button" title="Actualizar datos" aria-label="Actualizar datos" disabled={busy} onClick={() => { setError(''); setRevision(n => n + 1); }}><RefreshCw size={18} aria-hidden="true"/></button>
+      {onSignOut && <button type="button" title="Cerrar sesion" aria-label="Cerrar sesion" disabled={busy || ((role === 'dispensary' || role === 'doctor') && pending !== null && pendingContextMatches)} onClick={() => void signOut()}><LogOut size={18} aria-hidden="true"/></button>}
+    </>}
+  >
+      {notice && !withoutTeam && <WorkspaceNotice kind="success">{notice}</WorkspaceNotice>}
+      {visibleError && <WorkspaceNotice kind="error">{notice && readError ? `${notice} No se pudo actualizar la vista. ` : ''}{visibleError}</WorkspaceNotice>}
+      {readError && role === 'dispensary' && <WorkspaceNotice kind="info">No se pudo verificar la autorizacion del paciente. Actualiza para continuar. El inventario y el historial propios son datos anteriores, solo lectura.</WorkspaceNotice>}
+      {pending && !busy && data && (data.joined || pending.action === 'join') && !readError && !withoutTeam && pendingContextMatches && <button type="button" className="op-command" onClick={() => void execute(pending)}><RefreshCw size={16} aria-hidden="true"/>Reintentar operacion</button>}
+      {pending && data && !pendingContextMatches && <WorkspaceNotice kind="error">La operacion pendiente pertenece al acceso anterior. No puede reintentarse con la organizacion o permisos actuales. Comprueba su historial antes de repetirla.</WorkspaceNotice>}
+      {!data && !visibleError && <WorkspaceNotice kind="loading">Verificando permisos...</WorkspaceNotice>}
+      {data && !data.joined && !withoutTeam && <div className="op-empty op-workspace-gate"><ShieldCheck size={32} aria-hidden="true"/><h2>Participar en el piloto</h2>
         <p>Solo datos ficticios. Sin atencion clinica ni entrega real de medicamentos.</p>
         <button className="op-command" disabled={disabled} onClick={() => mutate('join', { acceptSyntheticOnly: true })}>Aceptar y participar</button></div>}
-      {withoutTeam && <div className="op-empty" role="status"><ShieldCheck size={32}/>
+      {withoutTeam && <div className="op-empty op-workspace-gate" role="status"><ShieldCheck size={32} aria-hidden="true"/>
         <h2>Sin acceso a un dispensario</h2>
         <p>Tu cuenta sigue activa. Para incorporarte a un equipo, necesitas una nueva invitación del encargado. Las operaciones anteriores se conservan en el historial del dispensario.</p>
       </div>}
       {data?.joined && !withoutTeam && <>
-        <div className={role === 'dispensary' ? 'op-workspace-layout' : undefined}>
-        <div className={role === 'dispensary' ? 'op-workspace-navigation' : undefined}>
-        <nav id={role === 'dispensary' ? 'dispensary-sections' : undefined} className={`op-tabs ${role === 'dispensary' ? 'op-sidebar' : ''}`} aria-label="Secciones del panel">{tabs.filter(([id]) => role !== 'dispensary' || id !== 'team').map(([id, label]) => {
-          const Icon = id === 'home' ? House : id === 'today' ? Users : id === 'inventory' ? Package : id === 'history' ? History : Settings;
-          return <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{role === 'dispensary' && <Icon size={18} aria-hidden="true"/>}{label}</button>;
-        })}</nav></div>
-        <div className="op-workspace-body" ref={sectionBody} tabIndex={role === 'dispensary' ? -1 : undefined}>
+        {role === 'doctor' && !readError && tab === 'today' && <DoctorOverview bookings={data.bookings ?? []} encounters={data.encounters ?? []}
+          onAgenda={() => void setTab('agenda')} onConsultations={data.encounters?.some(encounter => encounter.state === 'active') ? () => {
+            setConsultationFilter('active');
+            sectionBody.current?.focus();
+          } : undefined}/>}
+        {role === 'patient' && !readError && tab === 'today' && <PatientOverview bookings={data.bookings ?? []} encounters={data.encounters ?? []}
+          onAgenda={next => void setTab('agenda', next && { bookingRef: next.booking_ref, startsAt: next.starts_at })}
+          onRecord={() => patientRecord.current?.focus()} onTreatment={() => void setTab('treatment')}/>}
+        <div className={role === 'dispensary' || role === 'doctor' ? 'op-workspace-layout' : 'op-workspace-stacked'}>
+        <WorkspaceNavigation id={workspaceId} tabs={tabs} selected={tab} sidebar={role === 'dispensary'} verticalOnDesktop={role === 'dispensary' || role === 'doctor'} externalTab={teamTab?.[0]} onSelect={next => void setTab(next)}/>
+        <div className="op-workspace-body" ref={sectionBody} id={workspacePanelId(workspaceId)} tabIndex={-1} role="tabpanel" aria-labelledby={workspaceTabId(workspaceId, tab)} aria-busy={busy}>
         {role === 'dispensary' && tab === 'home' && <>
           <h2>Jornada</h2>
+          {data.membership?.role === 'operator' && <div className="op-primary-task">
+            <span className="op-task-icon"><Users size={22} aria-hidden="true"/></span>
+            <div><h3>Atención de pacientes</h3><p>Consulta los permisos antes de preparar una entrega.</p></div>
+            <button className="op-command op-task-action" type="button" onClick={() => void setTab('today')}>Atender pacientes</button>
+          </div>}
           {readError ? <p role="status">El resumen no esta disponible hasta recuperar los datos.</p> : <>
             {data.membership?.organization_ref && <DailyOverview data={data} navigate={openDailySection}/>}
             {!data.staffOnly && (!data.membership?.organization_ref || data.membership.role === 'manager') && <Preparation data={data} navigate={openDailySection}/>}
           </>}
-          <button className="op-command" onClick={() => setTab('today')}><Users size={18}/>Atender pacientes</button>
+          {data.membership?.role !== 'operator' && <button className="op-command" onClick={() => setTab('today')}><Users size={18}/>Atender pacientes</button>}
         </>}
         {tab === 'onboarding' && role === 'admin' && <AdminOnboarding/>}
         {!(role === 'dispensary' && tab === 'today') && tab !== 'onboarding' && tab !== 'home' && tab !== 'agenda' && tab !== 'demo' && !(role === 'dispensary' && tab === 'team' && managementView === 'commerce' && import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true') && <label className="op-search">{role === 'dispensary' && tab === 'today' ? 'Buscar paciente por nombre o referencia' : 'Buscar'}<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder={searchHint}/></label>}
-        {tab === 'today' && role === 'dispensary' && <DispensaryAttention key={`${data.actorRef}:${data.membership?.organization_ref}:${data.membership?.role}`} data={data} search={search} onSearch={setSearch} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={() => setTab('history')}/>}
+        {tab === 'today' && role === 'dispensary' && <DispensaryAttention key={`${data.actorRef}:${data.membership?.organization_ref}:${data.membership?.role}`} data={data} authorized={[...authorizedTreatments.values()]} search={search} onSearch={setSearch} disabled={disabled} readError={readError} receiptRef={receiptRef} onDirtyChange={setAttentionDirty} submit={input => mutate('dispense', input)} history={openDelivery}/>}
         {tab === 'agenda' && (role === 'doctor' || role === 'patient') && <PrivyAgenda email={email} target={agendaTarget}/>}
-        {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'today' && role === 'doctor' && <>
           <h2><ClipboardList size={20}/>Consultas</h2>
           {notesDirty && <p role="status">Notas sin guardar: {dirtyNoteCount}.</p>}
@@ -398,7 +459,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
           {!visibleError && !!filteredBookings.length && !visibleBookings.length && <Empty>No hay consultas para esta busqueda.</Empty>}
         </>}
         {tab === 'today' && role === 'patient' && <>
-          <h2><CalendarDays size={20}/>Mis citas</h2>
+          <h2 ref={patientRecord} tabIndex={-1}><CalendarDays size={20} aria-hidden="true"/>Mis citas</h2>
           {visibleBookings.map(b => <article className="op-row" key={b.booking_ref}><h3>{date(b.starts_at)}</h3><p>Medico {short(b.doctor_ref)} · {b.state === 'cancelled' ? 'Cancelada' : data.encounters?.some(e => e.booking_ref === b.booking_ref && e.state === 'completed') ? 'Atencion finalizada' : 'Confirmada'}</p><button className="op-command" onClick={() => setTab('agenda', { bookingRef: b.booking_ref, startsAt: b.starts_at })}><CalendarDays size={16}/>Ver en agenda</button></article>)}
           {!data.bookings?.length && <Empty>No tienes citas reservadas.</Empty>}
           {!!data.bookings?.length && !visibleBookings.length && <Empty>No hay citas para esta busqueda.</Empty>}
@@ -419,6 +480,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             </div>}
           </article>)}
         </>}
+        {tab === 'treatment' && role === 'patient' && <ProfileForm profile={data.profile} disabled={disabled} save={input => mutate('save-profile', input)}/>}
         {tab === 'inventory' && role === 'dispensary' && <>
           <h2><Package size={20}/>Inventario por lote</h2>
           {stockDirty && <p role="status">Formularios sin guardar: {Object.keys(stockDrafts).length}.</p>}
@@ -427,13 +489,13 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
             { name: 'lotCode', label: 'Codigo de lote', maxLength: 80 }, { name: 'product', label: 'Producto', value: 'Flor de prueba', maxLength: 100 },
             { name: 'sourceReference', label: 'Referencia de origen', maxLength: 160 }, { name: 'expiresAt', label: 'Vencimiento', type: 'datetime-local' }, { name: 'grams', label: 'Cantidad en gramos', value: '100' }]}
             submit={v => mutate('receive-batch', { lotCode: v.lotCode, product: v.product, sourceReference: v.sourceReference, expiresAt: new Date(v.expiresAt).toISOString(), quantityMg: gramsToMg(v.grams) })}/></details>}
-          {visibleBatches.map(b => <article className="op-row op-stock-row" key={b.batch_ref}>
-            <div><h3>{b.product}</h3><p>Lote {b.lot_code}</p></div>
-            <div className="op-stock-amount"><strong>{formatGrams(b.stock_mg)}</strong><span className={`op-batch-state op-batch-${batchState(b)}`}>{batchLabels[batchState(b)]}</span></div>
+          {visibleBatches.map(b => { const focused = trace?.kind === 'batch' && trace.ref === b.batch_ref; return <article className="op-row op-stock-row" key={b.batch_ref}>
+            <div><h3 ref={focused ? traceHeading : undefined} tabIndex={focused ? -1 : undefined}>{b.product}</h3><p>Lote {b.lot_code}</p></div>
+            <div className="op-stock-amount"><span className="sr-only">Stock actual: </span><strong>{formatGrams(b.stock_mg)}</strong><span className={`op-batch-state op-batch-${batchState(b)}`}>{batchLabels[batchState(b)]}</span></div>
             <p>Vence: {date(b.expires_at)}</p>
             {import.meta.env.VITE_COMMERCE_CATALOG_ENABLED === 'true' && <BatchCatalogDetails batchRef={b.batch_ref} version={b.version}/>}
             <button className="op-command" onClick={() => openBatchHistory(b.batch_ref)}><History size={16}/>Ver historial del lote</button>
-            <details><summary>Origen y trazabilidad</summary><p>Origen: {b.source_reference}</p><p className="op-reference">Lote: {b.batch_ref}</p></details>
+            <details open={focused || undefined}><summary>Origen y trazabilidad</summary><p>Origen: {b.source_reference}</p><p className="op-reference">Lote: {b.batch_ref}</p></details>
             {data.membership?.role === 'manager' && <details><summary>Gestionar lote</summary><button className="op-command" disabled={disabled || !!readError} onClick={() => mutate('set-batch-state', { resourceRef: b.batch_ref, version: b.version, state: b.state === 'active' ? 'quarantined' : 'active' })}>{b.state === 'active' ? 'Poner en cuarentena' : 'Liberar cuarentena'}</button>
               <details><summary>Ajustar existencias</summary><CommandForm label="Registrar ajuste" disabled={disabled || !!readError} values={stockDrafts[b.batch_ref]?.values ?? adjustmentDefaults} change={values => editStock(b.batch_ref, values, b.version)} fields={[{ name: 'grams', label: 'Variacion en gramos (+/-)' }, { name: 'reason', label: 'Motivo del ajuste', maxLength: 160 }]}
                 submit={v => mutate('adjust-stock', { resourceRef: b.batch_ref, version: stockDrafts[b.batch_ref]?.version ?? b.version, quantityMg: gramsToMg(v.grams, true), reason: v.reason })}/>
@@ -441,7 +503,7 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
                   <button type="button" disabled={disabled || !!readError} onClick={() => setStockDrafts(current => ({ ...current, [b.batch_ref]: { ...current[b.batch_ref], version: b.version } }))}>Usar existencias actuales y conservar ajuste</button>
                 </div>}
               </details></details>}
-          </article>)}
+          </article>; })}
           {!visibleError && !visibleBatches.length && <Empty>{query ? 'No hay resultados para esta busqueda.' : data.batches?.length ? 'No hay lotes en este estado.' : 'No hay lotes registrados.'}</Empty>}
         </>}
         {tab === 'team' && <>
@@ -459,29 +521,50 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         </>}
         {tab === 'history' && <>
           <h2>{role === 'dispensary' && historyView === 'movements' ? 'Movimientos de stock' : 'Historial de entregas'}</h2>
-          {role === 'dispensary' && <><div className="op-tabs" role="group" aria-label="Tipo de historial"><button aria-pressed={historyView === 'deliveries'} onClick={() => setHistoryView('deliveries')}>Entregas</button><button aria-pressed={historyView === 'movements'} onClick={() => setHistoryView('movements')}>Movimientos de stock</button></div>
+          {role === 'dispensary' && <><div className="op-tabs" role="group" aria-label="Tipo de historial"><button aria-pressed={historyView === 'deliveries'} onClick={() => { setTrace(null); setHistoryView('deliveries'); }}>Entregas</button><button aria-pressed={historyView === 'movements'} onClick={() => { setTrace(null); setHistoryView('movements'); }}>Movimientos de stock</button></div>
           <div className="op-form op-history-filters"><fieldset><label>{historyView === 'deliveries' ? 'Fecha de entrega' : 'Fecha de movimiento'}<input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)}/></label><label>Lote del historial<select value={historyBatch} onChange={e => setHistoryBatch(e.target.value)}><option value="">Todos</option>{[...historyLots].map(([ref,label]) => <option key={ref} value={ref}>{label}</option>)}</select></label><button type="button" title="Limpiar filtros" aria-label="Limpiar filtros" disabled={!search && !historyDate && !historyBatch} onClick={() => { setSearch(''); setHistoryDate(''); setHistoryBatch(''); }}><X size={18}/></button></fieldset></div></>}
           {(role !== 'dispensary' || historyView === 'deliveries') && <>{visibleDeliveries.map(d => {
             const batch = data.batches?.find(b => b.batch_ref === d.batch_ref);
-            const own = d.organization_ref === data.membership?.organization_ref;
+            const own = d.organization_ref === organizationRef;
+            const movement = movementForDelivery(d);
+            const treatment = authorizedTreatments.get(d.treatment_ref);
+            const patient = treatment ? data.patientProfiles?.find(profile => profile.patient_ref === treatment.patient_ref) : undefined;
+            const focused = trace?.kind === 'delivery' && trace.ref === d.delivery_ref;
             return <article className="op-row" key={d.delivery_ref}>
-              <h3>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3>
+              <h3 ref={focused ? traceHeading : undefined} tabIndex={focused ? -1 : undefined}>{formatGrams(d.quantity_mg)} · {date(d.created_at)}</h3>
               {role === 'dispensary' && <p>{own ? 'Entrega de este dispensario' : 'Entrega compartida de otro dispensario'}</p>}
               <p>{d.organization_name ?? data.organizations?.find(o => o.organization_ref === d.organization_ref)?.name ?? 'Nombre del dispensario no disponible'}</p>
               <p>{d.product ?? batch?.product ?? 'Producto no disponible'} · Lote {d.lot_code ?? batch?.lot_code ?? 'no disponible'} · Periodo {d.period_index}</p>
-              <details><summary>Ver comprobante y trazabilidad</summary>
+              <details open={focused || undefined}><summary>Ver comprobante y trazabilidad</summary>
+                {patient && <p>Paciente: {patient.name}</p>}
                 <p className="op-reference">Dispensario: {d.organization_ref} · Operador: {d.operator_ref}</p>
                 <p className="op-reference">Lote: {d.batch_ref}</p>
                 <p className="op-reference">Comprobante: {d.delivery_ref}</p>
-                <p className="op-reference">Tratamiento: {d.treatment_ref}</p>
+                {(role !== 'dispensary' || treatment) && <p className="op-reference">Tratamiento: {d.treatment_ref}</p>}
+                {role === 'dispensary' && own && <div className="op-trace-actions">
+                  {movement ? <button className="op-command" type="button" onClick={() => openMovement(movement)}><History size={16} aria-hidden="true"/>Ver movimiento de stock</button>
+                    : <p>Movimiento de stock no disponible.</p>}
+                  {ownBatches.has(d.batch_ref) && <button className="op-command" type="button" onClick={() => void openStockBatch(d.batch_ref)}><Package size={16} aria-hidden="true"/>Ver lote en inventario</button>}
+                </div>}
               </details>
             </article>;
           })}
-          {!visibleError && !!data.deliveries?.length && !visibleDeliveries.length && <Empty>No hay entregas para estos filtros.</Empty>}
-          {!visibleError && !data.deliveries?.length && <Empty>No hay entregas registradas.</Empty>}</>}
+          {!visibleError && !visibleDeliveries.length && <Empty>{search || historyDate || historyBatch ? 'No hay entregas para estos filtros.' : 'No hay entregas registradas.'}</Empty>}</>}
           {role === 'dispensary' && historyView === 'movements' && <>{visibleMovements.map(m => {
-            const batch = data.batches?.find(b => b.batch_ref === m.batch_ref);
-            return <article className="op-row" key={m.movement_ref}><h3>{formatGrams(m.quantity_mg)} · {date(m.created_at)}</h3><p>{batch?.product ?? 'Producto no disponible'} · Lote {batch?.lot_code ?? short(m.batch_ref)}</p><p>{m.reason}</p><details><summary>Ver movimiento y trazabilidad</summary><p className="op-reference">Operador: {m.operator_ref} · Movimiento: {m.movement_ref}</p><p className="op-reference">Lote: {m.batch_ref}</p></details></article>;
+            const batch = ownBatches.get(m.batch_ref);
+            const focused = trace?.kind === 'movement' && trace.ref === m.movement_ref;
+            return <article className="op-row" key={m.movement_ref}>
+              <h3 ref={focused ? traceHeading : undefined} tabIndex={focused ? -1 : undefined}>{formatGrams(m.quantity_mg)} · {date(m.created_at)}</h3>
+              <p>{batch?.product ?? 'Producto no disponible'} · Lote {batch?.lot_code ?? short(m.batch_ref)}</p>
+              <p>{m.reason}</p>
+              <dl className="op-trace-balance"><div><dt>Stock después del movimiento</dt><dd>{m.stock_after_mg == null ? 'Sin saldo histórico registrado' : formatGrams(m.stock_after_mg)}</dd></div></dl>
+              <details open={focused || undefined}><summary>Ver movimiento y trazabilidad</summary>
+                <p className="op-reference">Operador: {m.operator_ref} · Movimiento: {m.movement_ref}</p>
+                <p className="op-reference">Lote: {m.batch_ref}</p>
+                {m.delivery_ref && <p className="op-reference">Comprobante: {m.delivery_ref}</p>}
+              </details>
+              {batch && <button className="op-command" type="button" onClick={() => void openStockBatch(batch.batch_ref)}><Package size={16} aria-hidden="true"/>Ver lote en inventario</button>}
+            </article>;
           })}{!visibleError && !visibleMovements.length && <Empty>{data.movements?.length ? 'No hay movimientos para estos filtros.' : 'No hay movimientos registrados.'}</Empty>}</>}
         </>}
         {tab === 'today' && role === 'admin' && <>
@@ -493,11 +576,10 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
         <p className="op-footer">{data.asOf ? `Actualizado: ${date(data.asOf)} · ` : ''}Datos ficticios · America/Santiago</p>
         </div></div>
       </>}
-    </div>
-  </section>;
+  </WorkspaceFrame>;
 }
 
-function Empty({ children }: { children: ReactNode }) { return <p className="op-empty">{children}</p>; }
+function Empty({ children }: { children: ReactNode }) { return <p className="op-empty op-workspace-empty-result">{children}</p>; }
 function TreatmentSummary({ treatment: t, time }: { treatment: Treatment; time: number }) {
   const p = currentPeriod(t, time);
   // Revocation blocks availability, not the display of already recorded deliveries.

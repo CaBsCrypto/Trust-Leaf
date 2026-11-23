@@ -15,6 +15,10 @@ import { googleCalendarHandler } from '../_lib/google-calendar-handler.js';
  */
 export default async function handler(req: any, res: any) {
   const route = String(req.query?.__trustleaf_route ?? 'readiness');
+  if (route === 'cannabis-waitlist') {
+    const { cannabisWaitlistHandler } = await import('../_lib/cannabis-waitlist.js');
+    return cannabisWaitlistHandler(req, res, process.env);
+  }
   // Construct the provider only inside the handler's authenticated error boundary.
   const privateVerifier = {
     verify: (token: string) => createPrivyIdentityVerifier(process.env).verify(token),

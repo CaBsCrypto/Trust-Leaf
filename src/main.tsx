@@ -2,6 +2,7 @@ import {lazy, StrictMode, Suspense} from 'react';
 import {createRoot} from 'react-dom/client';
 import { Buffer } from 'buffer';
 import './index.css';
+import './styles/trustleaf-theme.css';
 import { TrustLeafPrivyProvider } from './components/TrustLeafPrivyProvider';
 
 const PILOT_FLOW_ROUTE = '/demo/pilot-flow';

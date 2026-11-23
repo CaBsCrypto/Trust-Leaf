@@ -1,66 +1,58 @@
-import { motion } from 'motion/react';
-import { Leaf, Code } from 'lucide-react';
+import { useRef, useState, type MouseEventHandler } from 'react';
+import { Code2, Menu, X } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { BRAND_CHANNEL, BRAND_NAME, BRAND_TITLE } from '../lib/brand';
 
 interface NavbarProps {
-  onPortalClick: () => void;
+  onAccess: MouseEventHandler<HTMLAnchorElement>;
   showTechnicalDetails?: boolean;
   onToggleTechnicalDetails?: () => void;
 }
 
-import { useLanguage } from '../context/LanguageContext';
+const copy = {
+  es: { nav: 'Navegación principal', care: 'Atención', network: 'Red', process: 'Cómo funciona', traceability: 'Trazabilidad', waitlist: 'Lista de espera', access: 'Acceder', menu: 'Abrir menú', close: 'Cerrar menú', language: 'View in English', technical: 'Detalles técnicos' },
+  en: { nav: 'Main navigation', care: 'Care', network: 'Network', process: 'How it works', traceability: 'Traceability', waitlist: 'Waiting lists', access: 'Sign in', menu: 'Open menu', close: 'Close menu', language: 'Ver en español', technical: 'Technical details' },
+};
 
-export default function Navbar({ onPortalClick, showTechnicalDetails, onToggleTechnicalDetails }: NavbarProps) {
-  const { t, language, setLanguage } = useLanguage();
-  const scrollTo = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
+export default function Navbar({ onAccess, showTechnicalDetails, onToggleTechnicalDetails }: NavbarProps) {
+  const { language, setLanguage } = useLanguage();
+  const [isOpen, setIsOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const text = copy[language];
 
   return (
-    <motion.nav 
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12 backdrop-blur-md bg-brand-ivory/80 border-b border-brand-green-deep/5"
-    >
-      <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-        <div className="p-1.5 bg-brand-green-deep rounded-lg text-brand-ivory">
-          <Leaf size={20} />
-        </div>
-        <span className="text-lg md:text-xl font-bold tracking-tight text-brand-green-deep">Trust Leaf</span>
-      </div>
-      
-      <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-        <button onClick={() => scrollTo('red')} className="hover:text-brand-green-mid transition-colors">Red</button>
-        <button onClick={() => scrollTo('profesionales')} className="hover:text-brand-green-mid transition-colors">Profesionales</button>
-      </div>
-      
-      <div className="flex items-center gap-4">
-        {onToggleTechnicalDetails && (
-          <button
-            onClick={onToggleTechnicalDetails}
-            title={showTechnicalDetails ? "Desactivar Modo Dev" : "Activar Modo Dev"}
-            className={`p-2 rounded-xl border transition-all cursor-pointer ${
-              showTechnicalDetails 
-                ? 'bg-brand-gold/20 border-brand-gold text-brand-green-deep' 
-                : 'bg-white/40 border-brand-green-deep/10 text-brand-green-deep/50 hover:bg-white hover:text-brand-green-deep'
-            }`}
-          >
-            <Code size={16} />
+    <header className="tl-relieve-header">
+      <nav className="tl-relieve-container tl-relieve-nav" aria-label={text.nav} onKeyDown={event => {
+        if (event.key === 'Escape' && isOpen) {
+          setIsOpen(false);
+          toggle.current?.focus();
+        }
+      }}>
+        <a className="tl-relieve-brand" href="#inicio" aria-label={BRAND_TITLE} onClick={() => setIsOpen(false)}>
+          <span className="tl-relieve-brand-name">{BRAND_NAME}</span><span>{BRAND_CHANNEL}</span>
+        </a>
+        <button ref={toggle} type="button" className="tl-relieve-mobile-toggle"
+          aria-label={isOpen ? text.close : text.menu} aria-expanded={isOpen} aria-controls="tl-relieve-nav-links"
+          onClick={() => setIsOpen(open => !open)}>
+          {isOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
+        </button>
+        <div id="tl-relieve-nav-links" className="tl-relieve-nav-links" data-open={isOpen}>
+          <a href="#profesionales" onClick={() => setIsOpen(false)}>{text.care}</a>
+          <a href="#red" onClick={() => setIsOpen(false)}>{text.network}</a>
+          <a href="#como-funciona" onClick={() => setIsOpen(false)}>{text.process}</a>
+          <a href="#trazabilidad" onClick={() => setIsOpen(false)}>{text.traceability}</a>
+          <a href="#lista-de-espera" onClick={() => setIsOpen(false)}>{text.waitlist}</a>
+          {onToggleTechnicalDetails && <button type="button" className="tl-relieve-technical" title={text.technical}
+            aria-label={text.technical} aria-pressed={Boolean(showTechnicalDetails)} onClick={onToggleTechnicalDetails}>
+            <Code2 size={17} aria-hidden="true" />
+          </button>}
+          <button type="button" className="tl-relieve-language" title={text.language} aria-label={text.language}
+            onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}>
+            {language === 'es' ? 'EN' : 'ES'}
           </button>
-        )}
-        <button 
-          onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
-          className="text-xs font-bold text-brand-green-deep/60 hover:text-brand-green-deep transition-colors tracking-widest cursor-pointer px-4"
-        >
-          {t.nav.language}
-        </button>
-        <button 
-          onClick={onPortalClick}
-          className="px-4 md:px-5 py-2 text-xs md:text-sm font-bold text-brand-ivory bg-brand-green-deep rounded-full hover:bg-brand-green-mid transition-all shadow-sm active:scale-95"
-        >
-          {t.nav.portal}
-        </button>
-      </div>
-    </motion.nav>
+          <a href="/paciente" className="tl-relieve-button tl-relieve-button-primary" onClick={onAccess}>{text.access}</a>
+        </div>
+      </nav>
+    </header>
   );
 }

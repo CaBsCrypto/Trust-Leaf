@@ -4,7 +4,30 @@
       "includeFiles": "soroban/target/wasm32v1-none/release/*.wasm"
     }
   },
+  "headers": [
+    {
+      "source": "/verify/:token",
+      "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }],
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    },
+    {
+      "source": "/demo/receipt-pilot",
+      "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }],
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    }
+  ],
   "rewrites": [
+    { "source": "/api/cannabis-waitlist", "destination": "/api/stellar/readiness?__trustleaf_route=cannabis-waitlist" },
+    { "source": "/verify/:token", "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }], "destination": "/index.html" },
+    { "source": "/demo/receipt-pilot", "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }], "destination": "/index.html" },
     { "source": "/api/dispensary-onboarding", "destination": "/api/stellar/readiness?__trustleaf_route=dispensary-onboarding" },
     { "source": "/api/team-invitations", "destination": "/api/stellar/readiness?__trustleaf_route=team-invitations" },
     { "source": "/api/operations-pilot", "destination": "/api/stellar/readiness?__trustleaf_route=operations-pilot" },

@@ -20,3 +20,7 @@ soroban/target/**
 !soroban/target/wasm32v1-none/release/*.wasm
 artifacts/testnet-v2/*.wasm
 artifacts/testnet-v2/.generated/
+
+.vite-visual-cache/
+dist-visual/
+node_modules.incomplete/

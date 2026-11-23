@@ -67,6 +67,10 @@ jobs:
           npm run test:pilot-safety
           npm run test:critical-static
           npm run test:public-verification
+          node tests/public-verification-cold-load.test.mjs
+          node --experimental-strip-types tests/cannabis-waitlist.test.ts
+          node tests/sql/cannabis-waitlist.mjs
+          node tests/sql/cannabis-waitlist-persistence.mjs
           npm run test:vercel-stellar-consolidation
           npm run test:visual-qa-regressions
           npm run qa:operations-pilot
@@ -134,6 +138,26 @@ jobs:
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/calendar-operations-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/consultation-agenda-browser.mjs
           PLAYWRIGHT_MODULE=/tmp/trustleaf-browser/node_modules/playwright PLAYWRIGHT_CHANNEL=chromium AGENDA_FIXTURE_URL=http://127.0.0.1:4321 node tests/ui/doctor-filters-browser.mjs
+      - name: Cannabis landing, QR and waitlist browser checks
+        env:
+          PLAYWRIGHT_MODULE: /tmp/trustleaf-browser/node_modules/playwright
+          PLAYWRIGHT_CHANNEL: chromium
+          TRUSTLEAF_LOCAL_WAITLIST_INSTANCE: ci-browser
+        run: |
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 5195 --strictPort > scratch/relieve-preview.log 2>&1 &
+          preview_pid=$!
+          node node_modules/vite/bin/vite.js --config vite.visual.config.ts --mode waitlist-local > scratch/relieve-waitlist.log 2>&1 &
+          waitlist_pid=$!
+          trap 'kill "$preview_pid" "$waitlist_pid" 2>/dev/null || true' EXIT
+          for port in 5195 5210; do
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent --max-time 3 "http://127.0.0.1:$port/" > /dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent --show-error --max-time 3 "http://127.0.0.1:$port/" > /dev/null
+          done
+          RELIEVE_TEST_URL=http://127.0.0.1:5195 node tests/ui/relieve-landing-browser.mjs
+          RELIEVE_TEST_URL=http://127.0.0.1:5210 RELIEVE_TEST_WAITLIST=1 node tests/ui/relieve-landing-browser.mjs
       - name: Isolated medical note drafts
         run: |
           node node_modules/vite/bin/vite.js --config tests/ui/vite-operations.config.mjs --port 4323 > scratch/medical-server.log 2>&1 &
@@ -176,4 +200,7 @@ jobs:
             scratch/legacy-ui-read-safety
             scratch/local-demo
             scratch/local-demo-server.log
+            scratch/redesign-qa/*.png
+            scratch/relieve-preview.log
+            scratch/relieve-waitlist.log
           retention-days: 7

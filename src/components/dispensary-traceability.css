@@ -1,0 +1,88 @@
+.tl-dispensary-trace {
+  padding-block: clamp(38px, 6vw, 80px);
+  border-bottom: 1px solid var(--tl-edge);
+  scroll-margin-top: 24px;
+}
+
+.tl-dispensary-trace:focus:not(:focus-visible) { outline: none; }
+
+.tl-dispensary-trace__layout {
+  display: grid;
+  gap: clamp(22px, 4vw, 52px);
+  align-items: start;
+}
+
+.tl-dispensary-trace h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 3.32rem);
+  font-weight: 700;
+  letter-spacing: -.052em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.tl-dispensary-trace p {
+  color: var(--tl-ink);
+  line-height: 1.55;
+}
+
+.tl-dispensary-trace__intro { margin: 12px 0 0; }
+
+.tl-dispensary-trace__steps {
+  display: grid;
+  gap: 15px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tl-dispensary-trace__steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tl-dispensary-trace__steps .tl-relieve-icon { width: 42px; height: 42px; }
+.tl-dispensary-trace__steps h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.tl-dispensary-trace__steps p { margin: 3px 0 0; font-size: .94rem; }
+
+.tl-dispensary-trace__example {
+  min-width: 0;
+  margin: 0;
+  padding: clamp(16px, 3vw, 32px);
+  border: 1px solid var(--tl-edge);
+  border-radius: 20px;
+  background: var(--tl-mint);
+}
+
+.tl-dispensary-trace__example figcaption { font-size: 1.2rem; font-weight: 700; }
+.tl-dispensary-trace__example dl { margin: 14px 0; }
+
+.tl-dispensary-trace__example dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding-block: 10px;
+  border-top: 1px solid var(--tl-edge);
+}
+
+.tl-dispensary-trace__example dl > div:last-child {
+  border-bottom: 1px solid var(--tl-edge);
+  color: var(--tl-emerald);
+  font-weight: 700;
+}
+
+.tl-dispensary-trace__example dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tl-dispensary-trace__example p { margin: 0; font-size: .94rem; }
+.tl-dispensary-trace__privacy { max-width: 75ch; margin: 22px 0 0; font-size: .94rem; }
+
+@media (min-width: 780px) {
+  .tl-dispensary-trace__layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); }
+}

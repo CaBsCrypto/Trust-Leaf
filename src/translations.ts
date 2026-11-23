@@ -7,7 +7,7 @@ export const translations = {
       language: "EN",
     },
     hero: {
-      badge: "Trust Leaf Network",
+      badge: "TrustLeaf Network",
       title: "Acceso seguro a cannabis medicinal",
       desc: "Recetas privadas, dosis autorizadas y trazabilidad por lote para flores, aceites y extractos. Tu informacion clinica queda bajo tu control; la red solo valida lo necesario.",
       cta: "Entrar como paciente",
@@ -24,7 +24,7 @@ export const translations = {
       oldExpQuote: "Tener que empezar de cero cada vez que viajas o buscas un nuevo profesional es una barrera inaceptable para tu bienestar.",
     },
     solution: {
-      badge: "La Red Trust Leaf",
+      badge: "La Red TrustLeaf",
       title: "Un ecosistema diseñado para tu libertad.",
       feature1Title: "Directorio de Especialistas",
       feature1Desc: "Accede a una red curada de profesionales que validan tu tratamiento con rigor científico y legal.",
@@ -170,7 +170,7 @@ export const translations = {
         backupEmptyValue: "Sin respaldo",
         continueAction: "Continuar al panel médico",
         connectedEyebrow: "Wallet Activa",
-        connectedDesc: "Tu acceso Trust Leaf ya está listo. Ahora puedes iniciar consultas, emitir tu Trust ID y operar sobre la red con una experiencia pensada para pacientes reales.",
+        connectedDesc: "Tu acceso TrustLeaf ya está listo. Ahora puedes iniciar consultas, emitir tu Trust ID y operar sobre la red con una experiencia pensada para pacientes reales.",
         startCareAction: "Agendar con un Especialista",
       },
     },
@@ -198,7 +198,7 @@ export const translations = {
       partners: "Partners",
       legal: "Aviso Legal",
       privacy: "Privacidad",
-      rights: "© 2026 Trust Leaf. Todos los derechos reservados.",
+      rights: "© 2026 TrustLeaf. Todos los derechos reservados.",
     },
     metrics: {
       title: "Impacto en la Red",
@@ -228,7 +228,7 @@ export const translations = {
       language: "ES",
     },
     hero: {
-      badge: "Trust Leaf Network",
+      badge: "TrustLeaf Network",
       title: "Secure access to medical cannabis",
       desc: "Private prescriptions, authorized dosing, and batch traceability for flower, oils, and extracts. Your clinical information stays under your control; the network validates only what is needed.",
       cta: "Enter Patient Portal",
@@ -245,7 +245,7 @@ export const translations = {
       oldExpQuote: "Having to start from scratch every time you travel or look for a new professional is an unacceptable barrier to your wellbeing.",
     },
     solution: {
-      badge: "The Trust Leaf Network",
+      badge: "The TrustLeaf Network",
       title: "An ecosystem designed for your freedom.",
       feature1Title: "Specialist Directory",
       feature1Desc: "Access a curated network of professionals who validate your treatment with scientific and legal rigor.",
@@ -391,7 +391,7 @@ export const translations = {
         backupEmptyValue: "No backup",
         continueAction: "Continue to care panel",
         connectedEyebrow: "Wallet Active",
-        connectedDesc: "Your Trust Leaf access is ready. You can now start consultations, activate your Trust ID, and operate on the network with a patient-first experience.",
+        connectedDesc: "Your TrustLeaf access is ready. You can now start consultations, activate your Trust ID, and operate on the network with a patient-first experience.",
         startCareAction: "Book a Specialist",
       },
     },
@@ -419,7 +419,7 @@ export const translations = {
       partners: "Partners",
       legal: "Legal Notice",
       privacy: "Privacy Policy",
-      rights: "© 2026 Trust Leaf. All rights reserved.",
+      rights: "© 2026 TrustLeaf. All rights reserved.",
     },
     metrics: {
       title: "Network Impact",

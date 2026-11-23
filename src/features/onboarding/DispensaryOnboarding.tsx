@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, LogIn, LogOut, RefreshCw, Save, Send } from 'lucide-react';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
+import { BRAND_NAME } from '../../lib/brand';
 import OperationsWorkspace from '../operations/OperationsWorkspace';
 import { applicationLabels, profileLabels } from './AdminOnboarding';
 import { onboardingRequest, clearOnboardingInvitation } from './api';
 import { useOnboarding } from './useOnboarding';
 import { emptyApplicationProfile, type DispensaryApplication, type OnboardingCommand } from './contracts';
 import './onboarding.css';
+import './dispensary-intake.css';
 
 type Result = { accepted?: boolean; application?: DispensaryApplication | null; accessEmail?: string | null; expiresAt?: string };
 export default function DispensaryOnboarding({ token }: { token: string | null }) {
@@ -24,6 +26,9 @@ function Applicant({ token }: { token: string | null }) {
   const [review, setReview] = useState(false);
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
+  const draftForm = useRef<HTMLFormElement>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const moveViewFocus = useRef(false);
   const app = data?.application;
   const editable = app?.state === 'draft' || app?.state === 'changes_requested';
   useEffect(() => {
@@ -48,6 +53,15 @@ function Applicant({ token }: { token: string | null }) {
     const before = (e: BeforeUnloadEvent) => { if (dirty || pending) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', before); return () => window.removeEventListener('beforeunload', before);
   }, [dirty, pending]);
+  useEffect(() => {
+    if (!moveViewFocus.current) return;
+    moveViewFocus.current = false;
+    (review ? reviewHeading.current : draftForm.current)?.focus();
+  }, [review]);
+  function changeReview(next: boolean) {
+    moveViewFocus.current = true;
+    setReview(next);
+  }
   async function run(command: OnboardingCommand) {
     const result = await execute<Result>(command);
     if (result) {
@@ -65,27 +79,34 @@ function Applicant({ token }: { token: string | null }) {
     return <OperationsWorkspace email={identity.email} onSignOut={() => void logout()}/>;
   }
   const disabled = busy || !!pending || !!readError;
-  return <section className="tl-operations tl-operations-page onboarding"><header className="op-header"><div><p className="op-brand">Trust Leaf</p><h1>Incorporar dispensario</h1><p className="op-email">{identity.email || 'Sin sesion'}</p></div><span className="op-simulation">Piloto de pruebas</span></header><div className="op-content">
+  return <section className="tl-operations tl-operations-page onboarding dispensary-intake"><header className="op-header"><div><p className="op-brand">{BRAND_NAME}</p><h1>Incorporar dispensario</h1><p className="op-email">{identity.email || 'Sin sesion'}</p></div><span className="op-simulation">Piloto de pruebas</span></header><div className="op-content">
     {(readError || error) && <p className="op-error" role="alert">{readError || error}</p>}
     {!identity.ready && <p role="status">Verificando identidad...</p>}
-    {identity.ready && !identity.authenticated && <button className="op-command" onClick={() => void identity.beginLogin()}><LogIn size={16}/>Ingresar con Privy</button>}
+    {identity.ready && !identity.authenticated && <button className="op-command dispensary-intake-primary" onClick={() => void identity.beginLogin()}><LogIn size={16}/>Ingresar con Privy</button>}
     {identity.authenticated && <div className="op-toolbar"><button className="op-command" disabled={busy || !!pending} onClick={() => void logout()}><LogOut size={16}/>Usar otra cuenta</button><button className="op-command" disabled={busy || !!pending || dirty} onClick={() => setRevision(n => n + 1)}><RefreshCw size={16}/>Actualizar solicitud</button></div>}
     {pending && !busy && <button className="op-command" onClick={() => void run(pending)}><RefreshCw size={16}/>Reintentar operacion pendiente</button>}
     {identity.authenticated && !data && !readError && <p role="status">Cargando incorporacion...</p>}
     {invitation && data && !data.accepted && <section className="onboarding-review"><h2>Invitacion para encargado</h2><p>La aceptacion abre una solicitud privada. No habilita acceso operativo.</p>
       <label className="op-check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/>Acepto participar en pruebas, sin atencion ni dispensacion reales.</label>
-      <button className="op-command" disabled={disabled || !consent} onClick={() => void run({ action: 'accept', token: invitation, consent })}><Check size={16}/>Aceptar invitacion</button></section>}
-    {app && <><h2>{applicationLabels[app.state]}</h2>{app.reason && <p className="onboarding-review">Motivo: {app.reason}</p>}
+      <button className="op-command dispensary-intake-primary" disabled={disabled || !consent} onClick={() => void run({ action: 'accept', token: invitation, consent })}><Check size={16}/>Aceptar invitacion</button></section>}
+    {app && <>
+      <div className="dispensary-intake-status" data-state={app.state}>
+        <h2>{applicationLabels[app.state]}</h2>
+        {app.reason && <p>Motivo: {app.reason}</p>}
+        {app.state === 'submitted' && <p role="status">Tu solicitud espera revision administrativa. Aun no tienes acceso operativo.</p>}
+        {app.state === 'rejected' && <p role="status">Esta solicitud es de solo lectura. Para iniciar otra incorporacion necesitas una nueva invitacion.</p>}
+      </div>
       <p>Usamos tus datos de identificacion y contacto para revisar esta incorporacion. Solo tu y los administradores autorizados pueden consultarlos. No incluyas datos de pacientes ni documentos sanitarios.</p>
-      {editable && !review ? <form className="onboarding-form" onSubmit={e => { e.preventDefault(); void run({ action: 'save-draft', applicationRef: app.applicationRef, version: app.version, profile, operationId: crypto.randomUUID() }); }}>
+      {editable && !review ? <form ref={draftForm} tabIndex={-1} aria-label="Datos de la solicitud" className="onboarding-form" onSubmit={e => { e.preventDefault(); void run({ action: 'save-draft', applicationRef: app.applicationRef, version: app.version, profile, operationId: crypto.randomUUID() }); }}>
         {(Object.keys(emptyApplicationProfile) as (keyof typeof profile)[]).map(key => <label key={key}>{profileLabels[key]}{key === 'contactEmail' ? ' (opcional)' : ''}
           {key === 'activity' ? <textarea disabled={disabled} maxLength={2000} value={profile[key]} onChange={e => { setProfile({ ...profile, [key]: e.target.value }); dirtyRef.current = true; setDirty(true); }}/>
             : <input disabled={disabled} type={key === 'contactEmail' ? 'email' : key === 'phone' ? 'tel' : 'text'} maxLength={key === 'address' ? 300 : key === 'contactEmail' ? 254 : 100} value={profile[key]} onChange={e => { setProfile({ ...profile, [key]: e.target.value }); dirtyRef.current = true; setDirty(true); }}/>}</label>)}
-        <div className="op-toolbar"><button className="op-command" disabled={disabled}><Save size={16}/>Guardar borrador</button><button type="button" className="op-command" disabled={disabled || dirty} onClick={() => setReview(true)}>Revisar datos guardados</button></div>
-      </form> : <dl className="onboarding-details">{Object.entries(app.profile).map(([key,value]) => <div key={key}><dt>{profileLabels[key]}</dt><dd>{value || 'No indicado'}</dd></div>)}</dl>}
-      {editable && review && <><label className="op-check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/>Acepto la finalidad de estos datos y participar solo en pruebas. La aprobacion no es una acreditacion sanitaria.</label><div className="op-toolbar"><button className="op-command" disabled={disabled || !consent} onClick={() => void run({ action: 'submit', applicationRef: app.applicationRef, version: app.version, consent, operationId: crypto.randomUUID() })}><Send size={16}/>Enviar solicitud a revision</button><button className="op-command" disabled={disabled} onClick={() => setReview(false)}>Volver a editar</button></div></>}
-      {app.state === 'submitted' && <p>Tu solicitud espera revision administrativa. Aun no tienes acceso operativo.</p>}
-      {app.state === 'rejected' && <p>Esta solicitud es de solo lectura. Para iniciar otra incorporacion necesitas una nueva invitacion.</p>}
+        <div className="op-toolbar"><button className="op-command dispensary-intake-primary" disabled={disabled}><Save size={16}/>Guardar borrador</button><button type="button" className="op-command" disabled={disabled || dirty} onClick={() => changeReview(true)}>Revisar datos guardados</button></div>
+      </form> : <>
+        {editable && review && <h3 ref={reviewHeading} tabIndex={-1}>Datos guardados de la solicitud</h3>}
+        <dl className="onboarding-details">{Object.entries(app.profile).map(([key,value]) => <div key={key}><dt>{profileLabels[key]}</dt><dd>{value || 'No indicado'}</dd></div>)}</dl>
+      </>}
+      {editable && review && <><label className="op-check"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/>Acepto la finalidad de estos datos y participar solo en pruebas. La aprobacion no es una acreditacion sanitaria.</label><div className="op-toolbar"><button className="op-command dispensary-intake-primary" disabled={disabled || !consent} onClick={() => void run({ action: 'submit', applicationRef: app.applicationRef, version: app.version, consent, operationId: crypto.randomUUID() })}><Send size={16}/>Enviar solicitud a revision</button><button className="op-command" disabled={disabled} onClick={() => changeReview(false)}>Volver a editar</button></div></>}
     </>}
   </div></section>;
 }

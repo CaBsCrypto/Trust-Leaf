@@ -1,7 +1,8 @@
 import { batchState, batchLabels } from './batchPresentation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { CheckCircle2, Circle, ArrowRight, Save, ClipboardCheck } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, ClipboardCheck, Clock3, Package, Save, Truck, Users, UserRound } from 'lucide-react';
 import { currentPeriod, formatGrams, gramsToMg, type PatientProfile, type PilotSnapshot, type Treatment } from './contracts';
+import './dispensary-care.css';
 
 export function DailyOverview({ data, navigate }: { data: PilotSnapshot; navigate: (tab: string) => void }) {
   const now = Date.now();
@@ -11,18 +12,29 @@ export function DailyOverview({ data, navigate }: { data: PilotSnapshot; navigat
   const day = (value: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(value));
   const today = day(new Date(now).toISOString());
   const deliveries = (data.deliveries ?? []).filter(d => d.organization_ref === org && day(d.created_at) === today);
-  const metrics = [
-    { label: 'Pacientes autorizados', value: new Set(data.treatments?.filter(t => currentPeriod(t, now) && data.grants?.some(g => g.treatment_ref === t.treatment_ref && g.organization_ref === org && Date.parse(g.expires_at) > now)).map(t => t.patient_ref)).size, tab: 'today' },
-    { label: 'Stock disponible', value: formatGrams(usable.reduce((sum,b) => sum + b.stock_mg, 0)), tab: 'inventory' },
-    { label: 'Entregas de hoy', value: deliveries.length, tab: 'history' },
-    { label: 'Equipo activo', value: data.members?.filter(m => m.organization_ref === org).length ?? 0, tab: 'team' },
-  ];
+  const patients = { label: 'Pacientes autorizados', value: new Set(data.treatments?.filter(t => currentPeriod(t, now) && data.grants?.some(g => g.treatment_ref === t.treatment_ref && g.organization_ref === org && Date.parse(g.expires_at) > now)).map(t => t.patient_ref)).size, tab: 'today', icon: UserRound };
+  const stock = { label: 'Stock disponible', value: formatGrams(usable.reduce((sum, b) => sum + b.stock_mg, 0)), tab: 'inventory', icon: Package };
+  const history = { label: 'Entregas de hoy', value: deliveries.length, tab: 'history', icon: Truck };
+  const team = { label: 'Equipo activo', value: data.members?.filter(m => m.organization_ref === org).length ?? 0, tab: 'team', icon: Users };
+  const manager = data.membership?.role === 'manager';
+  const metrics = manager ? [stock, team, patients, history] : [patients, history, stock, team];
   const expiring = usable.filter(b => Date.parse(b.expires_at) <= now + 30 * 86400000);
-  return <section aria-label="Resumen del dispensario" className="op-daily">
+  return <section aria-label="Resumen del dispensario" className="op-daily dispensary-task-overview">
     <h2>Jornada del dispensario</h2>
-    <div className="op-daily-metrics">{metrics.map(m => <button key={m.label} onClick={() => navigate(m.tab)}><span>{m.label}</span><strong>{m.value}</strong><ArrowRight size={16} aria-hidden="true"/></button>)}</div>
-    {!!expiring.length && <div className="op-daily-alert"><span>{expiring.length} lote(s) disponibles vencen en los proximos 30 dias.</span><button className="op-command" onClick={() => navigate('inventory')}>Revisar inventario</button></div>}
-    {!usable.length && <p className="op-daily-alert">Sin lotes disponibles para entregar.</p>}
+    <div className="op-daily-metrics">{metrics.map(({ label, value, tab, icon: Icon }, index) =>
+      <button key={tab} type="button" data-priority={index < 2} onClick={() => navigate(tab)}>
+        <span className="dispensary-task-icon"><Icon size={19} aria-hidden="true"/></span>
+        <span className="dispensary-task-metric"><span>{label}</span><strong>{value}</strong></span>
+        <ArrowRight className="dispensary-task-arrow" size={17} aria-hidden="true"/>
+      </button>
+    )}</div>
+    {!!expiring.length && <div className="op-daily-alert">
+      <div className="dispensary-stock-notice"><Clock3 size={16} aria-hidden="true"/>
+        <span>{expiring.length} lote(s) disponibles vencen en los proximos 30 dias.</span>
+      </div>
+      <button className="op-command" type="button" onClick={() => navigate('inventory')}>Revisar inventario</button>
+    </div>}
+    {!usable.length && <p className="op-daily-alert" role="status">Sin lotes disponibles para entregar.</p>}
   </section>;
 }
 
@@ -34,9 +46,16 @@ export function Preparation({ data, navigate }: { data: PilotSnapshot; navigate:
     { label: 'Lote disponible', done: !!data.batches?.some(b => b.organization_ref === org && b.state === 'active' && Date.parse(b.expires_at) > Date.now() && b.stock_mg > 0), tab: 'inventory' },
     { label: 'Primera entrega realizada', done: !!data.deliveries?.some(d => d.organization_ref === org), tab: 'history' },
   ];
-  return <details className="op-preparation" aria-label="Preparacion del dispensario"><summary>Preparacion del dispensario · {steps.filter(s => s.done).length}/{steps.length} completados</summary>
-    {steps.map(s => <div className="op-line" key={s.label}><span>{s.done ? <CheckCircle2 size={16} aria-label="Completado"/> : <Circle size={16} aria-label="Pendiente"/>} {s.label}</span>
-      <button className="op-command" onClick={() => navigate(s.done || s.tab !== 'history' ? s.tab : 'today')}><ArrowRight size={16}/>{s.done ? 'Ver' : 'Continuar'}<span className="sr-only"> {s.label}</span></button></div>)}
+  return <details className="op-preparation dispensary-task-preparation" aria-label="Preparacion del dispensario"><summary>Preparacion del dispensario · {steps.filter(s => s.done).length}/{steps.length} completados</summary>
+    {steps.map(s => <div className="op-line" key={s.label}>
+      <span>
+        {s.done ? <CheckCircle2 size={16} aria-hidden="true"/> : <Circle size={16} aria-hidden="true"/>}
+        <span>{s.label}<small>{s.done ? 'Completado' : 'Pendiente'}</small></span>
+      </span>
+      <button className="op-command" type="button" onClick={() => navigate(s.done || s.tab !== 'history' ? s.tab : 'today')}>
+        <ArrowRight size={16} aria-hidden="true"/>{s.done ? 'Ver' : 'Continuar'}<span className="sr-only"> {s.label}</span>
+      </button>
+    </div>)}
   </details>;
 }
 
@@ -70,6 +89,9 @@ export function ProfileForm({ profile, disabled, save }: { profile?: PatientProf
 
 export function DispensingForm({ data, treatment, disabled, submit, onDirty }: { data: PilotSnapshot; treatment: Treatment; disabled: boolean; submit: (input: Record<string, unknown>) => void; onDirty?: () => void }) {
   const [review, setReview] = useState<{ batch: string; quantity: number } | null>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const preparationForm = useRef<HTMLFormElement>(null);
+  const returningToPreparation = useRef(false);
   const [selected, setSelected] = useState('');
   const [quantity, setQuantity] = useState('10');
   const [error, setError] = useState('');
@@ -84,9 +106,16 @@ export function DispensingForm({ data, treatment, disabled, submit, onDirty }: {
   try { amount = gramsToMg(quantity); } catch { /* Invalid input remains editable. */ }
   const validDraft = !!selectedBatch && amount > 0 && amount <= remaining && amount <= selectedBatch.stock_mg;
   const valid = !!review && !!batch && review.quantity > 0 && review.quantity <= remaining && review.quantity <= batch.stock_mg;
+  useEffect(() => {
+    if (review) reviewHeading.current?.focus();
+    else if (returningToPreparation.current) {
+      returningToPreparation.current = false;
+      preparationForm.current?.focus();
+    }
+  }, [review]);
   return <>
     {!batches.length && <p className="op-empty">No hay lotes disponibles con stock y vigencia para esta entrega.</p>}
-    <form className="op-form op-desk-preparation" hidden={!!review} onSubmit={event => {
+    <form ref={preparationForm} tabIndex={-1} className="op-form op-desk-preparation" hidden={!!review} onSubmit={event => {
       event.preventDefault(); setError('');
       if (!validDraft) { setError('Selecciona un lote disponible y una cantidad dentro del saldo y stock.'); return; }
       setReview({ batch: selected, quantity: amount });
@@ -110,13 +139,20 @@ export function DispensingForm({ data, treatment, disabled, submit, onDirty }: {
       {!!selectedBatch && !validDraft && <p className="op-error" role="status">Indica una cantidad mayor que cero, dentro del saldo y las existencias disponibles.</p>}
     </form>
     {error && <p role="alert" className="op-error">{error}</p>}
-    {review && <section className="op-invitation-review" aria-label="Confirmar entrega"><h3>Confirmar entrega simulada</h3>
-      <p>{profile?.name ?? 'Perfil de prueba pendiente'} · Paciente {treatment.patient_ref.slice(0, 8)}</p>
-      <p>{batch?.product ?? 'Lote no disponible'} · {batch?.lot_code}</p>
-      <p>Entrega: {formatGrams(review.quantity)} · Saldo resultante: {formatGrams(Math.max(0, remaining - review.quantity))}</p>
+    {review && <section className="op-invitation-review dispensary-task-review" aria-label="Confirmar entrega">
+      <h3 ref={reviewHeading} tabIndex={-1}><ClipboardCheck size={20} aria-hidden="true"/>Confirmar entrega simulada</h3>
+      <dl className="dispensary-task-review-details">
+        <div><dt>Paciente</dt><dd>{profile?.name ?? 'Perfil de prueba pendiente'} · {treatment.patient_ref.slice(0, 8)}</dd></div>
+        <div><dt>Lote</dt><dd>{batch?.product ?? 'Lote no disponible'}{batch?.lot_code ? ` · ${batch.lot_code}` : ''}</dd></div>
+        <div><dt>Entrega: </dt><dd>{formatGrams(review.quantity)}</dd></div>
+        <div><dt>Saldo resultante: </dt><dd>{valid ? formatGrams(remaining - review.quantity) : '—'}</dd></div>
+        <div><dt>Stock resultante del lote</dt><dd>{valid && batch ? formatGrams(batch.stock_mg - review.quantity) : '—'}</dd></div>
+      </dl>
       {!valid && <p role="alert">Cambio el saldo o la disponibilidad del lote. Revisa la entrega.</p>}
-      <button className="op-command" disabled={disabled || !valid} onClick={() => { submit({ resourceRef: treatment.treatment_ref, batchRef: review.batch, quantityMg: review.quantity }); setReview(null); }}>Confirmar entrega</button>
-      <button className="op-command" disabled={disabled} onClick={() => setReview(null)}>Volver</button>
+      <div className="op-toolbar dispensary-task-review-actions">
+        <button className="op-command" disabled={disabled || !valid} onClick={() => { submit({ resourceRef: treatment.treatment_ref, batchRef: review.batch, quantityMg: review.quantity }); setReview(null); }}>Confirmar entrega</button>
+        <button className="op-command" disabled={disabled} onClick={() => { returningToPreparation.current = true; setReview(null); }}>Volver</button>
+      </div>
     </section>}
   </>;
 }

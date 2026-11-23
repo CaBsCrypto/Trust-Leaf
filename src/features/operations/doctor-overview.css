@@ -1,0 +1,143 @@
+.tl-operations .doctor-overview {
+  --doctor-overview-ink: var(--tl-brand-ink, #102e23);
+  --doctor-overview-muted: #405e53;
+  --doctor-overview-accent: var(--tl-brand-action, #075d42);
+  --doctor-overview-border: var(--tl-brand-line, #d4e6dc);
+  --doctor-overview-mint: var(--tl-brand-soft, #edf8f1);
+  margin: 0 0 28px;
+  color: var(--doctor-overview-ink);
+}
+
+.doctor-overview-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tl-operations .doctor-overview-heading > h2 {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.2;
+}
+
+.doctor-overview-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.doctor-overview-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(12px, 2vw, 20px);
+  border: 1px solid var(--doctor-overview-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.doctor-overview-appointment {
+  background: var(--doctor-overview-mint);
+}
+
+.doctor-overview-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--doctor-overview-mint);
+  color: var(--doctor-overview-accent);
+}
+
+.doctor-overview-counts {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 0;
+}
+
+.doctor-overview-counts dt {
+  color: var(--doctor-overview-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.doctor-overview-counts dd {
+  margin: 4px 0 0;
+  font-size: 21px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.doctor-overview-counts .doctor-overview-active dd {
+  color: var(--doctor-overview-accent);
+  font-size: 30px;
+}
+
+.doctor-overview-appointment-details {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.tl-operations .doctor-overview-appointment-details h3 {
+  margin: 0 0 4px;
+  color: var(--doctor-overview-muted);
+  font-size: 13px;
+}
+
+.tl-operations .doctor-overview-appointment-details time,
+.tl-operations .doctor-overview-appointment-details p {
+  display: block;
+  margin: 0;
+  line-height: 1.4;
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.tl-operations .doctor-overview button.doctor-overview-action {
+  gap: 8px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--doctor-overview-accent);
+  border-radius: 8px;
+  color: var(--doctor-overview-accent);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.tl-operations .doctor-overview button.doctor-overview-action:hover {
+  background: var(--doctor-overview-mint);
+}
+
+.tl-operations .doctor-overview button.doctor-overview-action:focus-visible {
+  outline: 2px solid var(--doctor-overview-accent);
+  outline-offset: 3px;
+}
+
+.doctor-overview-action svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 800px) {
+  .doctor-overview-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 400px) {
+  .tl-operations .doctor-overview-appointment .doctor-overview-action {
+    width: 100%;
+  }
+}

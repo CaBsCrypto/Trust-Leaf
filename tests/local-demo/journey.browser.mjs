@@ -31,7 +31,7 @@ const report = { status: 'RUNNING', origin: base, stages: [], screenshots: [], q
   uncertainRetries: [], posts: [], cleanup: { contextClosed: false, browserClosed: false },
   limits: ['Uses an already-running SQL-backed synthetic server; never starts or resets it.',
     'No provider, production, reset, cross-tab, or negative transport scenario is exercised here.',
-    'Responsive captures cover manager inventory and worker receipts at five widths.'] };
+    'Responsive captures cover manager inventory and worker receipts at five widths, and patient, doctor and admin onboarding at two widths.'] };
 let browser, context, page, metadata, identities, actor = 'admin', failure, closing = false;
 const lostResponses = new Map(), injectedRequests = new Map();
 function redact(value) {
@@ -44,7 +44,7 @@ const apiPaths = new Set(['/api/operations-pilot', '/api/dispensary-onboarding',
   '/api/team-invitations', '/api/dispensary-commerce', '/api/agenda']);
 const actions = {
   '/api/operations-pilot': { doctor: ['join', 'start-encounter', 'save-note', 'complete-encounter'],
-    patient: ['join', 'save-profile', 'grant'], newManager: ['join'], newWorker: ['join', 'dispense'] },
+    patient: ['join', 'save-profile', 'grant', 'revoke-grant'], newManager: ['join'], newWorker: ['join', 'dispense'] },
   '/api/dispensary-onboarding': { admin: ['list', 'invite', 'review'],
     newManager: ['inspect', 'read-draft', 'accept', 'save-draft', 'submit'] },
   '/api/team-invitations': { newManager: ['list', 'create'], newWorker: ['inspect', 'accept', 'list'] },
@@ -201,6 +201,7 @@ async function receipt(deliveryRef) {
   assert.ok((await row.textContent()).includes(`10 g`));
   assert.ok((await row.textContent()).includes(lotCode));
   assert.ok((await row.textContent()).includes(productName));
+  return row;
 }
 async function reload(key) {
   await page.reload(); await settle();
@@ -526,6 +527,8 @@ try {
     await button('Revisar entrega', preparation).click();
     const review = page.getByRole('region', { name: 'Confirmar entrega', exact: true });
     await review.waitFor(); assert.ok((await review.textContent()).includes('Entrega: 10 g'));
+    const resultingStock = review.locator('dl > div').filter({ has: page.getByText('Stock resultante del lote', { exact: true }) });
+    await resultingStock.getByText('90 g', { exact: true }).waitFor();
     assert.equal(report.posts.length, postCount, 'review does not send a command');
     await uncertainRetry('/api/operations-pilot', 'dispense', button('Confirmar entrega', review),
       button('Reintentar operacion'), page.getByRole('status').filter({ hasText: 'Entrega guardada. Comprobante:' }),
@@ -549,7 +552,29 @@ try {
     assert.equal(worker.batches[0].stock_mg, 90000);
     assert.equal(activePeriod(treatment(patient)).used_mg, 10000);
     assert.equal(activePeriod(treatment(worker)).allowance_mg - activePeriod(treatment(worker)).used_mg, 20000);
-    await receipt(deliveryRef); await reload('newWorker'); await receipt(deliveryRef);
+    const registered = page.getByRole('region', { name: 'Entrega registrada', exact: true });
+    await registered.getByRole('heading', { name: 'Entrega registrada: 10 g', exact: true }).waitFor();
+    const receiptField = label => registered.locator('dl > div').filter({ has: page.getByText(label, { exact: true }) });
+    await receiptField('Paciente').getByText(patientName, { exact: false }).waitFor();
+    await receiptField('Lote').getByText(lotCode, { exact: false }).waitFor();
+    assert.equal(await receiptField('Fecha y hora').locator('time').getAttribute('datetime'), delivery.created_at);
+    const deliveryRow = await receipt(deliveryRef);
+    await deliveryRow.getByText(patientName, { exact: false }).waitFor();
+    const movement = worker.movements.find(entry => entry.delivery_ref === deliveryRef);
+    assert.ok(movement, 'the receipt links to a saved inventory movement');
+    assert.equal(movement.quantity_mg, -10000);
+    await button('Ver movimiento de stock', deliveryRow).click();
+    await page.getByRole('heading', { name: 'Movimientos de stock', exact: true }).waitFor();
+    const movementRow = page.locator('article').filter({ hasText: movement.movement_ref });
+    await movementRow.getByText(movement.movement_ref, { exact: false }).waitFor();
+    await movementRow.getByText('Stock después del movimiento', { exact: true }).waitFor();
+    await movementRow.getByText('90 g', { exact: true }).waitFor();
+    await button('Ver lote en inventario', movementRow).click();
+    await page.getByRole('heading', { name: 'Inventario por lote', exact: true }).waitFor();
+    const inventoryLot = page.locator('.op-stock-row').filter({ hasText: delivery.batch_ref });
+    await inventoryLot.getByText(`Lote ${lotCode}`, { exact: true }).waitFor();
+    await inventoryLot.getByText('90 g', { exact: true }).waitFor();
+    await reload('newWorker'); await receipt(deliveryRef);
     await switchActor('patient'); await tab('Tratamientos');
     await page.locator('.op-stats div').filter({ hasText: 'Disponible ahora' }).getByText('20 g', { exact: true }).waitFor();
     await receipt(deliveryRef);
@@ -608,12 +633,64 @@ try {
       }
     }
   });
+  await stage('patient-doctor-admin-responsive-and-keyboard', async () => {
+    const firstTabs = { patient: 'Mi atencion', doctor: 'Consultas', admin: 'Invitaciones' };
+    for (const [key, label] of Object.entries(firstTabs)) {
+      await switchActor(key);
+      await tab(label);
+      const current = page.getByRole('tab', { name: label, exact: true });
+      const nextLabel = key === 'admin' ? 'Solicitudes' : 'Agenda';
+      const next = page.getByRole('tab', { name: nextLabel, exact: true });
+      for (const width of [390, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await settle();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${key} ${width}: horizontal overflow`);
+        const name = `${key}-${width}.png`;
+        const path = fileURLToPath(new URL(name, output));
+        await page.screenshot({ path, fullPage: true });
+        report.screenshots.push({ actor: key, width, path });
+      }
+      await current.focus();
+      await page.keyboard.press(key === 'doctor' ? 'ArrowDown' : 'ArrowRight');
+      assert.equal(await next.evaluate(element => element === document.activeElement), true, `${key}: next tab receives focus`);
+      if (key !== 'admin') {
+        assert.equal(await current.getAttribute('aria-selected'), 'true', `${key}: moving focus preserves selection`);
+        await page.keyboard.press('Enter');
+      }
+      await page.getByRole('tabpanel', { name: nextLabel, exact: true }).waitFor();
+      assert.equal(await next.getAttribute('aria-selected'), 'true');
+    }
+  });
+  await stage('patient-revokes-grant-and-dispensary-retains-private-receipt', async () => {
+    await switchActor('patient'); await tab('Tratamientos');
+    const previouslyShared = await read('/api/operations-pilot', 'newWorker');
+    const patientRef = treatment(previouslyShared).patient_ref;
+    assert.equal(previouslyShared.patientProfiles[0].name, patientName);
+    const permission = page.locator('.op-line').filter({ hasText: orgName });
+    await operations('revoke-grant', 'Revocar permiso', permission);
+    await button('Autorizar 24 horas', permission).waitFor();
+
+    await switchActor('newWorker'); await tab('Pacientes');
+    await page.getByText('No hay pacientes con permiso vigente.', { exact: true }).waitFor();
+    const worker = await read('/api/operations-pilot');
+    assert.deepEqual(worker.treatments, []);
+    assert.deepEqual(worker.grants, []);
+    assert.deepEqual(worker.patientProfiles, []);
+    assert.deepEqual(worker.deliveries, previouslyShared.deliveries, 'the dispensary retains its completed receipt');
+    assert.equal(JSON.stringify(worker).includes(patientRef), false, 'the private snapshot no longer identifies the patient');
+    const deliveryRow = await receipt(deliveryRef);
+    const receiptText = await deliveryRow.textContent();
+    for (const value of [patientName, patientRef.slice(0, 8), identities.get('patient').email]) {
+      assert.equal(receiptText.includes(value), false, 'the retained receipt contains no patient identifiers');
+    }
+  });
   await stage('final-read-only-isolation-and-single-write', async () => {
     const worker = await read('/api/operations-pilot', 'newWorker'), patient = await read('/api/operations-pilot', 'patient');
     assert.equal(worker.deliveries.length, 1); assert.equal(patient.deliveries.length, 1);
     assert.equal(worker.batches[0].stock_mg, 90000); assert.equal(activePeriod(treatment(patient)).used_mg, 10000);
     assert.equal(report.posts.filter(entry => entry.action === 'dispense').length, 2, 'one lost dispense acknowledgement plus one identical retry');
     assert.equal(report.posts.filter(entry => entry.action === 'receive').length, 2, 'one lost receive acknowledgement plus one identical retry');
+    assert.equal(report.posts.filter(entry => entry.action === 'revoke-grant' && entry.actor === 'patient').length, 1);
     assert.equal((await read(commercialReceipts, 'newManager')).items.length, 1);
     assert.equal(report.uncertainRetries.length, 2);
     assert.equal(report.expectedRequestFailures.length, 2, 'only the two deliberately aborted acknowledgements fail');
@@ -622,7 +699,7 @@ try {
     assert.deepEqual(health.blockedTransports, [], 'no server transport attempted to reach an external provider');
     for (const field of ['externalAttempts', 'unexpectedRequests', 'headerViolations', 'httpErrors', 'pageErrors', 'consoleErrors', 'requestFailures'])
       assert.deepEqual(report[field], [], field);
-    assert.equal(report.screenshots.length, 10);
+    assert.equal(report.screenshots.length, 16);
   });
   report.status = 'PASS';
 } catch (error) {
@@ -653,4 +730,4 @@ if (failure) {
   if (failure.stack) failure.stack = redact(failure.stack);
   throw failure;
 }
-console.log(`PASS local SQL journey: five identities, UI-only mutations, dirty drafts survive reads/grants, exact uncertain retries write once, 100g received / 30g for 720h / 10g dispensed, 1g review without POST, ten captures, zero external requests. Report: ${fileURLToPath(new URL('report.json', output))}`);
+console.log(`PASS local SQL journey: five identities, UI-only mutations, dirty drafts survive reads/grants, exact uncertain retries write once, 100g received / 30g for 720h / 10g dispensed, linked stock movement, private receipt retained after grant revocation, 1g review without POST, responsive and keyboard navigation, zero external requests. Report: ${fileURLToPath(new URL('report.json', output))}`);

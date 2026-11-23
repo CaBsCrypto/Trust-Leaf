@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw, Video, X } from 'lucide-react';
 import { useTrustLeafPrivyIdentity } from './privyIdentityContext';
+import './privy-agenda.css';
 
 type Slot = { slotRef: string; doctorRef: string; startsAt: string; endsAt: string; state: string; version: number; bookingRef: string | null; bookingState: string | null; conference?: {state: string | null; meetUrl?: string | null} | null };
 type Command = { action: string; input: Record<string, unknown> };
 type HistoricalBooking = Pick<Slot, 'slotRef' | 'bookingRef' | 'doctorRef' | 'startsAt' | 'endsAt' | 'bookingState'>;
 export type AgendaTarget = { bookingRef: string; startsAt: string };
 const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-const inputStyle = 'min-w-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm';
-const iconStyle = 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-gray-300 bg-white disabled:opacity-40';
-const commandStyle = 'inline-flex items-center justify-center gap-2 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-40';
+const inputStyle = 'tl-agenda-input';
+const iconStyle = 'tl-agenda-action tl-agenda-icon';
+const commandStyle = 'tl-agenda-action';
 
 export default function PrivyAgenda({ email, target }: { email?: string; target?: AgendaTarget }) {
   const identity = useTrustLeafPrivyIdentity();
@@ -125,45 +126,50 @@ function IdentityAgenda({ email, target }: { email?: string; target?: AgendaTarg
   const disabled=busy || loading || pending!==null;
   const visibleError = readError || error;
   const zone=Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return <section className="w-full min-w-0 space-y-5 text-gray-900">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 className="flex items-center gap-2 text-xl font-semibold"><CalendarDays size={22}/>{role==='doctor'?'Mi agenda':'Horarios y citas'}</h2>
-      <button title="Actualizar agenda" aria-label="Actualizar agenda" className={iconStyle} disabled={busy||loading} onClick={()=>{setError('');setRevision(v=>v+1);}}><RefreshCw size={18}/></button>
+  return <section className="tl-agenda" aria-label="Agenda">
+    <div className="tl-agenda-header">
+      <div>
+        <h2><CalendarDays size={22} aria-hidden="true"/>{role==='doctor'?'Mi agenda':'Horarios y citas'}</h2>
+        <p className="tl-agenda-meta">{email ? `${email} · ` : ''}{zone}</p>
+      </div>
+      <button title="Actualizar agenda" aria-label="Actualizar agenda" className={iconStyle} disabled={busy||loading} onClick={()=>{setError('');setRevision(v=>v+1);}}><RefreshCw size={18} aria-hidden="true"/></button>
     </div>
-    <p className="break-words text-sm text-gray-600">{email ? `${email} · ` : ''}{zone}</p>
-    <div className="flex flex-wrap items-center gap-2">
-      <button title="Semana anterior" aria-label="Semana anterior" className={iconStyle} disabled={busy} onClick={()=>move(-7)}><ChevronLeft size={18}/></button>
-      <label className="flex min-w-0 items-center gap-2 text-sm">Desde<input aria-label="Inicio de semana" type="date" required value={date} className={inputStyle} disabled={busy} onChange={e=>{if(e.target.value){setSelectedBooking(undefined);setDate(e.target.value);}}}/></label>
-      <button title="Semana siguiente" aria-label="Semana siguiente" className={iconStyle} disabled={busy} onClick={()=>move(7)}><ChevronRight size={18}/></button>
+    <div className="tl-agenda-week" role="group" aria-label="Semana de la agenda">
+      <button title="Semana anterior" aria-label="Semana anterior" className={iconStyle} disabled={busy} onClick={()=>move(-7)}><ChevronLeft size={18} aria-hidden="true"/></button>
+      <label>Desde<input aria-label="Inicio de semana" type="date" required value={date} className={inputStyle} disabled={busy} onChange={e=>{if(e.target.value){setSelectedBooking(undefined);setDate(e.target.value);}}}/></label>
+      <button title="Semana siguiente" aria-label="Semana siguiente" className={iconStyle} disabled={busy} onClick={()=>move(7)}><ChevronRight size={18} aria-hidden="true"/></button>
     </div>
-    {role==='doctor' && <form onSubmit={publish} className="flex flex-wrap items-end gap-3 border-y border-gray-200 py-4">
-      <label className="flex min-w-0 flex-col gap-1 text-sm">Fecha<input type="date" required min={localDate(new Date())} value={publishDate} onChange={e=>setPublishDate(e.target.value)} className={inputStyle}/></label>
-      <label className="flex flex-col gap-1 text-sm">Hora<input type="time" required value={time} onChange={e=>setTime(e.target.value)} className={inputStyle}/></label>
-      <label className="flex flex-col gap-1 text-sm">Duracion<select value={duration} onChange={e=>setDuration(Number(e.target.value))} className={inputStyle}>{[15,30,45,60,90,120].map(n=><option key={n} value={n}>{n} min</option>)}</select></label>
-      <button disabled={disabled} className={commandStyle}><Plus size={16}/>Publicar horario</button>
+    {role==='doctor' && <form onSubmit={publish} className="tl-agenda-publish">
+      <h3>Publicar disponibilidad</h3>
+      <div className="tl-agenda-fields">
+        <label>Fecha<input type="date" required min={localDate(new Date())} value={publishDate} onChange={e=>setPublishDate(e.target.value)} className={inputStyle}/></label>
+        <label>Hora<input type="time" required value={time} onChange={e=>setTime(e.target.value)} className={inputStyle}/></label>
+        <label>Duracion<select value={duration} onChange={e=>setDuration(Number(e.target.value))} className={inputStyle}>{[15,30,45,60,90,120].map(n=><option key={n} value={n}>{n} min</option>)}</select></label>
+        <button type="submit" disabled={disabled} className={`${commandStyle} tl-agenda-primary`}><Plus size={16} aria-hidden="true"/>Publicar horario</button>
+      </div>
     </form>}
-    {notice && <p role="status" className="text-sm text-green-800">{notice}</p>}
-    {visibleError && <p role="alert" className="text-sm text-red-700">{notice && readError ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. ' : ''}{visibleError}</p>}
+    {notice && <p role="status" className="tl-agenda-feedback">{notice}</p>}
+    {visibleError && <p role="alert" className="tl-agenda-feedback tl-agenda-error">{notice && readError ? 'El cambio esta guardado, pero no se pudo actualizar la agenda. ' : ''}{visibleError}</p>}
     {!loading && !visibleError && selectedBooking && !slots.some(slot => slot.bookingRef === selectedBooking) && (historicalBooking?.bookingRef === selectedBooking
       ? <div ref={historicalRow} aria-current="true" className={`border-l-4 p-3 ${historicalBooking.bookingState === 'cancelled' ? 'border-red-700 bg-red-50' : 'border-green-700 bg-green-50'}`}><p className={`font-semibold ${historicalBooking.bookingState === 'cancelled' ? 'text-red-800' : 'text-green-800'}`}>Reserva seleccionada · {historicalBooking.bookingState === 'cancelled' ? 'Cancelada' : 'Confirmada'}</p><p>{new Date(historicalBooking.startsAt).toLocaleString('es-CL')}</p><p className="break-all text-xs">Reserva {historicalBooking.bookingRef}</p></div>
-      : <div role="status" className="flex flex-wrap items-center gap-3 text-sm"><p>No se encontro la reserva seleccionada. Actualiza la agenda para comprobar su estado.</p><button className={commandStyle} disabled={busy} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={16}/>Actualizar reserva</button></div>)}
-    {pending && !busy && <button className={commandStyle} onClick={()=>void execute(pending)}><RefreshCw size={16}/>Reintentar cambio</button>}
-    {loading ? <p role="status">Cargando agenda...</p> : !visibleError && slots.length===0 ? <p className="text-sm text-gray-600">No hay horarios ni citas en esta semana.</p> : <ul className="divide-y divide-gray-200">
+      : <div role="status" className="tl-agenda-feedback tl-agenda-retry"><p>No se encontro la reserva seleccionada. Actualiza la agenda para comprobar su estado.</p><button className={commandStyle} disabled={busy} onClick={()=>setRevision(v=>v+1)}><RefreshCw size={16} aria-hidden="true"/>Actualizar reserva</button></div>)}
+    {pending && !busy && <button className={commandStyle} onClick={()=>void execute(pending)}><RefreshCw size={16} aria-hidden="true"/>Reintentar cambio</button>}
+    {loading ? <p role="status" className="tl-agenda-feedback">Cargando agenda...</p> : !visibleError && slots.length===0 ? <p className="tl-agenda-feedback">No hay horarios ni citas en esta semana.</p> : <ul className="tl-agenda-slots">
       {slots.map(slot=>{const future=Date.parse(slot.startsAt)>Date.now();const confirmed=slot.bookingState==='confirmed';
         const label=confirmed?'Cita confirmada':slot.state==='published'?'Disponible':slot.bookingState==='cancelled'||slot.state==='cancelled'?'Cancelada':'Reservada';
         const selected = slot.bookingRef === selectedBooking && !!selectedBooking;
         const cancelled = slot.bookingState === 'cancelled';
-        return <li key={slot.slotRef} ref={selected ? selectedRow : undefined} aria-current={selected ? 'true' : undefined} className={`flex flex-wrap items-center justify-between gap-3 py-4 ${selected ? `border-l-4 px-3 ${cancelled ? 'border-red-700 bg-red-50' : 'border-green-700 bg-green-50'}` : ''}`}>
+        return <li key={slot.slotRef} ref={selected ? selectedRow : undefined} aria-current={selected ? 'true' : undefined} className={`tl-agenda-slot${selected ? cancelled ? ' tl-agenda-selected-cancelled' : ' tl-agenda-selected' : ''}`}>
           {selected && <p className={`w-full text-sm font-semibold ${cancelled ? 'text-red-800' : 'text-green-800'}`}>Reserva seleccionada{cancelled ? ' · Cancelada' : ''}</p>}
-          <div className="min-w-0"><p className="text-sm font-semibold">{new Date(slot.startsAt).toLocaleString('es-CL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} – {new Date(slot.endsAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}</p>
+          <div className="tl-agenda-slot-details"><p className="text-sm font-semibold">{new Date(slot.startsAt).toLocaleString('es-CL',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} – {new Date(slot.endsAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}</p>
           {role==='patient' && <p title={slot.doctorRef} className="text-xs text-gray-600">Medico · {slot.doctorRef.slice(0,8)}</p>}
-          <p className={`text-sm ${confirmed?'text-blue-700':'text-gray-600'}`}>{label}</p>
+          <p className={`tl-agenda-state${confirmed ? ' tl-agenda-state-confirmed' : label === 'Cancelada' ? ' tl-agenda-state-cancelled' : ''}`}>{label}</p>
           {confirmed && <p className="break-all text-xs text-gray-500">Reserva {slot.bookingRef}</p>}</div>
           {confirmed && slot.conference && (slot.conference.state==='ready' && /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(slot.conference.meetUrl??'')
-            ? <a className={commandStyle} href={slot.conference.meetUrl!} target="_blank" rel="noopener noreferrer"><Video size={16}/>Unirse a consulta</a>
+            ? <a className={commandStyle} href={slot.conference.meetUrl!} target="_blank" rel="noopener noreferrer"><Video size={16} aria-hidden="true"/>Unirse a consulta</a>
             : <p role="status" className="text-sm text-gray-600">{['error','unavailable'].includes(slot.conference.state??'')?'Videollamada no disponible temporalmente':'Preparando videollamada'}</p>)}
-          {future && !(selected && slot.bookingState==='cancelled') && role==='patient' && slot.state==='published' && <button disabled={disabled} className={commandStyle} onClick={()=>mutate('reserve',{slotRef:slot.slotRef,bookingRef:crypto.randomUUID(),version:slot.version})}>Reservar</button>}
-          {future && !(selected && slot.bookingState==='cancelled') && (confirmed || role==='doctor' && slot.state==='published') && <button disabled={disabled} className={commandStyle} onClick={()=>{if(window.confirm(confirmed?'¿Cancelar esta cita?':'¿Retirar este horario?'))mutate(confirmed?'cancel-booking':'cancel-slot',{slotRef:slot.slotRef,bookingRef:slot.bookingRef,version:slot.version});}}><X size={16}/>{confirmed?'Cancelar cita':'Retirar horario'}</button>}
+          {future && !(selected && slot.bookingState==='cancelled') && role==='patient' && slot.state==='published' && <button disabled={disabled} className={`${commandStyle} tl-agenda-primary`} onClick={()=>mutate('reserve',{slotRef:slot.slotRef,bookingRef:crypto.randomUUID(),version:slot.version})}>Reservar</button>}
+          {future && !(selected && slot.bookingState==='cancelled') && (confirmed || role==='doctor' && slot.state==='published') && <button disabled={disabled} className={`${commandStyle} tl-agenda-cancel`} onClick={()=>{if(window.confirm(confirmed?'¿Cancelar esta cita?':'¿Retirar este horario?'))mutate(confirmed?'cancel-booking':'cancel-slot',{slotRef:slot.slotRef,bookingRef:slot.bookingRef,version:slot.version});}}><X size={16} aria-hidden="true"/>{confirmed?'Cancelar cita':'Retirar horario'}</button>}
         </li>;})}
     </ul>}
   </section>;

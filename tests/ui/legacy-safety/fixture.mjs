@@ -9,7 +9,7 @@ import postcss from 'postcss';
 
 export const repository = fileURLToPath(new URL('../../../', import.meta.url));
 export const root = fileURLToPath(new URL('./', import.meta.url));
-export const notice = 'Lectura heredada no disponible. Usa el piloto conectado de Trust Leaf.';
+export const notice = 'Lectura heredada no disponible. Usa el piloto conectado de TrustLeaf.';
 export const retiredKeys = ['trust_patient_dashboard', 'trust_has_rx', 'trust_prescription_allowance',
   'trust_pickups', 'trust_privacy_permissions'];
 export const privateMarker = 'FOREIGN_PRIVATE_RX_SENTINEL';
