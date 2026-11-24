@@ -1,4 +1,4 @@
-import { waitlistAudiences, type WaitlistAudience } from '../../src/lib/waitlist.js';
+import { waitlistAudiences, type WaitlistAudience } from '../../src/lib/waitlist.ts';
 
 const cannabisOrigin = 'https://cannabis.trustleaf.org';
 export const CANNABIS_WAITLIST_MAX_BODY_BYTES = 1_024;
