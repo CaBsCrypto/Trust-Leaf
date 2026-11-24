@@ -11,7 +11,7 @@ interface ActiveTrustLeafPrivyProviderProps {
 }
 
 function PrivyIdentityBridge({ children }: { children: ReactNode }) {
-  const { ready, authenticated, logout, user } = usePrivy();
+  const { ready, authenticated, logout, user, getAccessToken } = usePrivy();
   const { identityToken } = useIdentityToken();
   const { refreshUser } = useUser();
   const { login } = useLogin();
@@ -63,7 +63,12 @@ function PrivyIdentityBridge({ children }: { children: ReactNode }) {
       if (syncing || currentTokens.current !== tokens) return null;
       return tokens.read();
     },
-  }), [authenticated, login, logout, ready, user?.id, user?.email?.address, user?.google?.email, identityToken, tokens, syncing]);
+    async getAccessToken() {
+      if (!authenticated || syncing || currentTokens.current !== tokens) return null;
+      const accessToken = await getAccessToken();
+      return currentTokens.current === tokens ? accessToken : null;
+    },
+  }), [authenticated, getAccessToken, login, logout, ready, user?.id, user?.email?.address, user?.google?.email, identityToken, tokens, syncing]);
 
   return <TrustLeafPrivyContext.Provider value={value}>{children}</TrustLeafPrivyContext.Provider>;
 }
