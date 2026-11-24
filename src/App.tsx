@@ -48,7 +48,6 @@ const MockupPortal = lazy(() => import('./components/MockupPortal'));
 const PrescriptionVerifier = lazy(() => import('./components/PrescriptionVerifier'));
 const ReceiptPilotFlow = lazy(() => import('./components/ReceiptPilotFlow'));
 const TrustAuthorizationReview = lazy(() => import('./components/TrustAuthorizationReview'));
-const FichaPilot = lazy(() => import('./features/ficha-pilot/FichaPilot'));
 
 type DispensaryRegistrationStatus = ActorRegistrationStatus;
 type DispensaryRegistration = DispensaryApplication;
@@ -111,12 +110,9 @@ const PATIENT_ROUTE_VIEWS: Record<string, PortalView> = {
 };
 
 export default function App() {
-  const path = window.location.pathname;
   return (
     <LanguageProvider>
-      <PrivySessionBoundary>{path.startsWith('/pilot/')
-        ? <Suspense fallback={<p role="status">Cargando piloto…</p>}><FichaPilot path={path} /></Suspense>
-        : <AppContent />}</PrivySessionBoundary>
+      <PrivySessionBoundary><AppContent /></PrivySessionBoundary>
     </LanguageProvider>
   );
 }

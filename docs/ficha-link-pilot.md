@@ -4,7 +4,7 @@ Cannabis conserva la receta sintética y su estado clínico. FichaOnChain almace
 
 ## Configuración aislada
 
-- Usar un Preview de Cannabis y otro de FichaOnChain, una base Supabase exclusiva del piloto y los App ID de Privy de cada portal. Aplicar `20261124011856_ficha_link_pilot.sql` en la base aislada después de las migraciones de identidad.
+- Usar un Preview de Cannabis y otro de FichaOnChain, una base Supabase exclusiva del piloto y los App ID de Privy de cada portal. Aplicar `20261124011856_ficha_link_pilot.sql` en la base aislada después de las migraciones de identidad. El navegador de Cannabis requiere `VITE_PRIVY_ENABLED=true`, `VITE_PRIVY_APP_ID` y `VITE_PRIVY_CLIENT_ID`.
 - Fijar `STELLAR_NETWORK=testnet`, `TRUSTLEAF_FICHA_LINK_MODE=synthetic`, el origen exacto de la API de prueba en `TRUSTLEAF_FICHA_LINK_ORIGIN` y la referencia de la base aislada en `TRUSTLEAF_FICHA_LINK_SUPABASE_REF`. `SUPABASE_URL` debe coincidir con el origen del proyecto. Configurar las credenciales de servidor de Privy y Supabase en el Preview.
 - `TRUSTLEAF_FICHA_LINK_SERVICE_TOKEN` es la credencial del socio habilitada por FichaOnChain con los permisos `clinical-links:bind`, `clinical-links:write` y `proofs:verify`. `TRUSTLEAF_FICHA_LINK_ACTOR_KEY` es una clave independiente de 32 bytes en hexadecimal. Mantenerla estable para que el identificador opaco por cuenta permanezca estable.
 - Configurar los UUID de actor de un médico y dos pacientes sintéticos activos en `TRUSTLEAF_FICHA_LINK_DOCTOR`, `TRUSTLEAF_FICHA_LINK_PATIENT` (titular P1) y `TRUSTLEAF_FICHA_LINK_CONTROL_PATIENT` (control P2). Usar el UUID de actor de Cannabis que devuelve la sesión privada, sin cruzar IDs de Privy entre portales.
