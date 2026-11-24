@@ -45,6 +45,10 @@ export default async function handler(req: any, res: any) {
     const { operationsPilotHandler } = await import('../_lib/operations-pilot.js');
     return operationsPilotHandler(req, res, process.env, privateVerifier);
   }
+  if (route === 'ficha-link-pilot') {
+    const { fichaLinkPilotHandler } = await import('../_lib/ficha-link-pilot.js');
+    return fichaLinkPilotHandler(req, res, process.env, privateVerifier);
+  }
   if (route === 'calendar-worker') {
     const { calendarCron } = await import('../_lib/google-calendar-cron.js');
     return calendarCron(req, res);

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:ficha-link-pilot": "tsx --test tests/ficha-link-pilot.test.mjs",
     "preview:visual": "vite --config vite.visual.config.ts",
     "demo:local": "tsx tests/local-demo/server.mjs",
     "test:local-demo": "node tests/local-demo/network-probe.mjs && node tests/local-demo/guard.test.mjs && node tests/local-demo/server.test.mjs && node tests/local-demo/server.test.mjs --reset-failure",

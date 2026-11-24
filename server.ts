@@ -143,6 +143,17 @@ async function startServer() {
       query: { __trustleaf_route: 'operations-pilot' } }, res)
       .catch(() => { if (!res.headersSent) res.status(503).json({ code: 'PILOT_UNAVAILABLE' }); });
   });
+  app.all('/api/ficha-link-pilot', (req, res) => {
+    void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
+      query: { __trustleaf_route: 'ficha-link-pilot' } }, res)
+      .catch(() => { if (!res.headersSent) res.status(503).json({ code: 'PILOT_UNAVAILABLE' }); });
+  });
+  app.use('/pilot', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    next();
+  });
   app.all('/api/dispensary-commerce', (req, res) => {
     void consolidatedReadinessHandler({ method: req.method, headers: req.headers, body: req.body,
       query: { ...req.query, __trustleaf_route: 'dispensary-commerce' } }, res)

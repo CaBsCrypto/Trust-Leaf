@@ -6,6 +6,14 @@
   },
   "headers": [
     {
+      "source": "/pilot/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, private" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    },
+    {
       "source": "/verify/:token",
       "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }],
       "headers": [
@@ -25,6 +33,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/ficha-link-pilot", "destination": "/api/stellar/readiness?__trustleaf_route=ficha-link-pilot" },
+    { "source": "/pilot/ficha", "destination": "/index.html" },
+    { "source": "/pilot/recetas/:resourceRef", "destination": "/index.html" },
     { "source": "/api/cannabis-waitlist", "destination": "/api/stellar/readiness?__trustleaf_route=cannabis-waitlist" },
     { "source": "/verify/:token", "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }], "destination": "/index.html" },
     { "source": "/demo/receipt-pilot", "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }], "destination": "/index.html" },
