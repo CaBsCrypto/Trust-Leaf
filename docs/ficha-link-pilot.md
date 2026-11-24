@@ -10,6 +10,8 @@ Cannabis conserva la receta sintética y su estado clínico. FichaOnChain almace
 - Configurar los UUID de actor de un médico y dos pacientes sintéticos activos en `TRUSTLEAF_FICHA_LINK_DOCTOR`, `TRUSTLEAF_FICHA_LINK_PATIENT` (titular P1) y `TRUSTLEAF_FICHA_LINK_CONTROL_PATIENT` (control P2). Usar el UUID de actor de Cannabis que devuelve la sesión privada, sin cruzar IDs de Privy entre portales.
 - Activar `TRUSTLEAF_FICHA_LINK_PILOT_ENABLED=true` y `VITE_TRUSTLEAF_FICHA_LINK_PILOT_ENABLED=true` en el Preview. Poner el interruptor de servidor en `false` para detener consultas y mutaciones del piloto, conservando su evidencia.
 
+Los previews protegen el acceso mediante Vercel Authentication. Para conectar los servidores, en `trustleaf-demo` agrega `trustleaf` como Trusted Source con la regla Preview → Preview. Luego fija `TRUSTLEAF_FICHA_LINK_VERCEL_TRUSTED_SOURCE=true` solo en el Preview de Cannabis. `TRUSTLEAF_FICHA_LINK_ORIGIN` debe ser el origen HTTPS `.vercel.app` exacto del Preview de FichaOnChain. Cannabis envía el token OIDC al origen configurado junto con la credencial de la API. Los pacientes siguen ingresando por las sesiones web de cada portal. [Vercel Trusted Sources](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/trusted-sources)
+
 ## Comprobación
 
 1. El titular P1 genera un código en FichaOnChain y lo canjea en `/pilot/ficha` con la sesión de paciente de Cannabis. Copia el código de confirmación a FichaOnChain y confirma. Cannabis muestra el estado vigente con **Consultar vinculación**.

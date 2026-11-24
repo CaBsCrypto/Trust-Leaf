@@ -27,7 +27,7 @@ test('authenticated pilot keeps immutable PDF, rejects other patients, and resen
 
     const env = {
       TRUSTLEAF_FICHA_LINK_PILOT_ENABLED: 'true', TRUSTLEAF_FICHA_LINK_MODE: 'synthetic', STELLAR_NETWORK: 'testnet',
-      VERCEL_ENV: 'preview', TRUSTLEAF_FICHA_LINK_ORIGIN: 'https://ficha-pilot.example.invalid',
+      VERCEL_ENV: 'preview', TRUSTLEAF_FICHA_LINK_ORIGIN: 'https://ficha-pilot-example.vercel.app',
       SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co', TRUSTLEAF_FICHA_LINK_SUPABASE_REF: 'abcdefghijklmnopqrst',
       SUPABASE_SECRET_KEY: 'test-store-key', TRUSTLEAF_FICHA_LINK_SERVICE_TOKEN: `tl_clp_${'21'.repeat(32)}`,
       TRUSTLEAF_FICHA_LINK_ACTOR_KEY: '13'.repeat(32), PRIVY_APP_ID: 'synthetic-app',
@@ -44,10 +44,15 @@ test('authenticated pilot keeps immutable PDF, rejects other patients, and resen
     let commitment;
     let available = false;
     let proof = 'pending';
+    let expectedOidc = null;
+    let oidcReads = 0;
+    const oidcToken = 'test-only-vercel-oidc-token';
+    const readOidcToken = async () => { oidcReads++; return oidcToken; };
     const fetcher = async (target, init) => {
       const url = new URL(target);
       if (url.origin === env.SUPABASE_URL) {
         assert.equal(new Headers(init.headers).get('apikey'), env.SUPABASE_SECRET_KEY);
+        assert.equal(new Headers(init.headers).get('x-vercel-trusted-oidc-idp-token'), null);
         const body = JSON.parse(init.body);
         if (url.pathname.endsWith('/trustleaf_resolve_privy_actor')) {
           return Response.json((await db.query('select * from public.trustleaf_resolve_privy_actor($1)', [body.subject])).rows);
@@ -60,6 +65,7 @@ test('authenticated pilot keeps immutable PDF, rejects other patients, and resen
       }
       assert.equal(url.origin, env.TRUSTLEAF_FICHA_LINK_ORIGIN);
       assert.equal(new Headers(init.headers).get('authorization'), `Bearer ${env.TRUSTLEAF_FICHA_LINK_SERVICE_TOKEN}`);
+      assert.equal(new Headers(init.headers).get('x-vercel-trusted-oidc-idp-token'), expectedOidc);
       assert.equal(init.redirect, 'error');
       const body = init.body ? JSON.parse(init.body) : null;
       if (url.pathname.endsWith('/bindings/claim')) {
@@ -84,13 +90,25 @@ test('authenticated pilot keeps immutable PDF, rejects other patients, and resen
       return Response.json({ linkRef, revision: 1, integrityStatus: proof, commitment });
     };
     const verifier = { verify: async token => ({ subject: subjects[token], emails: [] }) };
-    const call = (token, action, data = {}) => executeFichaLinkPilot({ token, action, data, env, verifier, fetcher });
+    const call = (token, action, data = {}, overrides = {}) => executeFichaLinkPilot({
+      token, action, data, env: { ...env, ...overrides }, verifier, fetcher, readOidcToken,
+    });
 
     assert.throws(() => fichaPilotConfig({ ...env, VERCEL_ENV: 'production' }), { status: 404 });
     assert.throws(() => fichaPilotConfig({ ...env, SUPABASE_URL: 'https://another.supabase.co' }), { status: 503 });
     assert.throws(() => fichaPilotConfig({ ...env, TRUSTLEAF_FICHA_LINK_ORIGIN: 'https://www.trustleaf.org' }), { status: 503 });
-    assert.deepEqual(await call('patient', 'claim', { code: challenge }), { confirmationCode: '12345678' });
-    assert.deepEqual(await call('patient', 'binding-status'), { status: 'claimed' });
+    const oidcOptIn = { TRUSTLEAF_FICHA_LINK_VERCEL_TRUSTED_SOURCE: 'true' };
+    const hostedOidc = { ...oidcOptIn, VERCEL: '1' };
+    assert.throws(() => fichaPilotConfig({ ...env, ...hostedOidc, TRUSTLEAF_FICHA_LINK_ORIGIN: 'https://ficha.example.invalid' }), { status: 503 });
+    expectedOidc = oidcToken;
+    assert.deepEqual(await call('patient', 'claim', { code: challenge }, hostedOidc), { confirmationCode: '12345678' });
+    expectedOidc = null;
+    assert.deepEqual(await call('patient', 'binding-status', {}, oidcOptIn), { status: 'claimed' });
+    assert.equal(oidcReads, 1);
+    await assert.rejects(() => executeFichaLinkPilot({
+      token: 'patient', action: 'binding-status', data: {}, env: { ...env, ...hostedOidc }, verifier, fetcher,
+      readOidcToken: async () => { throw new Error('test fixture without a workload token'); },
+    }), { code: 'FICHA_TRUSTED_SOURCE_UNAVAILABLE' });
     await assert.rejects(() => call('doctor', 'issue'), { code: 'PILOT_BINDING_INACTIVE' });
     await assert.rejects(() => call('patient', 'issue'), { statusCode: 403 });
     grant = 'active';

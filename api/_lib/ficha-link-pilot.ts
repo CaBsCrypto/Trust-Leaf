@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
+import { getVercelOidcToken } from '@vercel/oidc';
 import { createSyntheticPrescription, matchesPdfCommitment } from './ficha-link-proof.js';
 import type { PrivyIdentity } from './privy-identity.ts';
 import { createPrivyRbacAuthorizer, createSupabasePrivyActorStore } from './privy-supabase-rbac.js';
@@ -48,7 +49,11 @@ export function fichaPilotConfig(env: Env) {
   if (['trustleaf.org', 'www.trustleaf.org', 'cannabis.trustleaf.org'].includes(ficha.hostname)
     || (ficha.protocol !== 'https:' && !(env.VERCEL_ENV !== 'preview' && ['127.0.0.1', 'localhost'].includes(ficha.hostname)
       && ficha.protocol === 'http:'))) throw new PilotError(503, 'PILOT_CONFIGURATION');
-  return { ficha, project, secret, apiKey, hmacKey, doctor, patient, control, appId };
+  const useTrustedSource = env.TRUSTLEAF_FICHA_LINK_VERCEL_TRUSTED_SOURCE === 'true' && env.VERCEL === '1' && env.VERCEL_ENV === 'preview';
+  if (useTrustedSource && (ficha.protocol !== 'https:' || ficha.port || !/^[a-z0-9-]+\.vercel\.app$/.test(ficha.hostname))) {
+    throw new PilotError(503, 'PILOT_CONFIGURATION');
+  }
+  return { ficha, project, secret, apiKey, hmacKey, doctor, patient, control, appId, useTrustedSource };
 }
 
 function parseOrigin(value?: string) {
@@ -68,11 +73,18 @@ function actorReference(config: ReturnType<typeof fichaPilotConfig>, actor: stri
     .update(`TrustLeaf/Cannabis/FichaActor/v1\0${config.appId}\0${actor}`, 'utf8').digest('hex');
 }
 
-function fichaPort(config: ReturnType<typeof fichaPilotConfig>, fetcher: typeof fetch) {
+function fichaPort(config: ReturnType<typeof fichaPilotConfig>, fetcher: typeof fetch, readOidcToken: () => Promise<string>) {
   return async <T>(path: string, body?: object): Promise<T> => {
+    const headers = new Headers({ authorization: `Bearer ${config.apiKey}` });
+    if (body) headers.set('content-type', 'application/json');
+    if (config.useTrustedSource) {
+      const token = await readOidcToken().catch(() => null);
+      if (!token) throw new PilotError(503, 'FICHA_TRUSTED_SOURCE_UNAVAILABLE');
+      headers.set('x-vercel-trusted-oidc-idp-token', token);
+    }
     const response = await fetcher(new URL(`/api/v1/${path}`, config.ficha), {
       method: body ? 'POST' : 'GET', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(6_000),
-      headers: { authorization: `Bearer ${config.apiKey}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     }).catch(() => { throw new PilotError(503, 'FICHA_UNAVAILABLE'); });
     if (!response.ok) throw new PilotError(response.status === 404 || response.status === 410 ? 404 :
@@ -92,6 +104,7 @@ function prescriptionEvent(input: {
 
 export async function executeFichaLinkPilot(input: {
   action: string; data: Record<string, unknown>; token: string; env: Env; verifier: Verifier; fetcher?: typeof fetch;
+  readOidcToken?: () => Promise<string>;
 }) {
   const config = fichaPilotConfig(input.env);
   const fetcher = input.fetcher ?? fetch;
@@ -101,7 +114,7 @@ export async function executeFichaLinkPilot(input: {
     store: createSupabasePrivyActorStore(input.env, fetcher) }).authorize(input.token, allowedRoles);
   if (!(actor.role === 'patient' ? [config.patient, config.control].includes(actor.actorRef)
     : actor.actorRef === config.doctor)) throw new PilotError(403, 'PILOT_ACTOR_NOT_ALLOWED');
-  const ficha = fichaPort(config, fetcher);
+  const ficha = fichaPort(config, fetcher, input.readOidcToken ?? getVercelOidcToken);
 
   async function db<T>(action: string, data: object = {}): Promise<T> {
     const response = await fetcher(new URL('/rest/v1/rpc/trustleaf_ficha_link_pilot', config.project), {
