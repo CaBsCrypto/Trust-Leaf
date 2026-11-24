@@ -54,6 +54,7 @@ jobs:
         run: |
           npm run lint
           npm run test:privy-supabase-rbac
+          npm run test:ficha-link-pilot
           node --experimental-strip-types tests/bootstrap-safe-diagnostics.test.ts
           node --experimental-strip-types tests/bootstrap-handler-safe-errors.test.mjs
           node --experimental-strip-types tests/express-parser-errors.test.ts

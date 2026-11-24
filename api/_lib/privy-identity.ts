@@ -1,4 +1,4 @@
-import { PrivyClient, verifyAccessToken, verifyIdentityToken } from '@privy-io/node';
+import { PrivyClient } from '@privy-io/node';
 
 export interface PrivyIdentity {
   subject: string;
@@ -26,6 +26,7 @@ export function createPrivyIdentityVerifier(
     return { async verify(identityToken: string) {
       if (!identityToken?.trim() || identityToken.length > 12_000) throw identityError('PRIVY_IDENTITY_TOKEN_INVALID', 401);
       try {
+        const { verifyIdentityToken } = await import('@privy-io/node');
         const user = await verifyIdentityToken({ identity_token: identityToken, app_id: appId, verification_key: key });
         if (!isPrivyDid(user.id)) throw identityError('PRIVY_IDENTITY_SUBJECT_INVALID', 401);
         return { subject: user.id, emails: linkedAccountEmails(user.linked_accounts) };
@@ -60,6 +61,7 @@ export async function verifySharedPrivyAccessToken(token: string, env: Record<st
   const key = required(env.TRUSTLEAF_SHARED_PRIVY_VERIFICATION_KEY).replaceAll('\\n', '\n');
   if (token.length > 12_000) throw identityError('PRIVY_ACCESS_TOKEN_INVALID', 401);
   try {
+    const { verifyAccessToken } = await import('@privy-io/node');
     const verified = await verifyAccessToken({ access_token: token, app_id: appId, verification_key: key });
     // The SDK verifies the signature first and omits additional claims from its projection.
     const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
