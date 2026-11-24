@@ -35,6 +35,7 @@
   "rewrites": [
     { "source": "/api/ficha-link-pilot", "destination": "/api/stellar/readiness?__trustleaf_route=ficha-link-pilot" },
     { "source": "/pilot/ficha", "destination": "/index.html" },
+    { "source": "/pilot/migrar-cuenta", "destination": "/index.html" },
     { "source": "/pilot/recetas/:resourceRef", "destination": "/index.html" },
     { "source": "/api/cannabis-waitlist", "destination": "/api/stellar/readiness?__trustleaf_route=cannabis-waitlist" },
     { "source": "/verify/:token", "has": [{ "type": "host", "value": "cannabis.trustleaf.org" }], "destination": "/index.html" },

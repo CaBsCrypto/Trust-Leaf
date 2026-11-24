@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { test } from 'node:test';
 import { executeFichaLinkPilot, fichaPilotConfig } from '../api/_lib/ficha-link-pilot.ts';
 import { pdfCommitment } from '../api/_lib/ficha-link-proof.ts';
+import { createPrivyIdentityVerifier } from '../api/_lib/privy-identity.ts';
 import { operationsDatabase } from './sql/operations-db.mjs';
 
 test('commitment matches the cross-portal v1 formula and depends on each exact byte', () => {
@@ -13,6 +14,147 @@ test('commitment matches the cross-portal v1 formula and depends on each exact b
   assert.equal(pdfCommitment(document, nonce), expected);
   assert.notEqual(pdfCommitment(Buffer.from('synthetic PDF byteS'), nonce), expected);
   assert.notEqual(pdfCommitment(document, Buffer.alloc(32, 8)), expected);
+});
+
+test('shared onboarding, clinician confirmation and rebind preserve consent, contract and actor continuity', async () => {
+  const { db, subjects, actors } = await operationsDatabase({ roles: {
+    admin: 'admin', patient: 'patient', otherPatient: 'patient', doctor: 'doctor', otherDoctor: 'doctor',
+  } });
+  try {
+    const appId = 'shared-app-test';
+    const clientId = 'cannabis-client-test';
+    const keys = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const env = {
+      TRUSTLEAF_FICHA_LINK_PILOT_ENABLED: 'true', TRUSTLEAF_FICHA_LINK_MODE: 'synthetic', STELLAR_NETWORK: 'testnet',
+      VERCEL_ENV: 'preview', TRUSTLEAF_FICHA_LINK_ORIGIN: 'https://ficha-demo-example.vercel.app',
+      SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co', TRUSTLEAF_FICHA_LINK_SUPABASE_REF: 'abcdefghijklmnopqrst',
+      SUPABASE_SECRET_KEY: 'test-store-key', TRUSTLEAF_FICHA_LINK_SERVICE_TOKEN: `tl_clp_${'42'.repeat(32)}`,
+      TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED: 'true', TRUSTLEAF_SHARED_PRIVY_APP_ID: appId,
+      TRUSTLEAF_SHARED_PRIVY_CLIENT_ID: clientId, TRUSTLEAF_SHARED_PRIVY_VERIFICATION_KEY: keys.publicKey.export({ type: 'spki', format: 'pem' }),
+    };
+    const workflowRef = randomUUID();
+    const bookingRef = randomUUID();
+    const consultationRef = randomUUID();
+    const slotRef = randomUUID();
+    const partnerPatientRef = randomUUID();
+    const linkRef = randomUUID();
+    env.TRUSTLEAF_FICHA_LINK_CONSULTATIONS = JSON.stringify({ [bookingRef]: consultationRef });
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = (subject, claims = {}) => {
+      const input = [ { alg: 'ES256', typ: 'JWT' }, { aud: appId, iss: 'privy.io', sub: subject, iat: now,
+        exp: now + 300, ...claims } ].map(part => Buffer.from(JSON.stringify(part)).toString('base64url')).join('.');
+      return `${input}.${sign('sha256', Buffer.from(input), { key: keys.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
+    };
+    const access = (client = clientId, subject = subjects.patient) => jwt(subject, { app_client_id: client, sid: 'session-credential' });
+    const doctorAccess = access(clientId, subjects.doctor);
+    let grant = false;
+    const enrollmentConsents = [];
+    const events = [];
+    let intent;
+    let state = 'pending';
+    let corrupted = false;
+    const contractId = 'CDUN6FXFX6OYLP6DS3W7RC72GBVMS3TFJ7LFTB3LGVPF6PWMR6FCZSYE';
+    const fetcher = async (target, init) => {
+      const url = new URL(target);
+      const headers = new Headers(init.headers);
+      const body = init.body ? JSON.parse(init.body) : null;
+      if (url.origin === env.SUPABASE_URL) {
+        assert.equal(headers.get('privy-access-token'), null);
+        if (url.pathname.endsWith('/trustleaf_resolve_privy_actor')) {
+          return Response.json((await db.query('select * from public.trustleaf_resolve_privy_actor($1)', [body.subject])).rows);
+        }
+        const rpc = url.pathname.split('/').pop();
+        assert.ok(['trustleaf_ficha_link_pilot', 'trustleaf_ficha_shared_pilot'].includes(rpc));
+        try {
+          const { rows } = await db.query(`select public.${rpc}($1,$2,$3) as data`, [body.p_subject, body.p_action, body.p_data]);
+          return Response.json(rows[0].data);
+        } catch (error) { return Response.json({ code: error.code }, { status: 400 }); }
+      }
+      assert.equal(url.origin, env.TRUSTLEAF_FICHA_LINK_ORIGIN);
+      assert.equal(headers.get('authorization'), `Bearer ${env.TRUSTLEAF_FICHA_LINK_SERVICE_TOKEN}`);
+      if (url.pathname.endsWith('/patient-enrollments')) {
+        assert.ok(headers.get('privy-access-token'));
+        assert.deepEqual(Object.keys(body), ['authorizePrescriptionLinks']);
+        enrollmentConsents.push(body.authorizePrescriptionLinks);
+        grant ||= body.authorizePrescriptionLinks;
+        return Response.json({ status: 'active', partnerPatientRef: grant ? partnerPatientRef : null,
+          associationStatus: grant ? 'active' : 'not_authorized' });
+      }
+      if (url.pathname.endsWith('/partner-prescriptions')) {
+        assert.equal(headers.get('privy-access-token'), doctorAccess);
+        assert.deepEqual(Object.keys(body).sort(), ['commitment', 'consultationRef', 'documentId', 'partnerPatientRef', 'version']);
+        assert.equal(body.consultationRef, consultationRef);
+        assert.equal(body.partnerPatientRef, partnerPatientRef);
+        intent = body;
+      } else assert.equal(headers.get('privy-access-token'), null);
+      if (url.pathname.includes('/partner-prescriptions')) {
+        return Response.json({ id: workflowRef, state, consultationRef, documentId: intent.documentId, version: 1,
+          commitment: corrupted ? '00'.repeat(32) : intent.commitment, network: 'testnet', contractId,
+          transactionHash: state === 'confirmed' ? '32'.repeat(32) : null, rxId: state === 'confirmed' ? '679' : null });
+      }
+      if (url.pathname.endsWith('/clinical-link-events')) {
+        events.push(body);
+        return Response.json({ eventId: body.eventId, linkRef, revision: body.revision, result: 'applied' }, { status: 202 });
+      }
+      assert.equal(url.pathname, `/api/v1/clinical-links/${linkRef}/proof`);
+      return Response.json({ linkRef, revision: 1, integrityStatus: 'verified', commitment: intent.commitment });
+    };
+    const verify = createPrivyIdentityVerifier(env);
+    const call = (role, action, data = {}, accessToken) => executeFichaLinkPilot({
+      token: jwt(subjects[role], { cr: String(now), linked_accounts: '[]' }), action, data, accessToken, env, verifier: verify, fetcher,
+    });
+
+    await db.exec('reset role');
+    for (const key of ['patient', 'doctor']) await db.query('insert into trustleaf_private.pilot_participants(actor_ref) values($1)', [actors[key]]);
+    await db.query(`insert into trustleaf_private.availability_slots(slot_ref,doctor_actor_ref,starts_at,ends_at,state)
+      values($1,$2,now(),now()+interval '30 minutes','booked')`, [slotRef, actors.doctor]);
+    await db.query('insert into trustleaf_private.appointment_bookings(booking_ref,slot_ref,patient_actor_ref) values($1,$2,$3)', [bookingRef, slotRef, actors.patient]);
+    await db.query('insert into trustleaf_private.pilot_encounters(booking_ref,doctor_ref,patient_ref) values($1,$2,$3)', [bookingRef, actors.doctor, actors.patient]);
+    await db.exec('set role service_role');
+
+    await assert.rejects(() => call('patient', 'enroll-account', { authorizePrescriptionLinks: true }, access('wrong-client')), { statusCode: 401 });
+    await assert.rejects(() => call('patient', 'enroll-account', { authorizePrescriptionLinks: true }, access(clientId, subjects.otherPatient)), { status: 403 });
+    const activation = await call('patient', 'enroll-account', { authorizePrescriptionLinks: false }, access());
+    assert.deepEqual(activation, { status: 'active', associationStatus: 'not_authorized', accountUrl: `${env.TRUSTLEAF_FICHA_LINK_ORIGIN}/patient?tab=perfil` });
+    assert.deepEqual((await call('doctor', 'snapshot')).consultations, []);
+    await assert.rejects(() => call('doctor', 'issue', { bookingRef }, doctorAccess), { status: 404 });
+    assert.equal((await call('patient', 'enroll-account', { authorizePrescriptionLinks: true }, access())).associationStatus, 'active');
+    assert.equal((await call('patient', 'enroll-account', { authorizePrescriptionLinks: false }, access())).associationStatus, 'active');
+    assert.deepEqual(enrollmentConsents, [false, true, false]);
+    assert.deepEqual((await call('doctor', 'snapshot')).consultations, [bookingRef]);
+    await assert.rejects(() => call('doctor', 'issue', { bookingRef }), { status: 401 });
+    await assert.rejects(() => call('doctor', 'issue', { bookingRef }, access(clientId, subjects.patient)), { status: 403 });
+    await assert.rejects(() => call('otherDoctor', 'issue', { bookingRef }, access(clientId, subjects.otherDoctor)), { status: 404 });
+    const pending = await call('doctor', 'issue', { bookingRef }, doctorAccess);
+    assert.equal(pending.clinicalStatus, 'pending');
+    assert.equal(intent.documentId, pending.resourceRef);
+    assert.deepEqual(events, []);
+    const document = { resourceRef: pending.resourceRef };
+    await assert.rejects(() => call('patient', 'document', document), { status: 404 });
+    state = 'confirmed';
+    corrupted = true;
+    await assert.rejects(() => call('doctor', 'resend', document), { code: 'FICHA_RESPONSE_INVALID' });
+    assert.deepEqual(events, []);
+    corrupted = false;
+    const confirmed = await call('doctor', 'resend', document);
+    assert.deepEqual(confirmed, { resourceRef: pending.resourceRef, clinicalStatus: 'active', deliveryStatus: 'accepted' });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].commitment, intent.commitment);
+    await assert.rejects(() => call('otherPatient', 'document', document), { status: 404 });
+    assert.equal((await call('patient', 'document', document)).integrityStatus, 'verified');
+
+    const newSubject = 'did:privy:shared-rebound-patient-1';
+    const rebind = (previous, next) => db.query('select public.trustleaf_ficha_rebind_privy_actor($1,$2) as actor', [previous, next]);
+    await assert.rejects(() => rebind(subjects.patient, subjects.otherPatient), { code: 'PT409' });
+    assert.equal((await rebind(subjects.patient, newSubject)).rows[0].actor, actors.patient);
+    assert.equal((await rebind(subjects.patient, newSubject)).rows[0].actor, actors.patient);
+    assert.equal((await db.query('select * from public.trustleaf_resolve_privy_actor($1)', [subjects.patient])).rows.length, 0);
+    assert.equal((await db.query('select * from public.trustleaf_resolve_privy_actor($1)', [newSubject])).rows[0].role, 'patient');
+    subjects.patient = newSubject;
+    assert.equal((await call('patient', 'document', document)).integrityStatus, 'verified');
+    await db.exec('reset role');
+    assert.equal((await db.query(`select count(*)::integer as count from trustleaf_private.audit_events where action_code='actor.identity.rebound' and actor_ref=$1`, [actors.patient])).rows[0].count, 1);
+  } finally { await db.close(); }
 });
 
 test('authenticated pilot keeps immutable PDF, rejects other patients, and resends durable events', async () => {

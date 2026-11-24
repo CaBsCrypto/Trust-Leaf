@@ -11,6 +11,7 @@ export interface TrustLeafPrivyIdentity {
   beginLogin: () => Promise<void>;
   logout: () => Promise<void>;
   getIdentityToken: () => Promise<string | null>;
+  getAccessToken?: () => Promise<string | null>;
 }
 
 export const disabledPrivyIdentity: TrustLeafPrivyIdentity = {

@@ -1,29 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTrustLeafPrivyIdentity } from '../../components/privyIdentityContext';
+import { requestFichaPilot as request } from './client';
+import FichaAccountEnrollment from './FichaAccountEnrollment';
 
 type Identity = ReturnType<typeof useTrustLeafPrivyIdentity>;
-type Receipt = { resourceRef: string; clinicalStatus: 'active' | 'revoked'; deliveryStatus: 'accepted' | 'pending' };
-type Workspace = { role: 'patient' | 'doctor'; receipt?: Receipt | null };
+type Receipt = { resourceRef: string; clinicalStatus: 'pending' | 'active' | 'revoked'; deliveryStatus: 'accepted' | 'pending' };
+type Workspace = { role: 'patient' | 'doctor'; receipt?: Receipt | null; receipts?: Receipt[]; consultations?: string[]; signingUrl?: string };
+const sharedEnrollment = import.meta.env.VITE_TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED === 'true';
 
 const button = 'rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50';
 const textLink = 'font-semibold text-emerald-800 underline underline-offset-2';
-
-async function request(identity: Identity, action: string, data: object, signal?: AbortSignal) {
-  const token = await identity.getIdentityToken();
-  if (!token) throw new Error('AUTH_REQUIRED');
-  const response = await fetch('/api/ficha-link-pilot', {
-    method: 'POST', cache: 'no-store', signal,
-    headers: { 'content-type': 'application/json', 'privy-id-token': token },
-    body: JSON.stringify({ action, data }),
-  });
-  if (!response.ok) throw new Error((await response.json().catch(() => null))?.code ?? 'PILOT_UNAVAILABLE');
-  return response;
-}
 
 function message(error: unknown) {
   const code = error instanceof Error ? error.message : '';
   if (code === 'AUTH_REQUIRED') return 'Vuelve a iniciar sesión para continuar.';
   if (code === 'PILOT_BINDING_INACTIVE') return 'El paciente de prueba debe confirmar primero el vínculo en FichaOnChain.';
+  if (code === 'PILOT_ISSUANCE_PENDING') return 'Aún faltan las confirmaciones de la emisión en TrustLeaf.';
   if (code === 'PDF_INTEGRITY_MISMATCH') return 'El PDF no coincide con la prueba de integridad.';
   if (code === 'PILOT_NOT_FOUND' || code === 'PILOT_FORBIDDEN' || code === 'PILOT_ACTOR_NOT_ALLOWED') return 'Este recurso no está disponible en tu sesión.';
   if (code === 'PILOT_DISABLED') return 'El piloto está deshabilitado en este entorno.';
@@ -56,6 +48,7 @@ export default function FichaPilot({ path }: { path: string }) {
 function PilotWorkspace({ identity }: { identity: Identity }) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [bookingRef, setBookingRef] = useState('');
   const [code, setCode] = useState('');
   const [confirmationCode, setConfirmationCode] = useState('');
   const [binding, setBinding] = useState('');
@@ -66,10 +59,11 @@ function PilotWorkspace({ identity }: { identity: Identity }) {
   useEffect(() => {
     if (identity.tokenReady === false) return;
     const controller = new AbortController();
-    void request(identity, 'snapshot', {}, controller.signal).then(r => r.json() as Promise<Workspace>).then(snapshot => {
+    void request(identity, 'snapshot', {}, { signal: controller.signal }).then(r => r.json() as Promise<Workspace>).then(snapshot => {
       if (controller.signal.aborted) return;
       setWorkspace(snapshot);
-      setReceipt(snapshot.receipt ?? null);
+      setReceipt(snapshot.receipts?.[0] ?? snapshot.receipt ?? null);
+      setBookingRef(snapshot.consultations?.[0] ?? '');
     }).catch(error => { if (!controller.signal.aborted) setError(message(error)); });
     return () => controller.abort();
   }, [identity, reload]);
@@ -83,7 +77,14 @@ function PilotWorkspace({ identity }: { identity: Identity }) {
       else if (action === 'binding-status') {
         setBinding(result.status);
         if (result.status !== 'claimed') setConfirmationCode('');
-      } else setReceipt(result);
+      } else {
+        setReceipt(result);
+        if (sharedEnrollment) setWorkspace(current => current && ({ ...current,
+          consultations: action === 'issue' ? current.consultations?.filter(ref => ref !== bookingRef) : current.consultations,
+          receipts: [result, ...(current.receipts ?? []).filter(entry => entry.resourceRef !== result.resourceRef)],
+        }));
+        if (action === 'issue') setBookingRef('');
+      }
     } catch (error) { setError(message(error)); } finally { setBusy(false); }
   }
 
@@ -98,7 +99,7 @@ function PilotWorkspace({ identity }: { identity: Identity }) {
   </> : <p role="status">Comprobando permisos…</p>;
 
   return <div className="space-y-4">
-    {workspace.role === 'patient' ? <>
+    {workspace.role === 'patient' ? sharedEnrollment ? <FichaAccountEnrollment identity={identity} /> : <>
       <p>Ingresa el código de vinculación que creaste al iniciar sesión en FichaOnChain.</p>
       <form onSubmit={claim} className="flex flex-wrap items-end gap-2">
         <label className="grid min-w-0 flex-1 gap-1.5 font-medium">Código de vinculación
@@ -111,6 +112,35 @@ function PilotWorkspace({ identity }: { identity: Identity }) {
       {binding && <p role="status">{({ unlinked: 'Sin vinculación', pending: 'Vínculo pendiente', claimed: 'Esperando tu confirmación en la ficha',
         active: 'Vinculación activa', revoked: 'Vinculación retirada', expired: 'Vinculación vencida' } as Record<string, string>)[binding]}</p>}
       <button className={button} onClick={() => void run('binding-status')} disabled={busy}>Consultar vinculación</button>
+    </> : sharedEnrollment ? <>
+      <p>Prepara la receta para una consulta activa. El paciente y el médico completan la autorización y la firma en TrustLeaf Testnet.</p>
+      <label className="grid gap-1.5 font-medium">Consulta confirmada
+        <select className="w-full rounded-lg border border-stone-400 p-2" value={bookingRef} onChange={event => setBookingRef(event.target.value)}>
+          <option value="">Selecciona una consulta</option>
+          {workspace.consultations?.map(ref => <option key={ref} value={ref}>{ref}</option>)}
+        </select>
+      </label>
+      <button className={button} disabled={busy || !bookingRef} onClick={() => void run('issue', { bookingRef })}>Preparar receta para firma</button>
+      {workspace.receipts && workspace.receipts.length > 1 && <label className="grid gap-1.5 font-medium">Receta preparada
+        <select className="w-full rounded-lg border border-stone-400 p-2" value={receipt?.resourceRef ?? ''}
+          onChange={event => setReceipt(workspace.receipts?.find(entry => entry.resourceRef === event.target.value) ?? null)}>
+          {workspace.receipts.map(entry => <option key={entry.resourceRef} value={entry.resourceRef}>{entry.resourceRef}</option>)}
+        </select>
+      </label>}
+      {receipt && <>
+        <dl className="grid grid-cols-2 gap-2">
+          <dt>Estado clínico</dt><dd>{receipt.clinicalStatus === 'pending' ? 'Pendiente de firma' : receipt.clinicalStatus === 'revoked' ? 'Revocada' : 'Emitida en Testnet'}</dd>
+          <dt>Envío a FichaOnChain</dt><dd>{receipt.deliveryStatus === 'accepted' ? 'Recibido' : 'Pendiente'}</dd>
+        </dl>
+        <div className="flex flex-wrap gap-2">
+          {receipt.clinicalStatus === 'pending' && workspace.signingUrl && <a className={button} href={workspace.signingUrl} rel="noreferrer">Abrir confirmación en TrustLeaf</a>}
+          <button className={button} disabled={busy} onClick={() => void run('resend', { resourceRef: receipt.resourceRef })}>
+            {receipt.clinicalStatus === 'pending' ? 'Actualizar confirmación' : 'Reenviar eventos'}
+          </button>
+          {receipt.clinicalStatus === 'active' && <button className={button} disabled={busy}
+            onClick={() => void run('revoke', { resourceRef: receipt.resourceRef })}>Revocar receta en Cannabis</button>}
+        </div>
+      </>}
     </> : <>
       <p>Emisión de prueba para el paciente sintético del piloto.</p>
       <button className={button} onClick={() => void run('issue')} disabled={busy}>{receipt ? 'Procesar emisión' : 'Emitir receta sintética'}</button>
@@ -139,7 +169,7 @@ function Viewer({ identity, resourceRef }: { identity: Identity; resourceRef: st
     const controller = new AbortController();
     let url: string | undefined;
     setDocument(null);
-    void request(identity, 'document', { resourceRef }, controller.signal).then(async response => {
+    void request(identity, 'document', { resourceRef }, { signal: controller.signal }).then(async response => {
       const bytes = await response.blob();
       if (controller.signal.aborted) return;
       url = URL.createObjectURL(bytes);

@@ -426,6 +426,8 @@ function WorkspaceSession({ email, onSignOut, embedded }: { email?: string; onSi
               <button className="op-command" onClick={() => setTab('agenda', { bookingRef: b.booking_ref, startsAt: b.starts_at })}><CalendarDays size={16}/>Ver en agenda</button>
               {b.state === 'confirmed' && !encounter && <button className="op-command" disabled={disabled} onClick={() => mutate('start-encounter', { resourceRef: b.booking_ref })}><Plus size={16}/>Iniciar consulta simulada</button>}
               {encounter?.state === 'active' && b.state === 'confirmed' && <>
+                {import.meta.env.VITE_TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED === 'true' &&
+                  <a className="op-command" href="/pilot/ficha">Preparar receta en TrustLeaf</a>}
                 <form className="op-form" onSubmit={event => { event.preventDefault(); mutate('save-note', { resourceRef: b.booking_ref, version: noteDrafts[b.booking_ref]?.version ?? encounter.version, note: noteDrafts[b.booking_ref]?.text ?? notes[0]?.body ?? '' }); }}>
                   <fieldset disabled={disabled || !!readError || noteDrafts[b.booking_ref]?.acknowledged}><label className="op-wide">Nota de prueba<textarea aria-label="Nota de prueba" required maxLength={4000} rows={4} value={noteDrafts[b.booking_ref]?.text ?? notes[0]?.body ?? ''} onChange={event => {
                     const text = event.target.value;

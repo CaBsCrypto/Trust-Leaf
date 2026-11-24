@@ -2,7 +2,15 @@
 
 Cannabis conserva la receta sintética y su estado clínico. FichaOnChain almacena su referencia, el estado sincronizado y la prueba de integridad de Stellar Testnet. La integración del piloto opera mediante la API privada `/api/v1` de FichaOnChain.
 
-## Configuración aislada
+## Alta desde Cannabis y emisión en Testnet
+
+- Habilitar `TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED=true` y `VITE_TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED=true` en el Preview sintético. Usar el App ID común en `TRUSTLEAF_SHARED_PRIVY_APP_ID` y `VITE_PRIVY_APP_ID`. Usar el Client ID exclusivo de Cannabis en `TRUSTLEAF_SHARED_PRIVY_CLIENT_ID` y `VITE_PRIVY_CLIENT_ID`. Cargar la clave **pública** de verificación Privy en `TRUSTLEAF_SHARED_PRIVY_VERIFICATION_KEY` y habilitar identity tokens en Privy.
+- Aplicar también `20261124030957_ficha_shared_onboarding.sql` en la base aislada de Cannabis. La credencial de servicio de Ficha debe incluir `clinical-links:enroll`, `clinical-links:write`, `proofs:verify` y `prescriptions:issue`. Los flujos y permisos previos de Cannabis siguen ligados al mismo UUID de actor.
+- Para probar cambio de cuenta previa, mantener `PRIVY_APP_ID`/`PRIVY_APP_SECRET` exclusivamente para verificar el App ID anterior en el servidor. Configurar los identificadores públicos previos `VITE_TRUSTLEAF_LEGACY_PRIVY_APP_ID` y `VITE_TRUSTLEAF_LEGACY_PRIVY_CLIENT_ID`. El paciente o profesional abre **Conservar mi cuenta anterior**, autentica la cuenta anterior y la nueva, y completa el cambio auditado. Un perfil distinto ya asociado a la identidad nueva requiere revisión administrativa.
+- Al entrar al portal de paciente mediante `/paciente`, el alta local activa también el perfil de FichaOnChain. **Abrir mi cuenta TrustLeaf** abre el perfil del otro portal. La opción de sincronizar referencias se confirma de forma explícita y por separado.
+- `TRUSTLEAF_FICHA_LINK_CONSULTATIONS` es un objeto JSON de identificadores UUID. Cada clave es una reserva de prueba confirmada en Cannabis y cada valor la referencia opaca de la consulta habilitada en Ficha. Ambos lados validan sus propios participantes. Con la consulta activa, el médico prepara la receta en `/pilot/ficha` y abre la confirmación en Ficha. La solicitud de preparación incluye la prueba de sesión del médico para que Ficha confirme que es el profesional de esa consulta. Tras la autorización del paciente y la firma del médico en Ficha, **Actualizar confirmación** sincroniza el enlace cuando Ficha confirma la transacción y el compromiso de los mismos bytes en Testnet.
+
+## Configuración aislada y flujo anterior por código
 
 - Usar un Preview de Cannabis y otro de FichaOnChain, una base Supabase exclusiva del piloto y los App ID de Privy de cada portal. Aplicar `20261124011856_ficha_link_pilot.sql` en la base aislada después de las migraciones de identidad. El navegador de Cannabis requiere `VITE_PRIVY_ENABLED=true`, `VITE_PRIVY_APP_ID` y `VITE_PRIVY_CLIENT_ID`.
 - Fijar `STELLAR_NETWORK=testnet`, `TRUSTLEAF_FICHA_LINK_MODE=synthetic`, el origen exacto de la API de prueba en `TRUSTLEAF_FICHA_LINK_ORIGIN` y la referencia de la base aislada en `TRUSTLEAF_FICHA_LINK_SUPABASE_REF`. `SUPABASE_URL` debe coincidir con el origen del proyecto. Configurar las credenciales de servidor de Privy y Supabase en el Preview.

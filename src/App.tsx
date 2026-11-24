@@ -41,6 +41,7 @@ import { validateRut, formatRut } from './lib/stellar/chileHelpers';
 import WalletOnboarding, { type WalletSetupState } from './components/WalletOnboarding';
 import { AdminReadinessPanel } from './components/AdminReadinessPanel';
 import { useTrustLeafPrivyIdentity, type TrustLeafPrivyIdentity } from './components/TrustLeafPrivyProvider';
+import FichaAccountEnrollment from './features/ficha-pilot/FichaAccountEnrollment';
 
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
@@ -1396,6 +1397,7 @@ function AuthGate({
   const [privySessionChecking, setPrivySessionChecking] = useState(false);
   const [privySessionRevision, setPrivySessionRevision] = useState(0);
   const [privyVerificationError, setPrivyVerificationError] = useState<string | null>(null);
+  const fichaEnrollmentEnabled = role === 'patient' && import.meta.env.VITE_TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED === 'true';
 
   useEffect(() => {
     let cancelled = false;
@@ -1460,7 +1462,7 @@ function AuthGate({
         setPendingNotice(resend ? 'Solicitud reenviada a administración.' : 'Solicitud enviada a administración.');
         return;
       }
-      onStart(role, { email, name: role === 'doctor' ? 'Profesional Trust Leaf' : role === 'dispensary' ? 'Dispensario Trust Leaf' : 'Paciente Trust Leaf', mode: 'email' });
+      if (!fichaEnrollmentEnabled) onStart(role, { email, name: role === 'doctor' ? 'Profesional Trust Leaf' : role === 'dispensary' ? 'Dispensario Trust Leaf' : 'Paciente Trust Leaf', mode: 'email' });
     } catch (enrollmentError) {
       const code = enrollmentError instanceof Error ? enrollmentError.message : '';
       if (code === 'AUTH_REQUIRED') setError('Tu sesión de Privy todavía no está lista. Verifica la cuenta e intenta nuevamente.');
@@ -1590,6 +1592,7 @@ function AuthGate({
         <h2>Cuenta autorizada</h2>
         <p>Tu identidad y tus permisos están confirmados.</p>
         {privyState.email && <p className="tl-account-email">Conectado como {privyState.email}</p>}
+        {fichaEnrollmentEnabled && <FichaAccountEnrollment key={privyIdentity.subject} identity={privyIdentity} />}
         <div className="tl-account-actions">
           <button type="button" className="tl-account-action is-primary" onClick={() => onStart(role, {
             email: privyState.email ?? `${role}@privy.trustleaf`,
@@ -1615,6 +1618,8 @@ function AuthGate({
       content = <>
         <h2>{isPatient ? 'Activa tu acceso' : 'Solicitud de prueba'}</h2>
         <p>{isPatient ? 'Completa el acceso a tu espacio de paciente.' : 'Envía un perfil simulado para que administración revise tu solicitud.'}</p>
+        {import.meta.env.VITE_TRUSTLEAF_FICHA_LINK_SHARED_ENROLLMENT_ENABLED === 'true' && import.meta.env.VITE_TRUSTLEAF_LEGACY_PRIVY_APP_ID
+          && <p><a className="tl-account-action" href="/pilot/migrar-cuenta">Conservar mi cuenta anterior</a></p>}
         <div className="tl-account-actions">
           <button
             type="button"
